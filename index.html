@@ -1,0 +1,428 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>A Record of Formalized Quantum Information Theory | Lean-QIT</title><meta name="description" content="Readable statements, source citations, and Lean context for formalized quantum information theory."><script>
+  (() => {
+    const storageKey = "lqit-theme";
+    const systemTheme = () => window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    let stored = null;
+    try {
+      stored = window.localStorage.getItem(storageKey);
+    } catch {
+      stored = null;
+    }
+    const theme = stored === "light" || stored === "dark" ? stored : systemTheme();
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  })();
+</script><script>(function(){const mathjaxRoot = "/Lean-QIT/mathjax";
+const mathjaxFonts = "/Lean-QIT/mathjax-fonts";
+
+  window.MathJax = {
+    loader: {
+      paths: {
+        mathjax: mathjaxRoot,
+        fonts: mathjaxFonts
+      }
+    },
+    tex: {
+      inlineMath: [["$", "$"], ["\\(", "\\)"]],
+      displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+      macros: {
+        ket: ["\\left|#1\\right\\rangle", 1],
+        bra: ["\\left\\langle#1\\right|", 1],
+        ketbra: ["\\left|#1\\right\\rangle\\!\\left\\langle#2\\right|", 2]
+      }
+    }
+  };
+})();</script> <script defer src="/Lean-QIT/mathjax/tex-mml-chtml-nofont.js"></script><link rel="stylesheet" href="/Lean-QIT/_astro/TheoremDetail.bYLBOKrk.css"></head> <body> <div class="bg-decoration" aria-hidden="true"> <div class="qit-ambient-wash"></div> <div class="qit-manuscript"></div> <div class="qit-resource-linework"></div> <div class="paper-layer"></div> <svg class="deco deco-info-flow" viewBox="0 0 380 190" aria-hidden="true"> <path class="info-thread" d="M32 138 C78 42 132 152 188 78 S296 28 344 122"></path> <path class="info-thread secondary" d="M48 56 C112 118 154 34 214 104 S292 154 348 66"></path> <g class="info-nodes"> <circle cx="32" cy="138" r="7"></circle> <circle cx="188" cy="78" r="7"></circle> <circle cx="344" cy="122" r="7"></circle> <circle cx="214" cy="104" r="5"></circle> </g> </svg> <svg class="deco deco-resource-web" viewBox="0 0 260 240" aria-hidden="true"> <g class="resource-links"> <path d="M48 58 C92 18 142 30 188 62"></path> <path d="M48 58 C70 116 116 150 190 172"></path> <path d="M188 62 C210 104 208 142 190 172"></path> <path d="M92 128 C128 88 162 94 198 124"></path> </g> <g class="resource-nodes"> <circle cx="48" cy="58" r="9"></circle> <circle cx="188" cy="62" r="9"></circle> <circle cx="92" cy="128" r="7"></circle> <circle cx="198" cy="124" r="7"></circle> <circle cx="190" cy="172" r="9"></circle> </g> <path class="resource-arrow" d="M68 198 C112 210 156 206 204 188"></path> </svg> <svg class="deco deco-entanglement-sheet" viewBox="0 0 240 230" aria-hidden="true"> <path class="entropy-contour" d="M50 100 C62 38 170 42 184 98 C198 166 62 176 50 100 Z"></path> <path class="entropy-contour inner" d="M82 106 C90 76 146 78 154 110 C160 142 88 140 82 106 Z"></path> <path class="correlation-arc" d="M38 142 C76 72 134 162 198 90"></path> <circle class="correlation-tip" cx="38" cy="142" r="5"></circle> <circle class="correlation-tip" cx="198" cy="90" r="5"></circle> </svg> </div> <div class="page-shell"> <main data-pagefind-body> <section class="intro reader-hero" aria-labelledby="title"> <div class="intro-copy"> <h1 id="title"> <span class="title-line-1">A Record of Formalized</span> <span class="title-line-2">Quantum Information Theory</span> </h1> <p> <span class="subtitle-line">Readable statements, source citations, and Lean context for</span> <span class="subtitle-line">verified quantum information theorems, bounds, and security results.</span> </p> </div> </section> <section class="catalog-main" id="browse" aria-labelledby="search-heading"> <div class="catalog-heading"> <h2 id="search-heading">Browse the theorem-like results</h2> </div> <div id="search"> <div class="catalog-search" data-pagefind-ignore> <section class="search-panel" aria-label="Search and filters"> <div class="search-field"> <span class="search-icon" aria-hidden="true"></span> <input id="catalog-search" type="search" autocomplete="off" placeholder="Search by theorem, source, author, topic, or keyword. Select several filters to narrow the list." aria-label="Search the formalized QIT catalog"> </div> <div class="filter-summary-row"> <button class="filter-toggle" type="button" aria-expanded="false" aria-controls="catalog-filters"> <span>Filters</span> <span class="filter-toggle-icon" aria-hidden="true"></span> </button> <div class="search-summary"> <p class="search-status" id="search-status" aria-live="polite">Showing 0 Results</p> <button class="clear-filters" type="button">Clear filters</button> </div> </div> <div class="filter-drawer" id="catalog-filters" hidden> <div class="filter-grid" aria-label="Filters"> <section class="filter-group" aria-labelledby="topic-filter-heading"> <h3 id="topic-filter-heading">Topics</h3> <div class="chip-row">  </div> </section> <section class="filter-group" aria-labelledby="type-filter-heading"> <h3 id="type-filter-heading">Types</h3> <div class="chip-row">  </div> </section> <section class="filter-group keyword-filter" aria-labelledby="keyword-filter-heading"> <h3 id="keyword-filter-heading">Keywords</h3> <div class="chip-row">  </div> </section> </div> </div> </section> <ol class="entry-list" id="search-results">  </ol> <nav class="pagination-nav" aria-label="Catalog pagination" hidden> <div class="pagination-pages" aria-label="Catalog pages"></div> </nav> <p class="empty-results" id="empty-results" hidden>No matching results.</p> </div> <script type="module">const searchableEntries = [];
+
+  const PAGE_SIZE = 15;
+  const EXIT_ANIMATION_MS = 180;
+  const searchElement = document.querySelector("#catalog-search");
+  const catalogSearch = document.querySelector(".catalog-search");
+  const status = document.querySelector("#search-status");
+  const emptyResults = document.querySelector("#empty-results");
+  const clearButton = document.querySelector(".clear-filters");
+  const filterToggle = document.querySelector(".filter-toggle");
+  const filterDrawer = document.querySelector("#catalog-filters");
+  const pagination = document.querySelector(".pagination-nav");
+  const paginationPages = document.querySelector(".pagination-pages");
+  const cards = Array.from(document.querySelectorAll("[data-entry-card]"));
+  const chips = Array.from(document.querySelectorAll("[data-filter-type][data-filter-value]"));
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const state = {
+    q: "",
+    topic: new Set(),
+    type: new Set(),
+    keyword: new Set(),
+    page: 1,
+  };
+  let input;
+  let filterCollapseTimer;
+  let filterRenderId = 0;
+  let revealObserver;
+
+  async function resolveInput() {
+    return searchElement instanceof HTMLInputElement ? searchElement : null;
+  }
+
+  function readUrlState() {
+    const params = new URL(window.location.href).searchParams;
+    state.q = params.get("q") ?? "";
+    const page = Number.parseInt(params.get("page") ?? "1", 10);
+    state.page = Number.isFinite(page) && page > 0 ? page : 1;
+    for (const key of ["topic", "type", "keyword"]) {
+      state[key].clear();
+      for (const value of params.getAll(key)) state[key].add(value);
+    }
+  }
+
+  function writeUrlState() {
+    const url = new URL(window.location.href);
+    for (const key of ["q", "topic", "type", "keyword", "page"]) url.searchParams.delete(key);
+    if (state.q.trim()) url.searchParams.set("q", state.q.trim());
+    for (const key of ["topic", "type", "keyword"]) {
+      for (const value of Array.from(state[key]).sort()) url.searchParams.append(key, value);
+    }
+    if (!hasActiveSearchOrFilters() && state.page > 1) url.searchParams.set("page", String(state.page));
+    window.history.replaceState({}, "", url);
+  }
+
+  function setChipState() {
+    for (const chip of chips) {
+      if (!(chip instanceof HTMLButtonElement)) continue;
+      const type = chip.dataset.filterType;
+      const value = chip.dataset.filterValue;
+      const active = Boolean(type && value && state[type]?.has(value));
+      chip.setAttribute("aria-pressed", String(active));
+    }
+  }
+
+  function activeFilterCount() {
+    return state.topic.size + state.type.size + state.keyword.size;
+  }
+
+  function hasActiveSearchOrFilters() {
+    return state.q.trim().length > 0 || activeFilterCount() > 0;
+  }
+
+  function setFiltersOpen(open) {
+    if (!(filterToggle instanceof HTMLButtonElement) || !(filterDrawer instanceof HTMLElement)) return;
+    window.clearTimeout(filterCollapseTimer);
+    filterToggle.setAttribute("aria-expanded", String(open));
+    filterDrawer.classList.toggle("is-open", open);
+    if (open) {
+      filterDrawer.hidden = false;
+      requestAnimationFrame(() => filterDrawer.classList.add("is-open"));
+    } else {
+      filterDrawer.classList.remove("is-open");
+      filterCollapseTimer = window.setTimeout(() => {
+        if (filterToggle.getAttribute("aria-expanded") !== "true") filterDrawer.hidden = true;
+      }, 180);
+    }
+  }
+
+  function entryMatchesSearch(entry, query) {
+    if (!query) return true;
+    return entry.search_text.toLowerCase().includes(query);
+  }
+
+  function cardMatches(card, query) {
+    if (!(card instanceof HTMLElement)) return false;
+    const entry = searchableEntries.find((item) => item.id === card.dataset.entryCard);
+    if (!entry || !entryMatchesSearch(entry, query)) return false;
+    if (state.topic.size > 0 && !state.topic.has(card.dataset.topic)) return false;
+    if (state.type.size > 0 && !state.type.has(card.dataset.type)) return false;
+    const keywords = JSON.parse(card.dataset.keywords ?? "[]");
+    if (state.keyword.size > 0 && !Array.from(state.keyword).some((keyword) => keywords.includes(keyword))) return false;
+    return true;
+  }
+
+  function pageNumbers(totalPages, currentPage) {
+    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, index) => index + 1);
+    const numbers = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+    return Array.from(numbers)
+      .filter((page) => page >= 1 && page <= totalPages)
+      .sort((left, right) => left - right);
+  }
+
+  function renderPagination(totalPages, currentPage) {
+    if (!(pagination instanceof HTMLElement) || !(paginationPages instanceof HTMLElement)) return;
+    const show = totalPages > 1 && !hasActiveSearchOrFilters();
+    pagination.hidden = !show;
+    if (!show) {
+      paginationPages.replaceChildren();
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    let prior = 0;
+    for (const page of pageNumbers(totalPages, currentPage)) {
+      if (prior > 0 && page - prior > 1) {
+        const ellipsis = document.createElement("span");
+        ellipsis.className = "pagination-ellipsis";
+        ellipsis.textContent = "...";
+        fragment.append(ellipsis);
+      }
+      const button = document.createElement("button");
+      button.className = "pagination-page";
+      button.type = "button";
+      button.dataset.page = String(page);
+      button.textContent = String(page);
+      button.setAttribute("aria-label", page === currentPage ? `Current page, Page ${page}` : `Go to page ${page}`);
+      if (page === currentPage) button.setAttribute("aria-current", "page");
+      fragment.append(button);
+      prior = page;
+    }
+    paginationPages.replaceChildren(fragment);
+  }
+
+  function animateCard(card, visible, visibleIndex = 0) {
+    if (!(card instanceof HTMLElement)) return;
+    card.getAnimations().forEach((animation) => animation.cancel());
+    if (visible) {
+      card.hidden = false;
+      card.removeAttribute("aria-hidden");
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        card.animate(
+          [
+            { opacity: 0, transform: "translateY(18px) scale(0.995)" },
+            { opacity: 1, transform: "translateY(0) scale(1)" },
+          ],
+          {
+            duration: 280,
+            delay: Math.min(visibleIndex, 9) * 24,
+            easing: "cubic-bezier(0.18, 0.78, 0.22, 1)",
+          },
+        );
+      }
+      return;
+    }
+    card.setAttribute("aria-hidden", "true");
+    if (card.hidden || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      card.hidden = true;
+      clearScrollReveal(card);
+      return;
+    }
+    const animation = card.animate(
+      [
+        { opacity: 1, transform: "translateY(0) scale(1)" },
+        { opacity: 0, transform: "translateY(-8px) scale(0.997)" },
+      ],
+      { duration: EXIT_ANIMATION_MS, easing: "ease" },
+    );
+    animation.onfinish = () => {
+      card.hidden = true;
+      clearScrollReveal(card);
+    };
+  }
+
+  function clearScrollReveal(card) {
+    if (!(card instanceof HTMLElement)) return;
+    card.classList.remove("is-scroll-reveal-pending", "is-scroll-revealed");
+  }
+
+  function markScrollRevealPending(card) {
+    if (!(card instanceof HTMLElement) || card.hidden) return;
+    card.classList.remove("is-scroll-revealed");
+    card.classList.add("is-scroll-reveal-pending");
+  }
+
+  function markScrollRevealed(card) {
+    if (!(card instanceof HTMLElement) || card.hidden) return;
+    card.classList.remove("is-scroll-reveal-pending");
+    card.classList.add("is-scroll-revealed");
+  }
+
+  function cardIntersectsViewport(card) {
+    if (!(card instanceof HTMLElement) || card.hidden) return false;
+    const rect = card.getBoundingClientRect();
+    return rect.bottom > 0 && rect.top < window.innerHeight * 0.92;
+  }
+
+  function refreshScrollReveal() {
+    if (reducedMotion.matches) {
+      for (const card of cards) clearScrollReveal(card);
+      return;
+    }
+    for (const card of cards) {
+      if (!(card instanceof HTMLElement)) continue;
+      if (card.hidden) {
+        clearScrollReveal(card);
+      } else if (cardIntersectsViewport(card)) {
+        markScrollRevealed(card);
+      } else {
+        markScrollRevealPending(card);
+      }
+    }
+  }
+
+  function setupScrollReveal() {
+    revealObserver?.disconnect();
+    if (reducedMotion.matches || !("IntersectionObserver" in window)) {
+      refreshScrollReveal();
+      return;
+    }
+    revealObserver = new IntersectionObserver(
+      (observedEntries) => {
+        for (const observedEntry of observedEntries) {
+          const card = observedEntry.target;
+          if (!(card instanceof HTMLElement)) continue;
+          if (card.hidden) {
+            clearScrollReveal(card);
+          } else if (observedEntry.isIntersecting) {
+            markScrollRevealed(card);
+          } else {
+            markScrollRevealPending(card);
+          }
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" },
+    );
+    for (const card of cards) {
+      if (card instanceof HTMLElement) revealObserver.observe(card);
+    }
+    refreshScrollReveal();
+  }
+
+  function applyFilters(updateUrl = true) {
+    const query = state.q.trim().toLowerCase();
+    const matchedCards = cards.filter((card) => cardMatches(card, query));
+    const usePagination = !hasActiveSearchOrFilters() && matchedCards.length > PAGE_SIZE;
+    const totalPages = usePagination ? Math.ceil(matchedCards.length / PAGE_SIZE) : 1;
+    state.page = Math.min(Math.max(state.page, 1), totalPages);
+    const start = usePagination ? (state.page - 1) * PAGE_SIZE : 0;
+    const end = usePagination ? Math.min(start + PAGE_SIZE, matchedCards.length) : matchedCards.length;
+    const visibleCards = new Set(usePagination ? matchedCards.slice(start, end) : matchedCards);
+
+    const renderId = ++filterRenderId;
+    let visible = 0;
+    const enteringCards = [];
+    const exitingCards = [];
+    const staticHiddenCards = [];
+    const stayingCards = [];
+    for (const card of cards) {
+      const shouldShow = visibleCards.has(card);
+      if (shouldShow) {
+        const visibleIndex = visible;
+        visible += 1;
+        if (card.hidden) {
+          enteringCards.push([card, visibleIndex]);
+        } else {
+          stayingCards.push([card, visibleIndex]);
+        }
+      } else if (card.hidden) {
+        staticHiddenCards.push(card);
+      } else {
+        exitingCards.push(card);
+      }
+    }
+    for (const [card, visibleIndex] of stayingCards) animateCard(card, true, visibleIndex);
+    for (const card of staticHiddenCards) animateCard(card, false);
+    for (const card of exitingCards) animateCard(card, false);
+    const showEnteringCards = () => {
+      if (renderId !== filterRenderId) return;
+      for (const [card, visibleIndex] of enteringCards) animateCard(card, true, visibleIndex);
+      refreshScrollReveal();
+      window.MathJax?.typesetPromise?.([document.querySelector("#search-results")]).catch(() => {});
+    };
+    if (exitingCards.length > 0 && enteringCards.length > 0 && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      window.setTimeout(showEnteringCards, EXIT_ANIMATION_MS);
+    } else {
+      showEnteringCards();
+    }
+    setChipState();
+    renderPagination(totalPages, state.page);
+    if (status) {
+      const activeFilters = activeFilterCount();
+      const filterLabel = activeFilters === 1 ? "filter" : "filters";
+      const queryLabel = state.q.trim() ? ` for "${state.q.trim()}"` : "";
+      if (activeFilters > 0) {
+        status.textContent = `Showing ${visible} Results${queryLabel} with ${activeFilters} ${filterLabel}`;
+      } else if (state.q.trim()) {
+        status.textContent = `Showing ${visible} Results${queryLabel}`;
+      } else if (usePagination) {
+        status.textContent = `Showing ${visible} of ${matchedCards.length} Results`;
+      } else {
+        status.textContent = `Showing ${visible} Results`;
+      }
+    }
+    if (emptyResults instanceof HTMLElement) emptyResults.hidden = matchedCards.length !== 0;
+    if (updateUrl) writeUrlState();
+  }
+
+  function toggleFilter(type, value) {
+    const bucket = state[type];
+    if (!bucket) return;
+    if (bucket.has(value)) {
+      bucket.delete(value);
+    } else {
+      bucket.add(value);
+    }
+    state.page = 1;
+    setFiltersOpen(true);
+    applyFilters();
+  }
+
+  filterToggle?.addEventListener("click", () => {
+    if (!(filterToggle instanceof HTMLButtonElement)) return;
+    setFiltersOpen(filterToggle.getAttribute("aria-expanded") !== "true");
+  });
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    const chip = target instanceof Element ? target.closest("[data-filter-type][data-filter-value]") : null;
+    if (!(chip instanceof HTMLElement)) return;
+    if (chip.closest("[data-entry-link]")) return;
+    event.preventDefault();
+    const type = chip.dataset.filterType;
+    const value = chip.dataset.filterValue;
+    if (type && value) toggleFilter(type, value);
+  });
+
+  clearButton?.addEventListener("click", () => {
+    state.q = "";
+    state.topic.clear();
+    state.type.clear();
+    state.keyword.clear();
+    state.page = 1;
+    if (input) input.value = "";
+    setFiltersOpen(false);
+    applyFilters();
+  });
+
+  pagination?.addEventListener("click", (event) => {
+    const target = event.target;
+    const button = target instanceof Element ? target.closest("[data-page]") : null;
+    if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+    const explicitPage = button.dataset.page;
+    if (explicitPage) {
+      state.page = Number.parseInt(explicitPage, 10);
+    }
+    applyFilters();
+  });
+
+  resolveInput().then((resolved) => {
+    input = resolved;
+    readUrlState();
+    setupScrollReveal();
+    if (input) {
+      input.value = state.q;
+      input.addEventListener("input", () => {
+        state.q = input.value;
+        state.page = 1;
+        applyFilters();
+      });
+    }
+    applyFilters();
+    setFiltersOpen(activeFilterCount() > 0);
+    if (catalogSearch instanceof HTMLElement) catalogSearch.dataset.ready = "true";
+  });
+
+  reducedMotion.addEventListener?.("change", setupScrollReveal);
+
+  window.addEventListener("popstate", () => {
+    readUrlState();
+    if (input) input.value = state.q;
+    applyFilters(false);
+    setFiltersOpen(activeFilterCount() > 0);
+  });
+</script> </div> </section> </main> <footer class="site-footer" data-pagefind-ignore> <a class="brand footer-brand" href="/Lean-QIT/">Lean-QIT</a> <p class="footer-meta"> <span>QuAIR</span> <span>Apache-2.0</span> </p> <button class="theme-toggle" type="button" aria-label="Toggle color theme" aria-pressed="false" data-theme-toggle> <span class="theme-toggle-icon" aria-hidden="true"></span> </button> <a class="footer-github" href="https://github.com/QuAIR/Lean-QIT"> <span>GitHub</span> <span>Stars</span> </a> </footer> <script type="module">var e=`lqit-theme`,t=document.querySelector(`[data-theme-toggle]`),n=window.matchMedia(`(prefers-color-scheme: dark)`);function r(){try{return window.localStorage.getItem(e)}catch{return null}}function i(t){try{window.localStorage.setItem(e,t)}catch{return}}function a(){return n.matches?`dark`:`light`}function o(e){document.documentElement.dataset.theme=e,document.documentElement.style.colorScheme=e,t instanceof HTMLButtonElement&&t.setAttribute(`aria-pressed`,String(e===`dark`))}o(document.documentElement.dataset.theme||r()||a()),t?.addEventListener(`click`,()=>{let e=(document.documentElement.dataset.theme===`dark`?`dark`:`light`)==`dark`?`light`:`dark`;i(e),o(e)}),n.addEventListener(`change`,()=>{r()||o(a())});</script> </div> <div class="drawer-scrim" data-drawer-close hidden data-pagefind-ignore></div> <aside class="theorem-drawer" role="dialog" aria-modal="true" aria-label="Theorem details" aria-hidden="true" hidden data-pagefind-ignore> <div class="drawer-topbar"> <button class="drawer-close" type="button" aria-label="Close theorem details" data-drawer-close>X</button> </div> <div class="drawer-scroll"> <div class="drawer-content"></div> </div> </aside> <div class="drawer-templates" hidden data-pagefind-ignore>  </div> <script type="module">var e=document.querySelector(`.theorem-drawer`),t=document.querySelector(`.drawer-scrim`),n=document.querySelector(`.drawer-content`),r=Array.from(document.querySelectorAll(`[data-drawer-template]`)),i=null;function a(e,t=0){let n=window.MathJax;if(typeof n?.typesetPromise==`function`){let r=()=>n.typesetPromise([e]),i=n.startup?.promise;(i&&typeof i.then==`function`?i.then(r):r()).catch(()=>{t<80&&window.setTimeout(()=>a(e,t+1),50)});return}if(t<80){window.setTimeout(()=>a(e,t+1),50);return}}function o(e){let t=window.MathJax;typeof t?.typesetPromise==`function`&&(t.typesetClear?.([e]),t.typesetPromise([e]).catch(()=>{}))}function s(e){for(let t of[0,150,500,1e3,2e3,3500,5e3])window.setTimeout(()=>a(e),t);window.setTimeout(()=>{o(e)},3e3);let t=0,n=window.setInterval(()=>{if(t+=1,e.querySelector(`mjx-container`)||t>12){window.clearInterval(n);return}o(e)},1e3)}function c(e){if(!(n instanceof HTMLElement))return;let t=document.querySelector(`[data-entry-card="${e}"] .entry-statement`),r=n.querySelector(`.math-statement`);!(t instanceof HTMLElement)||!(r instanceof HTMLElement)||t.querySelector(`mjx-container`)&&(r.innerHTML=t.innerHTML)}function l(e){return Array.from(e.querySelectorAll(`a[href], button:not([disabled]), details summary, [tabindex]:not([tabindex="-1"])`)).filter(e=>!e.hasAttribute(`disabled`)&&e.offsetParent!==null)}function u(e,t=!1){let n=new URL(window.location.href);e?n.searchParams.set(`entry`,e):n.searchParams.delete(`entry`);let r=t?`replaceState`:`pushState`;window.history[r]({},``,n)}function d(a,o=!1){if(!(e instanceof HTMLElement)||!(t instanceof HTMLElement))return;let l=r.find(e=>e.getAttribute(`data-drawer-template`)===a);if(!(l instanceof HTMLTemplateElement)||!(n instanceof HTMLElement))return;i=document.activeElement,n.replaceChildren(l.content.cloneNode(!0)),c(a);let d=n.querySelector(`h1`)?.textContent?.trim()||`Theorem details`;e.setAttribute(`aria-label`,d),e.hidden=!1,t.hidden=!1,requestAnimationFrame(()=>{e?.classList.add(`is-open`),t?.classList.add(`is-open`),s(n)}),e.setAttribute(`aria-hidden`,`false`),document.documentElement.classList.add(`drawer-active`),u(a,o),e.querySelector(`[data-drawer-close]`)?.focus()}function f(r=!1){!(e instanceof HTMLElement)||!(t instanceof HTMLElement)||e.hidden||(e.classList.remove(`is-open`),t.classList.remove(`is-open`),e.setAttribute(`aria-hidden`,`true`),document.documentElement.classList.remove(`drawer-active`),u(null,r),window.setTimeout(()=>{e.hidden=!0,t.hidden=!0,n instanceof HTMLElement&&n.replaceChildren()},180),i instanceof HTMLElement&&i.focus())}document.addEventListener(`click`,e=>{let t=e.target;if(t instanceof Element&&t.closest(`[data-drawer-close]`)){f();return}let n=t instanceof Element?t.closest(`[data-entry-link]`):null;if(!(n instanceof HTMLAnchorElement)||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button!==0)return;let r=n.dataset.entryId;r&&(e.preventDefault(),d(r))}),document.addEventListener(`keydown`,t=>{if(!(e instanceof HTMLElement)||e.hidden)return;if(t.key===`Escape`){t.preventDefault(),f();return}if(t.key!==`Tab`)return;let n=l(e);if(n.length===0)return;let r=n[0],i=n[n.length-1];t.shiftKey&&document.activeElement===r?(t.preventDefault(),i.focus()):!t.shiftKey&&document.activeElement===i&&(t.preventDefault(),r.focus())}),window.addEventListener(`popstate`,()=>{let e=new URL(window.location.href).searchParams.get(`entry`);e?d(e,!0):f(!0)});var p=new URL(window.location.href).searchParams.get(`entry`);p&&d(p,!0);</script> </body></html>
