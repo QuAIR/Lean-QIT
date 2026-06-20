@@ -1,2 +1,6 @@
-# cache and other artifacts produced by Lean's Lake build tool
+# Lean/Lake build artifacts
 .lake/
+
+# Local OS/editor noise
+.DS_Store
+Thumbs.db
