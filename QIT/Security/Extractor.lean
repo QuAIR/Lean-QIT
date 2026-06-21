@@ -7,7 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Security.Key
-public import QIT.Core.CQState
+public import QIT.Classical.CQState
 
 /-!
 # Two-universal hashing and extractor output states

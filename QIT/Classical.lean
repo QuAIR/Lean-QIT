@@ -6,9 +6,9 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Core.Ensemble
-public import QIT.Core.CQState
-public import QIT.Core.ClassicalBridge
+public import QIT.Classical.Ensemble
+public import QIT.Classical.CQState
+public import QIT.Classical.Bridge
 
 /-!
 # Classical interfaces

@@ -70,6 +70,25 @@ theorem collisionProbability_le_of_twoUniversal (hH : H.TwoUniversal)
     H.collisionProbability z z' ≤ (Fintype.card S : ℝ≥0)⁻¹ :=
   hH z z' hzz
 
+/--
+Source-shaped collision uniformity for weighted hash families.
+
+Tomamichel's direct leftover-hash setup uses the exact off-diagonal
+collision probability `1 / |S|`.  The existing `TwoUniversal` predicate keeps
+the weaker `≤` form; this predicate records the equality form needed for the
+centered quadratic cancellation in the direct proof route.
+-/
+def CollisionUniform : Prop :=
+  ∀ z z' : Z, z ≠ z' ->
+    H.collisionProbability z z' = (Fintype.card S : ℝ≥0)⁻¹
+
+omit [DecidableEq F] [Fintype Z] [DecidableEq Z] in
+/-- Collision-uniform hash families are two-universal. -/
+theorem CollisionUniform.toTwoUniversal (hH : H.CollisionUniform) :
+    H.TwoUniversal := by
+  intro z z' hzz
+  simpa [collisionProbability] using le_of_eq (hH z z' hzz)
+
 omit [DecidableEq F] in
 /--
 Pair-sum collision averaging for a nonnegative kernel.

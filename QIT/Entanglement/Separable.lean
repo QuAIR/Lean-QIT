@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Core.Ensemble
+public import QIT.Classical.Ensemble
 
 /-!
 # Separable bipartite states

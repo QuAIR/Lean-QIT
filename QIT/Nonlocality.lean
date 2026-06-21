@@ -6,19 +6,19 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Core.Bell
-public import QIT.Core.Tsirelson
-public import QIT.Core.TwoQubit
-public import QIT.Core.SelfTesting
-public import QIT.Core.ProjectiveRealization
-public import QIT.Core.YangNavascues
-public import QIT.Core.YangNavascues.BobLocal
-public import QIT.Core.YangNavascues.RankOneSupport
-public import QIT.Core.YangNavascues.BobSupport
-public import QIT.Core.YangNavascues.Fourier
-public import QIT.Core.YangNavascues.LocalIsometry
-public import QIT.Core.YangNavascues.Coherence
-public import QIT.Core.YangNavascues.Action
+public import QIT.Nonlocality.Bell
+public import QIT.Nonlocality.Tsirelson
+public import QIT.Nonlocality.TwoQubit
+public import QIT.Nonlocality.SelfTesting
+public import QIT.Nonlocality.ProjectiveRealization
+public import QIT.Nonlocality.YangNavascues
+public import QIT.Nonlocality.YangNavascues.BobLocal
+public import QIT.Nonlocality.YangNavascues.RankOneSupport
+public import QIT.Nonlocality.YangNavascues.BobSupport
+public import QIT.Nonlocality.YangNavascues.Fourier
+public import QIT.Nonlocality.YangNavascues.LocalIsometry
+public import QIT.Nonlocality.YangNavascues.Coherence
+public import QIT.Nonlocality.YangNavascues.Action
 
 /-!
 # Nonlocality interfaces

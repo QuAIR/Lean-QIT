@@ -6,14 +6,14 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Core.Information.Typicality
-public import QIT.Core.Information.AEP
-public import QIT.Core.Information.Decoupling
-public import QIT.Core.Information.SymmetricSubspace
-public import QIT.Core.Information.DeFinetti
-public import QIT.Core.Information.Recovery
-public import QIT.Core.HypothesisTesting.Asymptotic
-public import QIT.Core.HypothesisTesting.Audenaert
+public import QIT.Information.Typicality
+public import QIT.Information.AEP
+public import QIT.Information.Decoupling
+public import QIT.Information.SymmetricSubspace
+public import QIT.Information.DeFinetti
+public import QIT.Information.Recovery
+public import QIT.HypothesisTesting.Asymptotic
+public import QIT.HypothesisTesting.Audenaert
 
 /-!
 # Asymptotic information tools

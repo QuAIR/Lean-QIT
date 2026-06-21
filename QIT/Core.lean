@@ -8,20 +8,11 @@ module
 
 public import QIT.Core.System
 public import QIT.Core.State
-public import QIT.Core.PosSqrt
 public import QIT.Core.Pure
 public import QIT.Core.Map
 public import QIT.Core.Channel
 public import QIT.Core.Measurement
-public import QIT.Core.MeasurementMap
 public import QIT.Core.POVMProbability
-public import QIT.Core.ProjectiveMeasurement
-public import QIT.Core.MeasurementOverlap
-public import QIT.Core.SupportProjection
-public import QIT.Core.Order.Majorization
-public import QIT.Core.SDP.PSDCone
-public import QIT.Core.SDP.ConicDuality
-public import QIT.Core.SDP.StrongDuality
 public import QIT.Core.Components
 
 /-!

@@ -6,12 +6,12 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Core.Order.Majorization
+public import QIT.Util.Order.Majorization
 
 /-!
 # Compatibility import for finite majorization
 
-Finite real-vector majorization now lives at `QIT.Core.Order.Majorization`.
+Finite real-vector majorization now lives at `QIT.Util.Order.Majorization`.
 This module preserves the previous `QIT.Entanglement.Majorization` import path
 without owning reusable order-combinatorics declarations.
 -/

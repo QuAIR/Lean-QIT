@@ -6,8 +6,8 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Core.ClassicalBridge
-public import QIT.Core.TraceNorm.Distance
+public import QIT.Classical.Bridge
+public import QIT.States.TraceNorm.Distance
 public import Mathlib.Data.Fintype.Option
 
 /-!

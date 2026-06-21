@@ -8,8 +8,8 @@ module
 
 public import QIT.Core.State
 public import QIT.Core.Pure
-public import QIT.Core.TwoQubit
-public import QIT.Core.ProjectiveMeasurement
+public import QIT.Nonlocality.TwoQubit
+public import QIT.Measurements.Projective
 public import QIT.Core.POVMProbability
 
 /-!
@@ -17,7 +17,7 @@ public import QIT.Core.POVMProbability
 
 BB84 bit and basis registers for the prepare-and-measure protocol, following
 [Renner2005QkdSecurity, main.tex:677-702]. The qubit system is `Bool`, reusing
-the Pauli matrices from `QIT.Core.TwoQubit`.
+the Pauli matrices from `QIT.Nonlocality.TwoQubit`.
 -/
 
 @[expose] public section

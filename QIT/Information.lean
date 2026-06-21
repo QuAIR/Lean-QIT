@@ -6,6 +6,22 @@ Authors: QuAIR Team
 
 module
 
+public import QIT.Information.Entropy
+public import QIT.Information.Fidelity
+public import QIT.Information.Renyi
+public import QIT.Information.RenyiDPI
+public import QIT.Information.Holevo
+public import QIT.Information.HSW
+public import QIT.Information.ConditionalRenyi
+public import QIT.Information.CQGuessing
+public import QIT.Information.Smooth
+public import QIT.Information.Typicality
+public import QIT.Information.AEP
+public import QIT.Information.Decoupling
+public import QIT.Information.FuchsVdG
+public import QIT.Information.Recovery
+public import QIT.Information.DeFinetti
+public import QIT.Information.SymmetricSubspace
 public import QIT.Information.Basic
 public import QIT.Information.Asymptotic
 

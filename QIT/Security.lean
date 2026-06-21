@@ -7,9 +7,13 @@ Authors: QuAIR Team
 module
 
 public import QIT.Security.Key
+public import QIT.Security.KeyDistillation
 public import QIT.Security.Extractor
 public import QIT.Security.ExtractorAveraging
 public import QIT.Security.ExtractorAnalytic
+public import QIT.Security.ExtractorTraceBridge
+public import QIT.Security.ExtractorQuadraticBridge
+public import QIT.Security.RandomnessExtraction
 public import QIT.Security.BB84
 
 /-!

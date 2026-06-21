@@ -6,9 +6,12 @@ Authors: QuAIR Team
 
 module
 
+public import QIT.Measurements.Naimark
+public import QIT.Measurements.Projective
+public import QIT.Measurements.Support
 public import QIT.Core.Measurement
-public import QIT.Core.MeasurementMap
-public import QIT.Core.MeasurementOverlap
+public import QIT.Measurements.Map
+public import QIT.Measurements.Overlap
 public import QIT.Core.POVMProbability
 
 /-!
