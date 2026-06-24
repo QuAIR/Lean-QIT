@@ -25,7 +25,7 @@ open Matrix
 
 namespace QIT
 
-universe u
+universe u v
 
 noncomputable section
 
@@ -110,6 +110,40 @@ theorem state_matrix_conjTranspose :
 theorem state_matrix_isHermitian :
     ψ.state.matrix.IsHermitian :=
   state_matrix_conjTranspose ψ
+
+/-- Relabel a normalized pure vector along a finite basis equivalence. -/
+def reindex {β : Type v} [Fintype β] [DecidableEq β]
+    (e : a ≃ β) : PureVector β where
+  amp := fun j => ψ.amp (e.symm j)
+  trace_rankOne_eq_one := by
+    calc
+      (rankOneMatrix (fun j : β => ψ.amp (e.symm j))).trace =
+          ∑ j : β, ψ.amp (e.symm j) * star (ψ.amp (e.symm j)) := by
+            simp [Matrix.trace, rankOneMatrix_apply]
+      _ = ∑ i : a, ψ.amp i * star (ψ.amp i) := by
+            refine Fintype.sum_equiv e.symm
+              (fun j : β => ψ.amp (e.symm j) * star (ψ.amp (e.symm j)))
+              (fun i : a => ψ.amp i * star (ψ.amp i)) ?_
+            intro j
+            simp
+      _ = (rankOneMatrix ψ.amp).trace := by
+            simp [Matrix.trace, rankOneMatrix_apply]
+      _ = 1 := ψ.trace_rankOne_eq_one
+
+@[simp]
+theorem reindex_amp {β : Type v} [Fintype β] [DecidableEq β]
+    (e : a ≃ β) (j : β) :
+    (ψ.reindex e).amp j = ψ.amp (e.symm j) :=
+  rfl
+
+/-- Relabeling a pure vector and then forming its state agrees with relabeling
+the associated rank-one state. -/
+theorem reindex_state {β : Type v} [Fintype β] [DecidableEq β]
+    (e : a ≃ β) :
+    (ψ.reindex e).state = ψ.state.reindex e := by
+  apply State.ext
+  ext i j
+  simp [State.reindex, PureVector.state, rankOneMatrix_apply]
 
 /-- The density matrix of a normalized pure vector is idempotent. -/
 @[simp]

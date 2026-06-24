@@ -55,6 +55,18 @@ theorem partialTraceA_state_matrix_eq_of_purifies
     partialTraceA (a := r) (b := a) Ψ.state.matrix = ρ.matrix :=
   h
 
+/-- Swapping the two registers of a pure state makes it a purification of the
+original first marginal.  This adapter converts the channel-input-first
+convention used by finite diamond-distance statements into the local
+purification convention where the purified target is the second product
+factor. -/
+theorem reindex_prodComm_purifies_marginalA (Ψ : PureVector (Prod r a)) :
+    (Ψ.reindex (Equiv.prodComm r a)).Purifies Ψ.state.marginalA := by
+  rw [purifies_iff]
+  ext i j
+  simp [PureVector.reindex_state, State.reindex, State.marginalA, partialTraceA,
+    partialTraceB, PureVector.state_matrix, rankOneMatrix_apply]
+
 end PureVector
 
 end

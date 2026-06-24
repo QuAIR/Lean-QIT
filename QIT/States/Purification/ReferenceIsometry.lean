@@ -60,15 +60,39 @@ def targetBlock (X : CMatrix (Prod r₁ a)) (x y : a) : CMatrix r₁ :=
 def applyMatrix (X : CMatrix (Prod r₁ a)) : CMatrix (Prod r₂ a) :=
   fun x y => (V.matrix * targetBlock X x.2 y.2 * Matrix.conjTranspose V.matrix) x.1 y.1
 
+/-- The reference-indexed block of a bipartite matrix when the reference
+register is the right product factor. -/
+def rightBlock (X : CMatrix (Prod a r₁)) (x y : a) : CMatrix r₁ :=
+  fun i j => X (x, i) (y, j)
+
+/-- Apply a reference isometry to the right factor of a bipartite matrix.  This
+is the input-first counterpart to `applyMatrix`, useful when a channel acts on
+the left/input factor and the purifying reference is on the right. -/
+def applyMatrixRight (X : CMatrix (Prod a r₁)) : CMatrix (Prod a r₂) :=
+  fun x y => (V.matrix * rightBlock X x.1 y.1 * Matrix.conjTranspose V.matrix) x.2 y.2
+
 /-- Apply a reference isometry to the reference side of a bipartite amplitude. -/
 def applyAmp (ψ : Prod r₁ a -> Complex) : Prod r₂ a -> Complex :=
   fun x => V.matrix.mulVec (fun i : r₁ => ψ (i, x.2)) x.1
+
+/-- Apply a reference isometry to the right factor of a bipartite amplitude. -/
+def applyAmpRight (ψ : Prod a r₁ -> Complex) : Prod a r₂ -> Complex :=
+  fun x => V.matrix.mulVec (fun i : r₁ => ψ (x.1, i)) x.2
 
 /-- Applying a reference isometry to amplitudes matches conjugating the rank-one matrix. -/
 theorem rankOne_applyAmp (ψ : Prod r₁ a -> Complex) :
     rankOneMatrix (V.applyAmp ψ) = V.applyMatrix (rankOneMatrix ψ) := by
   ext x y
   simp [rankOneMatrix, applyAmp, applyMatrix, targetBlock, Matrix.mul_apply,
+    Matrix.mulVec, dotProduct, Matrix.vecMulVec_apply, Finset.sum_mul,
+    Finset.mul_sum, mul_assoc, mul_left_comm, mul_comm]
+
+/-- Applying a right-reference isometry to amplitudes matches conjugating the
+right reference blocks of the rank-one matrix. -/
+theorem rankOne_applyAmpRight (ψ : Prod a r₁ -> Complex) :
+    rankOneMatrix (V.applyAmpRight ψ) = V.applyMatrixRight (rankOneMatrix ψ) := by
+  ext x y
+  simp [rankOneMatrix, applyAmpRight, applyMatrixRight, rightBlock, Matrix.mul_apply,
     Matrix.mulVec, dotProduct, Matrix.vecMulVec_apply, Finset.sum_mul,
     Finset.mul_sum, mul_assoc, mul_left_comm, mul_comm]
 
@@ -84,6 +108,13 @@ theorem partialTraceA_applyMatrix (X : CMatrix (Prod r₁ a)) :
   ext x y
   exact V.trace_apply_block (targetBlock X x y)
 
+/-- Applying a right-reference isometry does not change the left/input marginal. -/
+theorem partialTraceB_applyMatrixRight [Fintype a] (X : CMatrix (Prod a r₁)) :
+    partialTraceB (a := a) (b := r₂) (V.applyMatrixRight X) =
+      partialTraceB (a := a) (b := r₁) X := by
+  ext x y
+  exact V.trace_apply_block (rightBlock X x y)
+
 /-- Apply a reference isometry to a bipartite pure vector. -/
 def applyPureVector [Fintype a] [DecidableEq a] (Ψ : PureVector (Prod r₁ a)) :
     PureVector (Prod r₂ a) where
@@ -97,6 +128,32 @@ def applyPureVector [Fintype a] [DecidableEq a] (Ψ : PureVector (Prod r₁ a)) 
 theorem applyPureVector_amp [Fintype a] [DecidableEq a] (Ψ : PureVector (Prod r₁ a)) :
     (V.applyPureVector Ψ).amp = V.applyAmp Ψ.amp :=
   rfl
+
+/-- Apply a reference isometry to the right factor of a bipartite pure vector. -/
+def applyPureVectorRight [Fintype a] [DecidableEq a] (Ψ : PureVector (Prod a r₁)) :
+    PureVector (Prod a r₂) :=
+  (V.applyPureVector (Ψ.reindex (Equiv.prodComm a r₁))).reindex (Equiv.prodComm r₂ a)
+
+/-- The amplitude of `applyPureVectorRight` unfolds to `applyAmpRight`. -/
+theorem applyPureVectorRight_amp [Fintype a] [DecidableEq a] (Ψ : PureVector (Prod a r₁)) :
+    (V.applyPureVectorRight Ψ).amp = V.applyAmpRight Ψ.amp :=
+  rfl
+
+/-- Right-reference pure-vector action matches `applyMatrixRight` on states. -/
+theorem rankOne_applyPureVectorRight [Fintype a] [DecidableEq a]
+    (Ψ : PureVector (Prod a r₁)) :
+    (V.applyPureVectorRight Ψ).state.matrix = V.applyMatrixRight Ψ.state.matrix := by
+  rw [PureVector.state_matrix, PureVector.state_matrix]
+  exact V.rankOne_applyAmpRight Ψ.amp
+
+/-- A right-reference isometry preserves the input marginal of a pure state. -/
+theorem marginalA_applyPureVectorRight [Fintype a] [DecidableEq a]
+    (Ψ : PureVector (Prod a r₁)) :
+    (V.applyPureVectorRight Ψ).state.marginalA = Ψ.state.marginalA := by
+  apply State.ext
+  rw [State.marginalA_matrix, State.marginalA_matrix]
+  rw [V.rankOne_applyPureVectorRight]
+  exact V.partialTraceB_applyMatrixRight Ψ.state.matrix
 
 /-- A reference isometry preserves the target state purified by a pure vector. -/
 theorem applyPureVector_purifies [Fintype a] [DecidableEq a]

@@ -9,6 +9,8 @@ module
 public import QIT.Core.State
 public import QIT.Core.Pure
 public import QIT.States.PosSqrt
+public import QIT.States.Schatten
+public import QIT.States.Subnormalized
 public import QIT.States.Purification.Canonical
 public import QIT.States.Purification.Equivalence
 public import QIT.States.Purification.Gram

@@ -23,10 +23,10 @@ Source: Boyd–Vandenberghe, *Convex Optimization*, §5.9.
 
 namespace QIT.SDP
 
-universe u
+universe u v
 
 /-- A conic linear program: maximize `⟨c, x⟩` subject to `A x = b`, `x ∈ K`. -/
-structure ConeProgram (E F : Type u) [AddCommGroup E] [Module ℝ E] [TopologicalSpace E]
+structure ConeProgram (E : Type u) (F : Type v) [AddCommGroup E] [Module ℝ E] [TopologicalSpace E]
     [AddCommGroup F] [Module ℝ F] [TopologicalSpace F] where
   K : ProperCone ℝ E
   A : E →ₗ[ℝ] F
@@ -35,7 +35,7 @@ structure ConeProgram (E F : Type u) [AddCommGroup E] [Module ℝ E] [Topologica
 
 namespace ConeProgram
 
-variable {E F : Type u} [AddCommGroup E] [Module ℝ E] [TopologicalSpace E]
+variable {E : Type u} {F : Type v} [AddCommGroup E] [Module ℝ E] [TopologicalSpace E]
 variable [AddCommGroup F] [Module ℝ F] [TopologicalSpace F]
 variable (P : ConeProgram E F)
 

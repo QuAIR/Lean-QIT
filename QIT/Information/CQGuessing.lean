@@ -7,6 +7,11 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Smooth
+public import QIT.Core.SDP.HermitianPSDTraceDuality
+public import QIT.Core.SDP.StrongDuality
+public import Mathlib.Analysis.CStarAlgebra.Matrix
+public import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Order
+public import Mathlib.Topology.MetricSpace.Sequences
 
 /-!
 # CQ guessing probability and conditional min-entropy dual program
@@ -20,6 +25,10 @@ characterization from [Tomamichel2015FiniteResources, calculus.tex:81-89] and
 @[expose] public section
 
 open scoped ComplexOrder MatrixOrder NNReal
+open scoped Topology
+open scoped Matrix.Norms.L2Operator
+open Set
+open Filter
 
 namespace QIT
 
@@ -31,6 +40,16 @@ namespace Ensemble
 
 variable {ι : Type u} {b : Type v}
 variable [Fintype ι] [DecidableEq ι] [Fintype b] [DecidableEq b]
+
+local instance cMatrixNormedSpaceReal : NormedSpace ℝ (CMatrix b) :=
+  inferInstance
+
+noncomputable local instance cMatrixCStarAlgebra : CStarAlgebra (CMatrix b) := {}
+
+attribute [local instance 1001] NormedAddCommGroup.toAddCommGroup
+  AddCommGroup.toAddCommMonoid NormedSpace.toModule
+attribute [local instance 1001] PseudoMetricSpace.toUniformSpace
+  UniformSpace.toTopologicalSpace
 
 /-! ## Primal and dual optimization surfaces -/
 
@@ -128,6 +147,457 @@ omit [DecidableEq ι] in
 theorem cqDualOptimalValue_eq (E : Ensemble ι b) :
     E.cqDualOptimalValue = sInf E.cqDualValueSet :=
   rfl
+
+/-- A normalized finite ensemble has at least one classical label. -/
+theorem index_nonempty (E : Ensemble ι b) : Nonempty ι := by
+  by_contra hne
+  haveI : IsEmpty ι := not_nonempty_iff.mp hne
+  have hsum : (∑ i, E.probs i) = 0 := by simp
+  have hzero : (0 : ℝ≥0) = 1 := by
+    simpa [hsum] using E.weights_sum
+  exact zero_ne_one hzero
+
+/-! ## cq SDP embedding -/
+
+/-- Raw families of cq guessing effects, before imposing positivity and the
+POVM normalization constraint.  This wrapper avoids instance diamonds between
+plain Pi-space and normed Pi-space instances when instantiating conic duality. -/
+structure CQEffectFamily (ι : Type u) (b : Type v) [Fintype b] [DecidableEq b] where
+  val : ι → CMatrix b
+
+namespace CQEffectFamily
+
+instance : CoeFun (CQEffectFamily ι b) (fun _ => ι → CMatrix b) :=
+  ⟨CQEffectFamily.val⟩
+
+@[ext]
+theorem ext {M N : CQEffectFamily ι b} (h : ∀ x, M x = N x) : M = N := by
+  cases M with
+  | mk M =>
+  cases N with
+  | mk N =>
+  simp only at h
+  congr
+  exact funext h
+
+instance : Zero (CQEffectFamily ι b) := ⟨⟨0⟩⟩
+
+instance : Add (CQEffectFamily ι b) :=
+  ⟨fun M N => ⟨fun x => M x + N x⟩⟩
+
+instance : Neg (CQEffectFamily ι b) :=
+  ⟨fun M => ⟨fun x => -M x⟩⟩
+
+instance : Sub (CQEffectFamily ι b) :=
+  ⟨fun M N => ⟨fun x => M x - N x⟩⟩
+
+instance : SMul ℕ (CQEffectFamily ι b) :=
+  ⟨fun k M => ⟨fun x => k • M x⟩⟩
+
+instance : SMul ℤ (CQEffectFamily ι b) :=
+  ⟨fun k M => ⟨fun x => k • M x⟩⟩
+
+instance : SMul ℝ (CQEffectFamily ι b) :=
+  ⟨fun c M => ⟨fun x => c • M x⟩⟩
+
+instance : SMul NNReal (CQEffectFamily ι b) :=
+  ⟨fun c M => ⟨fun x => c • M x⟩⟩
+
+@[simp]
+theorem val_zero : (0 : CQEffectFamily ι b).val = 0 := rfl
+
+@[simp]
+theorem val_add (M N : CQEffectFamily ι b) : (M + N).val = M.val + N.val := rfl
+
+@[simp]
+theorem val_neg (M : CQEffectFamily ι b) : (-M).val = -M.val := rfl
+
+@[simp]
+theorem val_sub (M N : CQEffectFamily ι b) : (M - N).val = M.val - N.val := rfl
+
+@[simp]
+theorem val_nsmul (k : ℕ) (M : CQEffectFamily ι b) : (k • M).val = k • M.val := rfl
+
+@[simp]
+theorem val_zsmul (k : ℤ) (M : CQEffectFamily ι b) : (k • M).val = k • M.val := rfl
+
+@[simp]
+theorem val_smul (c : ℝ) (M : CQEffectFamily ι b) : (c • M).val = c • M.val := rfl
+
+@[simp]
+theorem val_nnreal_smul (c : ℝ≥0) (M : CQEffectFamily ι b) :
+    (c • M).val = c • M.val := rfl
+
+@[simp]
+theorem val_zero_apply (x : ι) : (0 : CQEffectFamily ι b) x = 0 := rfl
+
+@[simp]
+theorem val_add_apply (M N : CQEffectFamily ι b) (x : ι) : (M + N) x = M x + N x := rfl
+
+@[simp]
+theorem val_neg_apply (M : CQEffectFamily ι b) (x : ι) : (-M) x = -M x := rfl
+
+@[simp]
+theorem val_sub_apply (M N : CQEffectFamily ι b) (x : ι) : (M - N) x = M x - N x := rfl
+
+@[simp]
+theorem val_nsmul_apply (k : ℕ) (M : CQEffectFamily ι b) (x : ι) :
+    (k • M) x = k • M x := rfl
+
+@[simp]
+theorem val_zsmul_apply (k : ℤ) (M : CQEffectFamily ι b) (x : ι) :
+    (k • M) x = k • M x := rfl
+
+@[simp]
+theorem val_smul_apply (c : ℝ) (M : CQEffectFamily ι b) (x : ι) :
+    (c • M) x = c • M x := rfl
+
+@[simp]
+theorem val_nnreal_smul_apply (c : ℝ≥0) (M : CQEffectFamily ι b) (x : ι) :
+    (c • M) x = c • M x := rfl
+
+theorem val_injective : Function.Injective (fun M : CQEffectFamily ι b => M.val) :=
+  fun _ _ h => ext (congrFun h)
+
+instance (priority := 50) : AddCommGroup (CQEffectFamily ι b) :=
+  Function.Injective.addCommGroup (fun M : CQEffectFamily ι b => M.val) val_injective
+    val_zero val_add val_neg val_sub (fun M k => val_nsmul k M) (fun M k => val_zsmul k M)
+
+def toPiAddMonoidHom : CQEffectFamily ι b →+ (ι → CMatrix b) where
+  toFun M := M.val
+  map_zero' := rfl
+  map_add' _ _ := rfl
+
+instance (priority := 50) : Module ℝ (CQEffectFamily ι b) :=
+  Function.Injective.module ℝ (toPiAddMonoidHom : CQEffectFamily ι b →+ (ι → CMatrix b))
+    val_injective
+    (by intro _ _; rfl)
+
+def toPiLinear : CQEffectFamily ι b →ₗ[ℝ] (ι → CMatrix b) where
+  toFun M := M.val
+  map_add' _ _ := rfl
+  map_smul' c M := by
+    ext x
+    simp
+
+theorem toPiLinear_injective :
+    Function.Injective (toPiLinear : CQEffectFamily ι b →ₗ[ℝ] (ι → CMatrix b)) :=
+  val_injective
+
+local instance piCMatrixNormedAddCommGroup : NormedAddCommGroup (ι → CMatrix b) :=
+  Pi.normedAddCommGroup
+
+local instance piCMatrixNormedSpaceReal : NormedSpace ℝ (ι → CMatrix b) :=
+  Pi.normedSpace
+
+noncomputable instance instNormedAddCommGroup : NormedAddCommGroup (CQEffectFamily ι b) :=
+  { NormedAddCommGroup.induced (CQEffectFamily ι b) (ι → CMatrix b)
+      (toPiAddMonoidHom : CQEffectFamily ι b →+ (ι → CMatrix b)) val_injective with
+    toAddCommGroup := inferInstance }
+
+noncomputable instance instNormedSpaceReal : NormedSpace ℝ (CQEffectFamily ι b) :=
+  { NormedSpace.induced ℝ (CQEffectFamily ι b) (ι → CMatrix b)
+      (toPiLinear : CQEffectFamily ι b →ₗ[ℝ] (ι → CMatrix b)) with
+    toModule := inferInstance }
+
+noncomputable instance instFiniteDimensionalReal : FiniteDimensional ℝ (CQEffectFamily ι b) :=
+  FiniteDimensional.of_injective
+    (toPiLinear : CQEffectFamily ι b →ₗ[ℝ] (ι → CMatrix b)) toPiLinear_injective
+
+noncomputable def toPiCLM : CQEffectFamily ι b →L[ℝ] (ι → CMatrix b) :=
+  LinearMap.toContinuousLinearMap
+    (toPiLinear : CQEffectFamily ι b →ₗ[ℝ] (ι → CMatrix b))
+
+noncomputable def evalCLM (x : ι) : CQEffectFamily ι b →L[ℝ] CMatrix b :=
+  LinearMap.toContinuousLinearMap
+    ({ toFun := fun M => M x
+       map_add' := by
+        intro M N
+        rfl
+       map_smul' c M := by
+        simp } :
+      CQEffectFamily ι b →ₗ[ℝ] CMatrix b)
+
+@[simp]
+theorem evalCLM_apply (x : ι) (M : CQEffectFamily ι b) :
+    evalCLM x M = M x :=
+  by
+    simp [evalCLM]
+
+/-- The raw effect family supported at one classical label. -/
+def single (x : ι) (A : CMatrix b) : CQEffectFamily ι b :=
+  ⟨fun y => if y = x then A else 0⟩
+
+@[simp]
+theorem single_apply_same (x : ι) (A : CMatrix b) :
+    single (ι := ι) (b := b) x A x = A := by
+  simp [single]
+
+@[simp]
+theorem single_apply_ne {x y : ι} (h : y ≠ x) (A : CMatrix b) :
+    single (ι := ι) (b := b) x A y = 0 := by
+  simp [single, h]
+
+@[simp]
+theorem sum_single (x : ι) (A : CMatrix b) :
+    (∑ y, single (ι := ι) (b := b) x A y) = A := by
+  classical
+  rw [Finset.sum_eq_single x]
+  · simp
+  · intro y _ hy
+    simp [single, hy]
+  · intro hx
+    simp at hx
+
+end CQEffectFamily
+
+private noncomputable def cMatrixEntryCLM (i j : b) : CMatrix b →L[ℝ] ℂ :=
+  LinearMap.toContinuousLinearMap
+    ({ toFun := fun A => A i j
+       map_add' := by
+        intro A B
+        rfl
+       map_smul' := by
+        intro c A
+        simp [Matrix.smul_apply] } :
+      CMatrix b →ₗ[ℝ] ℂ)
+
+private noncomputable def cMatrixConjTransposeCLM : CMatrix b →L[ℝ] CMatrix b :=
+  LinearMap.toContinuousLinearMap
+    ({ toFun := fun A => Matrix.conjTranspose A
+       map_add' := by
+        intro A B
+        rw [Matrix.conjTranspose_add]
+       map_smul' := by
+        intro c A
+        rw [Matrix.conjTranspose_smul]
+        simp } :
+      CMatrix b →ₗ[ℝ] CMatrix b)
+
+private noncomputable def hermitianInclusionNormed : HermitianMatrix b →L[ℝ] CMatrix b :=
+  LinearMap.toContinuousLinearMap
+    (HermitianMatrix.toCMatrixLinear : HermitianMatrix b →ₗ[ℝ] CMatrix b)
+
+private theorem isClosed_setOf_zero_le_complex' : IsClosed ({z : ℂ | 0 ≤ z} : Set ℂ) := by
+  have h : ({z : ℂ | 0 ≤ z} : Set ℂ) = {z | 0 ≤ z.re} ∩ {z | z.im = 0} := by
+    ext z
+    simp only [Set.mem_inter_iff, Set.mem_setOf_eq]
+    constructor
+    · intro hz
+      simp [Complex.le_def] at hz ⊢
+      tauto
+    · rintro ⟨hre, him⟩
+      simp [Complex.le_def]
+      exact ⟨hre, him.symm⟩
+  rw [h]
+  exact (isClosed_Ici.preimage Complex.continuous_re).inter
+    (isClosed_singleton.preimage Complex.continuous_im)
+
+private theorem continuous_quadraticForm_normed (x : b →₀ ℂ) :
+    Continuous (fun A : CMatrix b =>
+      (x.sum fun i xi => x.sum fun j xj => star xi * A i j * xj)) := by
+  classical
+  simp only [Finsupp.sum, Finsupp.sum]
+  exact continuous_finsetSum x.support fun i _ =>
+    continuous_finsetSum x.support fun j _ =>
+      Continuous.mul (Continuous.mul continuous_const (cMatrixEntryCLM (b := b) i j).continuous)
+        continuous_const
+
+private theorem isClosed_cMatrix_posSemidef_normed :
+    IsClosed ({A : CMatrix b | A.PosSemidef} : Set (CMatrix b)) := by
+  classical
+  have h : ({A : CMatrix b | A.PosSemidef} : Set (CMatrix b)) =
+      ({A | A.IsHermitian} ∩
+        (⋂ x : b →₀ ℂ,
+          {A : CMatrix b | 0 ≤ x.sum fun i xi => x.sum fun j xj => star xi * A i j * xj})) := by
+    ext A
+    simp [Matrix.PosSemidef, Set.mem_iInter]
+  rw [h]
+  refine IsClosed.inter ?herm ?quad
+  · have hH : ({A : CMatrix b | A.IsHermitian} : Set (CMatrix b)) =
+        {A | Matrix.conjTranspose A = A} := by
+      ext A
+      simp [Matrix.IsHermitian]
+    rw [hH]
+    exact isClosed_eq (cMatrixConjTransposeCLM (b := b)).continuous continuous_id
+  · exact isClosed_iInter fun x =>
+      isClosed_setOf_zero_le_complex'.preimage (continuous_quadraticForm_normed (b := b) x)
+
+set_option maxHeartbeats 800000 in
+private theorem cMatrix_norm_le_norm_of_posSemidef_le {A B : CMatrix b}
+    (hA : A.PosSemidef) (hAB : A ≤ B) :
+    ‖A‖ ≤ ‖B‖ := by
+  have hA0 : (0 : CMatrix b) ≤ A := by
+    simpa [Matrix.le_iff] using hA
+  exact CStarAlgebra.norm_le_norm_of_nonneg_of_le
+    (A := CMatrix b) (a := A) (b := B) hA0 hAB
+
+/-- The product PSD cone for finite cq effect families. -/
+def cqEffectFamilySubmodule : Submodule NNReal (CQEffectFamily ι b) where
+  carrier := {M | ∀ x, (M x).PosSemidef}
+  zero_mem' := fun _ => Matrix.PosSemidef.zero
+  add_mem' := by
+    intro M N hM hN x
+    exact (hM x).add (hN x)
+  smul_mem' := by
+    intro c M hM x
+    rw [CQEffectFamily.val_nnreal_smul_apply]
+    rw [NNReal.smul_def]
+    exact (hM x).smul (NNReal.coe_nonneg c)
+
+/-- The product PSD cone for finite cq effect families as a closed proper cone. -/
+def cqEffectFamilyCone : ProperCone ℝ (CQEffectFamily ι b) :=
+  { cqEffectFamilySubmodule (ι := ι) (b := b) with
+    isClosed' := by
+      classical
+      have h :
+          ({M : CQEffectFamily ι b | ∀ x, (M x).PosSemidef} :
+              Set (CQEffectFamily ι b)) =
+            ⋂ x, {M : CQEffectFamily ι b | (M x).PosSemidef} := by
+        ext M
+        simp
+      change IsClosed ({M : CQEffectFamily ι b | ∀ x, (M x).PosSemidef})
+      rw [h]
+      exact isClosed_iInter fun x =>
+        by
+          simpa [CQEffectFamily.evalCLM] using
+            (isClosed_cMatrix_posSemidef_normed (b := b)).preimage
+              ((CQEffectFamily.evalCLM (ι := ι) (b := b) x).continuous) }
+
+theorem cqEffectFamilyCone_mem (M : CQEffectFamily ι b) :
+    M ∈ cqEffectFamilyCone (ι := ι) (b := b) ↔ ∀ x, (M x).PosSemidef :=
+  Iff.rfl
+
+theorem CQEffectFamily.single_mem_cone {x : ι} {A : CMatrix b} (hA : A.PosSemidef) :
+    CQEffectFamily.single (ι := ι) (b := b) x A ∈ cqEffectFamilyCone (ι := ι) (b := b) := by
+  intro y
+  by_cases hy : y = x
+  · subst hy
+    simp [CQEffectFamily.single, hA]
+  · simp [CQEffectFamily.single, hy, Matrix.PosSemidef.zero]
+
+/-- The effect-family equality-constraint map `M ↦ ∑ x, M_x`. -/
+noncomputable def cqEffectFamilySumCLM :
+    CQEffectFamily ι b →L[ℝ] CMatrix b :=
+  LinearMap.toContinuousLinearMap
+    ({ toFun := fun M => ∑ x, M x
+       map_add' := by
+        intro M N
+        ext i j
+        simp [Finset.sum_add_distrib]
+       map_smul' := by
+        intro c M
+        change (∑ x, (c • M).val x) = c • ∑ x, M.val x
+        rw [CQEffectFamily.val_smul]
+        exact (Finset.smul_sum.symm : (∑ x, c • M.val x) = c • ∑ x, M.val x) } :
+      CQEffectFamily ι b →ₗ[ℝ] CMatrix b)
+
+/-- Real trace pairing against a fixed ambient complex matrix. -/
+noncomputable def cMatrixTracePairingCLM (T : CMatrix b) :
+    CMatrix b →L[ℝ] ℝ :=
+  Complex.reCLM.comp
+    (LinearMap.toContinuousLinearMap
+      ({ toFun := fun A => (T * A).trace
+         map_add' := by
+          intro A B
+          simp [Matrix.mul_add, Matrix.trace_add]
+         map_smul' := by
+          intro c A
+          simp [Matrix.trace_smul, Complex.real_smul] } :
+        CMatrix b →ₗ[ℝ] ℂ))
+
+@[simp]
+theorem cMatrixTracePairingCLM_apply (T A : CMatrix b) :
+    cMatrixTracePairingCLM T A = ((T * A).trace).re :=
+  rfl
+
+/-- The trace-form cq primal objective as a continuous real-linear map on raw
+effect families. -/
+noncomputable def cqPrimalObjectiveCLM (E : Ensemble ι b) :
+    CQEffectFamily ι b →L[ℝ] ℝ :=
+  LinearMap.toContinuousLinearMap
+    ({ toFun := fun M => ∑ x, ((E.cqBlock x * M x).trace).re
+       map_add' := by
+        intro M N
+        simp [Matrix.mul_add, Matrix.trace_add, Finset.sum_add_distrib]
+       map_smul' := by
+        intro c M
+        simp [Matrix.trace_smul, Complex.real_smul, Finset.mul_sum] } :
+      CQEffectFamily ι b →ₗ[ℝ] ℝ)
+
+@[simp]
+theorem cqPrimalObjectiveCLM_apply (E : Ensemble ι b) (M : CQEffectFamily ι b) :
+    cqPrimalObjectiveCLM E M = ∑ x, ((E.cqBlock x * M x).trace).re :=
+  by
+    simp [cqPrimalObjectiveCLM]
+
+/-- The finite-dimensional cq guessing primal SDP:
+maximize the trace-form score over PSD effects summing to the identity. -/
+noncomputable def cqPrimalProgram (E : Ensemble ι b) :
+    QIT.SDP.ContinuousConeProgram (CQEffectFamily ι b) (CMatrix b) where
+  K := cqEffectFamilyCone (ι := ι) (b := b)
+  A := cqEffectFamilySumCLM (ι := ι) (b := b)
+  b := 1
+  c := cqPrimalObjectiveCLM E
+
+/-- The conic primal value set is exactly the cq guessing value set. -/
+theorem cqPrimalProgram_primalValueSet_eq (E : Ensemble ι b) :
+    (cqPrimalProgram E).primalValueSet = E.cqPrimalValueSet := by
+  classical
+  ext value
+  constructor
+  · rintro ⟨M, hM, rfl⟩
+    let povm : POVM ι b :=
+      { effects := M.val
+        pos := by
+          intro x
+          exact hM.1 x
+        sum_eq_one := by
+          simpa [cqPrimalProgram, cqEffectFamilySumCLM] using hM.2 }
+    refine ⟨povm, ?_⟩
+    rw [cqPrimalValue_eq_traceValue]
+    simp [QIT.SDP.ContinuousConeProgram.primalValue, cqPrimalProgram,
+      cqPrimalObjectiveCLM, cqPrimalTraceValue, povm]
+  · rintro ⟨povm, rfl⟩
+    let M : CQEffectFamily ι b := ⟨povm.effects⟩
+    refine ⟨M, ?_, ?_⟩
+    · constructor
+      · intro x
+        exact povm.pos x
+      · simpa [cqPrimalProgram, cqEffectFamilySumCLM, M] using povm.sum_eq_one
+    · rw [cqPrimalValue_eq_traceValue]
+      simp [QIT.SDP.ContinuousConeProgram.primalValue, cqPrimalProgram,
+        cqPrimalObjectiveCLM, cqPrimalTraceValue, M]
+
+/-- Weighted cq blocks are positive semidefinite. -/
+theorem cqBlock_posSemidef (E : Ensemble ι b) (x : ι) :
+    (E.cqBlock x).PosSemidef := by
+  rw [cqBlock]
+  have hx : (0 : ℂ) ≤ (E.probs x : ℂ) := by
+    rw [Complex.zero_le_real]
+    exact NNReal.coe_nonneg (E.probs x)
+  exact (E.states x).pos.smul hx
+
+/-- The probability weights of an ensemble define a valid trivial POVM. -/
+noncomputable def probabilityPOVM (E : Ensemble ι b) : POVM ι b where
+  effects := fun x => (E.probs x : ℂ) • (1 : CMatrix b)
+  pos := by
+    intro x
+    have hx : (0 : ℂ) ≤ (E.probs x : ℂ) := by
+      rw [Complex.zero_le_real]
+      exact NNReal.coe_nonneg (E.probs x)
+    exact Matrix.PosSemidef.one.smul hx
+  sum_eq_one := by
+    classical
+    have hsum : (∑ x, (E.probs x : ℂ)) = 1 := by
+      exact_mod_cast E.weights_sum
+    calc
+      (∑ x, (E.probs x : ℂ) • (1 : CMatrix b)) =
+          (∑ x, (E.probs x : ℂ)) • (1 : CMatrix b) := by
+            rw [Finset.sum_smul]
+      _ = (1 : ℂ) • (1 : CMatrix b) := by
+            rw [hsum]
+      _ = 1 := by simp
 
 private theorem trace_mul_posSemidef_re_nonneg {A B : CMatrix b}
     (hA : A.PosSemidef) (hB : B.PosSemidef) :
@@ -254,6 +724,254 @@ theorem cqPrimalValue_le_dualValue (E : Ensemble ι b) (M : POVM ι b) {T : CMat
     _ = E.cqDualValue T := by
       rw [M.sum_eq_one]
       simp [cqDualValue]
+
+/-- A matrix-feasible cq dual point induces a feasible conic dual functional. -/
+theorem cqPrimalProgram_dualFeasible_of_cqDualFeasible
+    (E : Ensemble ι b) {T : CMatrix b} (hT : E.cqDualFeasible T) :
+    (cqPrimalProgram E).IsDualFeasible (cMatrixTracePairingCLM T) := by
+  classical
+  intro M hM
+  calc
+    (cqPrimalProgram E).primalValue M =
+        ∑ x, ((E.cqBlock x * M x).trace).re := by
+          simp [QIT.SDP.ContinuousConeProgram.primalValue, cqPrimalProgram,
+            cqPrimalObjectiveCLM]
+    _ ≤ ∑ x, ((T * M x).trace).re := by
+      refine Finset.sum_le_sum fun x _ => ?_
+      have hdiff : (T - E.cqBlock x).PosSemidef := by
+        simpa [Matrix.le_iff] using hT.2 x
+      have hnonneg := cMatrix_trace_mul_posSemidef_re_nonneg hdiff (hM x)
+      have htrace :
+          (((T - E.cqBlock x) * M x).trace).re =
+            ((T * M x).trace).re - ((E.cqBlock x * M x).trace).re := by
+        simp [Matrix.sub_mul, Matrix.trace_sub]
+      linarith
+    _ = ((T * (∑ x, M x)).trace).re := by
+      rw [← Complex.re_sum]
+      congr 1
+      calc
+        (∑ x, (T * M x).trace) = (∑ x, T * M x).trace := by
+          rw [Matrix.trace_sum]
+        _ = (T * (∑ x, M x)).trace := by
+          congr 1
+          simpa using (Matrix.mul_sum Finset.univ (fun x => M x) T).symm
+    _ = cMatrixTracePairingCLM T ((cqPrimalProgram E).A M) := by
+      rw [cMatrixTracePairingCLM_apply]
+      have hA : (cqPrimalProgram E).A M = ∑ x, M x := by
+        simp [cqPrimalProgram, cqEffectFamilySumCLM]
+      rw [hA]
+
+/-- Matrix dual values are conic dual values. -/
+theorem cqDualValueSet_subset_cqPrimalProgram_dualValueSet (E : Ensemble ι b) :
+    E.cqDualValueSet ⊆ (cqPrimalProgram E).dualValueSet := by
+  rintro value ⟨T, hT, rfl⟩
+  refine ⟨cMatrixTracePairingCLM T, cqPrimalProgram_dualFeasible_of_cqDualFeasible E hT, ?_⟩
+  simp [QIT.SDP.ContinuousConeProgram.dualValue, cqPrimalProgram, cqDualValue,
+    cMatrixTracePairingCLM]
+
+/-- Testing a conic dual functional on a single label gives the pointwise
+matrix-pairing lower bound. -/
+theorem cqPrimalProgram_dualFeasible_single_le
+    (E : Ensemble ι b) {y : CMatrix b →L[ℝ] ℝ}
+    (hy : (cqPrimalProgram E).IsDualFeasible y) (x : ι)
+    {A : CMatrix b} (hA : A.PosSemidef) :
+    ((E.cqBlock x * A).trace).re ≤ y A := by
+  have h := hy (CQEffectFamily.single (ι := ι) (b := b) x A)
+    (CQEffectFamily.single_mem_cone (ι := ι) (b := b) hA)
+  have hobj :
+      (cqPrimalProgram E).primalValue (CQEffectFamily.single (ι := ι) (b := b) x A) =
+        ((E.cqBlock x * A).trace).re := by
+    simp only [QIT.SDP.ContinuousConeProgram.primalValue, cqPrimalProgram,
+      cqPrimalObjectiveCLM_apply]
+    rw [Finset.sum_eq_single x]
+    · simp
+    · intro y hy_ne hx_ne
+      simp [CQEffectFamily.single, hx_ne]
+    · intro hx_not_mem
+      simp at hx_not_mem
+  have hmap :
+      (cqPrimalProgram E).A (CQEffectFamily.single (ι := ι) (b := b) x A) = A := by
+    simp [cqPrimalProgram, cqEffectFamilySumCLM, CQEffectFamily.sum_single]
+  simpa [hobj, hmap] using h
+
+/-- Conic dual values are represented by matrix-order cq dual feasible points. -/
+theorem cqPrimalProgram_dualValueSet_subset_cqDualValueSet (E : Ensemble ι b) :
+    (cqPrimalProgram E).dualValueSet ⊆ E.cqDualValueSet := by
+  classical
+  letI : Nonempty ι := E.index_nonempty
+  rintro value ⟨y, hy, rfl⟩
+  let yH : HermitianDual b :=
+    y.comp (hermitianInclusionNormed (b := b))
+  rcases exists_hermitian_tracePairing_representation (n := b) yH with ⟨T, hTrep⟩
+  have hrep_psd (A : CMatrix b) (hA : A.PosSemidef) :
+      y A = ((T.val * A).trace).re := by
+    let X : HermitianMatrix b := ⟨A, hA.1⟩
+    have h := hTrep X
+    simpa [yH, X, tracePairing] using h
+  refine ⟨T.val, ?_, ?_⟩
+  · constructor
+    · refine (cMatrix_posSemidef_iff_trace_mul_posSemidef_re_nonneg T.isHermitian).2 ?_
+      intro A hA
+      let x0 : ι := Classical.choice (inferInstance : Nonempty ι)
+      have hsingle := cqPrimalProgram_dualFeasible_single_le E hy x0 hA
+      have hblock_nonneg :=
+        cMatrix_trace_mul_posSemidef_re_nonneg (cqBlock_posSemidef E x0) hA
+      have hrep := hrep_psd A hA
+      linarith
+    · intro x
+      rw [Matrix.le_iff]
+      have hHerm : (T.val - E.cqBlock x).IsHermitian :=
+        T.isHermitian.sub (cqBlock_posSemidef E x).1
+      refine (cMatrix_posSemidef_iff_trace_mul_posSemidef_re_nonneg hHerm).2 ?_
+      intro A hA
+      have hsingle := cqPrimalProgram_dualFeasible_single_le E hy x hA
+      have hrep := hrep_psd A hA
+      have htrace :
+          (((T.val - E.cqBlock x) * A).trace).re =
+            ((T.val * A).trace).re - ((E.cqBlock x * A).trace).re := by
+        simp [Matrix.sub_mul, Matrix.trace_sub]
+      linarith
+  · have hrep_one : y (1 : CMatrix b) = E.cqDualValue T.val := by
+      let X : HermitianMatrix b := ⟨1, Matrix.PosSemidef.one.1⟩
+      have h := hTrep X
+      simpa [yH, X, tracePairing, cqDualValue] using h
+    simp [QIT.SDP.ContinuousConeProgram.dualValue, cqPrimalProgram, hrep_one]
+
+/-- The conic and matrix-order cq dual value sets coincide. -/
+theorem cqPrimalProgram_dualValueSet_eq (E : Ensemble ι b) :
+    (cqPrimalProgram E).dualValueSet = E.cqDualValueSet :=
+  Set.Subset.antisymm
+    (cqPrimalProgram_dualValueSet_subset_cqDualValueSet E)
+    (cqDualValueSet_subset_cqPrimalProgram_dualValueSet E)
+
+/-- The cq primal conic program is feasible. -/
+theorem cqPrimalProgram_primalValueSet_nonempty (E : Ensemble ι b) :
+    (cqPrimalProgram E).primalValueSet.Nonempty := by
+  classical
+  let M : CQEffectFamily ι b := ⟨(probabilityPOVM E).effects⟩
+  refine ⟨(cqPrimalProgram E).primalValue M, M, ?_, rfl⟩
+  constructor
+  · intro x
+    exact (probabilityPOVM E).pos x
+  · simpa [cqPrimalProgram, cqEffectFamilySumCLM, M] using
+      (probabilityPOVM E).sum_eq_one
+
+/-- The sum of all weighted cq blocks is dual feasible. -/
+theorem cqDualFeasible_sum_cqBlock (E : Ensemble ι b) :
+    E.cqDualFeasible (∑ x, E.cqBlock x) := by
+  classical
+  constructor
+  · exact Matrix.posSemidef_sum Finset.univ fun x _ => cqBlock_posSemidef E x
+  · intro x
+    rw [Matrix.le_iff]
+    have hsum :
+        (∑ y, E.cqBlock y) - E.cqBlock x =
+          ∑ y ∈ Finset.univ.erase x, E.cqBlock y := by
+      rw [← Finset.sum_erase_add _ _ (Finset.mem_univ x)]
+      abel
+    rw [hsum]
+    exact Matrix.posSemidef_sum (Finset.univ.erase x) fun y _ => cqBlock_posSemidef E y
+
+/-- A positive cq effect is dominated by the sum of all effects in its family. -/
+theorem cqEffectFamily_effect_le_sum {M : CQEffectFamily ι b}
+    (hM : ∀ x, (M x).PosSemidef) (x : ι) :
+    M x ≤ ∑ y, M y := by
+  rw [Matrix.le_iff]
+  have hsum :
+      (∑ y, M y) - M x =
+        ∑ y ∈ Finset.univ.erase x, M y := by
+    rw [← Finset.sum_erase_add _ _ (Finset.mem_univ x)]
+    abel
+  rw [hsum]
+  exact Matrix.posSemidef_sum (Finset.univ.erase x) fun y _ => hM y
+
+/-- The cq primal conic value set is bounded above by a concrete dual point. -/
+theorem cqPrimalProgram_primalValueSet_bddAbove (E : Ensemble ι b) :
+    BddAbove (cqPrimalProgram E).primalValueSet := by
+  exact (cqPrimalProgram E).primalValueSet_bddAbove_of_dualFeasible
+    (cqPrimalProgram_dualFeasible_of_cqDualFeasible E (cqDualFeasible_sum_cqBlock E))
+
+set_option maxHeartbeats 800000 in
+/-- The cq primal hypograph is closed: for bounded constraint values, positive
+effect witnesses are bounded by their sum in operator norm. -/
+theorem cqPrimalProgram_hasClosedPrimalHypograph (E : Ensemble ι b) :
+    (cqPrimalProgram E).HasClosedPrimalHypograph := by
+  classical
+  refine IsSeqClosed.isClosed ?_
+  intro ztSeq zt hztSeq hztLim
+  choose M hMK hA ht using hztSeq
+  have hZLim : Tendsto (fun n => (ztSeq n).1) atTop (𝓝 zt.1) :=
+    continuous_fst.tendsto zt |>.comp hztLim
+  have hZBounded : Bornology.IsBounded (Set.range fun n => (ztSeq n).1) :=
+    Metric.isBounded_range_of_tendsto _ hZLim
+  obtain ⟨C, hC⟩ := Bornology.IsBounded.exists_norm_le hZBounded
+  have hC_nonneg : 0 ≤ C := by
+    exact (norm_nonneg ((ztSeq 0).1)).trans (hC ((ztSeq 0).1) (Set.mem_range_self 0))
+  have hM_norm_le (n : ℕ) : ‖M n‖ ≤ C := by
+    change ‖(M n).val‖ ≤ C
+    rw [pi_norm_le_iff_of_nonneg hC_nonneg]
+    intro x
+    have hMx_le_sum : M n x ≤ ∑ y, M n y :=
+      cqEffectFamily_effect_le_sum (fun y => hMK n y) x
+    have hsum : (∑ y, M n y) = (ztSeq n).1 := by
+      simpa [cqPrimalProgram, cqEffectFamilySumCLM] using (hA n).symm
+    have hMx_le_Z : M n x ≤ (ztSeq n).1 := by
+      simpa [hsum] using hMx_le_sum
+    have hnorm_le_Z : ‖M n x‖ ≤ ‖(ztSeq n).1‖ :=
+      cMatrix_norm_le_norm_of_posSemidef_le (hMK n x) hMx_le_Z
+    exact hnorm_le_Z.trans (hC ((ztSeq n).1) (Set.mem_range_self n))
+  have hM_bounded : Bornology.IsBounded (Set.range M) :=
+    (isBounded_iff_forall_norm_le).2
+      ⟨C, by
+        rintro _ ⟨n, rfl⟩
+        exact hM_norm_le n⟩
+  obtain ⟨Mlim, -, φ, hφ, hMtend⟩ :=
+    tendsto_subseq_of_bounded hM_bounded (x := M) (fun n => Set.mem_range_self n)
+  have hMlimK : Mlim ∈ (cqPrimalProgram E).K :=
+    (cqPrimalProgram E).K.isClosed.mem_of_tendsto hMtend
+      (Eventually.of_forall fun n => hMK (φ n))
+  have hZLimSub : Tendsto (fun n => (ztSeq (φ n)).1) atTop (𝓝 zt.1) :=
+    hZLim.comp hφ.tendsto_atTop
+  have hAMlim :
+      Tendsto (fun n => (ztSeq (φ n)).1) atTop
+        (𝓝 ((cqPrimalProgram E).A Mlim)) := by
+    have hcont :
+        Tendsto (fun n => (cqPrimalProgram E).A (M (φ n))) atTop
+          (𝓝 ((cqPrimalProgram E).A Mlim)) :=
+      (cqPrimalProgram E).A.continuous.continuousAt.tendsto.comp hMtend
+    have hfun :
+        (fun n => (ztSeq (φ n)).1) =
+          fun n => (cqPrimalProgram E).A (M (φ n)) := by
+      funext n
+      exact hA (φ n)
+    simpa [hfun] using hcont
+  have hAeq : zt.1 = (cqPrimalProgram E).A Mlim :=
+    tendsto_nhds_unique hZLimSub hAMlim
+  have htLimSub : Tendsto (fun n => (ztSeq (φ n)).2) atTop (𝓝 zt.2) :=
+    (continuous_snd.tendsto zt |>.comp hztLim).comp hφ.tendsto_atTop
+  have hValueLim :
+      Tendsto (fun n => (cqPrimalProgram E).primalValue (M (φ n))) atTop
+        (𝓝 ((cqPrimalProgram E).primalValue Mlim)) :=
+    (cqPrimalProgram E).c.continuous.continuousAt.tendsto.comp hMtend
+  have htle : zt.2 ≤ (cqPrimalProgram E).primalValue Mlim :=
+    le_of_tendsto_of_tendsto' htLimSub hValueLim fun n => ht (φ n)
+  exact ⟨Mlim, hMlimK, hAeq, htle⟩
+
+/-- Exact cq SDP strong duality in value-set form. -/
+theorem cqGuessingProbability_eq_cqDualOptimalValue (E : Ensemble ι b) :
+    E.cqGuessingProbability = E.cqDualOptimalValue := by
+  rw [cqGuessingProbability_eq_sSup_primalValueSet, cqDualOptimalValue_eq,
+    ← cqPrimalProgram_primalValueSet_eq E, ← cqPrimalProgram_dualValueSet_eq E]
+  exact (cqPrimalProgram E).sSup_primalValueSet_eq_sInf_dualValueSet_of_hasClosedPrimalHypograph
+    (cqPrimalProgram_hasClosedPrimalHypograph E)
+    (cqPrimalProgram_primalValueSet_nonempty E)
+    (cqPrimalProgram_primalValueSet_bddAbove E)
+
+/-- Reverse weak duality for cq guessing, obtained from the closed-hypograph
+finite-dimensional conic strong-duality bridge. -/
+theorem cqDualOptimalValue_le_cqGuessingProbability (E : Ensemble ι b) :
+    E.cqDualOptimalValue <= E.cqGuessingProbability := by
+  rw [cqGuessingProbability_eq_cqDualOptimalValue]
 
 /-- Every dual-feasible matrix upper-bounds every value in the primal value set. -/
 theorem cqPrimalValueSet_le_dualValue (E : Ensemble ι b) {T : CMatrix b}

@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Util.Matrix
+public import QIT.Core.SDP.HermitianPSDTraceDuality
 public import QIT.States.TraceNorm.PositivePartBlock
 public import Mathlib.Analysis.CStarAlgebra.Basic
 public import Mathlib.Analysis.CStarAlgebra.Matrix
@@ -323,26 +324,6 @@ private theorem positiveSpectralProjector_trace_mul
     (positiveSpectralProjector H hH * X)]
   rw [spectralSignBlockMatrix_mul, spectralSignBlockMatrix_projector]
   exact trace_fromBlocks_projector_mul _
-
-/-- The trace of the product of two positive semidefinite matrices is nonnegative. -/
-public theorem cMatrix_trace_mul_posSemidef_re_nonneg {A B : CMatrix a}
-    (hA : A.PosSemidef) (hB : B.PosSemidef) :
-    0 ≤ ((A * B).trace).re := by
-  let S := psdSqrt A
-  have hpsd : (S * B * S).PosSemidef := by
-    have h := hB.mul_mul_conjTranspose_same S
-    rw [psdSqrt_isHermitian A] at h
-    exact h
-  have htrace_re : 0 ≤ ((S * B * S).trace).re :=
-    (Matrix.PosSemidef.trace_nonneg hpsd).1
-  have hEq : (A * B).trace = (S * B * S).trace := by
-    have hSsq : S * S = A := by simpa [S] using psdSqrt_mul_self_of_posSemidef hA
-    rw [← hSsq]
-    calc
-      ((S * S) * B).trace = (S * (S * B)).trace := by rw [Matrix.mul_assoc]
-      _ = ((S * B) * S).trace := by rw [Matrix.trace_mul_comm]
-      _ = (S * B * S).trace := by rw [Matrix.mul_assoc]
-  rwa [hEq]
 
 private theorem trace_mul_posSemidef_re_nonneg {A B : CMatrix a}
     (hA : A.PosSemidef) (hB : B.PosSemidef) :

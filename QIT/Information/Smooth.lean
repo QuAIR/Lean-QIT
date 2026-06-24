@@ -10,6 +10,8 @@ public import QIT.Classical.CQState
 public import QIT.Information.Entropy
 public import QIT.Information.Fidelity
 public import QIT.Core.POVMProbability
+public import QIT.States.Subnormalized
+public import Mathlib.Data.Real.Archimedean
 
 /-!
 # Smooth min/max entropy
@@ -32,7 +34,7 @@ downstream proof dependency.
 
 @[expose] public section
 
-open scoped ComplexOrder MatrixOrder NNReal
+open scoped ComplexOrder MatrixOrder NNReal Pointwise
 
 open Matrix
 
@@ -72,6 +74,36 @@ theorem purifiedBall_mono {ρ σ : State a} {ε δ : ℝ} (hεδ : ε ≤ δ) :
     ρ.purifiedBall ε σ → ρ.purifiedBall δ σ := by
   intro hball
   exact le_trans hball hεδ
+
+/-! ## Normalized/subnormalized purified-distance bridge -/
+
+/-- Generalized fidelity reduces to squared fidelity for normalized states. -/
+theorem toSubnormalized_generalizedFidelity_eq_squaredFidelity (ρ σ : State a) :
+    ρ.toSubnormalized.generalizedFidelity σ.toSubnormalized = ρ.squaredFidelity σ := by
+  rw [SubnormalizedState.generalizedFidelity_eq,
+    State.squaredFidelity_eq_traceNorm_sqrtMatrix_mul_sqrtMatrix_sq]
+  have hρ : ρ.matrix.trace.re = 1 := by
+    rw [ρ.trace_eq_one]
+    norm_num
+  have hσ : σ.matrix.trace.re = 1 := by
+    rw [σ.trace_eq_one]
+    norm_num
+  simp [State.sqrtMatrix, hρ, hσ]
+
+/-- The subnormalized purified distance agrees with the normalized one after
+embedding normalized states via `State.toSubnormalized`. -/
+theorem toSubnormalized_purifiedDistance_eq (ρ σ : State a) :
+    ρ.toSubnormalized.purifiedDistance σ.toSubnormalized = ρ.purifiedDistance σ := by
+  rw [SubnormalizedState.purifiedDistance_eq, State.purifiedDistance_eq,
+    toSubnormalized_generalizedFidelity_eq_squaredFidelity]
+
+/-- Normalized purified balls are exactly the subnormalized purified balls after
+embedding normalized states via `State.toSubnormalized`. -/
+theorem purifiedBall_iff_toSubnormalized_purifiedBall (ρ σ : State a) (ε : ℝ) :
+    ρ.purifiedBall ε σ ↔
+      ρ.toSubnormalized.purifiedBall ε σ.toSubnormalized := by
+  rw [State.purifiedBall_eq, SubnormalizedState.purifiedBall_eq,
+    toSubnormalized_purifiedDistance_eq]
 
 /-! ## Conditional min/max entropy definitions -/
 
@@ -203,6 +235,171 @@ theorem smoothConditionalMaxEntropy_eq (ρ : State (Prod a b)) (ε : ℝ) :
         ∃ ρ' : State (Prod a b), ρ.purifiedBall ε ρ' ∧
           h = ρ'.conditionalMaxEntropy} :=
   rfl
+
+variable {c : Type*} [Fintype c] [DecidableEq c]
+
+/-- Candidate-level relation needed to turn a purification-level min/max
+duality proof into the smooth entropy equality.
+
+For every max-entropy candidate of `ρAB`, the corresponding negated value is a
+min-entropy candidate of `ρAC`, and conversely. The source-shaped proof of this
+predicate requires the purification-ball lifting and unsmoothed min/max duality
+machinery; the theorem below isolates the order-theoretic `sInf`/`sSup` step. -/
+def SmoothConditionalMinMaxCandidateDuality
+    (ρAB : State (Prod a b)) (ρAC : State (Prod a c)) (ε : ℝ) : Prop :=
+  ∀ h : ℝ,
+    SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h ↔
+      SmoothConditionalMinEntropyCandidate (a := a) ρAC ε (-h)
+
+@[simp]
+theorem SmoothConditionalMinMaxCandidateDuality_eq
+    (ρAB : State (Prod a b)) (ρAC : State (Prod a c)) (ε : ℝ) :
+    SmoothConditionalMinMaxCandidateDuality (a := a) ρAB ρAC ε ↔
+      ∀ h : ℝ,
+        SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h ↔
+          SmoothConditionalMinEntropyCandidate (a := a) ρAC ε (-h) :=
+  Iff.rfl
+
+/-- Witness-level form of the purified-smoothing min/max duality route.
+
+The first projection says every smoothed `AB` candidate has a smoothed `AC`
+counterpart with unsmoothed `Hmax(AB') = -Hmin(AC')`; the second projection is
+the converse direction. This predicate packages the mathematical handoff from
+purification-ball lifting and unsmoothed min/max duality. -/
+def SmoothConditionalMinMaxWitnessDuality
+    (ρAB : State (Prod a b)) (ρAC : State (Prod a c)) (ε : ℝ) : Prop :=
+  (∀ ρAB' : State (Prod a b), ρAB.purifiedBall ε ρAB' →
+      ∃ ρAC' : State (Prod a c), ρAC.purifiedBall ε ρAC' ∧
+        ρAB'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy) ∧
+    (∀ ρAC' : State (Prod a c), ρAC.purifiedBall ε ρAC' →
+      ∃ ρAB' : State (Prod a b), ρAB.purifiedBall ε ρAB' ∧
+        ρAB'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy)
+
+@[simp]
+theorem SmoothConditionalMinMaxWitnessDuality_eq
+    (ρAB : State (Prod a b)) (ρAC : State (Prod a c)) (ε : ℝ) :
+    SmoothConditionalMinMaxWitnessDuality (a := a) ρAB ρAC ε ↔
+      (∀ ρAB' : State (Prod a b), ρAB.purifiedBall ε ρAB' →
+          ∃ ρAC' : State (Prod a c), ρAC.purifiedBall ε ρAC' ∧
+            ρAB'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy) ∧
+        (∀ ρAC' : State (Prod a c), ρAC.purifiedBall ε ρAC' →
+          ∃ ρAB' : State (Prod a b), ρAB.purifiedBall ε ρAB' ∧
+            ρAB'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy) :=
+  Iff.rfl
+
+/-- Relation-parametric pairing of smoothed `AB` and `AC` candidates.
+
+The relation is intended to express that two candidate states arise as
+complementary marginals of compatible nearby purifications, while this predicate
+only records the bidirectional smoothing transport property. -/
+def SmoothConditionalMinMaxPairing
+    (ρAB : State (Prod a b)) (ρAC : State (Prod a c)) (ε : ℝ)
+    (Rel : State (Prod a b) → State (Prod a c) → Prop) : Prop :=
+  (∀ ρAB' : State (Prod a b), ρAB.purifiedBall ε ρAB' →
+      ∃ ρAC' : State (Prod a c), ρAC.purifiedBall ε ρAC' ∧ Rel ρAB' ρAC') ∧
+    (∀ ρAC' : State (Prod a c), ρAC.purifiedBall ε ρAC' →
+      ∃ ρAB' : State (Prod a b), ρAB.purifiedBall ε ρAB' ∧ Rel ρAB' ρAC')
+
+@[simp]
+theorem SmoothConditionalMinMaxPairing_eq
+    (ρAB : State (Prod a b)) (ρAC : State (Prod a c)) (ε : ℝ)
+    (Rel : State (Prod a b) → State (Prod a c) → Prop) :
+    SmoothConditionalMinMaxPairing (a := a) ρAB ρAC ε Rel ↔
+      (∀ ρAB' : State (Prod a b), ρAB.purifiedBall ε ρAB' →
+          ∃ ρAC' : State (Prod a c), ρAC.purifiedBall ε ρAC' ∧ Rel ρAB' ρAC') ∧
+        (∀ ρAC' : State (Prod a c), ρAC.purifiedBall ε ρAC' →
+          ∃ ρAB' : State (Prod a b), ρAB.purifiedBall ε ρAB' ∧ Rel ρAB' ρAC') :=
+  Iff.rfl
+
+/-- Unsmoothed min/max entropy duality on each related pair of candidate states. -/
+def ConditionalMinMaxEntropyDualOn
+    (Rel : State (Prod a b) → State (Prod a c) → Prop) : Prop :=
+  ∀ ρAB' : State (Prod a b), ∀ ρAC' : State (Prod a c), Rel ρAB' ρAC' →
+    ρAB'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy
+
+@[simp]
+theorem ConditionalMinMaxEntropyDualOn_eq
+    (Rel : State (Prod a b) → State (Prod a c) → Prop) :
+    ConditionalMinMaxEntropyDualOn (a := a) Rel ↔
+      ∀ ρAB' : State (Prod a b), ∀ ρAC' : State (Prod a c), Rel ρAB' ρAC' →
+        ρAB'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy :=
+  Iff.rfl
+
+/-- Pairing transport plus unsmoothed pairwise duality gives the witness-level
+smooth min/max duality predicate. -/
+theorem SmoothConditionalMinMaxWitnessDuality.of_pairing_of_entropy_duality
+    {ρAB : State (Prod a b)} {ρAC : State (Prod a c)} {ε : ℝ}
+    {Rel : State (Prod a b) → State (Prod a c) → Prop}
+    (hpair : SmoothConditionalMinMaxPairing (a := a) ρAB ρAC ε Rel)
+    (hdual : ConditionalMinMaxEntropyDualOn (a := a) Rel) :
+    SmoothConditionalMinMaxWitnessDuality (a := a) ρAB ρAC ε := by
+  constructor
+  · intro ρAB' hballAB
+    obtain ⟨ρAC', hballAC, hrel⟩ := hpair.1 ρAB' hballAB
+    exact ⟨ρAC', hballAC, hdual ρAB' ρAC' hrel⟩
+  · intro ρAC' hballAC
+    obtain ⟨ρAB', hballAB, hrel⟩ := hpair.2 ρAC' hballAC
+    exact ⟨ρAB', hballAB, hdual ρAB' ρAC' hrel⟩
+
+/-- A witness-level smoothing duality immediately gives the candidate-set
+duality needed by the order-theoretic bridge. -/
+theorem SmoothConditionalMinMaxCandidateDuality.of_witness_duality
+    {ρAB : State (Prod a b)} {ρAC : State (Prod a c)} {ε : ℝ}
+    (hwit : SmoothConditionalMinMaxWitnessDuality (a := a) ρAB ρAC ε) :
+    SmoothConditionalMinMaxCandidateDuality (a := a) ρAB ρAC ε := by
+  intro h
+  constructor
+  · rintro ⟨ρAB', hballAB, hh⟩
+    obtain ⟨ρAC', hballAC, hentropy⟩ := hwit.1 ρAB' hballAB
+    refine ⟨ρAC', hballAC, ?_⟩
+    rw [hh, hentropy, neg_neg]
+  · rintro ⟨ρAC', hballAC, hh⟩
+    obtain ⟨ρAB', hballAB, hentropy⟩ := hwit.2 ρAC' hballAC
+    refine ⟨ρAB', hballAB, ?_⟩
+    rw [hentropy, ← hh, neg_neg]
+
+/-- Order-theoretic smooth min/max duality bridge.
+
+Once the max-candidate set for `ρAB` is exactly the pointwise negation of the
+min-candidate set for `ρAC`, the smooth max entropy is the negative smooth min
+entropy. This proves the `sInf`/`sSup` part of the purified-smoothing duality
+route; the source-level purification theorem supplies the candidate relation. -/
+theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_candidate_duality
+    {ρAB : State (Prod a b)} {ρAC : State (Prod a c)} {ε : ℝ}
+    (hdual : SmoothConditionalMinMaxCandidateDuality (a := a) ρAB ρAC ε) :
+    ρAB.smoothConditionalMaxEntropy ε = -ρAC.smoothConditionalMinEntropy ε := by
+  let maxSet : Set ℝ := {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h}
+  let minSet : Set ℝ := {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρAC ε h}
+  have hset : maxSet = -minSet := by
+    ext h
+    simp only [maxSet, minSet, Set.mem_setOf_eq, Set.mem_neg]
+    exact hdual h
+  calc
+    ρAB.smoothConditionalMaxEntropy ε = sInf maxSet := rfl
+    _ = sInf (-minSet) := by rw [hset]
+    _ = -sSup minSet := Real.sInf_neg minSet
+    _ = -ρAC.smoothConditionalMinEntropy ε := rfl
+
+/-- Composed smooth min/max duality bridge from witness-level smoothing
+duality. This is the exact handoff point for purification-ball lifting and
+unsmoothed min/max duality. -/
+theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_witness_duality
+    {ρAB : State (Prod a b)} {ρAC : State (Prod a c)} {ε : ℝ}
+    (hwit : SmoothConditionalMinMaxWitnessDuality (a := a) ρAB ρAC ε) :
+    ρAB.smoothConditionalMaxEntropy ε = -ρAC.smoothConditionalMinEntropy ε :=
+  smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_candidate_duality
+    (SmoothConditionalMinMaxCandidateDuality.of_witness_duality hwit)
+
+/-- Smooth min/max duality from a relation-parametric pairing and unsmoothed
+pairwise duality. -/
+theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_pairing
+    {ρAB : State (Prod a b)} {ρAC : State (Prod a c)} {ε : ℝ}
+    {Rel : State (Prod a b) → State (Prod a c) → Prop}
+    (hpair : SmoothConditionalMinMaxPairing (a := a) ρAB ρAC ε Rel)
+    (hdual : ConditionalMinMaxEntropyDualOn (a := a) Rel) :
+    ρAB.smoothConditionalMaxEntropy ε = -ρAC.smoothConditionalMinEntropy ε :=
+  smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_witness_duality
+    (SmoothConditionalMinMaxWitnessDuality.of_pairing_of_entropy_duality hpair hdual)
 
 end State
 

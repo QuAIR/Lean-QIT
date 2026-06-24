@@ -9,9 +9,9 @@ modules they need and compare statements against cited references.
 - Provide a modest, reusable Lean library for finite-dimensional QIT.
 - Keep information-theoretic statements tied to source references and stable
   import paths.
-- Support source-first public statements whose Lean declarations can be audited
+- Support source-first TeX statements whose Lean declarations can be audited
   against the cited mathematical literature.
-- Keep public statements, source evidence, and Lean proof-status alignment as
+- Keep TeX statements, source evidence, and Lean realization status alignment as
   separate auditable records.
 ## Using Lean-QIT in your project
 To add Lean-QIT as a dependency to a Lake project, add this to `lakefile.toml`:

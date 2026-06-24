@@ -57,6 +57,30 @@ def unit : State PUnit where
     rw [Matrix.trace_one]
     norm_num
 
+/-- Relabel a density state along a finite basis equivalence. -/
+def reindex {α : Type u} {β : Type v}
+    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    (rho : State α) (e : α ≃ β) : State β where
+  matrix := rho.matrix.submatrix e.symm e.symm
+  pos := rho.pos.submatrix e.symm
+  trace_eq_one := by
+    rw [← rho.trace_eq_one, Matrix.trace]
+    apply Fintype.sum_equiv e.symm
+    intro x
+    rfl
+
+@[simp]
+theorem reindex_matrix {α : Type u} {β : Type v}
+    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    (rho : State α) (e : α ≃ β) :
+    (rho.reindex e).matrix = rho.matrix.submatrix e.symm e.symm := rfl
+
+@[simp]
+theorem reindex_refl (rho : State a) :
+    rho.reindex (Equiv.refl a) = rho := by
+  ext i j
+  rfl
+
 /-- Product state as a Kronecker product. -/
 def prod (rho : State a) (sigma : State b) : State (Prod a b) where
   matrix := Matrix.kronecker rho.matrix sigma.matrix
@@ -102,6 +126,18 @@ theorem marginalA_matrix (rho : State (Prod a b)) :
 theorem marginalB_matrix (rho : State (Prod a b)) :
     rho.marginalB.matrix = partialTraceA (a := a) (b := b) rho.matrix := rfl
 
+theorem marginalA_reindex_prodCongr {α : Type u} {β : Type v} {γ : Type w} {δ : Type _}
+    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    [Fintype γ] [DecidableEq γ] [Fintype δ] [DecidableEq δ]
+    (ρ : State (Prod α γ)) (e : α ≃ β) (f : γ ≃ δ) :
+    (ρ.reindex (Equiv.prodCongr e f)).marginalA = ρ.marginalA.reindex e := by
+  apply State.ext
+  ext i j
+  simp [State.marginalA, State.reindex, partialTraceB]
+  apply Fintype.sum_equiv f.symm
+  intro x
+  rfl
+
 variable [Fintype c] [DecidableEq c]
 
 /-- Marginal state on `AB` from a left-associated tripartite state `ABC`. -/
@@ -143,6 +179,42 @@ def marginalBC (rho : State (Prod (Prod a b) c)) : State (Prod b c) where
       _ = ∑ x : Prod (Prod a b) c, rho.matrix x x := by
         simp [Fintype.sum_prod_type]
 
+/-- Marginal state on `AC` from a left-associated tripartite state `ABC`. -/
+def marginalAC (rho : State (Prod (Prod a b) c)) : State (Prod a c) where
+  matrix := fun ac ac' =>
+    Finset.univ.sum fun j : b => rho.matrix ((ac.1, j), ac.2) ((ac'.1, j), ac'.2)
+  pos := by
+    let block : b → CMatrix (Prod a c) := fun j =>
+      rho.matrix.submatrix
+        (fun ac : Prod a c => ((ac.1, j), ac.2))
+        (fun ac : Prod a c => ((ac.1, j), ac.2))
+    have hsum : (∑ j : b, block j).PosSemidef := by
+      classical
+      refine Finset.induction_on (s := Finset.univ) ?_ ?_
+      · simpa using (Matrix.PosSemidef.zero : (0 : CMatrix (Prod a c)).PosSemidef)
+      · intro j s hjs hs
+        simpa [Finset.sum_insert hjs, block] using
+          (rho.pos.submatrix (fun ac : Prod a c => ((ac.1, j), ac.2))).add hs
+    convert hsum using 1
+    ext ac ac'
+    simp [block, Matrix.sum_apply]
+  trace_eq_one := by
+    rw [← rho.trace_eq_one]
+    rw [Matrix.trace]
+    change
+      (∑ ac : Prod a c, ∑ j : b,
+        rho.matrix ((ac.1, j), ac.2) ((ac.1, j), ac.2)) =
+      ∑ x : Prod (Prod a b) c, rho.matrix x x
+    calc
+      (∑ ac : Prod a c, ∑ j : b,
+          rho.matrix ((ac.1, j), ac.2) ((ac.1, j), ac.2)) =
+          ∑ j : b, ∑ ac : Prod a c,
+            rho.matrix ((ac.1, j), ac.2) ((ac.1, j), ac.2) := by
+        rw [Finset.sum_comm]
+      _ = ∑ x : Prod (Prod a b) c, rho.matrix x x := by
+        simp [Fintype.sum_prod_type]
+        rw [Finset.sum_comm]
+
 /-- Marginal state on `B` from a left-associated tripartite state `ABC`. -/
 def marginalBOfABC (rho : State (Prod (Prod a b) c)) : State b :=
   rho.marginalAB.marginalB
@@ -154,6 +226,13 @@ theorem marginalAB_eq_marginalA (rho : State (Prod (Prod a b) c)) :
 @[simp]
 theorem marginalBOfABC_eq (rho : State (Prod (Prod a b) c)) :
     rho.marginalBOfABC = rho.marginalAB.marginalB := rfl
+
+@[simp]
+theorem marginalAC_matrix (rho : State (Prod (Prod a b) c)) :
+    rho.marginalAC.matrix =
+      fun ac ac' =>
+        Finset.univ.sum fun j : b =>
+          rho.matrix ((ac.1, j), ac.2) ((ac'.1, j), ac'.2) := rfl
 
 /-- IID tensor power of a density state. -/
 def tensorPower (rho : State a) : (n : Nat) -> State (TensorPower a n)
@@ -167,6 +246,142 @@ theorem tensorPower_zero (rho : State a) :
 /-- Successor tensor powers unfold as a product with one more IID factor. -/
 theorem tensorPower_succ (rho : State a) (n : Nat) :
     tensorPower rho (n + 1) = rho.prod (tensorPower rho n) := rfl
+
+/-- IID tensor power of a bipartite state, read as `A^n × B^n`.
+
+The underlying matrix is the ordinary IID tensor power of the `AB` state,
+transported across `tensorPowerProdEquiv`.
+-/
+def tensorPowerBipartite (rho : State (Prod a b)) (n : Nat) :
+    State (Prod (TensorPower a n) (TensorPower b n)) :=
+  (rho.tensorPower n).reindex (tensorPowerProdEquiv a b n)
+
+@[simp]
+theorem tensorPowerBipartite_matrix (rho : State (Prod a b)) (n : Nat) :
+    (rho.tensorPowerBipartite n).matrix =
+      (rho.tensorPower n).matrix.submatrix
+        (tensorPowerProdEquiv a b n).symm
+        (tensorPowerProdEquiv a b n).symm := rfl
+
+@[simp]
+theorem tensorPowerBipartite_marginalA_matrix (rho : State (Prod a b)) (n : Nat) :
+    (rho.tensorPowerBipartite n).marginalA.matrix =
+      partialTraceB (a := TensorPower a n) (b := TensorPower b n)
+        ((rho.tensorPower n).matrix.submatrix
+          (tensorPowerProdEquiv a b n).symm
+          (tensorPowerProdEquiv a b n).symm) := rfl
+
+@[simp]
+theorem tensorPowerBipartite_marginalB_matrix (rho : State (Prod a b)) (n : Nat) :
+    (rho.tensorPowerBipartite n).marginalB.matrix =
+      partialTraceA (a := TensorPower a n) (b := TensorPower b n)
+        ((rho.tensorPower n).matrix.submatrix
+          (tensorPowerProdEquiv a b n).symm
+          (tensorPowerProdEquiv a b n).symm) := rfl
+
+/-- The `A^n` marginal of the IID bipartite tensor power is the IID tensor
+power of the `A` marginal. -/
+theorem tensorPowerBipartite_marginalA (rho : State (Prod a b)) :
+    (n : Nat) -> (rho.tensorPowerBipartite n).marginalA =
+      (rho.marginalA).tensorPower n
+  | 0 => by
+      ext x y
+      cases x
+      cases y
+      simp [tensorPowerBipartite, tensorPowerProdEquiv, marginalA, tensorPower,
+        unit, reindex, partialTraceB, TensorPower]
+  | n + 1 => by
+      ext x y
+      cases x with
+      | mk x0 xs =>
+          cases y with
+          | mk y0 ys =>
+              have hih := congrArg (fun σ : State (TensorPower a n) => σ.matrix xs ys)
+                (tensorPowerBipartite_marginalA rho n)
+              simp [tensorPowerBipartite, marginalA, partialTraceB] at hih
+              simp [tensorPowerBipartite, tensorPowerProdEquiv, tensorPower, prod,
+                reindex, marginalA, partialTraceB, Matrix.kronecker,
+                Matrix.kroneckerMap_apply]
+              calc
+                (∑ x : Prod b (TensorPower b n),
+                    rho.matrix (x0, x.1) (y0, x.1) *
+                      (rho.tensorPower n).matrix
+                        ((tensorPowerProdEquiv a b n).symm (xs, x.2))
+                        ((tensorPowerProdEquiv a b n).symm (ys, x.2))) =
+                    ∑ i : b, ∑ rest : TensorPower b n,
+                      rho.matrix (x0, i) (y0, i) *
+                        (rho.tensorPower n).matrix
+                          ((tensorPowerProdEquiv a b n).symm (xs, rest))
+                          ((tensorPowerProdEquiv a b n).symm (ys, rest)) := by
+                  simp [Fintype.sum_prod_type]
+                _ = ∑ i : b,
+                    rho.matrix (x0, i) (y0, i) *
+                      (∑ rest : TensorPower b n,
+                        (rho.tensorPower n).matrix
+                          ((tensorPowerProdEquiv a b n).symm (xs, rest))
+                          ((tensorPowerProdEquiv a b n).symm (ys, rest))) := by
+                  simp [Finset.mul_sum]
+                _ = ∑ i : b,
+                    rho.matrix (x0, i) (y0, i) *
+                      ((rho.marginalA).tensorPower n).matrix xs ys := by
+                  simp [hih, marginalA]
+                _ = (∑ i : b, rho.matrix (x0, i) (y0, i)) *
+                      ((rho.marginalA).tensorPower n).matrix xs ys := by
+                  simpa using (Finset.sum_mul Finset.univ
+                    (fun i : b => rho.matrix (x0, i) (y0, i))
+                    (((rho.marginalA).tensorPower n).matrix xs ys)).symm
+
+/-- The `B^n` marginal of the IID bipartite tensor power is the IID tensor
+power of the `B` marginal. -/
+theorem tensorPowerBipartite_marginalB (rho : State (Prod a b)) :
+    (n : Nat) -> (rho.tensorPowerBipartite n).marginalB =
+      (rho.marginalB).tensorPower n
+  | 0 => by
+      ext x y
+      cases x
+      cases y
+      simp [tensorPowerBipartite, tensorPowerProdEquiv, marginalB, tensorPower,
+        unit, reindex, partialTraceA, TensorPower]
+  | n + 1 => by
+      ext x y
+      cases x with
+      | mk x0 xs =>
+          cases y with
+          | mk y0 ys =>
+              have hih := congrArg (fun σ : State (TensorPower b n) => σ.matrix xs ys)
+                (tensorPowerBipartite_marginalB rho n)
+              simp [tensorPowerBipartite, marginalB, partialTraceA] at hih
+              simp [tensorPowerBipartite, tensorPowerProdEquiv, tensorPower, prod,
+                reindex, marginalB, partialTraceA, Matrix.kronecker,
+                Matrix.kroneckerMap_apply]
+              calc
+                (∑ x : Prod a (TensorPower a n),
+                    rho.matrix (x.1, x0) (x.1, y0) *
+                      (rho.tensorPower n).matrix
+                        ((tensorPowerProdEquiv a b n).symm (x.2, xs))
+                        ((tensorPowerProdEquiv a b n).symm (x.2, ys))) =
+                    ∑ i : a, ∑ rest : TensorPower a n,
+                      rho.matrix (i, x0) (i, y0) *
+                        (rho.tensorPower n).matrix
+                          ((tensorPowerProdEquiv a b n).symm (rest, xs))
+                          ((tensorPowerProdEquiv a b n).symm (rest, ys)) := by
+                  simp [Fintype.sum_prod_type]
+                _ = ∑ i : a,
+                    rho.matrix (i, x0) (i, y0) *
+                      (∑ rest : TensorPower a n,
+                        (rho.tensorPower n).matrix
+                          ((tensorPowerProdEquiv a b n).symm (rest, xs))
+                          ((tensorPowerProdEquiv a b n).symm (rest, ys))) := by
+                  simp [Finset.mul_sum]
+                _ = ∑ i : a,
+                    rho.matrix (i, x0) (i, y0) *
+                      ((rho.marginalB).tensorPower n).matrix xs ys := by
+                  simp [hih, marginalB]
+                _ = (∑ i : a, rho.matrix (i, x0) (i, y0)) *
+                      ((rho.marginalB).tensorPower n).matrix xs ys := by
+                  simpa using (Finset.sum_mul Finset.univ
+                    (fun i : a => rho.matrix (i, x0) (i, y0))
+                    (((rho.marginalB).tensorPower n).matrix xs ys)).symm
 
 end State
 

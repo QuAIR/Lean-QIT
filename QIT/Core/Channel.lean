@@ -247,6 +247,23 @@ def unit : Channel PUnit.{u + 1} PUnit.{v + 1} where
   tracePreserving := MatrixMap.unit_isTracePreserving
   mapsPositive := MatrixMap.unit_mapsPositive
 
+/-- The identity channel on an arbitrary finite system, realized as a
+single-Kraus map with the identity operator as its sole Kraus operator. -/
+def idChannel (a : Type u) [Fintype a] [DecidableEq a] : Channel a a where
+  map := MatrixMap.ofKraus (fun (_ : Unit) => (1 : CMatrix a))
+  completelyPositive := by
+    rw [MatrixMap.IsCompletelyPositive, MatrixMap.choi_ofKraus]
+    exact Matrix.posSemidef_sum Finset.univ (fun _ _ =>
+      Matrix.posSemidef_vecMulVec_self_star
+        (fun x : a × a => (1 : CMatrix a) x.2 x.1))
+  tracePreserving := by
+    intro X
+    show (MatrixMap.ofKraus (fun (_ : Unit) => (1 : CMatrix a)) X).trace = X.trace
+    simp only [MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk,
+      Matrix.conjTranspose_one, Matrix.one_mul, Matrix.mul_one]
+    simp
+  mapsPositive := MatrixMap.ofKraus_mapsPositive (fun (_ : Unit) => (1 : CMatrix a))
+
 variable {c : Type w} {d : Type x}
 variable [Fintype c] [DecidableEq c] [Fintype d] [DecidableEq d]
 

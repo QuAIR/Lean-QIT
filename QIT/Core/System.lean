@@ -22,7 +22,7 @@ Wilde2011Qst, qit-notes.tex:1888-1920].
 
 namespace QIT
 
-universe u
+universe u v
 
 /-- Recursive finite tensor-power label type. -/
 def TensorPower (a : Type u) : Nat -> Type u
@@ -40,5 +40,46 @@ instance tensorPowerDecidableEq {a : Type u} [DecidableEq a] (n : Nat) :
   induction n with
   | zero => exact inferInstanceAs (DecidableEq PUnit)
   | succ n ih => exact inferInstanceAs (DecidableEq (Prod a (TensorPower a n)))
+
+/-- Split an IID tensor power of bipartite labels into the two IID tensor powers.
+
+The recursive convention for `TensorPower` stores
+`(A × B)^(n+1)` as `(A × B) × (A × B)^n`. This equivalence is the finite-system
+bookkeeping bridge used to read that system as `A^(n+1) × B^(n+1)`.
+-/
+def tensorPowerProdEquiv (a : Type u) (b : Type v) :
+    (n : Nat) -> TensorPower (Prod a b) n ≃
+      Prod (TensorPower a n) (TensorPower b n)
+  | 0 =>
+      { toFun := fun _ => (PUnit.unit, PUnit.unit)
+        invFun := fun _ => PUnit.unit
+        left_inv := by
+          intro x
+          cases x
+          rfl
+        right_inv := by
+          intro x
+          cases x with
+          | mk xa xb =>
+              cases xa
+              cases xb
+              rfl }
+  | n + 1 =>
+      let ih := tensorPowerProdEquiv a b n
+      { toFun := fun x => ((x.1.1, (ih x.2).1), (x.1.2, (ih x.2).2))
+        invFun := fun y => ((y.1.1, y.2.1), ih.symm (y.1.2, y.2.2))
+        left_inv := by
+          intro x
+          cases x with
+          | mk ab rest =>
+              cases ab
+              simp [ih]
+        right_inv := by
+          intro y
+          cases y with
+          | mk xa xb =>
+              cases xa
+              cases xb
+              simp [ih] }
 
 end QIT

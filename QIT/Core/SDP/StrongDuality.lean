@@ -30,7 +30,7 @@ open Set
 
 namespace QIT.SDP
 
-universe u
+universe u v
 
 /--
 A finite-dimensional continuous conic linear program.
@@ -38,7 +38,7 @@ A finite-dimensional continuous conic linear program.
 It represents the primal maximization problem
 `maximize c x` subject to `A x = b` and `x ∈ K`.
 -/
-structure ContinuousConeProgram (E F : Type u)
+structure ContinuousConeProgram (E : Type u) (F : Type v)
     [NormedAddCommGroup E] [NormedSpace ℝ E] [FiniteDimensional ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F] [FiniteDimensional ℝ F] where
   K : ProperCone ℝ E
@@ -48,7 +48,7 @@ structure ContinuousConeProgram (E F : Type u)
 
 namespace ContinuousConeProgram
 
-variable {E F : Type u}
+variable {E : Type u} {F : Type v}
 variable [NormedAddCommGroup E] [NormedSpace ℝ E] [FiniteDimensional ℝ E]
 variable [NormedAddCommGroup F] [NormedSpace ℝ F] [FiniteDimensional ℝ F]
 variable (P : ContinuousConeProgram E F)
