@@ -48,6 +48,23 @@ def holevoInformation (E : Ensemble ι a) : ℝ :=
   State.vonNeumann E.averageState
     - ∑ i, (E.probs i).toReal * State.vonNeumann (E.states i)
 
+/-- The Holevo information is the entropy of the average state minus the
+average entropy. -/
+theorem holevoInformation_def (E : Ensemble ι a) :
+    E.holevoInformation =
+      State.vonNeumann E.averageState
+        - ∑ i, (E.probs i).toReal * State.vonNeumann (E.states i) := by
+  rfl
+
+/-- Nonnegativity of Holevo information is equivalent to the entropy-concavity
+inequality for a finite ensemble. -/
+theorem holevoInformation_nonneg_iff_vonNeumann_average_ge_sum (E : Ensemble ι a) :
+    0 ≤ E.holevoInformation ↔
+      (∑ i, (E.probs i).toReal * State.vonNeumann (E.states i))
+        ≤ State.vonNeumann E.averageState := by
+  rw [holevoInformation_def]
+  exact sub_nonneg
+
 end Ensemble
 
 /-- Eigenvalues of a PSD trace-1 state sum to 1 (real). -/

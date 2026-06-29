@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Holevo
+public import QIT.Information.HypothesisTestingMutualInformation
 public import QIT.Core.Channel
 public import QIT.Core.POVMProbability
 public import QIT.Core.Pure
@@ -25,19 +26,30 @@ classical communication.  It defines the channel mutual-information objective
 `I(N)` from the BSST theorem and an operational entanglement-assisted code
 surface.
 
-The full BSST equality `C_E(N) = I(N)`, its converse, and the final
-capacity-supremum squeeze are separate proof obligations.  This file uses a
-supremum-style definition for `I(N)` and proves separately that this finite
-pure-state supremum is attained on nonempty input systems.
+The full BSST equality `C_E(N) = I(N)`, its one-shot converse/achievability
+ingredients, and the final capacity-supremum squeeze are separate proof
+obligations.  This file uses supremum-style definitions for `I(N)` and the
+one-shot capacity, and proves separately that this finite pure-state supremum
+is attained on nonempty input systems.
 
 Source alignment:
-* [Wilde2011Qst, qit-notes.tex:35326-35342] states the BSST formula
-  `C_E(N) = I(N)` and defines `I(N)` as a maximum over pure input-reference
+* [KhatriWilde2024Principles, Chapters/entropies.tex:8132-8144] defines the
+  channel mutual information `I(N)` as a supremum over pure input-reference
   states.
-* [Wilde2011Qst, qit-notes.tex:35345-35361] states the direct coding resource
-  inequality for a fixed pure input-reference state.
-* [Wilde2011Qst, qit-notes.tex:35474-35520] describes entanglement-assisted
-  message encoding and channel-output codewords.
+* [KhatriWilde2024Principles, Chapters/EA_capacity.tex:18-207] defines
+  one-shot entanglement-assisted protocols, maximal error, and
+  `C_EA^ε(N)`.
+* [KhatriWilde2024Principles, Chapters/EA_capacity.tex:530-665] proves the
+  hypothesis-testing one-shot lower bound by position-based coding and
+  sequential decoding.
+* [KhatriWilde2024Principles, Chapters/EA_capacity.tex:679-721] derives the
+  Renyi one-shot lower bound.
+* [KhatriWilde2024Principles, Chapters/EA_capacity.tex:857-884] states the
+  capacity theorem and its one-shot proof ingredients.
+* [KhatriWilde2024Principles, Chapters/EA_capacity.tex:894-982] derives
+  asymptotic achievability from the one-shot bounds.
+* [KhatriWilde2024Principles, Chapters/EA_capacity.tex:990-1331] derives the
+  strong-converse side from the one-shot upper bounds.
 -/
 
 @[expose] public section
@@ -447,6 +459,12 @@ def maxErrorAtMost (C : EntanglementAssistedClassicalCode N n M EA EB)
 def rate (_C : EntanglementAssistedClassicalCode N n M EA EB) : ℝ :=
   entanglementAssistedMessageRate M n
 
+@[simp]
+theorem rate_one (C : EntanglementAssistedClassicalCode N 1 M EA EB) :
+    C.rate = log2 (Fintype.card M : ℝ) := by
+  unfold rate entanglementAssistedMessageRate
+  norm_num
+
 end EntanglementAssistedClassicalCode
 
 namespace Channel
@@ -474,6 +492,63 @@ achievable rates.  The BSST theorem later identifies this quantity with
 def entanglementAssistedClassicalCapacity : ℝ :=
   sSup {R : ℝ | N.IsAchievableEntanglementAssistedClassicalRate R}
 
+/-- One-shot `ε`-error entanglement-assisted classical capacity.
+
+This is the Lean counterpart of `C_EA^ε(N)`: the supremum of one-use code rates
+over entanglement-assisted classical codes whose maximal error is at most `ε`.
+For `n = 1`, the rate unfolds to `log2 |M|`. -/
+def oneShotEntanglementAssistedClassicalCapacity (ε : ℝ) : ℝ :=
+  sSup {R : ℝ |
+    ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
+      ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
+        ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
+          ∃ C : EntanglementAssistedClassicalCode N 1 M EA EB,
+            C.maxErrorAtMost ε ∧ R = C.rate}
+
+/-- Extended-real one-shot `ε`-error entanglement-assisted classical capacity.
+
+This version matches the extended-real hypothesis-testing convention used by
+`D_H^ε`: if the type-II beta quantity vanishes, the converse upper bound is
+`⊤`.  The real-valued capacity above is kept as the compatibility wrapper for
+finite numerical statements. -/
+def oneShotEntanglementAssistedClassicalCapacityE (ε : ℝ) : EReal :=
+  sSup {R : EReal |
+    ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
+      ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
+        ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
+          ∃ C : EntanglementAssistedClassicalCode N 1 M EA EB,
+            C.maxErrorAtMost ε ∧ R = (C.rate : EReal)}
+
+/-- `B` upper-bounds all one-shot `ε`-reliable entanglement-assisted codes. -/
+def IsOneShotEntanglementAssistedClassicalCapacityUpperBound
+    (ε B : ℝ) : Prop :=
+  ∀ (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M],
+    ∀ (EA : Type u) [Fintype EA] [DecidableEq EA],
+      ∀ (EB : Type u) [Fintype EB] [DecidableEq EB],
+        ∀ C : EntanglementAssistedClassicalCode N 1 M EA EB,
+          C.maxErrorAtMost ε → C.rate ≤ B
+
+/-- `B` upper-bounds all one-shot `ε`-reliable entanglement-assisted codes in
+the extended-real convention. -/
+def IsOneShotEntanglementAssistedClassicalCapacityUpperBoundE
+    (ε : ℝ) (B : EReal) : Prop :=
+  ∀ (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M],
+    ∀ (EA : Type u) [Fintype EA] [DecidableEq EA],
+      ∀ (EB : Type u) [Fintype EB] [DecidableEq EB],
+        ∀ C : EntanglementAssistedClassicalCode N 1 M EA EB,
+          C.maxErrorAtMost ε → (C.rate : EReal) ≤ B
+
+theorem oneShotEntanglementAssistedClassicalCapacityE_le_of_upperBound
+    {ε : ℝ} {B : EReal}
+    (hB : N.IsOneShotEntanglementAssistedClassicalCapacityUpperBoundE ε B) :
+    N.oneShotEntanglementAssistedClassicalCapacityE ε ≤ B := by
+  unfold oneShotEntanglementAssistedClassicalCapacityE
+  refine sSup_le ?_
+  intro R hR
+  rcases hR with
+    ⟨M, _hM, _hMeq, _hMne, EA, _hEA, _hEAeq, EB, _hEB, _hEBeq, C, hC, rfl⟩
+  exact hB M EA EB C hC
+
 end Channel
 
 /-- Source-shaped witness for one block of the entanglement-assisted direct
@@ -492,6 +567,21 @@ structure EntanglementAssistedDirectCodingWitness {r : Type u}
   code : EntanglementAssistedClassicalCode N n M EA EB
   rate_ge : code.rate ≥ N.entanglementAssistedMutualInformation ψ - δ
   maxError_le : code.maxErrorAtMost ε
+
+/-- Source-shaped one-shot achievability witness.
+
+The Khatri--Wilde one-shot lower bound constructs such a witness using
+position-based coding and sequential decoding.  This structure records only the
+resulting code and numerical lower-bound estimate; it does not prove the
+one-shot theorem. -/
+structure EntanglementAssistedOneShotAchievabilityWitness (N : Channel a b)
+    (ε lowerBound : ℝ)
+    (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M]
+    (EA : Type u) [Fintype EA] [DecidableEq EA]
+    (EB : Type u) [Fintype EB] [DecidableEq EB] where
+  code : EntanglementAssistedClassicalCode N 1 M EA EB
+  maxError_le : code.maxErrorAtMost ε
+  lowerBound_le_rate : lowerBound ≤ code.rate
 
 /-- Source-shaped family of converse estimates for entanglement-assisted
 classical communication.
@@ -521,9 +611,11 @@ variable (N : Channel a b)
 direct-coding witnesses.
 
 This is the direct-coding side of the BSST route currently formalized in
-Lean.  The random-unitary code construction, packing/typicality estimates,
-converse, compactness/maximizer theorem, and final capacity equality are
-separate proof obligations. -/
+Lean.  In the modern source route, the concrete witnesses come from
+Khatri--Wilde one-shot position-based coding and the asymptotic passage from
+their one-shot lower bound.  The one-shot theorem itself, converse,
+compactness/maximizer theorem, and final capacity equality are separate proof
+obligations. -/
 theorem entanglementAssisted_direct_achievable_of_directCodingWitness
     {r : Type u} [Fintype r] [DecidableEq r] (ψ : PureVector (Prod r a))
     (h :

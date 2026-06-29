@@ -17,6 +17,7 @@ public import QIT.Information.FuchsVdG
 public import QIT.Information.Renyi
 public import QIT.Information.ConditionalRenyi
 public import QIT.Information.RenyiDPI
+public import QIT.Information.HypothesisTestingMutualInformation
 public import QIT.Information.Smooth
 public import QIT.Information.CQGuessing
 

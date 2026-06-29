@@ -10,6 +10,7 @@ public import QIT.Core.Channel
 public import QIT.Core.SDP.HermitianPSDTraceDuality
 public import QIT.States.TraceNorm.PositivePart
 public import QIT.States.TraceNorm.Variational
+public import QIT.Util.BlockMatrix
 
 /-!
 # Source-shaped diamond trace distance for finite channels
@@ -69,6 +70,365 @@ theorem TraceNonincreasingCP.mapsPositive {Φ : MatrixMap a b}
     (hΦ : TraceNonincreasingCP Φ) :
     ∀ X : CMatrix a, X.PosSemidef → (Φ X).PosSemidef :=
   isCompletelyPositive_mapsPositive Φ hΦ.completelyPositive
+
+noncomputable def TraceNonincreasingCP.kraus {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) : (a × b) → Matrix b a ℂ :=
+  Classical.choose (exists_kraus_of_choi_psd Φ hΦ.completelyPositive)
+
+theorem TraceNonincreasingCP.ofKraus_kraus {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) :
+    ofKraus hΦ.kraus = Φ :=
+  (Classical.choose_spec (exists_kraus_of_choi_psd Φ hΦ.completelyPositive)).symm
+
+theorem ofKraus_tracePreserving_of_krausAdjoint_one {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ) (hK : krausAdjoint K (1 : CMatrix b) = 1) :
+    IsTracePreserving (ofKraus K) := by
+  intro X
+  have hdual := ofKraus_trace_duality K X (1 : CMatrix b)
+  rw [Matrix.mul_one] at hdual
+  rw [hK, Matrix.mul_one] at hdual
+  exact hdual
+
+/-- Kraus-form matrix maps are completely positive. -/
+theorem ofKraus_isCompletelyPositive {κ : Type*} [Fintype κ]
+    (K : κ → Matrix b a ℂ) :
+    IsCompletelyPositive (ofKraus K) := by
+  rw [IsCompletelyPositive, choi_ofKraus]
+  exact Matrix.posSemidef_sum Finset.univ fun k _ =>
+    Matrix.posSemidef_vecMulVec_self_star _
+
+variable (a b)
+
+/-- Matrix-map form of tracing out the second tensor factor. -/
+def partialTraceB : MatrixMap (Prod a b) a where
+  toFun X := QIT.partialTraceB (a := a) (b := b) X
+  map_add' X Y := by
+    ext i j
+    simp [QIT.partialTraceB, Finset.sum_add_distrib]
+  map_smul' c X := by
+    ext i j
+    simp [QIT.partialTraceB, Finset.mul_sum]
+
+/-- Matrix-map form of tracing out the first tensor factor. -/
+def partialTraceA : MatrixMap (Prod a b) b where
+  toFun X := QIT.partialTraceA (a := a) (b := b) X
+  map_add' X Y := by
+    ext i j
+    simp [QIT.partialTraceA, Finset.sum_add_distrib]
+  map_smul' c X := by
+    ext i j
+    simp [QIT.partialTraceA, Finset.mul_sum]
+
+variable {a b}
+
+private def partialTraceBKraus (k : b) : Matrix a (Prod a b) ℂ :=
+  fun i x => if x = (i, k) then 1 else 0
+
+private def partialTraceAKraus (k : a) : Matrix b (Prod a b) ℂ :=
+  fun j x => if x = (k, j) then 1 else 0
+
+private theorem ofKraus_partialTraceBKraus :
+    ofKraus (partialTraceBKraus (a := a) (b := b)) = partialTraceB a b := by
+  apply LinearMap.ext
+  intro X
+  ext i j
+  simp only [ofKraus, partialTraceB, QIT.partialTraceB, LinearMap.coe_mk,
+    AddHom.coe_mk, Matrix.sum_apply]
+  simp [partialTraceBKraus, Matrix.mul_apply, Matrix.conjTranspose_apply, Finset.sum_ite_eq']
+
+private theorem ofKraus_partialTraceAKraus :
+    ofKraus (partialTraceAKraus (a := a) (b := b)) = partialTraceA a b := by
+  apply LinearMap.ext
+  intro X
+  ext i j
+  simp only [ofKraus, partialTraceA, QIT.partialTraceA, LinearMap.coe_mk,
+    AddHom.coe_mk, Matrix.sum_apply]
+  simp [partialTraceAKraus, Matrix.mul_apply, Matrix.conjTranspose_apply, Finset.sum_ite_eq']
+
+/-- Tracing out the second tensor factor is trace-nonincreasing CP. -/
+theorem partialTraceB_traceNonincreasingCP :
+    TraceNonincreasingCP (partialTraceB a b) where
+  completelyPositive := by
+    rw [← ofKraus_partialTraceBKraus (a := a) (b := b)]
+    exact ofKraus_isCompletelyPositive _
+  traceNonincreasing := by
+    intro X _hX
+    change ((QIT.partialTraceB (a := a) (b := b) X).trace).re ≤ X.trace.re
+    rw [QIT.partialTraceB_trace]
+
+/-- Tracing out the first tensor factor is trace-nonincreasing CP. -/
+theorem partialTraceA_traceNonincreasingCP :
+    TraceNonincreasingCP (partialTraceA a b) where
+  completelyPositive := by
+    rw [← ofKraus_partialTraceAKraus (a := a) (b := b)]
+    exact ofKraus_isCompletelyPositive _
+  traceNonincreasing := by
+    intro X _hX
+    change ((QIT.partialTraceA (a := a) (b := b) X).trace).re ≤ X.trace.re
+    rw [QIT.partialTraceA_trace]
+
+@[simp]
+theorem partialTraceB_apply (X : CMatrix (Prod a b)) :
+    partialTraceB a b X = QIT.partialTraceB (a := a) (b := b) X :=
+  rfl
+
+@[simp]
+theorem partialTraceA_apply (X : CMatrix (Prod a b)) :
+    partialTraceA a b X = QIT.partialTraceA (a := a) (b := b) X :=
+  rfl
+
+omit [DecidableEq a] [DecidableEq b] in
+private theorem krausAdjoint_posSemidef' {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ) (E : CMatrix b) (hE : E.PosSemidef) :
+    (krausAdjoint K E).PosSemidef := by
+  unfold krausAdjoint
+  exact Matrix.posSemidef_sum Finset.univ fun k _ => by
+    simpa [Matrix.conjTranspose_conjTranspose, Matrix.mul_assoc]
+      using hE.mul_mul_conjTranspose_same (Matrix.conjTranspose (K k))
+
+noncomputable def TraceNonincreasingCP.lossEffect {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) : CMatrix a :=
+  1 - krausAdjoint hΦ.kraus (1 : CMatrix b)
+
+theorem TraceNonincreasingCP.lossEffect_posSemidef {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) :
+    hΦ.lossEffect.PosSemidef := by
+  classical
+  let K := hΦ.kraus
+  let A : CMatrix a := krausAdjoint K (1 : CMatrix b)
+  have hApos : A.PosSemidef := by
+    exact krausAdjoint_posSemidef' K (1 : CMatrix b) Matrix.PosSemidef.one
+  have hHerm : (1 - A).IsHermitian :=
+    Matrix.isHermitian_one.sub hApos.isHermitian
+  rw [lossEffect]
+  change (1 - A).PosSemidef
+  rw [cMatrix_posSemidef_iff_trace_mul_posSemidef_re_nonneg hHerm]
+  intro X hX
+  have hKΦ : ofKraus K = Φ := by
+    simpa [K] using hΦ.ofKraus_kraus
+  have hdual :
+      ((Φ X).trace).re = ((X * A).trace).re := by
+    have h := ofKraus_trace_duality K X (1 : CMatrix b)
+    rw [Matrix.mul_one] at h
+    rw [hKΦ] at h
+    simpa [A] using congrArg Complex.re h
+  have htni := hΦ.traceNonincreasing X hX
+  have htrace :
+      (((1 - A) * X).trace).re = X.trace.re - ((X * A).trace).re := by
+    rw [Matrix.sub_mul, Matrix.trace_sub, Matrix.one_mul, Matrix.trace_mul_comm A X]
+    simp
+  linarith
+
+noncomputable def TraceNonincreasingCP.hatCompletionKraus {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) :
+    Sum (a × b) (Sum Unit a) → Matrix (Sum PUnit b) (Sum PUnit a) ℂ
+  | Sum.inl k, Sum.inr y, Sum.inr x => hΦ.kraus k y x
+  | Sum.inr (Sum.inl _), Sum.inl _, Sum.inl _ => 1
+  | Sum.inr (Sum.inr l), Sum.inl _, Sum.inr x => psdSqrt hΦ.lossEffect l x
+  | _, _, _ => 0
+
+@[simp]
+theorem TraceNonincreasingCP.hatCompletionKraus_original_fail_out {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) (k : a × b) (i : PUnit) (j : Sum PUnit a) :
+    hΦ.hatCompletionKraus (Sum.inl k) (Sum.inl i) j = 0 := by
+  cases j <;> rfl
+
+@[simp]
+theorem TraceNonincreasingCP.hatCompletionKraus_original_fail_in {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) (k : a × b) (i : b) (j : PUnit) :
+    hΦ.hatCompletionKraus (Sum.inl k) (Sum.inr i) (Sum.inl j) = 0 :=
+  rfl
+
+@[simp]
+theorem TraceNonincreasingCP.hatCompletionKraus_original_state_state {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) (k : a × b) (i : b) (j : a) :
+    hΦ.hatCompletionKraus (Sum.inl k) (Sum.inr i) (Sum.inr j) =
+      hΦ.kraus k i j :=
+  rfl
+
+@[simp]
+theorem TraceNonincreasingCP.hatCompletionKraus_keep_fail_fail {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) (u : Unit) (i : PUnit) (j : PUnit) :
+    hΦ.hatCompletionKraus (Sum.inr (Sum.inl u)) (Sum.inl i) (Sum.inl j) = 1 := by
+  cases u
+  cases i
+  cases j
+  rfl
+
+@[simp]
+theorem TraceNonincreasingCP.hatCompletionKraus_keep_fail_state {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) (u : Unit) (i : PUnit) (j : a) :
+    hΦ.hatCompletionKraus (Sum.inr (Sum.inl u)) (Sum.inl i) (Sum.inr j) = 0 := by
+  cases u
+  cases i
+  rfl
+
+@[simp]
+theorem TraceNonincreasingCP.hatCompletionKraus_keep_state_out {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) (u : Unit) (i : b) (j : Sum PUnit a) :
+    hΦ.hatCompletionKraus (Sum.inr (Sum.inl u)) (Sum.inr i) j = 0 := by
+  cases u
+  cases j <;> rfl
+
+@[simp]
+theorem TraceNonincreasingCP.hatCompletionKraus_loss_fail_fail {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) (l : a) (i : PUnit) (j : PUnit) :
+    hΦ.hatCompletionKraus (Sum.inr (Sum.inr l)) (Sum.inl i) (Sum.inl j) = 0 := by
+  cases i
+  cases j
+  rfl
+
+@[simp]
+theorem TraceNonincreasingCP.hatCompletionKraus_loss_fail_state {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) (l : a) (i : PUnit) (j : a) :
+    hΦ.hatCompletionKraus (Sum.inr (Sum.inr l)) (Sum.inl i) (Sum.inr j) =
+      psdSqrt hΦ.lossEffect l j := by
+  cases i
+  rfl
+
+@[simp]
+theorem TraceNonincreasingCP.hatCompletionKraus_loss_state_out {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) (l : a) (i : b) (j : Sum PUnit a) :
+    hΦ.hatCompletionKraus (Sum.inr (Sum.inr l)) (Sum.inr i) j = 0 := by
+  cases j <;> rfl
+
+theorem TraceNonincreasingCP.hatCompletionKraus_adjoint_one {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) :
+    krausAdjoint hΦ.hatCompletionKraus (1 : CMatrix (Sum PUnit b)) = 1 := by
+  classical
+  ext x y
+  cases x with
+  | inl xi =>
+      cases y with
+      | inl yj =>
+          cases xi
+          cases yj
+          simp [krausAdjoint, TraceNonincreasingCP.hatCompletionKraus,
+            Matrix.sum_apply, Matrix.mul_apply, Matrix.conjTranspose_apply,
+            Fintype.sum_sum_type]
+      | inr yj =>
+          simp [krausAdjoint, TraceNonincreasingCP.hatCompletionKraus,
+            Matrix.sum_apply, Matrix.mul_apply, Matrix.conjTranspose_apply,
+            Fintype.sum_sum_type]
+  | inr xi =>
+      cases y with
+      | inl yj =>
+          simp [krausAdjoint, TraceNonincreasingCP.hatCompletionKraus,
+            Matrix.sum_apply, Matrix.mul_apply, Matrix.conjTranspose_apply,
+            Fintype.sum_sum_type]
+      | inr yj =>
+          have hsqrt :
+              psdSqrt hΦ.lossEffect * psdSqrt hΦ.lossEffect =
+                hΦ.lossEffect := by
+            simpa using psdSqrt_mul_self_of_posSemidef hΦ.lossEffect_posSemidef
+          have hentry :
+              (∑ l : a, star (psdSqrt hΦ.lossEffect l xi) *
+                  psdSqrt hΦ.lossEffect l yj) =
+                hΦ.lossEffect xi yj := by
+            have hHerm := psdSqrt_isHermitian hΦ.lossEffect
+            calc
+              (∑ l : a, star (psdSqrt hΦ.lossEffect l xi) *
+                  psdSqrt hΦ.lossEffect l yj) =
+                  ∑ l : a, psdSqrt hΦ.lossEffect xi l *
+                    psdSqrt hΦ.lossEffect l yj := by
+                    refine Finset.sum_congr rfl fun l _ => ?_
+                    have hstar :
+                        star (psdSqrt hΦ.lossEffect l xi) =
+                          psdSqrt hΦ.lossEffect xi l := by
+                      simpa [Matrix.conjTranspose_apply] using
+                        congrFun (congrFun hHerm xi) l
+                    rw [hstar]
+                _ = (psdSqrt hΦ.lossEffect * psdSqrt hΦ.lossEffect) xi yj := by
+                    simp [Matrix.mul_apply]
+                _ = hΦ.lossEffect xi yj := by rw [hsqrt]
+          have hbase :
+              krausAdjoint hΦ.kraus (1 : CMatrix b) xi yj +
+                  hΦ.lossEffect xi yj =
+                (1 : CMatrix a) xi yj := by
+            rw [TraceNonincreasingCP.lossEffect]
+            simp [sub_eq_add_neg, add_comm, add_left_comm]
+          have hentry' :
+              (∑ x : a, (starRingEnd ℂ) (psdSqrt hΦ.lossEffect x xi) *
+                  psdSqrt hΦ.lossEffect x yj) =
+                hΦ.lossEffect xi yj := by
+            simpa using hentry
+          simpa [krausAdjoint, Matrix.one_apply, Matrix.sum_apply, Matrix.mul_apply,
+            Matrix.conjTranspose_apply, hentry'] using hbase
+
+noncomputable def TraceNonincreasingCP.hatCompletion {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) : Channel (Sum PUnit a) (Sum PUnit b) where
+  map := ofKraus hΦ.hatCompletionKraus
+  completelyPositive := by
+    rw [IsCompletelyPositive, choi_ofKraus]
+    exact Matrix.posSemidef_sum Finset.univ fun _ _ =>
+      Matrix.posSemidef_vecMulVec_self_star _
+  tracePreserving :=
+    ofKraus_tracePreserving_of_krausAdjoint_one hΦ.hatCompletionKraus
+      hΦ.hatCompletionKraus_adjoint_one
+  mapsPositive := ofKraus_mapsPositive hΦ.hatCompletionKraus
+
+theorem TraceNonincreasingCP.hatCompletion_apply_fromBlocks {Φ : MatrixMap a b}
+    (hΦ : TraceNonincreasingCP Φ) (f : CMatrix PUnit) (X : CMatrix a) :
+    hΦ.hatCompletion.map (Matrix.fromBlocks f 0 0 X) =
+      Matrix.fromBlocks
+        (fun i j : PUnit => f i j + (X * hΦ.lossEffect).trace)
+        0 0 (Φ X) := by
+  classical
+  ext x y
+  cases x with
+  | inl xi =>
+      cases y with
+      | inl yj =>
+          cases xi
+          cases yj
+          let S : CMatrix a := psdSqrt hΦ.lossEffect
+          have hHerm : Matrix.conjTranspose S = S := by
+            exact (psdSqrt_isHermitian hΦ.lossEffect).eq
+          have hsqrt : S * S = hΦ.lossEffect := by
+            simpa [S] using psdSqrt_mul_self_of_posSemidef hΦ.lossEffect_posSemidef
+          have hloss :
+              (∑ x : a, ∑ x_1 : a,
+                  (∑ x_2 : a, psdSqrt hΦ.lossEffect x x_2 * X x_2 x_1) *
+                    (starRingEnd ℂ) (psdSqrt hΦ.lossEffect x x_1)) =
+                (X * hΦ.lossEffect).trace := by
+            calc
+              (∑ x : a, ∑ x_1 : a,
+                  (∑ x_2 : a, psdSqrt hΦ.lossEffect x x_2 * X x_2 x_1) *
+                    (starRingEnd ℂ) (psdSqrt hΦ.lossEffect x x_1)) =
+                  (S * X * Matrix.conjTranspose S).trace := by
+                    simp [S, Matrix.trace, Matrix.mul_apply,
+                      Matrix.conjTranspose_apply, Finset.sum_mul]
+              _ = (Matrix.conjTranspose S * (S * X)).trace := by
+                    rw [Matrix.trace_mul_comm]
+              _ = ((Matrix.conjTranspose S * S) * X).trace := by
+                    rw [← Matrix.mul_assoc]
+              _ = (X * (Matrix.conjTranspose S * S)).trace := by
+                    rw [Matrix.trace_mul_comm]
+              _ = (X * hΦ.lossEffect).trace := by
+                    rw [hHerm, hsqrt]
+          simpa [TraceNonincreasingCP.hatCompletion, MatrixMap.ofKraus,
+            TraceNonincreasingCP.hatCompletionKraus, Matrix.sum_apply, Matrix.mul_apply,
+            Matrix.conjTranspose_apply, Fintype.sum_sum_type] using hloss
+      | inr yj =>
+          simp [TraceNonincreasingCP.hatCompletion, MatrixMap.ofKraus,
+            TraceNonincreasingCP.hatCompletionKraus, Matrix.sum_apply, Matrix.mul_apply,
+            Matrix.conjTranspose_apply, Fintype.sum_sum_type]
+  | inr xi =>
+      cases y with
+      | inl yj =>
+          simp [TraceNonincreasingCP.hatCompletion, MatrixMap.ofKraus,
+            TraceNonincreasingCP.hatCompletionKraus, Matrix.sum_apply, Matrix.mul_apply,
+            Matrix.conjTranspose_apply, Fintype.sum_sum_type]
+      | inr yj =>
+          calc
+            (MatrixMap.ofKraus hΦ.hatCompletionKraus
+                (Matrix.fromBlocks f 0 0 X)) (Sum.inr xi) (Sum.inr yj) =
+                (MatrixMap.ofKraus hΦ.kraus X) xi yj := by
+              simp [MatrixMap.ofKraus, TraceNonincreasingCP.hatCompletionKraus,
+                Matrix.sum_apply, Matrix.conjTranspose_apply, Matrix.mul_apply,
+                Fintype.sum_sum_type]
+            _ = Φ X xi yj := by
+              rw [hΦ.ofKraus_kraus]
 
 /-- Trace-preserving CP maps are trace-nonincreasing CP maps. -/
 theorem traceNonincreasingCP_of_tracePreserving {Φ : MatrixMap a b}
@@ -204,16 +564,16 @@ theorem partialTraceA_kron_idChannel_left
     {c : Type w} {d : Type x} [Fintype c] [DecidableEq c]
     [Fintype d] [DecidableEq d]
     (Φ : MatrixMap c d) (X : CMatrix (Prod a c)) :
-    partialTraceA (a := a) (b := d)
+    QIT.partialTraceA (a := a) (b := d)
         (MatrixMap.kron (Channel.idChannel a).map Φ X) =
-      Φ (partialTraceA (a := a) (b := c) X) := by
+      Φ (QIT.partialTraceA (a := a) (b := c) X) := by
   ext j j'
-  simp only [partialTraceA]
+  simp only [QIT.partialTraceA]
   have hpt :
-      partialTraceA (a := a) (b := c) X =
+      QIT.partialTraceA (a := a) (b := c) X =
         ∑ i : a, (fun x y => X (i, x) (i, y)) := by
     ext x y
-    simp [partialTraceA]
+    simp [QIT.partialTraceA]
   rw [hpt]
   have hmap :
       Φ (∑ i : a, (fun x y => X (i, x) (i, y))) =
@@ -283,10 +643,10 @@ private theorem trace_kron_id_left_eq_trace_apply_partialTraceA
     [Fintype d] [DecidableEq d]
     (Φ : MatrixMap c d) (X : CMatrix (Prod a c)) :
     (MatrixMap.kron (Channel.idChannel a).map Φ X).trace =
-      (Φ (partialTraceA (a := a) (b := c) X)).trace := by
+      (Φ (QIT.partialTraceA (a := a) (b := c) X)).trace := by
   classical
   rw [trace_map_eq_sum_single (MatrixMap.kron (Channel.idChannel a).map Φ) X]
-  rw [trace_map_eq_sum_single Φ (partialTraceA (a := a) (b := c) X)]
+  rw [trace_map_eq_sum_single Φ (QIT.partialTraceA (a := a) (b := c) X)]
   calc
     (∑ ac : Prod a c, ∑ ac' : Prod a c,
         X ac ac' *
@@ -303,7 +663,7 @@ private theorem trace_kron_id_left_eq_trace_apply_partialTraceA
           rw [trace_single_one]
     _ =
         ∑ j : c, ∑ j' : c,
-          (partialTraceA (a := a) (b := c) X) j j' *
+          (QIT.partialTraceA (a := a) (b := c) X) j j' *
             (Φ (Matrix.single j j' (1 : Complex))).trace := by
           calc
             (∑ ac : Prod a c, ∑ ac' : Prod a c,
@@ -342,9 +702,9 @@ private theorem trace_kron_id_left_eq_trace_apply_partialTraceA
                 refine Finset.sum_congr rfl fun j' _ => ?_
                 rw [Finset.sum_mul]
             _ = ∑ j : c, ∑ j' : c,
-                (partialTraceA (a := a) (b := c) X) j j' *
+                (QIT.partialTraceA (a := a) (b := c) X) j j' *
                   (Φ (Matrix.single j j' (1 : Complex))).trace := by
-                simp [partialTraceA]
+                simp [QIT.partialTraceA]
 
 /-- Tensoring a trace-nonincreasing CP map on the right with an identity map on
 the left is trace-nonincreasing CP. -/
@@ -359,9 +719,9 @@ theorem traceNonincreasingCP_id_kron
   traceNonincreasing := by
     intro X hX
     rw [trace_kron_id_left_eq_trace_apply_partialTraceA]
-    have hpt : (partialTraceA (a := a) (b := c) X).PosSemidef :=
+    have hpt : (QIT.partialTraceA (a := a) (b := c) X).PosSemidef :=
       partialTraceA_posSemidef hX
-    have hle := hΦ.traceNonincreasing (partialTraceA (a := a) (b := c) X) hpt
+    have hle := hΦ.traceNonincreasing (QIT.partialTraceA (a := a) (b := c) X) hpt
     have htrace := partialTraceA_trace (a := a) (b := c) X
     linarith [congrArg Complex.re htrace]
 
@@ -507,6 +867,336 @@ theorem blockCompression_traceNonincreasingCP (i : ι) :
 
 end BlockCompression
 
+section SumInrCompression
+
+variable {α : Type u} [Fintype α] [DecidableEq α]
+
+/-- Compress a hat-extension matrix to its original-state success block.
+
+For matrices on `Sum PUnit α`, this drops the one-dimensional failure block and
+keeps the `Sum.inr` block indexed by `α`. -/
+def sumInrCompression : MatrixMap (Sum PUnit.{u + 1} α) α where
+  toFun X := fun x y => X (Sum.inr x) (Sum.inr y)
+  map_add' X Y := by ext x y; rfl
+  map_smul' c X := by ext x y; rfl
+
+@[simp]
+theorem sumInrCompression_apply (X : CMatrix (Sum PUnit.{u + 1} α)) :
+    (sumInrCompression (α := α)) X = fun x y => X (Sum.inr x) (Sum.inr y) :=
+  rfl
+
+private theorem choi_sumInrCompression :
+    MatrixMap.choi (sumInrCompression (α := α)) =
+      Matrix.vecMulVec
+        (fun x : Prod (Sum PUnit.{u + 1} α) α =>
+          match x.1 with
+          | Sum.inl _ => 0
+          | Sum.inr i => if i = x.2 then (1 : ℂ) else 0)
+        (fun x : Prod (Sum PUnit.{u + 1} α) α =>
+          star
+            (match x.1 with
+            | Sum.inl _ => 0
+            | Sum.inr i => if i = x.2 then (1 : ℂ) else 0)) := by
+  ext x y
+  rcases x with ⟨xi, xo⟩
+  rcases y with ⟨yi, yo⟩
+  cases xi with
+  | inl xu =>
+      cases yi with
+      | inl yu => simp [MatrixMap.choi, sumInrCompression, Matrix.single, Matrix.vecMulVec]
+      | inr yv => simp [MatrixMap.choi, sumInrCompression, Matrix.single, Matrix.vecMulVec]
+  | inr xv =>
+      cases yi with
+      | inl yu => simp [MatrixMap.choi, sumInrCompression, Matrix.single, Matrix.vecMulVec]
+      | inr yv =>
+          by_cases hx : xv = xo <;> by_cases hy : yv = yo <;>
+            simp [MatrixMap.choi, sumInrCompression, Matrix.single, Matrix.vecMulVec, hx, hy]
+
+/-- Success-block compression is completely positive. -/
+theorem sumInrCompression_completelyPositive :
+    IsCompletelyPositive (sumInrCompression (α := α)) := by
+  rw [MatrixMap.IsCompletelyPositive, choi_sumInrCompression]
+  exact Matrix.posSemidef_vecMulVec_self_star _
+
+private theorem sumInrCompression_trace_re_le {X : CMatrix (Sum PUnit.{u + 1} α)}
+    (hX : X.PosSemidef) :
+    (((sumInrCompression (α := α)) X).trace).re ≤ X.trace.re := by
+  simp only [sumInrCompression_apply, Matrix.trace]
+  have hfail_nonneg :
+      0 ≤ (∑ u : PUnit, (X (Sum.inl u) (Sum.inl u)).re) := by
+    exact Finset.sum_nonneg fun u _ =>
+      (Complex.nonneg_iff.mp (hX.diag_nonneg (i := Sum.inl u))).1
+  calc
+    (∑ x : α, X (Sum.inr x) (Sum.inr x)).re =
+        ∑ x : α, (X (Sum.inr x) (Sum.inr x)).re := by
+          simp
+    _ ≤ (∑ u : PUnit, (X (Sum.inl u) (Sum.inl u)).re) +
+        ∑ x : α, (X (Sum.inr x) (Sum.inr x)).re := by
+          linarith
+    _ = (∑ z : Sum PUnit.{u + 1} α, (X z z).re) := by
+          rw [Fintype.sum_sum_type]
+    _ = (∑ z : Sum PUnit.{u + 1} α, X z z).re := by
+          simp
+
+/-- Success-block compression is trace-nonincreasing completely positive. -/
+theorem sumInrCompression_traceNonincreasingCP :
+    TraceNonincreasingCP (sumInrCompression (α := α)) where
+  completelyPositive := sumInrCompression_completelyPositive (α := α)
+  traceNonincreasing := by
+    intro X hX
+    exact sumInrCompression_trace_re_le (α := α) hX
+
+end SumInrCompression
+
+section SumInrBlockCompression
+
+variable {extra : Type u} {α : Type v}
+variable [Fintype extra] [DecidableEq extra] [Fintype α] [DecidableEq α]
+
+/-- Compress a right-summand block from `Sum extra α` back to `α`.
+
+This is the arbitrary-extra analogue of `sumInrCompression`, used for padding
+arguments where the discarded summand is not just the one-dimensional
+hat-extension failure branch. -/
+def sumInrBlockCompression : MatrixMap (Sum extra α) α where
+  toFun X := fun x y => X (Sum.inr x) (Sum.inr y)
+  map_add' X Y := by ext x y; rfl
+  map_smul' c X := by ext x y; rfl
+
+@[simp]
+theorem sumInrBlockCompression_apply (X : CMatrix (Sum extra α)) :
+    (sumInrBlockCompression (extra := extra) (α := α)) X =
+      fun x y => X (Sum.inr x) (Sum.inr y) :=
+  rfl
+
+private theorem choi_sumInrBlockCompression :
+    MatrixMap.choi (sumInrBlockCompression (extra := extra) (α := α)) =
+      Matrix.vecMulVec
+        (fun x : Prod (Sum extra α) α =>
+          match x.1 with
+          | Sum.inl _ => 0
+          | Sum.inr i => if i = x.2 then (1 : ℂ) else 0)
+        (fun x : Prod (Sum extra α) α =>
+          star
+            (match x.1 with
+            | Sum.inl _ => 0
+            | Sum.inr i => if i = x.2 then (1 : ℂ) else 0)) := by
+  ext x y
+  rcases x with ⟨xi, xo⟩
+  rcases y with ⟨yi, yo⟩
+  cases xi with
+  | inl xu =>
+      cases yi with
+      | inl yu =>
+          simp [MatrixMap.choi, sumInrBlockCompression, Matrix.single, Matrix.vecMulVec]
+      | inr yv =>
+          simp [MatrixMap.choi, sumInrBlockCompression, Matrix.single, Matrix.vecMulVec]
+  | inr xv =>
+      cases yi with
+      | inl yu =>
+          simp [MatrixMap.choi, sumInrBlockCompression, Matrix.single, Matrix.vecMulVec]
+      | inr yv =>
+          by_cases hx : xv = xo <;> by_cases hy : yv = yo <;>
+            simp [MatrixMap.choi, sumInrBlockCompression, Matrix.single, Matrix.vecMulVec, hx, hy]
+
+/-- Arbitrary right-summand block compression is completely positive. -/
+theorem sumInrBlockCompression_completelyPositive :
+    IsCompletelyPositive (sumInrBlockCompression (extra := extra) (α := α)) := by
+  rw [MatrixMap.IsCompletelyPositive, choi_sumInrBlockCompression]
+  exact Matrix.posSemidef_vecMulVec_self_star _
+
+private theorem sumInrBlockCompression_trace_re_le {X : CMatrix (Sum extra α)}
+    (hX : X.PosSemidef) :
+    (((sumInrBlockCompression (extra := extra) (α := α)) X).trace).re ≤ X.trace.re := by
+  simp only [sumInrBlockCompression_apply, Matrix.trace]
+  have hextra_nonneg :
+      0 ≤ (∑ u : extra, (X (Sum.inl u) (Sum.inl u)).re) := by
+    exact Finset.sum_nonneg fun u _ =>
+      (Complex.nonneg_iff.mp (hX.diag_nonneg (i := Sum.inl u))).1
+  calc
+    (∑ x : α, X (Sum.inr x) (Sum.inr x)).re =
+        ∑ x : α, (X (Sum.inr x) (Sum.inr x)).re := by
+          simp
+    _ ≤ (∑ u : extra, (X (Sum.inl u) (Sum.inl u)).re) +
+        ∑ x : α, (X (Sum.inr x) (Sum.inr x)).re := by
+          linarith
+    _ = (∑ z : Sum extra α, (X z z).re) := by
+          rw [Fintype.sum_sum_type]
+    _ = (∑ z : Sum extra α, X z z).re := by
+          simp
+
+/-- Arbitrary right-summand block compression is trace-nonincreasing completely
+positive. -/
+theorem sumInrBlockCompression_traceNonincreasingCP :
+    TraceNonincreasingCP (sumInrBlockCompression (extra := extra) (α := α)) where
+  completelyPositive := sumInrBlockCompression_completelyPositive (extra := extra) (α := α)
+  traceNonincreasing := by
+    intro X hX
+    exact sumInrBlockCompression_trace_re_le (extra := extra) (α := α) hX
+
+end SumInrBlockCompression
+
+section SumInrTraceDiscard
+
+variable {r : Type u} {α : Type v} {β : Type w}
+variable [Fintype r] [DecidableEq r] [Fintype α] [DecidableEq α]
+variable [Fintype β] [DecidableEq β]
+
+/-- Kraus operator for success-block extraction from a hatted bipartite target,
+followed by tracing out the second success subsystem.
+
+The input is indexed as `r × (PUnit ⊕ (α × β))`; the output keeps `α` and the
+reference `r`.  The Kraus index is the discarded `β` coordinate. -/
+def sumInrTraceDiscardKraus (k : β) :
+    Matrix (Prod α r) (Prod r (Sum PUnit.{max v w + 1} (Prod α β))) ℂ :=
+  fun out inp =>
+    match inp.2 with
+    | Sum.inl _ => 0
+    | Sum.inr ab => if inp.1 = out.2 ∧ ab = (out.1, k) then 1 else 0
+
+omit [Fintype r] [Fintype α] [Fintype β] in
+private theorem sumInrTraceDiscardKraus_eq_zero_of_ne
+    (k : β) (out : Prod α r)
+    {inp : Prod r (Sum PUnit.{max v w + 1} (Prod α β))}
+    (hneq : inp ≠ (out.2, Sum.inr (out.1, k))) :
+    sumInrTraceDiscardKraus (r := r) (α := α) (β := β) k out inp = 0 := by
+  classical
+  rcases inp with ⟨i, s⟩
+  cases s with
+  | inl u => rfl
+  | inr ab =>
+      by_cases h : i = out.2 ∧ ab = (out.1, k)
+      · exfalso
+        exact hneq (by cases h.1; cases h.2; rfl)
+      · simp [sumInrTraceDiscardKraus, h]
+
+private theorem sumInrTraceDiscardKraus_mul_apply
+    (k : β) (X : CMatrix (Prod r (Sum PUnit.{max v w + 1} (Prod α β))))
+    (x y : Prod α r) :
+    (sumInrTraceDiscardKraus (r := r) (α := α) (β := β) k * X *
+      Matrix.conjTranspose
+        (sumInrTraceDiscardKraus (r := r) (α := α) (β := β) k)) x y =
+      X (x.2, Sum.inr (x.1, k)) (y.2, Sum.inr (y.1, k)) := by
+  classical
+  simp only [Matrix.mul_apply, Matrix.conjTranspose_apply]
+  rw [Finset.sum_eq_single (y.2, Sum.inr (y.1, k))]
+  · rw [Finset.sum_eq_single (x.2, Sum.inr (x.1, k))]
+    · simp [sumInrTraceDiscardKraus]
+    · intro z _ hz
+      rw [sumInrTraceDiscardKraus_eq_zero_of_ne (r := r) (α := α) (β := β) k x hz]
+      simp
+    · simp
+  · intro z _ hz
+    rw [sumInrTraceDiscardKraus_eq_zero_of_ne (r := r) (α := α) (β := β) k y hz]
+    simp
+  · rw [Finset.sum_eq_single (x.2, Sum.inr (x.1, k))]
+    · simp [sumInrTraceDiscardKraus]
+    · intro z _ hz
+      rw [sumInrTraceDiscardKraus_eq_zero_of_ne (r := r) (α := α) (β := β) k x hz]
+      simp
+    · simp
+
+/-- Extract the success block from a hatted bipartite target and trace out the
+second success subsystem. -/
+def sumInrTraceDiscard :
+    MatrixMap (Prod r (Sum PUnit.{max v w + 1} (Prod α β))) (Prod α r) where
+  toFun X := fun x y =>
+    ∑ k : β, X (x.2, Sum.inr (x.1, k)) (y.2, Sum.inr (y.1, k))
+  map_add' X Y := by
+    ext x y
+    simp [Finset.sum_add_distrib]
+  map_smul' c X := by
+    ext x y
+    simp [Finset.mul_sum]
+
+@[simp]
+theorem sumInrTraceDiscard_apply
+    (X : CMatrix (Prod r (Sum PUnit.{max v w + 1} (Prod α β)))) :
+    (sumInrTraceDiscard (r := r) (α := α) (β := β)) X =
+      fun x y =>
+        ∑ k : β, X (x.2, Sum.inr (x.1, k)) (y.2, Sum.inr (y.1, k)) := by
+  rfl
+
+private theorem sumInrTraceDiscard_eq_ofKraus :
+    sumInrTraceDiscard (r := r) (α := α) (β := β) =
+      MatrixMap.ofKraus (sumInrTraceDiscardKraus (r := r) (α := α) (β := β)) := by
+  classical
+  apply LinearMap.ext
+  intro X
+  ext x y
+  simp only [sumInrTraceDiscard, MatrixMap.ofKraus, LinearMap.coe_mk,
+    AddHom.coe_mk, Matrix.sum_apply]
+  simp [sumInrTraceDiscardKraus_mul_apply]
+
+/-- Success-block trace-discard is completely positive. -/
+theorem sumInrTraceDiscard_completelyPositive :
+    IsCompletelyPositive (sumInrTraceDiscard (r := r) (α := α) (β := β)) := by
+  rw [sumInrTraceDiscard_eq_ofKraus]
+  exact MatrixMap.ofKraus_isCompletelyPositive
+    (sumInrTraceDiscardKraus (r := r) (α := α) (β := β))
+
+private theorem sumInrTraceDiscard_trace_re_le
+    {X : CMatrix (Prod r (Sum PUnit.{max v w + 1} (Prod α β)))}
+    (hX : X.PosSemidef) :
+    (((sumInrTraceDiscard (r := r) (α := α) (β := β)) X).trace).re ≤
+      X.trace.re := by
+  classical
+  simp only [sumInrTraceDiscard_apply, Matrix.trace]
+  have hfail_nonneg :
+      0 ≤ ∑ i : r, ∑ u : PUnit,
+        (X (i, Sum.inl u) (i, Sum.inl u)).re := by
+    exact Finset.sum_nonneg fun i _ =>
+      Finset.sum_nonneg fun u _ =>
+        (Complex.nonneg_iff.mp (hX.diag_nonneg (i := (i, Sum.inl u)))).1
+  have hsuccess_re :
+      (∑ x : Prod α r, ∑ k : β,
+          X (x.2, Sum.inr (x.1, k)) (x.2, Sum.inr (x.1, k))).re =
+        ∑ x : Prod α r, ∑ k : β,
+          (X (x.2, Sum.inr (x.1, k)) (x.2, Sum.inr (x.1, k))).re := by
+    simp
+  have hsuccess_sum :
+      (∑ x : Prod α r, ∑ k : β,
+          (X (x.2, Sum.inr (x.1, k)) (x.2, Sum.inr (x.1, k))).re) =
+        ∑ i : r, ∑ ab : Prod α β,
+          (X (i, Sum.inr ab) (i, Sum.inr ab)).re := by
+    rw [Fintype.sum_prod_type]
+    rw [Finset.sum_comm]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    rw [Fintype.sum_prod_type]
+  have hfull_sum :
+      (∑ z : Prod r (Sum PUnit.{max v w + 1} (Prod α β)), (X z z).re) =
+        (∑ i : r, ∑ u : PUnit, (X (i, Sum.inl u) (i, Sum.inl u)).re) +
+          ∑ i : r, ∑ ab : Prod α β,
+            (X (i, Sum.inr ab) (i, Sum.inr ab)).re := by
+    rw [Fintype.sum_prod_type]
+    simp only [Fintype.sum_sum_type]
+    rw [Finset.sum_add_distrib]
+  calc
+    (∑ x : Prod α r, ∑ k : β,
+        X (x.2, Sum.inr (x.1, k)) (x.2, Sum.inr (x.1, k))).re =
+        ∑ x : Prod α r, ∑ k : β,
+          (X (x.2, Sum.inr (x.1, k)) (x.2, Sum.inr (x.1, k))).re := hsuccess_re
+    _ ≤
+        (∑ i : r, ∑ u : PUnit, (X (i, Sum.inl u) (i, Sum.inl u)).re) +
+        ∑ x : Prod α r, ∑ k : β,
+          (X (x.2, Sum.inr (x.1, k)) (x.2, Sum.inr (x.1, k))).re := by
+          linarith
+    _ =
+        ∑ z : Prod r (Sum PUnit.{max v w + 1} (Prod α β)), (X z z).re := by
+          rw [hsuccess_sum, hfull_sum]
+    _ = (∑ z : Prod r (Sum PUnit.{max v w + 1} (Prod α β)), X z z).re := by
+          simp
+
+/-- Success-block trace-discard is trace-nonincreasing completely positive. -/
+theorem sumInrTraceDiscard_traceNonincreasingCP :
+    TraceNonincreasingCP (sumInrTraceDiscard (r := r) (α := α) (β := β)) where
+  completelyPositive := sumInrTraceDiscard_completelyPositive (r := r) (α := α) (β := β)
+  traceNonincreasing := by
+    intro X hX
+    exact sumInrTraceDiscard_trace_re_le (r := r) (α := α) (β := β) hX
+
+end SumInrTraceDiscard
+
 /-- Kronecker product of matrix maps is linear in the left map. -/
 theorem kron_sub_left (Φ Ψ : MatrixMap a b) (Γ : MatrixMap r r) :
     kron (Φ - Ψ) Γ = kron Φ Γ - kron Ψ Γ := by
@@ -626,27 +1316,6 @@ end ReferenceIsometryChannel
 
 variable {κ : Type x} [Fintype κ]
 
-private def krausAdjoint (K : κ → Matrix b a ℂ) (E : CMatrix b) : CMatrix a :=
-  ∑ k : κ, Matrix.conjTranspose (K k) * E * K k
-
-private theorem ofKraus_trace_duality
-    (K : κ → Matrix b a ℂ) (X : CMatrix a) (E : CMatrix b) :
-    (((ofKraus K) X) * E).trace = (X * krausAdjoint K E).trace := by
-  simp [ofKraus, krausAdjoint, Matrix.sum_mul, Matrix.mul_sum, Matrix.trace_sum]
-  refine Finset.sum_congr rfl fun k _ => ?_
-  let Kk : Matrix b a ℂ := K k
-  let KkH : Matrix a b ℂ := Matrix.conjTranspose Kk
-  calc
-    ((K k * X * Matrix.conjTranspose (K k)) * E).trace =
-        ((Kk * X * KkH) * E).trace := by rfl
-    _ = (E * (Kk * X * KkH)).trace := by rw [Matrix.trace_mul_comm]
-    _ = ((E * Kk) * (X * KkH)).trace := by
-          simp only [Matrix.mul_assoc]
-    _ = ((X * KkH) * (E * Kk)).trace := by rw [Matrix.trace_mul_comm]
-    _ = (X * (KkH * E * Kk)).trace := by
-          simp only [Matrix.mul_assoc]
-    _ = (X * (Matrix.conjTranspose (K k) * E * K k)).trace := by rfl
-
 omit [DecidableEq a] [DecidableEq b] in
 private theorem krausAdjoint_posSemidef
     (K : κ → Matrix b a ℂ) (E : CMatrix b) (hE : E.PosSemidef) :
@@ -655,45 +1324,6 @@ private theorem krausAdjoint_posSemidef
   exact Matrix.posSemidef_sum Finset.univ fun k _ => by
     simpa [Matrix.conjTranspose_conjTranspose, Matrix.mul_assoc]
       using hE.mul_mul_conjTranspose_same (Matrix.conjTranspose (K k))
-
-private theorem krausAdjoint_one_of_tracePreserving
-    (K : κ → Matrix b a ℂ) (hTP : IsTracePreserving (ofKraus K)) :
-    krausAdjoint K (1 : CMatrix b) = 1 := by
-  apply Matrix.ext
-  intro i j
-  let X : CMatrix a := Matrix.single j i (1 : ℂ)
-  have htrace := hTP X
-  have hdual :
-      (((ofKraus K) X) * (1 : CMatrix b)).trace =
-        (X * krausAdjoint K (1 : CMatrix b)).trace :=
-    ofKraus_trace_duality K X (1 : CMatrix b)
-  rw [Matrix.mul_one] at hdual
-  rw [hdual] at htrace
-  have hsingle_trace :
-      (X * krausAdjoint K (1 : CMatrix b)).trace =
-        (krausAdjoint K (1 : CMatrix b)) i j := by
-    simp [X, Matrix.trace_single_mul]
-  have hXtrace : X.trace = if j = i then (1 : ℂ) else 0 := by
-    by_cases hji : j = i
-    · subst hji
-      simp [X, Matrix.trace, Matrix.single]
-    · have hij : i ≠ j := by
-        intro hij
-        exact hji hij.symm
-      simp [X, Matrix.trace, Matrix.single, hji, hij]
-  have hOne : (1 : CMatrix a) i j = if j = i then (1 : ℂ) else 0 := by
-    by_cases hji : j = i
-    · subst hji
-      simp
-    · have hij : i ≠ j := by
-        intro hij
-        exact hji hij.symm
-      simp [hji, hij]
-  calc
-    krausAdjoint K (1 : CMatrix b) i j =
-        (X * krausAdjoint K (1 : CMatrix b)).trace := hsingle_trace.symm
-    _ = X.trace := htrace
-    _ = (1 : CMatrix a) i j := by rw [hXtrace, hOne]
 
 omit [Fintype a] [DecidableEq a] [DecidableEq b] in
 private theorem krausAdjoint_sub (K : κ → Matrix b a ℂ) (E F : CMatrix b) :

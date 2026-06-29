@@ -115,6 +115,18 @@ theorem partialTraceB_applyMatrixRight [Fintype a] (X : CMatrix (Prod a r₁)) :
   ext x y
   exact V.trace_apply_block (rightBlock X x y)
 
+/-- Tracing out the left factor after a right-reference isometry conjugates the
+right marginal by the isometry. -/
+theorem partialTraceA_applyMatrixRight [Fintype a] (X : CMatrix (Prod a r₁)) :
+    partialTraceA (a := a) (b := r₂) (V.applyMatrixRight X) =
+      V.matrix * partialTraceA (a := a) (b := r₁) X * Matrix.conjTranspose V.matrix := by
+  ext x y
+  simp [partialTraceA, applyMatrixRight, rightBlock, Matrix.mul_apply,
+    Finset.sum_mul, Finset.mul_sum, mul_assoc, mul_comm]
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  rw [Finset.sum_comm]
+
 /-- Apply a reference isometry to a bipartite pure vector. -/
 def applyPureVector [Fintype a] [DecidableEq a] (Ψ : PureVector (Prod r₁ a)) :
     PureVector (Prod r₂ a) where

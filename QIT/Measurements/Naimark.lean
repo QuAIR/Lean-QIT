@@ -597,6 +597,17 @@ def familyNaimarkProjectiveMeasurement [Inhabited y]
     ProjectiveMeasurement y (FamilyNaimarkSpace M) :=
   (M setting).fixedNaimarkProjectiveMeasurement
 
+/-- Compressing a shared-family Naimark projector recovers the selected POVM
+effect. -/
+theorem familyNaimark_compression_projector_eq [Inhabited y]
+    (M : settings → POVM y a) (setting : settings) (outcome : y) :
+    Matrix.conjTranspose (familyNaimarkEmbedding M) *
+        (familyNaimarkProjectiveMeasurement M setting).effects outcome *
+        familyNaimarkEmbedding M =
+      (M setting).effects outcome := by
+  simpa [familyNaimarkEmbedding, familyNaimarkProjectiveMeasurement, fixedNaimarkEmbedding]
+    using (M setting).fixedNaimark_compression_projector outcome
+
 /-- The shared lifted state for a family Naimark dilation. -/
 def familyNaimarkLiftState [Inhabited y]
     (M : settings → POVM y a) (rho : State a) :

@@ -31,11 +31,268 @@ open Matrix Polynomial
 
 namespace QIT
 
-universe u
+universe u v
 
 noncomputable section
 
 variable {a : Type u} [Fintype a] [DecidableEq a]
+
+omit [DecidableEq a] in
+theorem partialTraceB_leftKroneckerOne_mul
+    {b : Type v} [Fintype b] [DecidableEq b]
+    (X : CMatrix (Prod a b)) (U : CMatrix a) :
+    partialTraceB (a := a) (b := b) (Matrix.kronecker U (1 : CMatrix b) * X) =
+      U * partialTraceB (a := a) (b := b) X := by
+  ext i i'
+  simp [partialTraceB, Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
+    Matrix.one_apply, Fintype.sum_prod_type, Finset.mul_sum]
+  rw [Finset.sum_comm]
+
+omit [DecidableEq a] in
+theorem partialTraceB_mul_leftKroneckerOne
+    {b : Type v} [Fintype b] [DecidableEq b]
+    (X : CMatrix (Prod a b)) (U : CMatrix a) :
+    partialTraceB (a := a) (b := b) (X * Matrix.kronecker U (1 : CMatrix b)) =
+      partialTraceB (a := a) (b := b) X * U := by
+  ext i i'
+  simp [partialTraceB, Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
+    Matrix.one_apply, Fintype.sum_prod_type, Finset.sum_mul]
+  rw [Finset.sum_comm]
+
+theorem partialTraceB_left_unitary_conj
+    {b : Type v} [Fintype b] [DecidableEq b]
+    (X : CMatrix (Prod a b)) (U : Matrix.unitaryGroup a ℂ) :
+    partialTraceB (a := a) (b := b)
+        (star (Matrix.kronecker (U : CMatrix a) (1 : CMatrix b)) * X *
+          Matrix.kronecker (U : CMatrix a) (1 : CMatrix b)) =
+      star (U : CMatrix a) * partialTraceB (a := a) (b := b) X *
+        (U : CMatrix a) := by
+  have hstar :
+      star (Matrix.kronecker (U : CMatrix a) (1 : CMatrix b)) =
+        Matrix.kronecker (star (U : CMatrix a)) (1 : CMatrix b) := by
+    simpa [Matrix.star_eq_conjTranspose] using
+      Matrix.conjTranspose_kronecker (U : CMatrix a) (1 : CMatrix b)
+  rw [hstar]
+  calc
+    partialTraceB (a := a) (b := b)
+        ((Matrix.kronecker (star (U : CMatrix a)) (1 : CMatrix b) * X) *
+          Matrix.kronecker (U : CMatrix a) (1 : CMatrix b))
+        =
+          partialTraceB (a := a) (b := b)
+            (Matrix.kronecker (star (U : CMatrix a)) (1 : CMatrix b) * X) *
+            (U : CMatrix a) := by
+            rw [partialTraceB_mul_leftKroneckerOne]
+    _ = (star (U : CMatrix a) * partialTraceB (a := a) (b := b) X) *
+          (U : CMatrix a) := by
+            rw [partialTraceB_leftKroneckerOne_mul]
+    _ = star (U : CMatrix a) * partialTraceB (a := a) (b := b) X *
+          (U : CMatrix a) := by
+            rw [Matrix.mul_assoc]
+
+theorem partialTraceB_right_unitary_conj
+    {b : Type v} [Fintype b] [DecidableEq b]
+    (X : CMatrix (Prod a b)) (V : Matrix.unitaryGroup b ℂ) :
+    partialTraceB (a := a) (b := b)
+        (star (Matrix.kronecker (1 : CMatrix a) (V : CMatrix b)) * X *
+          Matrix.kronecker (1 : CMatrix a) (V : CMatrix b)) =
+      partialTraceB (a := a) (b := b) X := by
+  classical
+  ext i i'
+  have hstar :
+      star (Matrix.kronecker (1 : CMatrix a) (V : CMatrix b)) =
+        Matrix.kronecker (1 : CMatrix a) (star (V : CMatrix b)) := by
+    simpa [Matrix.star_eq_conjTranspose] using
+      Matrix.conjTranspose_kronecker (1 : CMatrix a) (V : CMatrix b)
+  rw [hstar]
+  simp [partialTraceB, Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
+    Matrix.one_apply, Fintype.sum_prod_type, Finset.mul_sum, mul_left_comm, mul_comm]
+  have hunit : (V : CMatrix b) * star (V : CMatrix b) = 1 :=
+    Unitary.coe_mul_star_self V
+  have hrow : ∀ x₁ x₂ : b,
+      (∑ x, (V : CMatrix b) x₁ x * star ((V : CMatrix b) x₂ x)) =
+        if x₁ = x₂ then 1 else 0 := by
+    intro x₁ x₂
+    have h := congrFun (congrFun hunit x₁) x₂
+    simpa [Matrix.mul_apply, Matrix.one_apply, Matrix.star_apply] using h
+  calc
+    ∑ x, ∑ x_1, ∑ x_2,
+        X (i, x_2) (i', x_1) *
+          ((V : CMatrix b) x_1 x * star ((V : CMatrix b) x_2 x))
+        =
+      ∑ x_1, ∑ x_2, ∑ x,
+        X (i, x_2) (i', x_1) *
+          ((V : CMatrix b) x_1 x * star ((V : CMatrix b) x_2 x)) := by
+        rw [Finset.sum_comm]
+        refine Finset.sum_congr rfl fun x_1 _ => ?_
+        rw [Finset.sum_comm]
+    _ =
+      ∑ x_1, ∑ x_2,
+        X (i, x_2) (i', x_1) *
+          (∑ x, (V : CMatrix b) x_1 x * star ((V : CMatrix b) x_2 x)) := by
+        simp [Finset.mul_sum]
+    _ = ∑ x_1, ∑ x_2,
+        X (i, x_2) (i', x_1) * (if x_1 = x_2 then 1 else 0) := by
+        simp_rw [hrow]
+    _ = ∑ j, X (i, j) (i', j) := by
+        simp
+
+theorem partialTraceA_rightKroneckerOne_mul
+    {b : Type v} [Fintype b] [DecidableEq b]
+    (X : CMatrix (Prod a b)) (V : CMatrix b) :
+    partialTraceA (a := a) (b := b) (Matrix.kronecker (1 : CMatrix a) V * X) =
+      V * partialTraceA (a := a) (b := b) X := by
+  ext j j'
+  simp [partialTraceA, Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
+    Matrix.one_apply, Fintype.sum_prod_type, Finset.mul_sum]
+  rw [Finset.sum_comm]
+
+theorem partialTraceA_mul_rightKroneckerOne
+    {b : Type v} [Fintype b] [DecidableEq b]
+    (X : CMatrix (Prod a b)) (V : CMatrix b) :
+    partialTraceA (a := a) (b := b) (X * Matrix.kronecker (1 : CMatrix a) V) =
+      partialTraceA (a := a) (b := b) X * V := by
+  ext j j'
+  simp [partialTraceA, Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
+    Matrix.one_apply, Fintype.sum_prod_type, Finset.sum_mul]
+  rw [Finset.sum_comm]
+
+theorem partialTraceA_right_unitary_conj
+    {b : Type v} [Fintype b] [DecidableEq b]
+    (X : CMatrix (Prod a b)) (V : Matrix.unitaryGroup b ℂ) :
+    partialTraceA (a := a) (b := b)
+        (star (Matrix.kronecker (1 : CMatrix a) (V : CMatrix b)) * X *
+          Matrix.kronecker (1 : CMatrix a) (V : CMatrix b)) =
+      star (V : CMatrix b) * partialTraceA (a := a) (b := b) X *
+        (V : CMatrix b) := by
+  have hstar :
+      star (Matrix.kronecker (1 : CMatrix a) (V : CMatrix b)) =
+        Matrix.kronecker (1 : CMatrix a) (star (V : CMatrix b)) := by
+    simpa [Matrix.star_eq_conjTranspose] using
+      Matrix.conjTranspose_kronecker (1 : CMatrix a) (V : CMatrix b)
+  rw [hstar]
+  calc
+    partialTraceA (a := a) (b := b)
+        ((Matrix.kronecker (1 : CMatrix a) (star (V : CMatrix b)) * X) *
+          Matrix.kronecker (1 : CMatrix a) (V : CMatrix b))
+        =
+          partialTraceA (a := a) (b := b)
+            (Matrix.kronecker (1 : CMatrix a) (star (V : CMatrix b)) * X) *
+            (V : CMatrix b) := by
+            rw [partialTraceA_mul_rightKroneckerOne]
+    _ = (star (V : CMatrix b) * partialTraceA (a := a) (b := b) X) *
+          (V : CMatrix b) := by
+            rw [partialTraceA_rightKroneckerOne_mul]
+    _ = star (V : CMatrix b) * partialTraceA (a := a) (b := b) X *
+          (V : CMatrix b) := by
+            rw [Matrix.mul_assoc]
+
+theorem partialTraceA_left_unitary_conj
+    {b : Type v} [Fintype b] [DecidableEq b]
+    (X : CMatrix (Prod a b)) (U : Matrix.unitaryGroup a ℂ) :
+    partialTraceA (a := a) (b := b)
+        (star (Matrix.kronecker (U : CMatrix a) (1 : CMatrix b)) * X *
+          Matrix.kronecker (U : CMatrix a) (1 : CMatrix b)) =
+      partialTraceA (a := a) (b := b) X := by
+  classical
+  ext j j'
+  have hstar :
+      star (Matrix.kronecker (U : CMatrix a) (1 : CMatrix b)) =
+        Matrix.kronecker (star (U : CMatrix a)) (1 : CMatrix b) := by
+    simpa [Matrix.star_eq_conjTranspose] using
+      Matrix.conjTranspose_kronecker (U : CMatrix a) (1 : CMatrix b)
+  rw [hstar]
+  simp [partialTraceA, Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
+    Matrix.one_apply, Fintype.sum_prod_type, Finset.mul_sum, mul_left_comm, mul_comm]
+  have hunit : (U : CMatrix a) * star (U : CMatrix a) = 1 :=
+    Unitary.coe_mul_star_self U
+  have hrow : ∀ x₁ x₂ : a,
+      (∑ x, (U : CMatrix a) x₁ x * star ((U : CMatrix a) x₂ x)) =
+        if x₁ = x₂ then 1 else 0 := by
+    intro x₁ x₂
+    have h := congrFun (congrFun hunit x₁) x₂
+    simpa [Matrix.mul_apply, Matrix.one_apply, Matrix.star_apply] using h
+  calc
+    ∑ x, ∑ x_1, ∑ x_2,
+        X (x_2, j) (x_1, j') *
+          ((U : CMatrix a) x_1 x * star ((U : CMatrix a) x_2 x))
+        =
+      ∑ x_1, ∑ x_2, ∑ x,
+        X (x_2, j) (x_1, j') *
+          ((U : CMatrix a) x_1 x * star ((U : CMatrix a) x_2 x)) := by
+        rw [Finset.sum_comm]
+        refine Finset.sum_congr rfl fun x_1 _ => ?_
+        rw [Finset.sum_comm]
+    _ =
+      ∑ x_1, ∑ x_2,
+        X (x_2, j) (x_1, j') *
+          (∑ x, (U : CMatrix a) x_1 x * star ((U : CMatrix a) x_2 x)) := by
+        simp [Finset.mul_sum]
+    _ = ∑ x_1, ∑ x_2,
+        X (x_2, j) (x_1, j') * (if x_1 = x_2 then 1 else 0) := by
+        simp_rw [hrow]
+    _ = ∑ i, X (i, j) (i, j') := by
+        simp
+
+theorem partialTraceB_local_unitary_conj
+    {b : Type v} [Fintype b] [DecidableEq b]
+    (X : CMatrix (Prod a b)) (U : Matrix.unitaryGroup a ℂ)
+    (V : Matrix.unitaryGroup b ℂ) :
+    partialTraceB (a := a) (b := b)
+        (star (Matrix.kronecker (U : CMatrix a) (V : CMatrix b)) * X *
+          Matrix.kronecker (U : CMatrix a) (V : CMatrix b)) =
+      star (U : CMatrix a) * partialTraceB (a := a) (b := b) X *
+        (U : CMatrix a) := by
+  let K : CMatrix (Prod a b) := Matrix.kronecker (U : CMatrix a) (1 : CMatrix b)
+  let L : CMatrix (Prod a b) := Matrix.kronecker (1 : CMatrix a) (V : CMatrix b)
+  have hfactor :
+      Matrix.kronecker (U : CMatrix a) (V : CMatrix b) = K * L := by
+    simpa using
+      (Matrix.mul_kronecker_mul (U : CMatrix a) (1 : CMatrix a)
+        (1 : CMatrix b) (V : CMatrix b))
+  rw [hfactor]
+  have houter :
+      partialTraceB (a := a) (b := b) (star (K * L) * X * (K * L)) =
+        partialTraceB (a := a) (b := b) (star K * X * K) := by
+    rw [star_mul]
+    simpa [K, L, Matrix.mul_assoc] using
+      partialTraceB_right_unitary_conj (a := a) (b := b) (star K * X * K) V
+  rw [houter]
+  simpa [K] using partialTraceB_left_unitary_conj (a := a) (b := b) X U
+
+theorem partialTraceA_local_unitary_conj
+    {b : Type v} [Fintype b] [DecidableEq b]
+    (X : CMatrix (Prod a b)) (U : Matrix.unitaryGroup a ℂ)
+    (V : Matrix.unitaryGroup b ℂ) :
+    partialTraceA (a := a) (b := b)
+        (star (Matrix.kronecker (U : CMatrix a) (V : CMatrix b)) * X *
+          Matrix.kronecker (U : CMatrix a) (V : CMatrix b)) =
+      star (V : CMatrix b) * partialTraceA (a := a) (b := b) X *
+        (V : CMatrix b) := by
+  let K : CMatrix (Prod a b) := Matrix.kronecker (U : CMatrix a) (1 : CMatrix b)
+  let L : CMatrix (Prod a b) := Matrix.kronecker (1 : CMatrix a) (V : CMatrix b)
+  have hfactor :
+      Matrix.kronecker (U : CMatrix a) (V : CMatrix b) = K * L := by
+    simpa using
+      (Matrix.mul_kronecker_mul (U : CMatrix a) (1 : CMatrix a)
+        (1 : CMatrix b) (V : CMatrix b))
+  rw [hfactor]
+  have houter :
+      partialTraceA (a := a) (b := b) (star (K * L) * X * (K * L)) =
+        star (V : CMatrix b) *
+          partialTraceA (a := a) (b := b) (star K * X * K) *
+            (V : CMatrix b) := by
+    rw [star_mul]
+    simpa [K, L, Matrix.mul_assoc] using
+      partialTraceA_right_unitary_conj (a := a) (b := b) (star K * X * K) V
+  rw [houter]
+  rw [partialTraceA_left_unitary_conj (a := a) (b := b) X U]
+
+theorem kronecker_mem_unitaryGroup
+    {b : Type v} [Fintype b] [DecidableEq b]
+    (U : Matrix.unitaryGroup a ℂ) (V : Matrix.unitaryGroup b ℂ) :
+    Matrix.kronecker (U : CMatrix a) (V : CMatrix b) ∈
+      Matrix.unitaryGroup (Prod a b) ℂ := by
+  exact kronecker_mem_unitary U.2 V.2
 
 namespace Matrix
 
@@ -49,6 +306,12 @@ def Supports (M N : CMatrix a) : Prop :=
 omit [DecidableEq a] in
 theorem Supports.refl (M : CMatrix a) : Supports M M :=
   fun _ h => h
+
+/-- Support domination is transitive. -/
+theorem Supports.trans {M N P : CMatrix a}
+    (hMN : Supports M N) (hNP : Supports N P) :
+    Supports M P :=
+  fun v hPv => hMN v (hNP v hPv)
 
 /-- Entrywise support domination for real diagonal matrices. -/
 theorem Supports.diagonal_of_real_zero_imp_zero {d e : a → ℝ}
@@ -564,6 +827,337 @@ theorem cMatrix_rpow_eq_eigenbasis_diagonal
   rw [hA.isHermitian.cfc_eq]
   simp [Matrix.IsHermitian.cfc, Unitary.conjStarAlgAut_apply, Function.comp_def]
 
+/-- Positive real powers do not enlarge the support of a PSD matrix. In the
+finite-dimensional kernel-inclusion convention, `A^α` is supported by `A`
+for every `0 < α`. -/
+theorem cMatrix_rpow_supports_self
+    {A : CMatrix a} (hA : A.PosSemidef) {α : ℝ} (hα : 0 < α) :
+    Matrix.Supports (CFC.rpow A α) A := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hA.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := fun i => hA.isHermitian.eigenvalues i
+  have hd : ∀ i, 0 ≤ d i := by
+    intro i
+    exact hA.eigenvalues_nonneg i
+  have hdiagSupport :
+      Matrix.Supports
+        (Matrix.diagonal fun i => ((d i ^ α : ℝ) : ℂ) : CMatrix a)
+        (Matrix.diagonal fun i => ((d i : ℝ) : ℂ) : CMatrix a) := by
+    apply Matrix.Supports.diagonal_of_real_zero_imp_zero
+    intro i hi
+    simp [hi, Real.zero_rpow (ne_of_gt hα)]
+  have hconj := Matrix.Supports.unitary_conj hdiagSupport U
+  have hpow :
+      CFC.rpow A α =
+        (U : CMatrix a) *
+          Matrix.diagonal (fun i => ((d i ^ α : ℝ) : ℂ)) *
+          star (U : CMatrix a) := by
+    simpa [U, d] using cMatrix_rpow_eq_eigenbasis_diagonal hA α
+  have hAdiag :
+      A =
+        (U : CMatrix a) *
+          Matrix.diagonal (fun i => ((d i : ℝ) : ℂ)) *
+          star (U : CMatrix a) := by
+    simpa [U, d, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
+      using hA.isHermitian.spectral_theorem
+  rw [hpow, hAdiag]
+  exact hconj
+
+/-- A positive semidefinite matrix with a zero diagonal entry has zero row and
+column at that index. -/
+theorem PosSemidef.zero_diag_zero_row_col
+    {A : CMatrix a} (hA : A.PosSemidef) {i : a} (hii : A i i = 0) (j : a) :
+    A i j = 0 ∧ A j i = 0 := by
+  classical
+  set e : a → ℂ := Pi.single i 1 with he
+  have hei : e i = (1 : ℂ) := by
+    rw [he, Pi.single_apply, if_pos rfl]
+  have hek : ∀ k, k ≠ i → e k = 0 := fun k hk => by
+    rw [he, Pi.single_apply, if_neg hk]
+  have hmulVec : Matrix.mulVec A e = fun k => A k i := by
+    ext k
+    rw [Matrix.mulVec, dotProduct, Finset.sum_eq_single i]
+    · simp [hei]
+    · intro m _ hm
+      simp [hek m hm]
+    · simp [hei]
+  have hform : dotProduct (star e) (Matrix.mulVec A e) = A i i := by
+    rw [hmulVec, dotProduct, Finset.sum_eq_single i]
+    · simp [hei]
+    · intro k _ hk
+      simp [hek k hk]
+    · simp [hei]
+  have hcol : Matrix.mulVec A e = 0 :=
+    (hA.dotProduct_mulVec_zero_iff e).mp (by rw [hform, hii])
+  have hji : A j i = 0 := by
+    have h1 : (fun k => A k i) j = 0 := by
+      rw [← hmulVec, hcol]
+      simp
+    exact h1
+  refine ⟨?_, hji⟩
+  have hherm : star A = A := hA.isHermitian.eq
+  have hij : A i j = star (A j i) := by
+    rw [show A i j = star A i j from by rw [hherm], Matrix.star_apply A i j]
+  rw [hij, hji, star_zero]
+
+/-- For a positive semidefinite matrix, a diagonal entry with zero real part is
+zero as a complex number. -/
+theorem PosSemidef.diag_eq_zero_of_re_eq_zero
+    {A : CMatrix a} (hA : A.PosSemidef) {i : a} (hii : (A i i).re = 0) :
+    A i i = 0 := by
+  have hself : star (A i i) = A i i := by
+    have h := congrFun (congrFun hA.isHermitian.eq i) i
+    simpa [Matrix.star_apply] using h
+  apply Complex.ext
+  · simpa using hii
+  · have him : -(A i i).im = (A i i).im := by
+      simpa using congrArg Complex.im hself
+    have him_zero : (A i i).im = 0 := by
+      nlinarith [him]
+    simpa using him_zero
+
+/-- A PSD matrix whose diagonal entries vanish wherever a nonnegative diagonal
+support vanishes is supported by that diagonal matrix. -/
+theorem Matrix.Supports.of_posSemidef_diagonal
+    {M : CMatrix a} (hM : M.PosSemidef) {d : a → ℝ} (_hd : ∀ i, 0 ≤ d i)
+    (hzero : ∀ i, d i = 0 → M i i = 0) :
+    Matrix.Supports M
+      (Matrix.diagonal fun i => ((d i : ℝ) : ℂ) : CMatrix a) := by
+  intro v hv
+  ext k
+  rw [Matrix.mulVec, dotProduct]
+  apply Finset.sum_eq_zero
+  intro j _hj
+  by_cases hdj : d j = 0
+  · have hcol : M k j = 0 :=
+      (PosSemidef.zero_diag_zero_row_col hM (hzero j hdj) k).2
+    simp [hcol]
+  · have hdjC : ((d j : ℝ) : ℂ) ≠ 0 := by
+      exact_mod_cast hdj
+    have hvj : v j = 0 := by
+      have hjv := congrFun hv j
+      simpa [Matrix.mulVec, dotProduct, Matrix.diagonal, hdjC] using hjv
+    simp [hvj]
+
+namespace State
+
+variable {b : Type v} [Fintype b] [DecidableEq b]
+
+/-- A bipartite density matrix is supported on the tensor product of the
+supports of its two marginals. This is the finite-dimensional support fact
+used to discharge the PSD-domain Petz trace positivity for barred mutual
+information. -/
+theorem matrix_supports_prod_marginals (ρ : State (Prod a b)) :
+    Matrix.Supports ρ.matrix (ρ.marginalA.prod ρ.marginalB).matrix := by
+  classical
+  let ρA : State a := ρ.marginalA
+  let ρB : State b := ρ.marginalB
+  let UA : Matrix.unitaryGroup a ℂ := ρA.pos.isHermitian.eigenvectorUnitary
+  let UB : Matrix.unitaryGroup b ℂ := ρB.pos.isHermitian.eigenvectorUnitary
+  let UAB : Matrix.unitaryGroup (Prod a b) ℂ :=
+    ⟨Matrix.kronecker (UA : CMatrix a) (UB : CMatrix b),
+      kronecker_mem_unitaryGroup UA UB⟩
+  let M' : CMatrix (Prod a b) := star (UAB : CMatrix (Prod a b)) * ρ.matrix * UAB
+  let dA : a → ℝ := fun i => ρA.pos.isHermitian.eigenvalues i
+  let dB : b → ℝ := fun j => ρB.pos.isHermitian.eigenvalues j
+  let d : Prod a b → ℝ := fun x => dA x.1 * dB x.2
+  have hdA_nonneg : ∀ i, 0 ≤ dA i := by
+    intro i
+    exact ρA.pos.eigenvalues_nonneg i
+  have hdB_nonneg : ∀ j, 0 ≤ dB j := by
+    intro j
+    exact ρB.pos.eigenvalues_nonneg j
+  have hd_nonneg : ∀ x, 0 ≤ d x := by
+    intro x
+    exact mul_nonneg (hdA_nonneg x.1) (hdB_nonneg x.2)
+  have hM'pos : M'.PosSemidef := by
+    simpa [M', Matrix.star_eq_conjTranspose] using
+      ρ.pos.conjTranspose_mul_mul_same (UAB : CMatrix (Prod a b))
+  have hptB :
+      partialTraceB (a := a) (b := b) M' =
+        Matrix.diagonal fun i => ((dA i : ℝ) : ℂ) := by
+    have hloc := partialTraceB_local_unitary_conj (a := a) (b := b) ρ.matrix UA UB
+    have hdiag :
+        star (UA : CMatrix a) * ρA.matrix * (UA : CMatrix a) =
+          Matrix.diagonal fun i => ((dA i : ℝ) : ℂ) := by
+      have hspec := ρA.pos.isHermitian.spectral_theorem
+      -- The spectral theorem is `ρA = UA * D * UAᴴ`; conjugating by `UAᴴ`
+      -- gives the diagonal eigenvalue matrix.
+      have hρA :
+          ρA.matrix =
+            (UA : CMatrix a) * (Matrix.diagonal fun i => ((dA i : ℝ) : ℂ)) *
+              star (UA : CMatrix a) := by
+        simpa [UA, dA, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
+          using hspec
+      calc
+        star (UA : CMatrix a) * ρA.matrix * (UA : CMatrix a)
+            = star (UA : CMatrix a) *
+                ((UA : CMatrix a) * (Matrix.diagonal fun i => ((dA i : ℝ) : ℂ)) *
+                  star (UA : CMatrix a)) * (UA : CMatrix a) := by
+                rw [hρA]
+        _ = (star (UA : CMatrix a) * (UA : CMatrix a)) *
+              (Matrix.diagonal fun i => ((dA i : ℝ) : ℂ)) *
+                (star (UA : CMatrix a) * (UA : CMatrix a)) := by
+                noncomm_ring
+        _ = Matrix.diagonal fun i => ((dA i : ℝ) : ℂ) := by
+                rw [Unitary.coe_star_mul_self]
+                simp
+    simpa [M', UAB, ρA, State.marginalA_matrix] using hloc.trans hdiag
+  have hptA :
+      partialTraceA (a := a) (b := b) M' =
+        Matrix.diagonal fun j => ((dB j : ℝ) : ℂ) := by
+    have hloc := partialTraceA_local_unitary_conj (a := a) (b := b) ρ.matrix UA UB
+    have hdiag :
+        star (UB : CMatrix b) * ρB.matrix * (UB : CMatrix b) =
+          Matrix.diagonal fun j => ((dB j : ℝ) : ℂ) := by
+      have hspec := ρB.pos.isHermitian.spectral_theorem
+      have hρB :
+          ρB.matrix =
+            (UB : CMatrix b) * (Matrix.diagonal fun j => ((dB j : ℝ) : ℂ)) *
+              star (UB : CMatrix b) := by
+        simpa [UB, dB, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
+          using hspec
+      calc
+        star (UB : CMatrix b) * ρB.matrix * (UB : CMatrix b)
+            = star (UB : CMatrix b) *
+                ((UB : CMatrix b) * (Matrix.diagonal fun j => ((dB j : ℝ) : ℂ)) *
+                  star (UB : CMatrix b)) * (UB : CMatrix b) := by
+                rw [hρB]
+        _ = (star (UB : CMatrix b) * (UB : CMatrix b)) *
+              (Matrix.diagonal fun j => ((dB j : ℝ) : ℂ)) *
+                (star (UB : CMatrix b) * (UB : CMatrix b)) := by
+                noncomm_ring
+        _ = Matrix.diagonal fun j => ((dB j : ℝ) : ℂ) := by
+                rw [Unitary.coe_star_mul_self]
+                simp
+    simpa [M', UAB, ρB, State.marginalB_matrix] using hloc.trans hdiag
+  have hzero : ∀ x : Prod a b, d x = 0 → M' x x = 0 := by
+    intro x hdx
+    rcases x with ⟨i, j⟩
+    have hcases : dA i = 0 ∨ dB j = 0 := by
+      exact mul_eq_zero.mp hdx
+    have hdiag_re_zero : (M' (i, j) (i, j)).re = 0 := by
+      rcases hcases with hAi | hBj
+      · have hsum_complex := congrFun (congrFun hptB i) i
+        have hsum_re := congrArg Complex.re hsum_complex
+        have hsum_zero : (∑ k : b, (M' (i, k) (i, k)).re) = 0 := by
+          simpa [partialTraceB, Matrix.diagonal, dA, hAi] using hsum_re
+        have hnonneg : ∀ k ∈ (Finset.univ : Finset b), 0 ≤ (M' (i, k) (i, k)).re := by
+          intro k _
+          exact posSemidef_diagonal_re_nonneg hM'pos (i, k)
+        have hle :
+            (M' (i, j) (i, j)).re ≤
+              ∑ k : b, (M' (i, k) (i, k)).re :=
+          Finset.single_le_sum hnonneg (Finset.mem_univ j)
+        exact le_antisymm (by simpa [hsum_zero] using hle)
+          (posSemidef_diagonal_re_nonneg hM'pos (i, j))
+      · have hsum_complex := congrFun (congrFun hptA j) j
+        have hsum_re := congrArg Complex.re hsum_complex
+        have hsum_zero : (∑ k : a, (M' (k, j) (k, j)).re) = 0 := by
+          simpa [partialTraceA, Matrix.diagonal, dB, hBj] using hsum_re
+        have hnonneg : ∀ k ∈ (Finset.univ : Finset a), 0 ≤ (M' (k, j) (k, j)).re := by
+          intro k _
+          exact posSemidef_diagonal_re_nonneg hM'pos (k, j)
+        have hle :
+            (M' (i, j) (i, j)).re ≤
+              ∑ k : a, (M' (k, j) (k, j)).re :=
+          Finset.single_le_sum hnonneg (Finset.mem_univ i)
+        exact le_antisymm (by simpa [hsum_zero] using hle)
+          (posSemidef_diagonal_re_nonneg hM'pos (i, j))
+    exact PosSemidef.diag_eq_zero_of_re_eq_zero hM'pos hdiag_re_zero
+  have hdiagSupport :
+      Matrix.Supports M'
+        (Matrix.diagonal fun x : Prod a b => ((d x : ℝ) : ℂ) : CMatrix (Prod a b)) :=
+    Matrix.Supports.of_posSemidef_diagonal hM'pos hd_nonneg hzero
+  have hconj := Matrix.Supports.unitary_conj hdiagSupport UAB
+  have hMback :
+      (UAB : CMatrix (Prod a b)) * M' * star (UAB : CMatrix (Prod a b)) =
+        ρ.matrix := by
+    have hUU : (UAB : CMatrix (Prod a b)) * star (UAB : CMatrix (Prod a b)) = 1 := by
+      exact Unitary.coe_mul_star_self UAB
+    change (UAB : CMatrix (Prod a b)) *
+        (star (UAB : CMatrix (Prod a b)) * ρ.matrix * (UAB : CMatrix (Prod a b))) *
+          star (UAB : CMatrix (Prod a b)) = ρ.matrix
+    calc
+      (UAB : CMatrix (Prod a b)) *
+          (star (UAB : CMatrix (Prod a b)) * ρ.matrix * (UAB : CMatrix (Prod a b))) *
+            star (UAB : CMatrix (Prod a b))
+          =
+            ((UAB : CMatrix (Prod a b)) * star (UAB : CMatrix (Prod a b))) *
+              ρ.matrix *
+                ((UAB : CMatrix (Prod a b)) * star (UAB : CMatrix (Prod a b))) := by
+              noncomm_ring
+      _ = ρ.matrix := by
+              rw [hUU]
+              simp
+  have hNback :
+      (UAB : CMatrix (Prod a b)) *
+          (Matrix.diagonal fun x : Prod a b => ((d x : ℝ) : ℂ)) *
+          star (UAB : CMatrix (Prod a b)) =
+        (ρA.prod ρB).matrix := by
+    have hA :
+        ρA.matrix =
+          (UA : CMatrix a) * (Matrix.diagonal fun i => ((dA i : ℝ) : ℂ)) *
+            star (UA : CMatrix a) := by
+      simpa [UA, dA, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
+        using ρA.pos.isHermitian.spectral_theorem
+    have hB :
+        ρB.matrix =
+          (UB : CMatrix b) * (Matrix.diagonal fun j => ((dB j : ℝ) : ℂ)) *
+            star (UB : CMatrix b) := by
+      simpa [UB, dB, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
+        using ρB.pos.isHermitian.spectral_theorem
+    let DA : CMatrix a := Matrix.diagonal fun i => ((dA i : ℝ) : ℂ)
+    let DB : CMatrix b := Matrix.diagonal fun j => ((dB j : ℝ) : ℂ)
+    have hD :
+        (Matrix.diagonal fun x : Prod a b => ((d x : ℝ) : ℂ) : CMatrix (Prod a b)) =
+          Matrix.kronecker DA DB := by
+      ext x y
+      by_cases hxy : x = y
+      · subst y
+        simp [DA, DB, d, Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.diagonal]
+      · have hneq : x.1 ≠ y.1 ∨ x.2 ≠ y.2 := by
+          by_cases h1 : x.1 = y.1
+          · right
+            intro h2
+            exact hxy (Prod.ext h1 h2)
+          · left
+            exact h1
+        rcases hneq with hneqA | hneqB
+        · simp [DA, DB, d, Matrix.kronecker, Matrix.kroneckerMap_apply,
+            Matrix.diagonal, hxy, hneqA]
+        · simp [DA, DB, d, Matrix.kronecker, Matrix.kroneckerMap_apply,
+            Matrix.diagonal, hxy, hneqB]
+    have hUAB :
+        (UAB : CMatrix (Prod a b)) =
+          Matrix.kronecker (UA : CMatrix a) (UB : CMatrix b) := rfl
+    have hstarUAB :
+        star (UAB : CMatrix (Prod a b)) =
+          Matrix.kronecker (star (UA : CMatrix a)) (star (UB : CMatrix b)) := by
+      simpa [UAB, Matrix.star_eq_conjTranspose] using
+        Matrix.conjTranspose_kronecker (UA : CMatrix a) (UB : CMatrix b)
+    change (UAB : CMatrix (Prod a b)) *
+          (Matrix.diagonal fun x : Prod a b => ((d x : ℝ) : ℂ)) *
+          star (UAB : CMatrix (Prod a b)) =
+        Matrix.kronecker ρA.matrix ρB.matrix
+    rw [hD, hUAB, hstarUAB]
+    change (Matrix.kronecker (UA : CMatrix a) (UB : CMatrix b) *
+          Matrix.kronecker DA DB) *
+          Matrix.kronecker (star (UA : CMatrix a)) (star (UB : CMatrix b)) =
+        Matrix.kronecker ρA.matrix ρB.matrix
+    rw [hA, hB]
+    simp [DA, DB, Matrix.mul_kronecker_mul, Matrix.mul_assoc]
+  simpa [hMback, hNback, ρA, ρB] using hconj
+
+/-- Positive real powers of a bipartite density matrix are supported on the
+tensor product of the supports of its two marginals. -/
+theorem rpow_matrix_supports_prod_marginals
+    (ρ : State (Prod a b)) {α : ℝ} (hα : 0 < α) :
+    Matrix.Supports (CFC.rpow ρ.matrix α) (ρ.marginalA.prod ρ.marginalB).matrix :=
+  (cMatrix_rpow_supports_self ρ.pos hα).trans ρ.matrix_supports_prod_marginals
+
+end State
+
 /-- Unitary conjugation preserves positive semidefiniteness. -/
 theorem posSemidef_unitary_conj {A : CMatrix a} (hA : A.PosSemidef)
     (U : Matrix.unitaryGroup a ℂ) :
@@ -805,6 +1399,86 @@ theorem psdTracePower_pos_of_ne_zero
       Real.rpow_nonneg (hA.eigenvalues_nonneg j) p)
     ⟨i, Finset.mem_univ i,
       Real.rpow_pos_of_pos (lt_of_le_of_ne (hA.eigenvalues_nonneg i) (Ne.symm hi)) p⟩
+
+/-- If a nonzero PSD matrix is supported on a PSD matrix, then pairing it
+with any real power of the supporting matrix has strictly positive trace. -/
+theorem trace_mul_cMatrix_rpow_pos_of_support
+    {M N : CMatrix a} (hM : M.PosSemidef) (hN : N.PosSemidef)
+    (hMne : M ≠ 0) (hSupport : Matrix.Supports M N)
+    (s : ℝ) :
+    0 < ((M * CFC.rpow N s).trace).re := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hN.isHermitian.eigenvectorUnitary
+  let M' : CMatrix a := star (U : CMatrix a) * M * (U : CMatrix a)
+  let x : a → ℝ := fun i => (M' i i).re
+  let w : a → ℝ := fun i => hN.isHermitian.eigenvalues i
+  have hM' : M'.PosSemidef := by
+    simpa [M'] using posSemidef_unitary_conj hM U
+  have hx_nonneg : ∀ i, 0 ≤ x i := by
+    intro i
+    exact posSemidef_diagonal_re_nonneg hM' i
+  have hw_nonneg : ∀ i, 0 ≤ w i := by
+    intro i
+    exact hN.eigenvalues_nonneg i
+  have hsumx_pos : 0 < ∑ i, x i := by
+    have htraceM_pos : 0 < M.trace.re := by
+      have hpow := psdTracePower_pos_of_ne_zero M hM (p := 1) hMne
+      simpa [psdTracePower, CFC.rpow_one M
+        (ha := Matrix.nonneg_iff_posSemidef.mpr hM)] using hpow
+    have htraceM' : M'.trace = M.trace := by
+      calc
+        M'.trace = (((star (U : CMatrix a) * M) * (U : CMatrix a))).trace := by
+          simp [M', Matrix.mul_assoc]
+        _ = (((U : CMatrix a) * (star (U : CMatrix a) * M))).trace := by
+          exact Matrix.trace_mul_comm (star (U : CMatrix a) * M) (U : CMatrix a)
+        _ = (((U : CMatrix a) * star (U : CMatrix a)) * M).trace := by
+          rw [Matrix.mul_assoc]
+        _ = M.trace := by
+          have hUU : (U : CMatrix a) * star (U : CMatrix a) = 1 := by
+            exact Unitary.coe_mul_star_self U
+          rw [hUU, Matrix.one_mul]
+    have hsumx : ∑ i, x i = M.trace.re := by
+      calc
+        ∑ i, x i = M'.trace.re := by
+          simp [x, Matrix.trace]
+        _ = M.trace.re := by
+          rw [htraceM']
+    rw [hsumx]
+    exact htraceM_pos
+  have hexists : ∃ i, 0 < x i := by
+    by_contra hno
+    have hx_zero : ∀ i, x i = 0 := by
+      intro i
+      exact le_antisymm (not_lt.mp (by
+        intro hxi
+        exact hno ⟨i, hxi⟩)) (hx_nonneg i)
+    have hsum_zero : ∑ i, x i = 0 := by
+      simp [hx_zero]
+    linarith
+  rcases hexists with ⟨i, hxi_pos⟩
+  have hwi_ne : w i ≠ 0 := by
+    intro hwi
+    have hxi_zero :
+        x i = 0 := by
+      simpa [x, w, M', U] using
+        supports_conjugate_diagonal_re_eq_zero (M := M) (N := N) hN hSupport
+          (i := i) hwi
+    linarith
+  have hwi_pos : 0 < w i := lt_of_le_of_ne (hw_nonneg i) (Ne.symm hwi_ne)
+  have hterm_pos : 0 < x i * w i ^ s :=
+    mul_pos hxi_pos (Real.rpow_pos_of_pos hwi_pos s)
+  have hsum_pos : 0 < ∑ i, x i * w i ^ s := by
+    exact Finset.sum_pos'
+      (fun j _ => mul_nonneg (hx_nonneg j)
+        (Real.rpow_nonneg (hw_nonneg j) s))
+      ⟨i, Finset.mem_univ i, hterm_pos⟩
+  have htrace :
+      ((M * CFC.rpow N s).trace).re =
+        ∑ i, x i * w i ^ s := by
+    simpa [x, w, M', U] using
+      trace_mul_cMatrix_rpow_eq_conjugate_diag_sum (M := M) (N := N) hN s
+  rw [htrace]
+  exact hsum_pos
 
 /-- The first power trace is the ordinary trace. -/
 @[simp]

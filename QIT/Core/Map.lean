@@ -49,6 +49,53 @@ def IsCompletelyPositive (Phi : MatrixMap a b) : Prop :=
 def IsTracePreserving (Phi : MatrixMap a b) : Prop :=
   forall X : CMatrix a, (Phi X).trace = X.trace
 
+/-- The matrix map whose Choi matrix is the prescribed finite matrix.
+
+This is the explicit inverse to `MatrixMap.choi`, obtained by expanding the
+input matrix in matrix units. -/
+def ofChoiMatrix (J : CMatrix (Prod a b)) : MatrixMap a b where
+  toFun X := fun j j' => ∑ i : a, ∑ i' : a, X i i' * J (i, j) (i', j')
+  map_add' X Y := by
+    ext j j'
+    simp [add_mul, Finset.sum_add_distrib]
+  map_smul' c X := by
+    ext j j'
+    simp [Finset.mul_sum, mul_assoc]
+
+@[simp]
+theorem ofChoiMatrix_apply (J : CMatrix (Prod a b)) (X : CMatrix a)
+    (j j' : b) :
+    ofChoiMatrix J X j j' =
+      ∑ i : a, ∑ i' : a, X i i' * J (i, j) (i', j') := by
+  rfl
+
+/-- `ofChoiMatrix` is a right inverse to the Choi construction. -/
+theorem choi_ofChoiMatrix (J : CMatrix (Prod a b)) :
+    choi (ofChoiMatrix J) = J := by
+  ext ij kl
+  rcases ij with ⟨i, j⟩
+  rcases kl with ⟨i', j'⟩
+  simp only [choi, ofChoiMatrix, LinearMap.coe_mk, AddHom.coe_mk]
+  rw [Finset.sum_eq_single i]
+  · rw [Finset.sum_eq_single i']
+    · simp [Matrix.single]
+    · intro y _ hy
+      have hy' : i' ≠ y := hy.symm
+      simp [Matrix.single, hy']
+    · intro hnot
+      simp at hnot
+  · intro x _ hx
+    have hxi : i ≠ x := hx.symm
+    simp [Matrix.single, hxi]
+  · intro hnot
+    simp at hnot
+
+/-- A positive semidefinite Choi matrix defines a completely positive map. -/
+theorem ofChoiMatrix_isCompletelyPositive {J : CMatrix (Prod a b)}
+    (hJ : J.PosSemidef) :
+    IsCompletelyPositive (ofChoiMatrix J) := by
+  rwa [IsCompletelyPositive, choi_ofChoiMatrix]
+
 /-- The unique linear matrix map between unit systems. -/
 def unit : MatrixMap PUnit.{u + 1} PUnit.{v + 1} where
   toFun X := fun _ _ => X PUnit.unit PUnit.unit
@@ -139,6 +186,70 @@ theorem ofKraus_mapsPositive {κ : Type w} [Fintype κ] (K : κ -> Matrix b a Co
   rw [ofKraus]
   exact Matrix.posSemidef_sum Finset.univ
     (fun k _ => hX.mul_mul_conjTranspose_same (K k))
+
+/-- Heisenberg adjoint of a Kraus-form map. -/
+def krausAdjoint {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ) (E : CMatrix b) : CMatrix a :=
+  ∑ k : κ, Matrix.conjTranspose (K k) * E * K k
+
+/-- Trace duality between a Kraus map and its Heisenberg adjoint. -/
+theorem ofKraus_trace_duality {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ) (X : CMatrix a) (E : CMatrix b) :
+    (((ofKraus K) X) * E).trace = (X * krausAdjoint K E).trace := by
+  simp [ofKraus, krausAdjoint, Matrix.sum_mul, Matrix.mul_sum, Matrix.trace_sum]
+  refine Finset.sum_congr rfl fun k _ => ?_
+  let Kk : Matrix b a ℂ := K k
+  let KkH : Matrix a b ℂ := Matrix.conjTranspose Kk
+  calc
+    ((K k * X * Matrix.conjTranspose (K k)) * E).trace =
+        ((Kk * X * KkH) * E).trace := by rfl
+    _ = (E * (Kk * X * KkH)).trace := by rw [Matrix.trace_mul_comm]
+    _ = ((E * Kk) * (X * KkH)).trace := by
+          simp only [Matrix.mul_assoc]
+    _ = ((X * KkH) * (E * Kk)).trace := by rw [Matrix.trace_mul_comm]
+    _ = (X * (KkH * E * Kk)).trace := by
+          simp only [Matrix.mul_assoc]
+    _ = (X * (Matrix.conjTranspose (K k) * E * K k)).trace := by rfl
+
+/-- A trace-preserving Kraus map has unital Heisenberg adjoint. -/
+theorem krausAdjoint_one_of_tracePreserving {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ) (hTP : IsTracePreserving (ofKraus K)) :
+    krausAdjoint K (1 : CMatrix b) = 1 := by
+  apply Matrix.ext
+  intro i j
+  let X : CMatrix a := Matrix.single j i (1 : ℂ)
+  have htrace := hTP X
+  have hdual :
+      (((ofKraus K) X) * (1 : CMatrix b)).trace =
+        (X * krausAdjoint K (1 : CMatrix b)).trace :=
+    ofKraus_trace_duality K X (1 : CMatrix b)
+  rw [Matrix.mul_one] at hdual
+  rw [hdual] at htrace
+  have hsingle_trace :
+      (X * krausAdjoint K (1 : CMatrix b)).trace =
+        (krausAdjoint K (1 : CMatrix b)) i j := by
+    simp [X, Matrix.trace_single_mul]
+  have hXtrace : X.trace = if j = i then (1 : ℂ) else 0 := by
+    by_cases hji : j = i
+    · subst hji
+      simp [X, Matrix.trace, Matrix.single]
+    · have hij : i ≠ j := by
+        intro hij
+        exact hji hij.symm
+      simp [X, Matrix.trace, Matrix.single, hji, hij]
+  have hOne : (1 : CMatrix a) i j = if j = i then (1 : ℂ) else 0 := by
+    by_cases hji : j = i
+    · subst hji
+      simp
+    · have hij : i ≠ j := by
+        intro hij
+        exact hji hij.symm
+      simp [hji, hij]
+  calc
+    krausAdjoint K (1 : CMatrix b) i j =
+        (X * krausAdjoint K (1 : CMatrix b)).trace := hsingle_trace.symm
+    _ = X.trace := htrace
+    _ = (1 : CMatrix a) i j := by rw [hXtrace, hOne]
 
 /-- Choi matrix of a Kraus-form matrix map, as a sum of rank-one projectors. -/
 theorem choi_ofKraus {κ : Type w} [Fintype κ] (K : κ -> Matrix b a Complex) :

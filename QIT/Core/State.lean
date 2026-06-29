@@ -49,6 +49,14 @@ theorem ext {rho sigma : State a} (h : rho.matrix = sigma.matrix) : rho = sigma 
   cases h
   rfl
 
+/-- A normalized finite-dimensional state has a nonempty index type. -/
+theorem nonempty (rho : State a) : Nonempty a := by
+  classical
+  by_contra h
+  haveI : IsEmpty a := not_nonempty_iff.mp h
+  have htrace := rho.trace_eq_one
+  simp [Matrix.trace] at htrace
+
 /-- The unique density state on the unit system. -/
 def unit : State PUnit where
   matrix := 1

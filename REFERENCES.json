@@ -365,6 +365,20 @@
       "arxiv_id": "quant-ph/0512258",
       "doi": null,
       "url": "https://arxiv.org/abs/quant-ph/0512258"
+    },
+    {
+      "key": "KhatriWilde2024Principles",
+      "source_id": "khatri-wilde-2024-principles",
+      "title": "Principles of Quantum Communication Theory: A Modern Approach",
+      "authors": [
+        "Sumeet Khatri",
+        "Mark M. Wilde"
+      ],
+      "year": 2024,
+      "kind": "book",
+      "arxiv_id": "2011.04672",
+      "doi": "10.48550/arXiv.2011.04672",
+      "url": "https://arxiv.org/abs/2011.04672"
     }
   ]
 }

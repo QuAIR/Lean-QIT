@@ -2030,6 +2030,630 @@ theorem symmetricProjectionMatrix_trace_re_le_pow_succ (n : ℕ) :
   rw [symmetricProjectionMatrix_trace_eq_symmetricSubmodule_finrank]
   exact_mod_cast symmetricSubmodule_finrank_le_pow_succ (a := a) n
 
+/-- The nontrivial tensor-factor permutation on two copies. -/
+def twoCopySwapPerm : Equiv.Perm (Fin 2) :=
+  Equiv.swap 0 1
+
+/-- The flip matrix on two tensor copies. -/
+abbrev tensorPowerSwapMatrix_two : CMatrix (TensorPower a 2) :=
+  permutationMatrix (a := a) 2 twoCopySwapPerm
+
+/-- The two-copy flip matrix squares to the identity. -/
+theorem tensorPowerSwapMatrix_two_sq :
+    tensorPowerSwapMatrix_two (a := a) * tensorPowerSwapMatrix_two (a := a) = 1 := by
+  rw [tensorPowerSwapMatrix_two, permutationMatrix_mul]
+  ext x y
+  simp [Matrix.one_apply, twoCopySwapPerm]
+
+private theorem permutationMatrix_sum_fin_two :
+    (∑ σ : Equiv.Perm (Fin 2), permutationMatrix (a := a) 2 σ) =
+      1 + tensorPowerSwapMatrix_two (a := a) := by
+  rw [Finset.sum_eq_add_sum_diff_singleton_of_mem
+    (s := Finset.univ)
+    (i := (1 : Equiv.Perm (Fin 2)))
+    (f := fun σ : Equiv.Perm (Fin 2) => permutationMatrix (a := a) 2 σ)
+    (by simp)]
+  rw [permutationMatrix_one]
+  congr 1
+  refine Finset.sum_eq_single
+    (s := Finset.univ.erase (1 : Equiv.Perm (Fin 2)))
+    (f := fun σ : Equiv.Perm (Fin 2) => permutationMatrix (a := a) 2 σ)
+    twoCopySwapPerm ?_ ?_
+  · intro σ hσ hne
+    have hnot_one : σ ≠ 1 := (Finset.mem_erase.mp hσ).1
+    have hσ : σ = twoCopySwapPerm := by
+      fin_cases σ <;> simp [twoCopySwapPerm] at hnot_one ⊢
+    exact (hne hσ).elim
+  · intro hnot_mem
+    exact (hnot_mem (by simp [twoCopySwapPerm])).elim
+
+/-- On two tensor copies, the Reynolds projection is `1/2 * (1 + F)`. -/
+theorem symmetricProjectionMatrix_two_eq_half_one_add_swap :
+    symmetricProjectionMatrix (a := a) 2 =
+      ((2 : ℂ)⁻¹) • (1 + tensorPowerSwapMatrix_two (a := a)) := by
+  rw [symmetricProjectionMatrix_eq_perm_average, permutationMatrix_sum_fin_two]
+  norm_num [Fintype.card_perm, Nat.factorial]
+
+/-- The two-copy antisymmetric projection `1 - P₊`. -/
+def antisymmetricProjectionMatrix_two : CMatrix (TensorPower a 2) :=
+  1 - symmetricProjectionMatrix (a := a) 2
+
+/-- The tensor word with first coordinate `i` and second coordinate `j`. -/
+def twoCopyTensorWord (i j : a) : TensorPower a 2 :=
+  (tensorPowerEquiv (a := a) 2).symm
+    (fun r : Fin 2 => if r = 0 then i else j)
+
+omit [DecidableEq a] [Fintype a] in
+@[simp]
+theorem tensorPowerEquiv_twoCopyTensorWord_zero (i j : a) :
+    tensorPowerEquiv (a := a) 2 (twoCopyTensorWord (a := a) i j) 0 = i := by
+  simp [twoCopyTensorWord]
+
+omit [DecidableEq a] [Fintype a] in
+@[simp]
+theorem tensorPowerEquiv_twoCopyTensorWord_one (i j : a) :
+    tensorPowerEquiv (a := a) 2 (twoCopyTensorWord (a := a) i j) 1 = j := by
+  simp [twoCopyTensorWord]
+
+omit [DecidableEq a] [Fintype a] in
+theorem twoCopyTensorWord_ext {i j k l : a}
+    (h0 : i = k) (h1 : j = l) :
+    twoCopyTensorWord (a := a) i j = twoCopyTensorWord (a := a) k l := by
+  subst k
+  subst l
+  rfl
+
+omit [DecidableEq a] [Fintype a] in
+@[simp]
+theorem twoCopyTensorWord_eq_iff {i j k l : a} :
+    twoCopyTensorWord (a := a) i j = twoCopyTensorWord (a := a) k l ↔
+      i = k ∧ j = l := by
+  constructor
+  · intro h
+    constructor
+    · simpa using congrFun (congrArg (tensorPowerEquiv (a := a) 2) h) 0
+    · simpa using congrFun (congrArg (tensorPowerEquiv (a := a) 2) h) 1
+  · intro h
+    exact twoCopyTensorWord_ext (a := a) h.1 h.2
+
+omit [DecidableEq a] [Fintype a] in
+theorem twoCopyTensorWord_coords (x : TensorPower a 2) :
+    twoCopyTensorWord (a := a)
+      (tensorPowerEquiv (a := a) 2 x 0)
+      (tensorPowerEquiv (a := a) 2 x 1) = x := by
+  apply (tensorPowerEquiv (a := a) 2).injective
+  ext r
+  fin_cases r <;> simp
+
+theorem permEquiv_twoCopySwapPerm_twoCopyTensorWord (i j : a) :
+    permEquiv (a := a) 2 twoCopySwapPerm (twoCopyTensorWord (a := a) i j) =
+      twoCopyTensorWord (a := a) j i := by
+  apply (tensorPowerEquiv (a := a) 2).injective
+  ext r
+  fin_cases r <;> simp [tensorPowerEquiv_permEquiv, twoCopySwapPerm]
+
+@[simp]
+theorem permEquiv_twoCopySwapPerm_permEquiv_twoCopySwapPerm (x : TensorPower a 2) :
+    permEquiv (a := a) 2 twoCopySwapPerm
+      (permEquiv (a := a) 2 twoCopySwapPerm x) = x := by
+  rw [← twoCopyTensorWord_coords (a := a) x]
+  simp [permEquiv_twoCopySwapPerm_twoCopyTensorWord]
+
+/-- The unnormalized antisymmetric two-copy vector `|i,j⟩ - |j,i⟩`. -/
+def antisymmetricPairVector (i j : a) : TensorPower a 2 → ℂ :=
+  tensorPowerBasisDelta (a := a) (twoCopyTensorWord (a := a) i j) -
+    tensorPowerBasisDelta (a := a) (twoCopyTensorWord (a := a) j i)
+
+omit [Fintype a] in
+theorem antisymmetricPairVector_swap (i j : a) :
+    antisymmetricPairVector (a := a) j i =
+      -antisymmetricPairVector (a := a) i j := by
+  ext x
+  simp [antisymmetricPairVector]
+
+omit [Fintype a] in
+@[simp]
+theorem antisymmetricPairVector_self (i : a) :
+    antisymmetricPairVector (a := a) i i = 0 := by
+  ext x
+  simp [antisymmetricPairVector]
+
+theorem antisymmetricPairVector_comp_permEquiv_twoCopySwapPerm (i j : a) :
+    (fun x => antisymmetricPairVector (a := a) i j
+      (permEquiv (a := a) 2 twoCopySwapPerm x)) =
+      antisymmetricPairVector (a := a) j i := by
+  ext x
+  have hij :
+      (permEquiv (a := a) 2 twoCopySwapPerm x = twoCopyTensorWord (a := a) i j) ↔
+        x = twoCopyTensorWord (a := a) j i := by
+    constructor
+    · intro h
+      apply (permEquiv (a := a) 2 twoCopySwapPerm).injective
+      simpa [h] using (permEquiv_twoCopySwapPerm_twoCopyTensorWord (a := a) j i).symm
+    · intro h
+      rw [h, permEquiv_twoCopySwapPerm_twoCopyTensorWord]
+  have hji :
+      (permEquiv (a := a) 2 twoCopySwapPerm x = twoCopyTensorWord (a := a) j i) ↔
+        x = twoCopyTensorWord (a := a) i j := by
+    constructor
+    · intro h
+      apply (permEquiv (a := a) 2 twoCopySwapPerm).injective
+      simpa [h] using (permEquiv_twoCopySwapPerm_twoCopyTensorWord (a := a) i j).symm
+    · intro h
+      rw [h, permEquiv_twoCopySwapPerm_twoCopyTensorWord]
+  simp [antisymmetricPairVector, tensorPowerBasisDelta, hij, hji, sub_eq_add_neg]
+
+theorem tensorPowerSwapMatrix_two_mulVec_antisymmetricPairVector (i j : a) :
+    (tensorPowerSwapMatrix_two (a := a)).mulVec (antisymmetricPairVector (a := a) i j) =
+      -antisymmetricPairVector (a := a) i j := by
+  calc
+    (tensorPowerSwapMatrix_two (a := a)).mulVec (antisymmetricPairVector (a := a) i j)
+        = (fun x => antisymmetricPairVector (a := a) i j
+            (permEquiv (a := a) 2 twoCopySwapPerm x)) := by
+          rw [tensorPowerSwapMatrix_two, permutationMatrix_mulVec]
+    _ = antisymmetricPairVector (a := a) j i :=
+          antisymmetricPairVector_comp_permEquiv_twoCopySwapPerm (a := a) i j
+    _ = -antisymmetricPairVector (a := a) i j :=
+          antisymmetricPairVector_swap (a := a) i j
+
+/-- On two tensor copies, the antisymmetric projection is `1/2 * (1 - F)`. -/
+theorem antisymmetricProjectionMatrix_two_eq_half_one_sub_swap :
+    antisymmetricProjectionMatrix_two (a := a) =
+      ((2 : ℂ)⁻¹) • (1 - tensorPowerSwapMatrix_two (a := a)) := by
+  rw [antisymmetricProjectionMatrix_two, symmetricProjectionMatrix_two_eq_half_one_add_swap]
+  ext x y
+  simp [Matrix.one_apply, Matrix.sub_apply, Matrix.add_apply, Matrix.smul_apply]
+  by_cases hxy : x = y
+  · subst y
+    by_cases hswap : (permEquiv (a := a) 2 twoCopySwapPerm) x = x <;>
+      simp [hswap] <;> ring_nf
+  · by_cases hswap : (permEquiv (a := a) 2 twoCopySwapPerm) x = y <;>
+      simp [hxy, hswap]
+
+theorem antisymmetricProjectionMatrix_two_mulVec_antisymmetricPairVector (i j : a) :
+    (antisymmetricProjectionMatrix_two (a := a)).mulVec (antisymmetricPairVector (a := a) i j) =
+      antisymmetricPairVector (a := a) i j := by
+  rw [antisymmetricProjectionMatrix_two_eq_half_one_sub_swap]
+  rw [Matrix.smul_mulVec, Matrix.sub_mulVec, Matrix.one_mulVec,
+    tensorPowerSwapMatrix_two_mulVec_antisymmetricPairVector]
+  ext x
+  simp [Pi.smul_apply]
+  ring
+
+private theorem twoCopyTensorWord_delta_delta_sum (x y : TensorPower a 2) :
+    (∑ i : a, ∑ j : a,
+      (if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) *
+      (if y = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0)) =
+      if x = y then 1 else 0 := by
+  classical
+  by_cases hxy : x = y
+  · subst y
+    rw [if_pos rfl]
+    let ix := tensorPowerEquiv (a := a) 2 x 0
+    let jx := tensorPowerEquiv (a := a) 2 x 1
+    rw [Finset.sum_eq_single ix]
+    · rw [Finset.sum_eq_single jx]
+      · simp [ix, jx, twoCopyTensorWord_coords (a := a) x]
+      · intro j _ hj
+        have hword : x ≠ twoCopyTensorWord (a := a) ix j := by
+          intro h
+          apply hj
+          simpa [ix] using congrFun
+            (congrArg (tensorPowerEquiv (a := a) 2)
+              (h.symm.trans (twoCopyTensorWord_coords (a := a) x))) 1
+        simp [hword]
+      · intro hnot
+        exact False.elim (hnot (Finset.mem_univ jx))
+    · intro i _ hi
+      have hword : ∀ j, x ≠ twoCopyTensorWord (a := a) i j := by
+        intro j h
+        apply hi
+        simpa [ix] using congrFun
+          (congrArg (tensorPowerEquiv (a := a) 2)
+            (h.symm.trans (twoCopyTensorWord_coords (a := a) x))) 0
+      simp [hword]
+    · intro hnot
+      exact False.elim (hnot (Finset.mem_univ ix))
+  · rw [if_neg hxy]
+    apply Finset.sum_eq_zero
+    intro i _
+    apply Finset.sum_eq_zero
+    intro j _
+    by_cases hx : x = twoCopyTensorWord (a := a) i j
+    · have hy : y ≠ twoCopyTensorWord (a := a) i j := by
+        intro hy
+        apply hxy
+        exact hx.trans hy.symm
+      simp [hx, hy]
+    · simp [hx]
+
+private theorem twoCopyTensorWord_delta_delta_swap_sum (x y : TensorPower a 2) :
+    (∑ i : a, ∑ j : a,
+      (if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) *
+      (if y = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0)) =
+      if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0 := by
+  classical
+  rw [← twoCopyTensorWord_delta_delta_sum (a := a) x
+    (permEquiv (a := a) 2 twoCopySwapPerm y)]
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  refine Finset.sum_congr rfl ?_
+  intro j _
+  have hswap :
+      (permEquiv (a := a) 2 twoCopySwapPerm y = twoCopyTensorWord (a := a) i j) ↔
+        y = twoCopyTensorWord (a := a) j i := by
+    constructor
+    · intro h
+      apply (permEquiv (a := a) 2 twoCopySwapPerm).injective
+      simpa [h] using (permEquiv_twoCopySwapPerm_twoCopyTensorWord (a := a) j i).symm
+    · intro h
+      rw [h, permEquiv_twoCopySwapPerm_twoCopyTensorWord]
+  by_cases hx : x = twoCopyTensorWord (a := a) i j <;>
+    by_cases hy : y = twoCopyTensorWord (a := a) j i <;>
+    simp [hx, hy, hswap, permEquiv_twoCopySwapPerm_twoCopyTensorWord]
+
+private theorem twoCopyTensorWord_delta_swap_delta_sum (x y : TensorPower a 2) :
+    (∑ i : a, ∑ j : a,
+      (if x = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0) *
+      (if y = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0)) =
+      if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0 := by
+  rw [Finset.sum_comm]
+  simpa [mul_comm] using twoCopyTensorWord_delta_delta_swap_sum (a := a) x y
+
+private theorem twoCopyTensorWord_delta_swap_delta_swap_sum (x y : TensorPower a 2) :
+    (∑ i : a, ∑ j : a,
+      (if x = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0) *
+      (if y = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0)) =
+      if x = y then 1 else 0 := by
+  rw [Finset.sum_comm]
+  simpa using twoCopyTensorWord_delta_delta_sum (a := a) x y
+
+private theorem twoCopyTensorWord_delta_delta_nested_sum (x y : TensorPower a 2) :
+    (∑ i : a, ∑ j : a,
+      if y = twoCopyTensorWord (a := a) i j then
+        if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0
+      else 0) =
+      if x = y then 1 else 0 := by
+  calc
+    (∑ i : a, ∑ j : a,
+      if y = twoCopyTensorWord (a := a) i j then
+        if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0
+      else 0)
+        = ∑ i : a, ∑ j : a,
+            (if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) *
+            (if y = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) := by
+            refine Finset.sum_congr rfl fun i _ => ?_
+            refine Finset.sum_congr rfl fun j _ => ?_
+            by_cases hx : x = twoCopyTensorWord (a := a) i j <;>
+              by_cases hy : y = twoCopyTensorWord (a := a) i j <;>
+              simp [hx, hy]
+    _ = if x = y then 1 else 0 :=
+        twoCopyTensorWord_delta_delta_sum (a := a) x y
+
+private theorem twoCopyTensorWord_delta_swap_delta_nested_sum (x y : TensorPower a 2) :
+    (∑ i : a, ∑ j : a,
+      if x = twoCopyTensorWord (a := a) j i then
+        if y = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0
+      else 0) =
+      if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0 := by
+  calc
+    (∑ i : a, ∑ j : a,
+      if x = twoCopyTensorWord (a := a) j i then
+        if y = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0
+      else 0)
+        = ∑ i : a, ∑ j : a,
+            (if x = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0) *
+            (if y = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) := by
+            refine Finset.sum_congr rfl fun i _ => ?_
+            refine Finset.sum_congr rfl fun j _ => ?_
+            by_cases hx : x = twoCopyTensorWord (a := a) j i <;>
+              by_cases hy : y = twoCopyTensorWord (a := a) i j <;>
+              simp [hx, hy]
+    _ = if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0 :=
+        twoCopyTensorWord_delta_swap_delta_sum (a := a) x y
+
+private theorem twoCopyTensorWord_delta_delta_swap_nested_sum (x y : TensorPower a 2) :
+    (∑ i : a, ∑ j : a,
+      if y = twoCopyTensorWord (a := a) j i then
+        if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0
+      else 0) =
+      if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0 := by
+  calc
+    (∑ i : a, ∑ j : a,
+      if y = twoCopyTensorWord (a := a) j i then
+        if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0
+      else 0)
+        = ∑ i : a, ∑ j : a,
+            (if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) *
+            (if y = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0) := by
+            refine Finset.sum_congr rfl fun i _ => ?_
+            refine Finset.sum_congr rfl fun j _ => ?_
+            by_cases hx : x = twoCopyTensorWord (a := a) i j <;>
+              by_cases hy : y = twoCopyTensorWord (a := a) j i <;>
+              simp [hx, hy]
+    _ = if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0 :=
+        twoCopyTensorWord_delta_delta_swap_sum (a := a) x y
+
+private theorem twoCopyTensorWord_delta_delta_swap_nested_sum' (x y : TensorPower a 2) :
+    (∑ i : a, ∑ j : a,
+      if x = twoCopyTensorWord (a := a) i j then
+        if y = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0
+      else 0) =
+      if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0 := by
+  calc
+    (∑ i : a, ∑ j : a,
+      if x = twoCopyTensorWord (a := a) i j then
+        if y = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0
+      else 0)
+        = ∑ i : a, ∑ j : a,
+            (if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) *
+            (if y = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0) := by
+            refine Finset.sum_congr rfl fun i _ => ?_
+            refine Finset.sum_congr rfl fun j _ => ?_
+            by_cases hx : x = twoCopyTensorWord (a := a) i j <;>
+              by_cases hy : y = twoCopyTensorWord (a := a) j i <;>
+              simp [hx, hy]
+    _ = if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0 :=
+        twoCopyTensorWord_delta_delta_swap_sum (a := a) x y
+
+private theorem twoCopyTensorWord_delta_swap_delta_swap_nested_sum (x y : TensorPower a 2) :
+    (∑ i : a, ∑ j : a,
+      if y = twoCopyTensorWord (a := a) j i then
+        if x = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0
+      else 0) =
+      if x = y then 1 else 0 := by
+  calc
+    (∑ i : a, ∑ j : a,
+      if y = twoCopyTensorWord (a := a) j i then
+        if x = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0
+      else 0)
+        = ∑ i : a, ∑ j : a,
+            (if x = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0) *
+            (if y = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0) := by
+            refine Finset.sum_congr rfl fun i _ => ?_
+            refine Finset.sum_congr rfl fun j _ => ?_
+            by_cases hx : x = twoCopyTensorWord (a := a) j i <;>
+              by_cases hy : y = twoCopyTensorWord (a := a) j i <;>
+              simp [hx, hy]
+    _ = if x = y then 1 else 0 :=
+        twoCopyTensorWord_delta_swap_delta_swap_sum (a := a) x y
+
+private theorem twoCopyTensorWord_delta_pair_sub_sum (x y : TensorPower a 2) :
+    (∑ i : a, ∑ j : a,
+      if y = twoCopyTensorWord (a := a) i j then
+        (if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) -
+          if x = twoCopyTensorWord (a := a) j i then 1 else 0
+      else 0) =
+      (if x = y then 1 else 0) -
+        if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0 := by
+  calc
+    (∑ i : a, ∑ j : a,
+      if y = twoCopyTensorWord (a := a) i j then
+        (if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) -
+          if x = twoCopyTensorWord (a := a) j i then 1 else 0
+      else 0)
+        = ∑ i : a, ∑ j : a,
+            (if y = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) *
+              ((if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) -
+                if x = twoCopyTensorWord (a := a) j i then 1 else 0) := by
+            refine Finset.sum_congr rfl fun i _ => ?_
+            refine Finset.sum_congr rfl fun j _ => ?_
+            by_cases hy : y = twoCopyTensorWord (a := a) i j <;> simp [hy]
+    _ = (if x = y then 1 else 0) -
+        if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0 := by
+            simp [mul_sub, Finset.sum_sub_distrib,
+              twoCopyTensorWord_delta_delta_nested_sum,
+              twoCopyTensorWord_delta_swap_delta_nested_sum]
+            by_cases hxy : x = y
+            · simp [hxy]
+            · have hyx : ¬ y = x := by
+                intro hyx
+                exact hxy hyx.symm
+              simp [hxy, hyx]
+
+private theorem twoCopyTensorWord_delta_swap_pair_sub_sum (x y : TensorPower a 2) :
+    (∑ i : a, ∑ j : a,
+      if y = twoCopyTensorWord (a := a) j i then
+        (if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) -
+          if x = twoCopyTensorWord (a := a) j i then 1 else 0
+      else 0) =
+      (if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0) -
+        if x = y then 1 else 0 := by
+  calc
+    (∑ i : a, ∑ j : a,
+      if y = twoCopyTensorWord (a := a) j i then
+        (if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) -
+          if x = twoCopyTensorWord (a := a) j i then 1 else 0
+      else 0)
+        = ∑ i : a, ∑ j : a,
+            (if y = twoCopyTensorWord (a := a) j i then (1 : ℂ) else 0) *
+              ((if x = twoCopyTensorWord (a := a) i j then (1 : ℂ) else 0) -
+                if x = twoCopyTensorWord (a := a) j i then 1 else 0) := by
+            refine Finset.sum_congr rfl fun i _ => ?_
+            refine Finset.sum_congr rfl fun j _ => ?_
+            by_cases hy : y = twoCopyTensorWord (a := a) j i <;> simp [hy]
+    _ = (if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0) -
+        if x = y then 1 else 0 := by
+            simp [mul_sub, Finset.sum_sub_distrib,
+              twoCopyTensorWord_delta_delta_swap_nested_sum',
+              twoCopyTensorWord_delta_swap_delta_swap_nested_sum]
+            by_cases hxy : x = y
+            · simp [hxy]
+            · have hyx : ¬ y = x := by
+                intro hyx
+                exact hxy hyx.symm
+              simp [hxy, hyx]
+
+private theorem rankOne_antisymmetricPairVector_ordered_sum_apply
+    (x y : TensorPower a 2) :
+    (∑ i : a, ∑ j : a, rankOneMatrix (antisymmetricPairVector (a := a) i j)) x y =
+      2 * (if x = y then 1 else 0) -
+        2 * (if x = permEquiv (a := a) 2 twoCopySwapPerm y then 1 else 0) := by
+  simp [Matrix.sum_apply, rankOneMatrix_apply, antisymmetricPairVector,
+    tensorPowerBasisDelta, mul_sub, Finset.sum_sub_distrib,
+    twoCopyTensorWord_delta_pair_sub_sum, twoCopyTensorWord_delta_swap_pair_sub_sum]
+  by_cases hxy : x = y
+  · subst x
+    by_cases hswap : y = permEquiv (a := a) 2 twoCopySwapPerm y
+    · simp only [if_pos hswap]
+      norm_num
+    · simp only [if_neg hswap]
+      norm_num
+  · by_cases hswap : x = permEquiv (a := a) 2 twoCopySwapPerm y <;>
+      simp [hxy, hswap]
+    have hself : ¬ permEquiv (a := a) 2 twoCopySwapPerm y = y := by
+      intro hself
+      apply hxy
+      rw [hswap, hself]
+    have hifself :
+        (if permEquiv (a := a) 2 twoCopySwapPerm y = y then (2 : ℂ) else 0) = 0 :=
+      if_neg hself
+    have hifself_one :
+        (if permEquiv (a := a) 2 twoCopySwapPerm y = y then (1 : ℂ) else 0) = 0 :=
+      if_neg hself
+    rw [hifself, hifself_one]
+    norm_num
+
+/-- The two-copy antisymmetric projection is the ordered-pair average of the
+rank-one matrices generated by `|i,j⟩ - |j,i⟩`.  Ordered pairs are used to
+avoid choosing representatives of unordered pairs; the factor `1/4` accounts
+for both orientations and for the unnormalized pair vectors. -/
+theorem antisymmetricProjectionMatrix_two_eq_quarter_sum_rankOne_antisymmetricPairVector :
+    antisymmetricProjectionMatrix_two (a := a) =
+      ((4 : ℂ)⁻¹) •
+        (∑ i : a, ∑ j : a, rankOneMatrix (antisymmetricPairVector (a := a) i j)) := by
+  classical
+  rw [antisymmetricProjectionMatrix_two_eq_half_one_sub_swap]
+  ext x y
+  simp [Matrix.smul_apply, Matrix.sub_apply, Matrix.one_apply,
+    tensorPowerSwapMatrix_two, rankOne_antisymmetricPairVector_ordered_sum_apply]
+  have hswap_iff :
+      (permEquiv (a := a) 2 twoCopySwapPerm x = y) ↔
+        x = permEquiv (a := a) 2 twoCopySwapPerm y := by
+    constructor
+    · intro h
+      rw [← h]
+      simp
+    · intro h
+      rw [h]
+      simp
+  by_cases hxy : x = y
+  · subst x
+    by_cases hself : y = permEquiv (a := a) 2 twoCopySwapPerm y
+    · have hself' : permEquiv (a := a) 2 twoCopySwapPerm y = y := hself.symm
+      rw [if_pos rfl, if_pos hself, if_pos hself']
+      simp only [if_true]
+      ring_nf
+    · have hself' : ¬ permEquiv (a := a) 2 twoCopySwapPerm y = y := by
+        intro hself'
+        exact hself hself'.symm
+      rw [if_pos rfl, if_neg hself, if_neg hself']
+      simp only [if_true]
+      ring_nf
+  · by_cases hswap : x = permEquiv (a := a) 2 twoCopySwapPerm y
+    · have hleft : permEquiv (a := a) 2 twoCopySwapPerm x = y := hswap_iff.mpr hswap
+      have hself : ¬ permEquiv (a := a) 2 twoCopySwapPerm y = y := by
+        intro hself
+        apply hxy
+        rw [hswap, hself]
+      have hself' : ¬ y = permEquiv (a := a) 2 twoCopySwapPerm y := by
+        intro hself'
+        exact hself hself'.symm
+      have hifxy : (if x = y then (2 : ℂ) else 0) = 0 := if_neg hxy
+      rw [if_neg hxy, if_pos hleft, if_pos hswap, hifxy]
+      ring_nf
+    · have hleft : ¬ permEquiv (a := a) 2 twoCopySwapPerm x = y := by
+        intro hleft
+        exact hswap (hswap_iff.mp hleft)
+      simp [hxy, hswap, hleft]
+
+/-- The two-copy flip fixes the symmetric projection on the left. -/
+theorem tensorPowerSwapMatrix_two_mul_symmetricProjectionMatrix_two :
+    tensorPowerSwapMatrix_two (a := a) * symmetricProjectionMatrix (a := a) 2 =
+      symmetricProjectionMatrix (a := a) 2 := by
+  simpa [tensorPowerSwapMatrix_two, twoCopySwapPerm] using
+    permutationMatrix_mul_symmetricProjectionMatrix (a := a) 2 twoCopySwapPerm
+
+/-- The two-copy flip fixes the symmetric projection on the right. -/
+theorem symmetricProjectionMatrix_two_mul_tensorPowerSwapMatrix_two :
+    symmetricProjectionMatrix (a := a) 2 * tensorPowerSwapMatrix_two (a := a) =
+      symmetricProjectionMatrix (a := a) 2 := by
+  simpa [tensorPowerSwapMatrix_two, twoCopySwapPerm] using
+    symmetricProjectionMatrix_mul_permutationMatrix (a := a) 2 twoCopySwapPerm
+
+/-- The two-copy flip acts by `-1` on the antisymmetric projection on the left. -/
+theorem tensorPowerSwapMatrix_two_mul_antisymmetricProjectionMatrix_two :
+    tensorPowerSwapMatrix_two (a := a) * antisymmetricProjectionMatrix_two (a := a) =
+      -antisymmetricProjectionMatrix_two (a := a) := by
+  rw [antisymmetricProjectionMatrix_two_eq_half_one_sub_swap]
+  rw [Matrix.mul_smul, Matrix.mul_sub, Matrix.mul_one, tensorPowerSwapMatrix_two_sq]
+  ext x y
+  simp [Matrix.sub_apply, Matrix.smul_apply]
+  ring
+
+/-- The two-copy flip acts by `-1` on the antisymmetric projection on the right. -/
+theorem antisymmetricProjectionMatrix_two_mul_tensorPowerSwapMatrix_two :
+    antisymmetricProjectionMatrix_two (a := a) * tensorPowerSwapMatrix_two (a := a) =
+      -antisymmetricProjectionMatrix_two (a := a) := by
+  rw [antisymmetricProjectionMatrix_two_eq_half_one_sub_swap]
+  rw [Matrix.smul_mul, Matrix.sub_mul, Matrix.one_mul, tensorPowerSwapMatrix_two_sq]
+  ext x y
+  simp [Matrix.sub_apply, Matrix.smul_apply]
+  ring
+
+/-- The symmetric and antisymmetric two-copy projections sum to the identity. -/
+theorem symmetricProjectionMatrix_two_add_antisymmetricProjectionMatrix_two :
+    symmetricProjectionMatrix (a := a) 2 + antisymmetricProjectionMatrix_two (a := a) = 1 := by
+  rw [antisymmetricProjectionMatrix_two]
+  abel
+
+/-- The symmetric and antisymmetric two-copy projections are orthogonal. -/
+theorem symmetricProjectionMatrix_two_mul_antisymmetricProjectionMatrix_two :
+    symmetricProjectionMatrix (a := a) 2 * antisymmetricProjectionMatrix_two (a := a) = 0 := by
+  rw [antisymmetricProjectionMatrix_two]
+  rw [Matrix.mul_sub, Matrix.mul_one, symmetricProjectionMatrix_idempotent]
+  abel
+
+private theorem tensorPowerProfile_card_two_cast_eq :
+    (Fintype.card (TensorPowerProfile a 2) : ℂ) =
+      ((Fintype.card a : ℂ) * ((Fintype.card a : ℂ) + 1)) / 2 := by
+  rw [tensorPowerProfile_card_eq_multichoose, Nat.multichoose_eq]
+  rw [Nat.choose_two_right]
+  have hdiv : 2 ∣ ((Fintype.card a + 2 - 1) * (Fintype.card a + 2 - 1 - 1)) := by
+    simpa [Nat.add_sub_assoc] using
+      (even_iff_two_dvd.mp (Nat.even_mul_pred_self (Fintype.card a + 1)))
+  rw [Nat.cast_div hdiv (by norm_num : (2 : ℂ) ≠ 0)]
+  norm_num
+  ring
+
+/-- The trace of the symmetric two-copy projection is `D(D+1)/2`. -/
+theorem symmetricProjectionMatrix_two_trace :
+    (symmetricProjectionMatrix (a := a) 2).trace =
+      ((Fintype.card a : ℂ) * ((Fintype.card a : ℂ) + 1)) / 2 := by
+  rw [symmetricProjectionMatrix_trace_eq_profile_card, tensorPowerProfile_card_two_cast_eq]
+
+/-- The trace of the antisymmetric two-copy projection is `D(D-1)/2`. -/
+theorem antisymmetricProjectionMatrix_two_trace :
+    (antisymmetricProjectionMatrix_two (a := a)).trace =
+      ((Fintype.card a : ℂ) * ((Fintype.card a : ℂ) - 1)) / 2 := by
+  rw [antisymmetricProjectionMatrix_two, Matrix.trace_sub, Matrix.trace_one,
+    symmetricProjectionMatrix_two_trace]
+  rw [tensorPower_card]
+  norm_num
+  ring_nf
+
+/-- The two-copy antisymmetric projection has nonzero trace on a nontrivial
+alphabet. -/
+theorem antisymmetricProjectionMatrix_two_trace_ne_zero [Nontrivial a] :
+    (antisymmetricProjectionMatrix_two (a := a)).trace ≠ 0 := by
+  rw [antisymmetricProjectionMatrix_two_trace]
+  have hcard_pos : (Fintype.card a : ℂ) ≠ 0 := by
+    exact_mod_cast (Nat.ne_of_gt (Nat.zero_lt_of_lt Fintype.one_lt_card))
+  have hcard_ne_one : (Fintype.card a : ℂ) - 1 ≠ 0 := by
+    rw [sub_ne_zero]
+    exact_mod_cast (ne_of_gt (Fintype.one_lt_card (α := a)))
+  exact div_ne_zero (mul_ne_zero hcard_pos hcard_ne_one) (by norm_num)
+
 theorem symmetricProjection_basisDelta_value_eq_of_typeProfile_eq {n : ℕ}
     (y : TensorPower a n) {x z : TensorPower a n}
     (hxz : tensorPowerTypeProfile (a := a) n x =

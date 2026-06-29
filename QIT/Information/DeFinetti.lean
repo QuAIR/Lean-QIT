@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.SymmetricSubspace
+public import QIT.Information.UnitaryTwirl
 public import QIT.Classical.Ensemble
 public import QIT.Classical.CQState
 public import QIT.Channels.Diamond
@@ -15,6 +16,9 @@ public import QIT.States.Purification.Equivalence
 public import QIT.States.Schatten
 public import QIT.States.Subnormalized
 public import QIT.States.TraceNorm.PositivePart
+public import Mathlib.Analysis.InnerProductSpace.Adjoint
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.Analysis.InnerProductSpace.Projection.Submodule
 
 /-!
 # Quantum de Finetti representation
@@ -30,7 +34,8 @@ tensor-power support.
 
 @[expose] public section
 
-open scoped ComplexOrder MatrixOrder NNReal
+open scoped ComplexOrder MatrixOrder Matrix.Norms.L2Operator NNReal
+open MeasureTheory
 
 namespace QIT
 
@@ -40,6 +45,10 @@ noncomputable section
 
 variable {ι : Type u} {a : Type v}
 variable [Fintype ι] [Fintype a] [DecidableEq a]
+
+local instance deFinettiCMatrixContinuousENorm {α : Type v} [Fintype α] [DecidableEq α] :
+    ContinuousENorm (CMatrix α) :=
+  SeminormedAddGroup.toContinuousENorm
 
 namespace TensorPower
 
@@ -106,6 +115,35 @@ def tensorPowerTakeDropEquiv (a : Type v) [Fintype a] [DecidableEq a]
       (Equiv.prodCongr (tensorPowerEquiv (a := a) n).symm
         (tensorPowerEquiv (a := a) k).symm))
 
+/-- Embed a permutation of the last `k` tensor positions into a permutation of
+`Fin (n+k)` that fixes the first `n` positions. -/
+def finRightPerm (n k : ℕ) (σ : Equiv.Perm (Fin k)) : Equiv.Perm (Fin (n + k)) :=
+  ((finSumFinEquiv (m := n) (n := k)).symm.trans
+    (Equiv.sumCongr (Equiv.refl (Fin n)) σ)).trans
+      (finSumFinEquiv (m := n) (n := k))
+
+@[simp]
+theorem finRightPerm_castAdd (n k : ℕ) (σ : Equiv.Perm (Fin k)) (i : Fin n) :
+    finRightPerm n k σ (Fin.castAdd k i) = Fin.castAdd k i := by
+  simp [finRightPerm, finSumFinEquiv_apply_left]
+
+@[simp]
+theorem finRightPerm_natAdd (n k : ℕ) (σ : Equiv.Perm (Fin k)) (j : Fin k) :
+    finRightPerm n k σ (Fin.natAdd n j) = Fin.natAdd n (σ j) := by
+  simp [finRightPerm, finSumFinEquiv_apply_right]
+
+@[simp]
+theorem finRightPerm_symm_castAdd (n k : ℕ) (σ : Equiv.Perm (Fin k)) (i : Fin n) :
+    (finRightPerm n k σ).symm (Fin.castAdd k i) = Fin.castAdd k i := by
+  apply (finRightPerm n k σ).injective
+  simp
+
+@[simp]
+theorem finRightPerm_symm_natAdd (n k : ℕ) (σ : Equiv.Perm (Fin k)) (j : Fin k) :
+    (finRightPerm n k σ).symm (Fin.natAdd n j) = Fin.natAdd n (σ.symm j) := by
+  apply (finRightPerm n k σ).injective
+  simp
+
 @[simp]
 theorem tensorPowerTakeDropEquiv_fst_apply (n k : ℕ)
     (x : TensorPower a (n + k)) (i : Fin n) :
@@ -119,6 +157,126 @@ theorem tensorPowerTakeDropEquiv_snd_apply (n k : ℕ)
     tensorPowerEquiv k ((tensorPowerTakeDropEquiv a n k x).2) j =
       tensorPowerEquiv (n + k) x (Fin.natAdd n j) := by
   simp [tensorPowerTakeDropEquiv, finTakeDropEquiv]
+
+/-- Under the `n|k` split, a permutation embedded in the last `k` positions
+acts only on the dropped/right tensor factor. -/
+theorem tensorPowerTakeDropEquiv_permEquiv_right (n k : ℕ)
+    (σ : Equiv.Perm (Fin k)) (x : TensorPower a (n + k)) :
+    tensorPowerTakeDropEquiv a n k
+        (permEquiv (a := a) (n + k) (finRightPerm n k σ) x) =
+      ((tensorPowerTakeDropEquiv a n k x).1,
+        permEquiv (a := a) k σ ((tensorPowerTakeDropEquiv a n k x).2)) := by
+  apply Prod.ext
+  · apply (tensorPowerEquiv (a := a) n).injective
+    funext i
+    rw [tensorPowerTakeDropEquiv_fst_apply]
+    rw [tensorPowerTakeDropEquiv_fst_apply]
+    rw [tensorPowerEquiv_permEquiv]
+    simp
+  · apply (tensorPowerEquiv (a := a) k).injective
+    funext j
+    rw [tensorPowerTakeDropEquiv_snd_apply]
+    rw [tensorPowerEquiv_permEquiv]
+    simp [tensorPowerEquiv_permEquiv, tensorPowerTakeDropEquiv_snd_apply]
+
+theorem tensorPowerTakeDropEquiv_symm_prod_permEquiv_right (n k : ℕ)
+    (σ : Equiv.Perm (Fin k)) (x : TensorPower a n) (y : TensorPower a k) :
+    (tensorPowerTakeDropEquiv a n k).symm
+        (x, permEquiv (a := a) k σ y) =
+      permEquiv (a := a) (n + k) (finRightPerm n k σ)
+        ((tensorPowerTakeDropEquiv a n k).symm (x, y)) := by
+  apply (tensorPowerTakeDropEquiv a n k).injective
+  simp [tensorPowerTakeDropEquiv_permEquiv_right]
+
+/-- A globally symmetric vector remains symmetric in the right block after the
+`n|k` split and after fixing the left block. -/
+theorem rightBlock_mem_symmetric_of_global_mem_symmetric (n k : ℕ)
+    {f : TensorPower a (n + k) → ℂ}
+    (hf : f ∈ symmetricSubspace (a := a) (n + k))
+    (x : TensorPower a n) :
+    (fun y : TensorPower a k =>
+      f ((tensorPowerTakeDropEquiv a n k).symm (x, y))) ∈
+        symmetricSubspace (a := a) k := by
+  rw [mem_symmetric]
+  intro σ
+  ext y
+  have hglobal := congrFun (hf (finRightPerm n k σ))
+    ((tensorPowerTakeDropEquiv a n k).symm (x, y))
+  simpa [Function.comp_apply,
+    tensorPowerTakeDropEquiv_symm_prod_permEquiv_right] using hglobal
+
+private theorem kronecker_one_mulVec_apply {α β : Type*}
+    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    (P : CMatrix β) (φ : Prod α β → ℂ) (x : Prod α β) :
+    (Matrix.kronecker (1 : CMatrix α) P).mulVec φ x =
+      P.mulVec (fun y : β => φ (x.1, y)) x.2 := by
+  simp only [Matrix.mulVec, dotProduct, Matrix.kronecker, Matrix.kroneckerMap_apply]
+  rw [Fintype.sum_prod_type]
+  simp [Matrix.one_apply]
+
+/-- Matrix-vector form of `rightBlock_mem_symmetric_of_global_mem_symmetric`:
+after splitting `n+k` tensor factors into `n|k`, the projector onto the
+symmetric subspace of the right block fixes any globally symmetric vector. -/
+theorem kronecker_one_symmetricProjection_mulVec_split_of_global_mem_symmetric
+    (n k : ℕ) {f : TensorPower a (n + k) → ℂ}
+    (hf : f ∈ symmetricSubspace (a := a) (n + k)) :
+    (Matrix.kronecker (1 : CMatrix (TensorPower a n))
+        (symmetricProjectionMatrix (a := a) k)).mulVec
+      (fun x : Prod (TensorPower a n) (TensorPower a k) =>
+        f ((tensorPowerTakeDropEquiv a n k).symm x)) =
+      (fun x : Prod (TensorPower a n) (TensorPower a k) =>
+        f ((tensorPowerTakeDropEquiv a n k).symm x)) := by
+  ext x
+  have hright :=
+    (mem_symmetric_iff_symmetricProjectionMatrix_mulVec_eq_self
+      (a := a) k
+      (fun y : TensorPower a k =>
+        f ((tensorPowerTakeDropEquiv a n k).symm (x.1, y)))).mp
+      (rightBlock_mem_symmetric_of_global_mem_symmetric (a := a) n k hf x.1)
+  have happ := congrFun hright x.2
+  rw [kronecker_one_mulVec_apply]
+  exact happ
+
+/-- The right-block symmetric projector absorbs the globally symmetric
+projector after the `n|k` reindexing. -/
+theorem kronecker_one_symmetricProjection_mul_reindexed_symmetricProjection
+    (n k : ℕ) :
+    Matrix.kronecker (1 : CMatrix (TensorPower a n))
+        (symmetricProjectionMatrix (a := a) k) *
+      (symmetricProjectionMatrix (a := a) (n + k)).submatrix
+        (tensorPowerTakeDropEquiv a n k).symm
+        (tensorPowerTakeDropEquiv a n k).symm =
+      (symmetricProjectionMatrix (a := a) (n + k)).submatrix
+        (tensorPowerTakeDropEquiv a n k).symm
+        (tensorPowerTakeDropEquiv a n k).symm := by
+  ext x y
+  let f : TensorPower a (n + k) → ℂ :=
+    fun z => symmetricProjectionMatrix (a := a) (n + k) z
+      ((tensorPowerTakeDropEquiv a n k).symm y)
+  have hf : f ∈ symmetricSubspace (a := a) (n + k) := by
+    change (fun z => symmetricProjection (a := a) (n + k)
+      (tensorPowerBasisDelta (a := a)
+        ((tensorPowerTakeDropEquiv a n k).symm y)) z) ∈
+        symmetricSubspace (a := a) (n + k)
+    exact symmetricProjection_mem (a := a) (n + k)
+      (tensorPowerBasisDelta (a := a)
+        ((tensorPowerTakeDropEquiv a n k).symm y))
+  have hvec :=
+    congrFun
+      (kronecker_one_symmetricProjection_mulVec_split_of_global_mem_symmetric
+        (a := a) n k hf) x
+  simpa [Matrix.mul_apply, Matrix.mulVec, dotProduct, f] using hvec
+
+/-- Splitting a tensor power at `m|0` leaves the retained component unchanged,
+up to the definitional `m+0` reindexing. -/
+theorem tensorPowerTakeDropEquiv_zero_fst (m : ℕ)
+    (x : TensorPower a (m + 0)) :
+    ((tensorPowerTakeDropEquiv a m 0) x).1 =
+      (Equiv.cast (by simp) x : TensorPower a m) := by
+  apply (tensorPowerEquiv (a := a) m).injective
+  funext i
+  rw [tensorPowerTakeDropEquiv_fst_apply]
+  simp
 
 private theorem fin_prod_univ_add {M : Type _} [CommMonoid M] (n k : ℕ)
     (f : Fin (n + k) → M) :
@@ -137,6 +295,62 @@ private theorem fin_prod_univ_add {M : Type _} [CommMonoid M] (n k : ℕ)
           (∏ j : Fin k, f (Fin.natAdd n j)) := by
           simp [Fintype.prod_sum_type, finSumFinEquiv_apply_left,
             finSumFinEquiv_apply_right]
+
+/-- Under the source `n|k` split, a tensor-power unitary factors as the
+Kronecker product of its retained and traced-block tensor powers. -/
+theorem unitaryTensorPowerMatrix_takeDrop_submatrix
+    (n k : ℕ) (U : Matrix.unitaryGroup a ℂ) :
+    (unitaryTensorPowerMatrix U (n + k) : CMatrix (TensorPower a (n + k))).submatrix
+        (tensorPowerTakeDropEquiv a n k).symm
+        (tensorPowerTakeDropEquiv a n k).symm =
+      Matrix.kronecker
+        (unitaryTensorPowerMatrix U n : CMatrix (TensorPower a n))
+        (unitaryTensorPowerMatrix U k : CMatrix (TensorPower a k)) := by
+  ext x y
+  rw [Matrix.submatrix_apply, Matrix.kronecker, Matrix.kroneckerMap_apply]
+  rw [unitaryTensorPowerMatrix_apply_eq_fin_prod,
+    unitaryTensorPowerMatrix_apply_eq_fin_prod,
+    unitaryTensorPowerMatrix_apply_eq_fin_prod]
+  rw [fin_prod_univ_add]
+  have hx_left : ∀ i : Fin n,
+      tensorPowerEquiv (n + k) ((tensorPowerTakeDropEquiv a n k).symm x)
+          (Fin.castAdd k i) =
+        tensorPowerEquiv n x.1 i := by
+    intro i
+    have h := tensorPowerTakeDropEquiv_fst_apply (a := a) n k
+      ((tensorPowerTakeDropEquiv a n k).symm x) i
+    simpa using h.symm
+  have hy_left : ∀ i : Fin n,
+      tensorPowerEquiv (n + k) ((tensorPowerTakeDropEquiv a n k).symm y)
+          (Fin.castAdd k i) =
+        tensorPowerEquiv n y.1 i := by
+    intro i
+    have h := tensorPowerTakeDropEquiv_fst_apply (a := a) n k
+      ((tensorPowerTakeDropEquiv a n k).symm y) i
+    simpa using h.symm
+  have hx_right : ∀ j : Fin k,
+      tensorPowerEquiv (n + k) ((tensorPowerTakeDropEquiv a n k).symm x)
+          (Fin.natAdd n j) =
+        tensorPowerEquiv k x.2 j := by
+    intro j
+    have h := tensorPowerTakeDropEquiv_snd_apply (a := a) n k
+      ((tensorPowerTakeDropEquiv a n k).symm x) j
+    simpa using h.symm
+  have hy_right : ∀ j : Fin k,
+      tensorPowerEquiv (n + k) ((tensorPowerTakeDropEquiv a n k).symm y)
+          (Fin.natAdd n j) =
+        tensorPowerEquiv k y.2 j := by
+    intro j
+    have h := tensorPowerTakeDropEquiv_snd_apply (a := a) n k
+      ((tensorPowerTakeDropEquiv a n k).symm y) j
+    simpa using h.symm
+  congr 1
+  · apply Finset.prod_congr rfl
+    intro i hi
+    rw [hx_left i, hy_left i]
+  · apply Finset.prod_congr rfl
+    intro j hj
+    rw [hx_right j, hy_right j]
 
 namespace PureVector
 
@@ -242,6 +456,19 @@ def IsRennerMIIDIn {m r : ℕ} (ψ : PureVector (TensorPower a (m + r)))
       (((ν.tensorPower m).prod η).reindex
         (tensorPowerTakeDropEquiv a m r).symm).state.reindex
           (permEquiv (a := a) (m + r) σ).symm
+
+/-- The pure IID tensor power is Renner `m`-IID with zero residual part. -/
+theorem tensorPower_isRennerMIIDIn_zero (ν : PureVector a) (m : ℕ) :
+    (ν.tensorPower m).IsRennerMIIDIn (a := a) (m := m) (r := 0) ν := by
+  refine ⟨1, ν.tensorPower 0, ?_⟩
+  apply State.ext
+  ext x y
+  simp [State.reindex_matrix, PureVector.state_matrix, rankOneMatrix_apply, PureVector.prod_amp]
+  have hx : x = ((tensorPowerTakeDropEquiv a m 0) x).1 :=
+    (tensorPowerTakeDropEquiv_zero_fst (a := a) m x).symm
+  have hy : y = ((tensorPowerTakeDropEquiv a m 0) y).1 :=
+    (tensorPowerTakeDropEquiv_zero_fst (a := a) m y).symm
+  conv_lhs => rw [hx, hy]
 
 end PureVector
 
@@ -358,6 +585,66 @@ def IsRankOneRennerMIIDIn {m r : ℕ} (ρ : State (TensorPower a (m + r)))
     ψ.IsRennerMIIDIn (a := a) (m := m) (r := r) ν ∧ ρ = ψ.state
 
 end State
+
+/-- The subspace spanned by Renner `m`-IID pure vectors with prototype `ν`.
+
+This is the finite-dimensional support space behind Renner's projector
+`P_id^{n,r}` [Renner2007Symmetry, sub.tex:833-852]. -/
+def RennerMIIDSubspace (a : Type v) [Fintype a] [DecidableEq a]
+    (m r : ℕ) (ν : PureVector a) :
+    Submodule ℂ (EuclideanSpace ℂ (TensorPower a (m + r))) :=
+  Submodule.span ℂ
+    {v : EuclideanSpace ℂ (TensorPower a (m + r)) |
+      ∃ ψ : PureVector (TensorPower a (m + r)),
+        ψ.IsRennerMIIDIn (a := a) (m := m) (r := r) ν ∧
+          v = WithLp.toLp 2 ψ.amp}
+
+@[simp]
+theorem pureVector_mem_RennerMIIDSubspace {m r : ℕ} {ν : PureVector a}
+    {ψ : PureVector (TensorPower a (m + r))}
+    (hψ : ψ.IsRennerMIIDIn (a := a) (m := m) (r := r) ν) :
+    WithLp.toLp 2 ψ.amp ∈ RennerMIIDSubspace a m r ν := by
+  exact Submodule.subset_span ⟨ψ, hψ, rfl⟩
+
+/-- Orthogonal projector onto the Renner m-IID support subspace, represented
+as a matrix in the tensor-power computational basis. -/
+def rennerMIIDProjectorFor (m r : ℕ) (ν : PureVector a) :
+    CMatrix (TensorPower a (m + r)) :=
+  Matrix.toEuclideanLin.symm
+    ((RennerMIIDSubspace a m r ν).starProjection.toLinearMap)
+
+@[simp]
+theorem rennerMIIDProjectorFor_toEuclideanLin (m r : ℕ) (ν : PureVector a) :
+    (rennerMIIDProjectorFor (a := a) m r ν).toEuclideanLin =
+      (RennerMIIDSubspace a m r ν).starProjection.toLinearMap := by
+  simp [rennerMIIDProjectorFor]
+
+/-- Source-facing notation for Renner's fixed/base projector `P_id^{m,r}`. -/
+def rennerMIIDProjectorId (m r : ℕ) (ν : PureVector a) :
+    CMatrix (TensorPower a (m + r)) :=
+  rennerMIIDProjectorFor (a := a) m r ν
+
+/-- Source-facing notation for Renner's rotated projector
+`P_U^{m,r} = U^⊗(m+r) P_id^{m,r} (U†)^⊗(m+r)`. -/
+def rennerMIIDProjector (m r : ℕ) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) : CMatrix (TensorPower a (m + r)) :=
+  (unitaryTensorPowerMatrix U (m + r) : CMatrix (TensorPower a (m + r))) *
+    rennerMIIDProjectorId (a := a) m r ν *
+      star (unitaryTensorPowerMatrix U (m + r) : CMatrix (TensorPower a (m + r)))
+
+theorem rennerMIIDProjector_covariant (m r : ℕ) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) :
+    rennerMIIDProjector (a := a) m r ν U =
+      (unitaryTensorPowerMatrix U (m + r) : CMatrix (TensorPower a (m + r))) *
+        rennerMIIDProjectorId (a := a) m r ν *
+          star (unitaryTensorPowerMatrix U (m + r) :
+            CMatrix (TensorPower a (m + r))) := rfl
+
+/-- A state is supported in the Renner m-IID span when its matrix is dominated
+by the corresponding orthogonal projector. -/
+def State.SupportedOnRennerMIIDSubspace {m r : ℕ}
+    (ρ : State (TensorPower a (m + r))) (ν : PureVector a) : Prop :=
+  ρ.matrix ≤ rennerMIIDProjectorFor (a := a) m r ν
 
 /-- A finite source-shaped mixture of IID tensor-power states.
 
@@ -2433,6 +2720,98 @@ private theorem posSemidef_one_sub_of_posSemidef_idempotent (P : CMatrix a)
   convert hPSD using 1
   rw [hQherm.eq, hQid]
 
+private theorem cMatrix_eq_zero_of_posSemidef_and_neg_posSemidef_general
+    {A : CMatrix a} (hA : A.PosSemidef) (hneg : (-A).PosSemidef) :
+    A = 0 := by
+  have h0A : (0 : CMatrix a) ≤ A := by
+    rw [Matrix.le_iff]
+    simpa using hA
+  have hA0 : A ≤ (0 : CMatrix a) := by
+    rw [Matrix.le_iff]
+    simpa using hneg
+  exact le_antisymm hA0 h0A
+
+private theorem projection_sandwich_fixed_of_le
+    (ρ : State a) (P : CMatrix a)
+    (hPpos : P.PosSemidef) (hPid : P * P = P)
+    (hρP : ρ.matrix ≤ P) :
+    P * ρ.matrix * P = ρ.matrix := by
+  let Q : CMatrix a := 1 - P
+  have hQherm : Q.IsHermitian := by
+    dsimp [Q]
+    exact Matrix.IsHermitian.sub (by simp [Matrix.IsHermitian]) hPpos.isHermitian
+  have hQP : Q * P = 0 := by
+    calc
+      Q * P = (1 - P) * P := rfl
+      _ = P - P * P := by rw [Matrix.sub_mul, Matrix.one_mul]
+      _ = 0 := by rw [hPid, sub_self]
+  have hdiff : (P - ρ.matrix).PosSemidef := by
+    rwa [Matrix.le_iff] at hρP
+  have hQrhoQ_pos : (Q * ρ.matrix * Q).PosSemidef := by
+    have h := ρ.pos.conjTranspose_mul_mul_same Q
+    simpa [hQherm.eq] using h
+  have hQdiffQ_pos : (Q * (P - ρ.matrix) * Q).PosSemidef := by
+    have h := hdiff.conjTranspose_mul_mul_same Q
+    simpa [hQherm.eq] using h
+  have hQdiffQ_eq_neg :
+      Q * (P - ρ.matrix) * Q = -(Q * ρ.matrix * Q) := by
+    have hleft : Q * (P - ρ.matrix) = Q * P - Q * ρ.matrix := by
+      rw [Matrix.mul_sub]
+    calc
+      Q * (P - ρ.matrix) * Q =
+          (Q * P - Q * ρ.matrix) * Q := by rw [hleft]
+      _ = Q * P * Q - Q * ρ.matrix * Q := by rw [Matrix.sub_mul]
+      _ = 0 - Q * ρ.matrix * Q := by rw [hQP, Matrix.zero_mul]
+      _ = -(Q * ρ.matrix * Q) := by rw [zero_sub]
+  have hQrhoQ_zero : Q * ρ.matrix * Q = 0 :=
+    cMatrix_eq_zero_of_posSemidef_and_neg_posSemidef_general
+      hQrhoQ_pos (by simpa [hQdiffQ_eq_neg] using hQdiffQ_pos)
+  let S : CMatrix a := psdSqrt ρ.matrix
+  have hSsq : S * S = ρ.matrix := by
+    simpa [S] using psdSqrt_mul_self_of_posSemidef ρ.pos
+  have hSherm : S.IsHermitian := by
+    simpa [S] using psdSqrt_isHermitian ρ.matrix
+  have hSQ_conj_self :
+      (S * Q).conjTranspose * (S * Q) = 0 := by
+    calc
+      (S * Q).conjTranspose * (S * Q) =
+          Q * S * (S * Q) := by
+          rw [Matrix.conjTranspose_mul, hQherm.eq, hSherm.eq]
+      _ = Q * ρ.matrix * Q := by
+          calc
+            Q * S * (S * Q) = (Q * S * S) * Q := by
+              rw [← Matrix.mul_assoc]
+            _ = Q * (S * S) * Q := by
+              rw [Matrix.mul_assoc Q S S]
+            _ = Q * ρ.matrix * Q := by rw [hSsq]
+      _ = 0 := hQrhoQ_zero
+  have hSQ : S * Q = 0 := by
+    have htrace : ((S * Q).conjTranspose * (S * Q)).trace = 0 := by
+      rw [hSQ_conj_self, Matrix.trace_zero]
+    exact (Matrix.trace_conjTranspose_mul_self_eq_zero_iff).mp htrace
+  have hρQ : ρ.matrix * Q = 0 := by
+    rw [← hSsq, Matrix.mul_assoc, hSQ, Matrix.mul_zero]
+  have hQρ : Q * ρ.matrix = 0 := by
+    rw [← Matrix.conjTranspose_eq_zero]
+    calc
+      (Q * ρ.matrix).conjTranspose =
+          ρ.matrix.conjTranspose * Q.conjTranspose := by rw [Matrix.conjTranspose_mul]
+      _ = ρ.matrix * Q := by rw [ρ.pos.isHermitian.eq, hQherm.eq]
+      _ = 0 := hρQ
+  have hPρ : P * ρ.matrix = ρ.matrix := by
+    calc
+      P * ρ.matrix = (1 - Q) * ρ.matrix := by simp [Q, sub_sub_cancel]
+      _ = ρ.matrix - Q * ρ.matrix := by rw [Matrix.sub_mul, Matrix.one_mul]
+      _ = ρ.matrix := by rw [hQρ, sub_zero]
+  have hρP : ρ.matrix * P = ρ.matrix := by
+    calc
+      ρ.matrix * P = ρ.matrix * (1 - Q) := by simp [Q, sub_sub_cancel]
+      _ = ρ.matrix - ρ.matrix * Q := by rw [Matrix.mul_sub, Matrix.mul_one]
+      _ = ρ.matrix := by rw [hρQ, sub_zero]
+  calc
+    P * ρ.matrix * P = ρ.matrix * P := by rw [hPρ]
+    _ = ρ.matrix := hρP
+
 private theorem rankOneMatrix_le_one_of_trace_eq_one (ψ : a → ℂ)
     (hnorm : (rankOneMatrix ψ).trace = 1) :
     rankOneMatrix ψ ≤ (1 : CMatrix a) := by
@@ -2442,6 +2821,48 @@ private theorem rankOneMatrix_le_one_of_trace_eq_one (ψ : a → ℂ)
     let Ψ : PureVector a := ⟨ψ, hnorm⟩
     simpa [Ψ, PureVector.state_matrix] using Ψ.state_matrix_mul_self
   exact posSemidef_one_sub_of_posSemidef_idempotent (rankOneMatrix ψ) hpos hid
+
+private theorem exists_nonzero_coord_of_rankOne_trace_one (ψ : a → ℂ)
+    (hnorm : (rankOneMatrix ψ).trace = 1) :
+    ∃ i, ψ i ≠ 0 := by
+  by_contra h
+  push Not at h
+  have hzero : (rankOneMatrix ψ).trace = 0 := by
+    rw [rankOneMatrix_trace]
+    simp [h]
+  rw [hzero] at hnorm
+  norm_num at hnorm
+
+private theorem rankOneMatrix_eq_colinear (ψ φ : a → ℂ)
+    (_hψ : (rankOneMatrix ψ).trace = 1)
+    (hφ : (rankOneMatrix φ).trace = 1)
+    (h : rankOneMatrix ψ = rankOneMatrix φ) :
+    ∃ c : ℂ, ψ = c • φ := by
+  rcases exists_nonzero_coord_of_rankOne_trace_one φ hφ with ⟨i0, hφ0⟩
+  have hψ0 : ψ i0 ≠ 0 := by
+    intro hz
+    have hii := congrFun (congrFun h i0) i0
+    simp [rankOneMatrix_apply, hz, hφ0] at hii
+  refine ⟨star (φ i0) / star (ψ i0), ?_⟩
+  funext i
+  have hii := congrFun (congrFun h i) i0
+  simp [rankOneMatrix_apply] at hii
+  have hstarψ : star (ψ i0) ≠ 0 := star_ne_zero.mpr hψ0
+  have hdiv :
+      (ψ i * star (ψ i0)) / star (ψ i0) =
+        (φ i * star (φ i0)) / star (ψ i0) :=
+    congrArg (fun z => z / star (ψ i0)) hii
+  calc
+    ψ i = (ψ i * star (ψ i0)) / star (ψ i0) := by field_simp [hstarψ]
+    _ = (φ i * star (φ i0)) / star (ψ i0) := hdiv
+    _ = (star (φ i0) / star (ψ i0)) * φ i := by ring
+    _ = ((star (φ i0) / star (ψ i0)) • φ) i := by rfl
+
+private theorem pureVector_state_eq_colinear (ψ φ : PureVector a)
+    (h : ψ.state = φ.state) :
+    ∃ c : ℂ, ψ.amp = c • φ.amp :=
+  rankOneMatrix_eq_colinear ψ.amp φ.amp ψ.trace_rankOne_eq_one
+    φ.trace_rankOne_eq_one (by simpa [PureVector.state] using congrArg State.matrix h)
 
 private theorem rankOneMatrix_mul_of_mulVec_eq_self
     (P : CMatrix a) (ψ : a → ℂ) (hψ : P.mulVec ψ = ψ) :
@@ -2508,6 +2929,1880 @@ private theorem rankOneMatrix_le_projection_of_mulVec_eq_self
       _ = P * P - R * P := by rw [Matrix.sub_mul]
       _ = P - R := by rw [hPid, hRP]
   simpa [hEq, R] using hconj
+
+theorem rennerMIIDProjectorFor_isHermitian {m r : ℕ} (ν : PureVector a) :
+    (rennerMIIDProjectorFor (a := a) m r ν).IsHermitian := by
+  exact Matrix.isSymmetric_toEuclideanLin_iff.mp
+    (by
+      simpa [rennerMIIDProjectorFor_toEuclideanLin] using
+        (RennerMIIDSubspace a m r ν).starProjection_isSymmetric)
+
+theorem rennerMIIDProjectorFor_idempotent {m r : ℕ} (ν : PureVector a) :
+    rennerMIIDProjectorFor (a := a) m r ν *
+        rennerMIIDProjectorFor (a := a) m r ν =
+      rennerMIIDProjectorFor (a := a) m r ν := by
+  apply Matrix.toEuclideanLin.injective
+  have hlin := rennerMIIDProjectorFor_toEuclideanLin (a := a) m r ν
+  rw [Matrix.toLpLin_mul]
+  ext x i
+  rw [hlin]
+  simp only [LinearMap.comp_apply]
+  exact congrArg (fun v : EuclideanSpace ℂ (TensorPower a (m + r)) => v i)
+    ((RennerMIIDSubspace a m r ν).starProjection_eq_self_iff.mpr
+      ((RennerMIIDSubspace a m r ν).starProjection_apply_mem x))
+
+theorem rennerMIIDProjectorFor_posSemidef {m r : ℕ} (ν : PureVector a) :
+    (rennerMIIDProjectorFor (a := a) m r ν).PosSemidef := by
+  rw [← Matrix.isPositive_toEuclideanLin_iff]
+  rw [rennerMIIDProjectorFor_toEuclideanLin]
+  exact (ContinuousLinearMap.isPositive_toLinearMap_iff
+    ((RennerMIIDSubspace a m r ν).starProjection)).mpr
+      (ContinuousLinearMap.IsPositive.of_isStarProjection
+        (isStarProjection_starProjection
+          (U := RennerMIIDSubspace a m r ν)))
+
+theorem rennerMIIDProjectorFor_le_one {m r : ℕ} (ν : PureVector a) :
+    rennerMIIDProjectorFor (a := a) m r ν ≤
+      (1 : CMatrix (TensorPower a (m + r))) := by
+  rw [Matrix.le_iff]
+  exact posSemidef_one_sub_of_posSemidef_idempotent
+    (rennerMIIDProjectorFor (a := a) m r ν)
+    (rennerMIIDProjectorFor_posSemidef (a := a) ν)
+    (rennerMIIDProjectorFor_idempotent (a := a) ν)
+
+theorem rennerMIIDProjector_idempotent {m r : ℕ} (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) :
+    rennerMIIDProjector (a := a) m r ν U *
+        rennerMIIDProjector (a := a) m r ν U =
+      rennerMIIDProjector (a := a) m r ν U := by
+  let Un : CMatrix (TensorPower a (m + r)) := unitaryTensorPowerMatrix U (m + r)
+  let P : CMatrix (TensorPower a (m + r)) := rennerMIIDProjectorId (a := a) m r ν
+  have hstar : star Un * Un = 1 := by
+    simpa [Un] using unitaryTensorPowerMatrix_star_mul_self (a := a) U (m + r)
+  have hP : P * P = P := by
+    simpa [P, rennerMIIDProjectorId] using
+      rennerMIIDProjectorFor_idempotent (a := a) (m := m) (r := r) ν
+  dsimp [rennerMIIDProjector]
+  change (Un * P * star Un) * (Un * P * star Un) = Un * P * star Un
+  calc
+    (Un * P * star Un) * (Un * P * star Un) =
+        Un * P * (star Un * Un) * P * star Un := by noncomm_ring
+    _ = Un * P * 1 * P * star Un := by rw [hstar]
+    _ = Un * (P * P) * star Un := by noncomm_ring
+    _ = Un * P * star Un := by rw [hP]
+
+theorem rennerMIIDProjector_posSemidef {m r : ℕ} (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) :
+    (rennerMIIDProjector (a := a) m r ν U).PosSemidef := by
+  dsimp [rennerMIIDProjector, rennerMIIDProjectorId]
+  simpa [Matrix.star_eq_conjTranspose, Matrix.mul_assoc] using
+    (rennerMIIDProjectorFor_posSemidef (a := a) (m := m) (r := r) ν).mul_mul_conjTranspose_same
+      (unitaryTensorPowerMatrix U (m + r) : CMatrix (TensorPower a (m + r)))
+
+theorem rennerMIIDProjector_isHermitian {m r : ℕ} (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) :
+    (rennerMIIDProjector (a := a) m r ν U).IsHermitian :=
+  (rennerMIIDProjector_posSemidef (a := a) ν U).isHermitian
+
+theorem rennerMIIDProjector_le_one {m r : ℕ} (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) :
+    rennerMIIDProjector (a := a) m r ν U ≤
+      (1 : CMatrix (TensorPower a (m + r))) := by
+  rw [Matrix.le_iff]
+  exact posSemidef_one_sub_of_posSemidef_idempotent
+    (rennerMIIDProjector (a := a) m r ν U)
+    (rennerMIIDProjector_posSemidef (a := a) ν U)
+    (rennerMIIDProjector_idempotent (a := a) ν U)
+
+theorem rennerMIIDProjectorFor_mulVec_eq_self_of_mem {m r : ℕ}
+    {ν : PureVector a} {v : TensorPower a (m + r) → ℂ}
+    (hv : WithLp.toLp 2 v ∈ RennerMIIDSubspace a m r ν) :
+    (rennerMIIDProjectorFor (a := a) m r ν).mulVec v = v := by
+  have hproj :
+      (RennerMIIDSubspace a m r ν).starProjection (WithLp.toLp 2 v) =
+        WithLp.toLp 2 v :=
+    (RennerMIIDSubspace a m r ν).starProjection_eq_self_iff.mpr hv
+  have hlin :
+      (rennerMIIDProjectorFor (a := a) m r ν).toEuclideanLin (WithLp.toLp 2 v) =
+        WithLp.toLp 2 v := by
+    calc
+      (rennerMIIDProjectorFor (a := a) m r ν).toEuclideanLin (WithLp.toLp 2 v) =
+          (RennerMIIDSubspace a m r ν).starProjection (WithLp.toLp 2 v) := by
+            rw [rennerMIIDProjectorFor_toEuclideanLin]
+            rfl
+      _ = WithLp.toLp 2 v := hproj
+  exact congrArg WithLp.ofLp hlin
+
+theorem rennerMIIDProjectorFor_mulVec_pure_eq_self {m r : ℕ}
+    {ν : PureVector a} {ψ : PureVector (TensorPower a (m + r))}
+    (hψ : ψ.IsRennerMIIDIn (a := a) (m := m) (r := r) ν) :
+    (rennerMIIDProjectorFor (a := a) m r ν).mulVec ψ.amp = ψ.amp :=
+  rennerMIIDProjectorFor_mulVec_eq_self_of_mem (a := a)
+    (pureVector_mem_RennerMIIDSubspace (a := a) hψ)
+
+theorem State.supportedOnRennerMIIDSubspace_of_rankOne {m r : ℕ}
+    {ν : PureVector a} {ψ : PureVector (TensorPower a (m + r))}
+    (hψ : ψ.IsRennerMIIDIn (a := a) (m := m) (r := r) ν) :
+    ψ.state.SupportedOnRennerMIIDSubspace (a := a) (m := m) (r := r) ν := by
+  dsimp [State.SupportedOnRennerMIIDSubspace, PureVector.state]
+  apply rankOneMatrix_le_projection_of_mulVec_eq_self
+  · exact rennerMIIDProjectorFor_posSemidef (a := a) ν
+  · exact rennerMIIDProjectorFor_idempotent (a := a) ν
+  · exact rennerMIIDProjectorFor_mulVec_pure_eq_self (a := a) hψ
+  · exact ψ.trace_rankOne_eq_one
+
+/-- The rank-one IID tensor power is supported in the zero-residual Renner
+m-IID subspace. -/
+theorem State.tensorPower_supportedOnRennerMIIDSubspace_zero
+    (ν : PureVector a) (m : ℕ) :
+    (ν.tensorPower m).state.SupportedOnRennerMIIDSubspace
+      (a := a) (m := m) (r := 0) ν :=
+  State.supportedOnRennerMIIDSubspace_of_rankOne (a := a)
+    (PureVector.tensorPower_isRennerMIIDIn_zero (a := a) ν m)
+
+/-- Canonical reindexing between the repository's `TensorPower a m` and
+`TensorPower a (m+0)` conventions.  This keeps Renner's `P_U^{m,0}` projector
+usable in formulas written on the literal `m`-fold tensor power. -/
+def tensorPowerAddZeroEquiv (a : Type v) [Fintype a] [DecidableEq a] (m : ℕ) :
+    TensorPower a m ≃ TensorPower a (m + 0) :=
+  Equiv.cast (by simp)
+
+private theorem pure_prod_zero_reindex_state_eq_tensorPower_reindex
+    (ν : PureVector a) (m : ℕ) (η : PureVector (TensorPower a 0)) :
+    (((ν.tensorPower m).prod η).reindex
+          (tensorPowerTakeDropEquiv a m 0).symm).state =
+      ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).state := by
+  apply State.ext
+  ext x y
+  simp [PureVector.prod_amp, tensorPowerAddZeroEquiv]
+  cases ((tensorPowerTakeDropEquiv a m 0) x).2
+  cases ((tensorPowerTakeDropEquiv a m 0) y).2
+  have hηtrace := η.trace_rankOne_eq_one
+  rw [rankOneMatrix_trace] at hηtrace
+  have hη : η.amp PUnit.unit * star (η.amp PUnit.unit) = 1 := by
+    change (∑ x : PUnit, η.amp x * star (η.amp x)) = 1 at hηtrace
+    simpa using hηtrace
+  have hx : ((tensorPowerTakeDropEquiv a m 0) x).1 = x :=
+    tensorPowerTakeDropEquiv_zero_fst (a := a) m x
+  have hy : ((tensorPowerTakeDropEquiv a m 0) y).1 = y :=
+    tensorPowerTakeDropEquiv_zero_fst (a := a) m y
+  rw [hx, hy]
+  calc
+    (ν.tensorPower m).amp x * η.amp PUnit.unit *
+        (star ((ν.tensorPower m).amp y) * star (η.amp PUnit.unit)) =
+          ((ν.tensorPower m).amp x * star ((ν.tensorPower m).amp y)) *
+            (η.amp PUnit.unit * star (η.amp PUnit.unit)) := by
+          ring
+    _ = (ν.tensorPower m).amp x * star ((ν.tensorPower m).amp y) := by
+          rw [hη]
+          ring
+
+private theorem tensorPower_reindex_addZero_state_eq_tensorPower_state
+    (ν : PureVector a) (m : ℕ) :
+    ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).state =
+      ν.state.tensorPower (m + 0) := by
+  rw [PureVector.reindex_state, PureVector.tensorPower_state]
+  apply State.ext
+  ext x y
+  simp [State.tensorPower_matrix_apply, tensorPowerAddZeroEquiv]
+
+private theorem tensorPower_reindex_addZero_state_reindex_perm_symm_eq
+    (ν : PureVector a) (m : ℕ) (σ : Equiv.Perm (Fin (m + 0))) :
+    (((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).state.reindex
+        (permEquiv (a := a) (m + 0) σ).symm) =
+      ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).state := by
+  rw [tensorPower_reindex_addZero_state_eq_tensorPower_state]
+  apply State.ext
+  ext x y
+  have h := congrArg State.matrix
+    (State.permutationChannel_apply_tensorPower (a := a) ν.state (m + 0) σ)
+  change (permutationChannel (a := a) (m + 0) σ).map
+      (ν.state.tensorPower (m + 0)).matrix =
+    (ν.state.tensorPower (m + 0)).matrix at h
+  simpa [State.reindex_matrix, permutationChannel_map_apply] using congrFun (congrFun h x) y
+
+theorem PureVector.isRennerMIIDIn_zero_state_eq_tensorPower_reindex
+    {m : ℕ} {ψ : PureVector (TensorPower a (m + 0))} {ν : PureVector a}
+    (hψ : ψ.IsRennerMIIDIn (a := a) (m := m) (r := 0) ν) :
+    ψ.state = ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).state := by
+  rcases hψ with ⟨σ, η, hψ⟩
+  rw [hψ]
+  rw [pure_prod_zero_reindex_state_eq_tensorPower_reindex]
+  exact tensorPower_reindex_addZero_state_reindex_perm_symm_eq (a := a) ν m σ
+
+theorem PureVector.tensorPower_reindex_addZero_isRennerMIIDIn_zero
+    (ν : PureVector a) (m : ℕ) :
+    ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).IsRennerMIIDIn
+      (a := a) (m := m) (r := 0) ν := by
+  refine ⟨1, ν.tensorPower 0, ?_⟩
+  simpa using (pure_prod_zero_reindex_state_eq_tensorPower_reindex (a := a)
+    ν m (ν.tensorPower 0)).symm
+
+private theorem RennerMIIDSubspace_zero_le_tensorPower_span
+    (m : ℕ) (ν : PureVector a) :
+    RennerMIIDSubspace a m 0 ν ≤
+      Submodule.span ℂ
+        ({WithLp.toLp 2
+            ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).amp} :
+          Set (EuclideanSpace ℂ (TensorPower a (m + 0)))) := by
+  rw [RennerMIIDSubspace]
+  apply Submodule.span_le.mpr
+  intro v hv
+  rcases hv with ⟨ψ, hψ, rfl⟩
+  have hstate :=
+    PureVector.isRennerMIIDIn_zero_state_eq_tensorPower_reindex (a := a) hψ
+  rcases pureVector_state_eq_colinear
+      (a := TensorPower a (m + 0)) ψ
+      ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)) hstate with ⟨c, hc⟩
+  have hv :
+      WithLp.toLp 2 ψ.amp =
+        c • WithLp.toLp 2
+          ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).amp := by
+    ext x
+    exact congrFun hc x
+  rw [hv]
+  exact Submodule.smul_mem _ c (Submodule.subset_span (by simp))
+
+private theorem tensorPower_span_le_RennerMIIDSubspace_zero
+    (m : ℕ) (ν : PureVector a) :
+    Submodule.span ℂ
+        ({WithLp.toLp 2
+            ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).amp} :
+          Set (EuclideanSpace ℂ (TensorPower a (m + 0)))) ≤
+      RennerMIIDSubspace a m 0 ν := by
+  apply Submodule.span_le.mpr
+  intro v hv
+  simp only [Set.mem_singleton_iff] at hv
+  subst hv
+  exact pureVector_mem_RennerMIIDSubspace (a := a)
+    (PureVector.tensorPower_reindex_addZero_isRennerMIIDIn_zero (a := a) ν m)
+
+private theorem RennerMIIDSubspace_zero_eq_tensorPower_span
+    (m : ℕ) (ν : PureVector a) :
+    RennerMIIDSubspace a m 0 ν =
+      Submodule.span ℂ
+        ({WithLp.toLp 2
+            ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).amp} :
+          Set (EuclideanSpace ℂ (TensorPower a (m + 0)))) :=
+  le_antisymm
+    (RennerMIIDSubspace_zero_le_tensorPower_span (a := a) m ν)
+    (tensorPower_span_le_RennerMIIDSubspace_zero (a := a) m ν)
+
+set_option synthInstance.maxHeartbeats 80000 in
+private theorem starProjection_singleton_apply {ι : Type _} [Fintype ι] [DecidableEq ι]
+    (v x : EuclideanSpace ℂ ι) (hv : inner ℂ v v = 1)
+    [hK : (Submodule.span ℂ ({v} : Set (EuclideanSpace ℂ ι))).HasOrthogonalProjection] :
+    (Submodule.span ℂ ({v} : Set (EuclideanSpace ℂ ι))).starProjection x =
+      inner ℂ v x • v := by
+  apply Submodule.eq_starProjection_of_mem_of_inner_eq_zero
+  · exact Submodule.smul_mem _ _ (Submodule.subset_span (by simp))
+  · intro w hw
+    rw [Submodule.mem_span_singleton] at hw
+    rcases hw with ⟨c, rfl⟩
+    by_cases hc : c = 0
+    · simp [hc]
+    · simp [inner_sub_left, inner_smul_right, inner_smul_left, hc]
+      have hnormsq : ((‖v‖ : ℂ) ^ 2) = 1 := by
+        simpa [inner_self_eq_norm_sq_to_K] using hv
+      rw [hnormsq]
+      ring
+
+set_option synthInstance.maxHeartbeats 80000 in
+private theorem starProjection_singleton_matrix_eq_rankOne {ι : Type _}
+    [Fintype ι] [DecidableEq ι] (ψ : ι → ℂ)
+    (hψ : (rankOneMatrix ψ).trace = 1)
+    [hK : (Submodule.span ℂ ({WithLp.toLp 2 ψ} :
+      Set (EuclideanSpace ℂ ι))).HasOrthogonalProjection] :
+    Matrix.toEuclideanLin.symm
+      ((Submodule.span ℂ ({WithLp.toLp 2 ψ} : Set (EuclideanSpace ℂ ι))).starProjection.toLinearMap) =
+      rankOneMatrix ψ := by
+  apply Matrix.toEuclideanLin.injective
+  ext x i
+  have hv : inner ℂ (WithLp.toLp 2 ψ) (WithLp.toLp 2 ψ) = 1 := by
+    rw [EuclideanSpace.inner_toLp_toLp]
+    simpa [rankOneMatrix_trace, dotProduct, mul_comm] using hψ
+  have happ := congrFun (congrArg WithLp.ofLp
+    (starProjection_singleton_apply (v := WithLp.toLp 2 ψ) (x := x) hv)) i
+  simp [Matrix.toEuclideanLin, rankOneMatrix_apply, Matrix.mulVec, dotProduct,
+    PiLp.inner_apply, happ, Finset.mul_sum, mul_comm, mul_left_comm]
+
+private theorem RennerMIIDSubspace_zero_starProjection_apply
+    (m : ℕ) (ν : PureVector a)
+    (x : EuclideanSpace ℂ (TensorPower a (m + 0))) :
+    (RennerMIIDSubspace a m 0 ν).starProjection x =
+      inner ℂ
+        (WithLp.toLp 2
+          ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).amp) x •
+        WithLp.toLp 2
+          ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).amp := by
+  let v : EuclideanSpace ℂ (TensorPower a (m + 0)) :=
+    WithLp.toLp 2 ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).amp
+  have hv : inner ℂ v v = 1 := by
+    rw [EuclideanSpace.inner_toLp_toLp]
+    simpa [v, rankOneMatrix_trace, dotProduct, mul_comm] using
+      ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).trace_rankOne_eq_one
+  apply Submodule.eq_starProjection_of_mem_of_inner_eq_zero
+  · apply tensorPower_span_le_RennerMIIDSubspace_zero (a := a) m ν
+    exact Submodule.smul_mem _ _ (Submodule.subset_span (by simp))
+  · intro w hw
+    have hwspan := RennerMIIDSubspace_zero_le_tensorPower_span (a := a) m ν hw
+    rw [Submodule.mem_span_singleton] at hwspan
+    rcases hwspan with ⟨c, rfl⟩
+    by_cases hc : c = 0
+    · simp [hc]
+    · simp [inner_sub_left, inner_smul_right, inner_smul_left, hc]
+      have hnormsq : ((‖v‖ : ℂ) ^ 2) = 1 := by
+        simpa [inner_self_eq_norm_sq_to_K] using hv
+      rw [hnormsq]
+      ring
+
+theorem rennerMIIDProjectorId_zero_eq_rankOneTensorPower
+    (m : ℕ) (ν : PureVector a) :
+    rennerMIIDProjectorId (a := a) m 0 ν =
+      rankOneMatrix ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).amp := by
+  apply Matrix.toEuclideanLin.injective
+  ext x i
+  have happ := congrFun (congrArg WithLp.ofLp
+    (RennerMIIDSubspace_zero_starProjection_apply (a := a) m ν x)) i
+  simp [rennerMIIDProjectorId, rennerMIIDProjectorFor, Matrix.toEuclideanLin,
+    rankOneMatrix_apply, Matrix.mulVec, dotProduct, PiLp.inner_apply, happ,
+    Finset.mul_sum, mul_comm, mul_left_comm]
+
+/-- A state supported in the Renner m-IID span is fixed by the corresponding
+orthogonal-projector sandwich. -/
+theorem State.rennerMIIDProjector_sandwich_eq_of_supported {m r : ℕ}
+    {ν : PureVector a} {ρ : State (TensorPower a (m + r))}
+    (hρ : ρ.SupportedOnRennerMIIDSubspace (a := a) (m := m) (r := r) ν) :
+    rennerMIIDProjectorFor (a := a) m r ν * ρ.matrix *
+        rennerMIIDProjectorFor (a := a) m r ν = ρ.matrix := by
+  exact projection_sandwich_fixed_of_le ρ
+    (rennerMIIDProjectorFor (a := a) m r ν)
+    (rennerMIIDProjectorFor_posSemidef (a := a) ν)
+    (rennerMIIDProjectorFor_idempotent (a := a) ν)
+    hρ
+
+/-- Conversely, a state fixed by the Renner m-IID projector sandwich is
+supported in the Renner m-IID span. -/
+theorem State.supportedOnRennerMIIDSubspace_of_projector_sandwich_eq {m r : ℕ}
+    {ν : PureVector a} {ρ : State (TensorPower a (m + r))}
+    (hfixed :
+      rennerMIIDProjectorFor (a := a) m r ν * ρ.matrix *
+          rennerMIIDProjectorFor (a := a) m r ν = ρ.matrix) :
+    ρ.SupportedOnRennerMIIDSubspace (a := a) (m := m) (r := r) ν := by
+  let P : CMatrix (TensorPower a (m + r)) := rennerMIIDProjectorFor (a := a) m r ν
+  have hconj : P.conjTranspose * ρ.matrix * P ≤ P.conjTranspose * 1 * P :=
+    star_left_conjugate_le_conjugate (matrix_le_one ρ) P
+  simpa [State.SupportedOnRennerMIIDSubspace, P,
+    (rennerMIIDProjectorFor_isHermitian (a := a) ν).eq,
+    rennerMIIDProjectorFor_idempotent (a := a) ν, Matrix.mul_assoc,
+    hfixed] using hconj
+
+/-- Source-facing support equivalence for the Renner m-IID projector. -/
+theorem State.supportedOnRennerMIIDSubspace_iff_projector_sandwich_eq {m r : ℕ}
+    {ν : PureVector a} {ρ : State (TensorPower a (m + r))} :
+    ρ.SupportedOnRennerMIIDSubspace (a := a) (m := m) (r := r) ν ↔
+      rennerMIIDProjectorFor (a := a) m r ν * ρ.matrix *
+          rennerMIIDProjectorFor (a := a) m r ν = ρ.matrix := by
+  constructor
+  · exact State.rennerMIIDProjector_sandwich_eq_of_supported (a := a)
+  · exact State.supportedOnRennerMIIDSubspace_of_projector_sandwich_eq (a := a)
+
+/-- Renner's rotated `r=0` m-IID projector, reindexed onto `TensorPower a m`.
+
+The generic projector lives on `TensorPower a (m+0)`.  The source
+formula for `ρ_U^n` uses `P_U^{k,0}` as an operator on the traced `k` systems,
+so this definition removes only that definitional bookkeeping. -/
+def rennerMIIDProjectorZero (m : ℕ) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) : CMatrix (TensorPower a m) :=
+  (rennerMIIDProjector (a := a) m 0 ν U).submatrix
+    (tensorPowerAddZeroEquiv a m) (tensorPowerAddZeroEquiv a m)
+
+/-- The fixed/base `r=0` m-IID projector, reindexed onto `TensorPower a m`. -/
+def rennerMIIDProjectorIdZero (m : ℕ) (ν : PureVector a) :
+    CMatrix (TensorPower a m) :=
+  (rennerMIIDProjectorId (a := a) m 0 ν).submatrix
+    (tensorPowerAddZeroEquiv a m) (tensorPowerAddZeroEquiv a m)
+
+theorem rennerMIIDProjectorIdZero_eq_rankOneTensorPower
+    (m : ℕ) (ν : PureVector a) :
+    rennerMIIDProjectorIdZero (a := a) m ν =
+      rankOneMatrix (ν.tensorPower m).amp := by
+  rw [rennerMIIDProjectorIdZero, rennerMIIDProjectorId_zero_eq_rankOneTensorPower]
+  ext x y
+  simp [rankOneMatrix_apply, PureVector.reindex_amp, tensorPowerAddZeroEquiv]
+
+theorem rennerMIIDProjectorIdZero_trace_eq_one
+    (m : ℕ) (ν : PureVector a) :
+    (rennerMIIDProjectorIdZero (a := a) m ν).trace = 1 := by
+  rw [rennerMIIDProjectorIdZero_eq_rankOneTensorPower]
+  exact (ν.tensorPower m).trace_rankOne_eq_one
+
+private theorem trace_submatrix_equiv_renner {ι κ : Type*} [Fintype ι] [Fintype κ]
+    (e : ι ≃ κ) (M : CMatrix κ) :
+    (M.submatrix e e).trace = M.trace := by
+  classical
+  unfold Matrix.trace
+  exact Fintype.sum_equiv e (fun i => M (e i) (e i)) (fun k => M k k) (by simp)
+
+theorem rennerMIIDProjector_trace_eq_id {m r : ℕ} (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) :
+    (rennerMIIDProjector (a := a) m r ν U).trace =
+      (rennerMIIDProjectorId (a := a) m r ν).trace := by
+  let Un : CMatrix (TensorPower a (m + r)) := unitaryTensorPowerMatrix U (m + r)
+  let P : CMatrix (TensorPower a (m + r)) := rennerMIIDProjectorId (a := a) m r ν
+  have hstar : star Un * Un = 1 := by
+    simpa [Un] using unitaryTensorPowerMatrix_star_mul_self (a := a) U (m + r)
+  dsimp [rennerMIIDProjector]
+  change (Un * P * star Un).trace = P.trace
+  calc
+    (Un * P * star Un).trace = (star Un * (Un * P)).trace := by
+      simpa [Matrix.mul_assoc] using Matrix.trace_mul_cycle Un P (star Un)
+    _ = ((star Un * Un) * P).trace := by rw [Matrix.mul_assoc]
+    _ = (1 * P).trace := by rw [hstar]
+    _ = P.trace := by simp
+
+/-- The rotated Renner m-IID projector is exactly the Haar-twirl integrand of
+the fixed/base m-IID projector. -/
+theorem rennerMIIDProjector_eq_unitaryTwirlIntegrand
+    (m r : ℕ) (ν : PureVector a) (U : Matrix.unitaryGroup a ℂ) :
+    rennerMIIDProjector (a := a) m r ν U =
+      unitaryTwirlIntegrand (a := a) (m + r)
+        (rennerMIIDProjectorId (a := a) m r ν) U := rfl
+
+private theorem rennerMIIDProjector_integrable
+    [Nonempty a] (m r : ℕ) (ν : PureVector a) :
+    Integrable
+      (fun U : Matrix.unitaryGroup a ℂ =>
+        rennerMIIDProjector (a := a) m r ν U)
+      (unitaryHaarMeasure (a := a)) := by
+  have h := unitaryTwirl_integrand_integrable (a := a) (m + r)
+    (rennerMIIDProjectorId (a := a) m r ν)
+  simpa [rennerMIIDProjector_eq_unitaryTwirlIntegrand] using h
+
+private theorem rennerMIIDProjector_continuous
+    (m r : ℕ) (ν : PureVector a) :
+    Continuous fun U : Matrix.unitaryGroup a ℂ =>
+      rennerMIIDProjector (a := a) m r ν U := by
+  simpa [rennerMIIDProjector_eq_unitaryTwirlIntegrand] using
+    unitaryTwirl_integrand_continuous (a := a) (m + r)
+      (rennerMIIDProjectorId (a := a) m r ν)
+
+theorem rennerMIIDProjectorZero_trace_eq_one
+    (m : ℕ) (ν : PureVector a) (U : Matrix.unitaryGroup a ℂ) :
+    (rennerMIIDProjectorZero (a := a) m ν U).trace = 1 := by
+  rw [rennerMIIDProjectorZero, trace_submatrix_equiv_renner,
+    rennerMIIDProjector_trace_eq_id, rennerMIIDProjectorId_zero_eq_rankOneTensorPower]
+  exact ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).trace_rankOne_eq_one
+
+private theorem unitaryTensorPowerMatrix_addZero_submatrix
+    (m : ℕ) (U : Matrix.unitaryGroup a ℂ) :
+    (unitaryTensorPowerMatrix U (m + 0) : CMatrix (TensorPower a (m + 0))).submatrix
+        (tensorPowerAddZeroEquiv a m) (tensorPowerAddZeroEquiv a m) =
+      (unitaryTensorPowerMatrix U m : CMatrix (TensorPower a m)) := by
+  ext x y
+  rw [Matrix.submatrix_apply, unitaryTensorPowerMatrix_apply_eq_fin_prod,
+    unitaryTensorPowerMatrix_apply_eq_fin_prod]
+  simp [tensorPowerAddZeroEquiv]
+
+private theorem rankOneMatrix_reindex_addZero_submatrix
+    (m : ℕ) (ψ : PureVector a) :
+    (rankOneMatrix ((ψ.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).amp).submatrix
+        (tensorPowerAddZeroEquiv a m) (tensorPowerAddZeroEquiv a m) =
+      rankOneMatrix (ψ.tensorPower m).amp := by
+  ext x y
+  simp [rankOneMatrix_apply, PureVector.reindex_amp, tensorPowerAddZeroEquiv]
+
+private theorem submatrix_equiv_mul_renner {ι κ : Type*} [Fintype ι] [Fintype κ]
+    (e : ι ≃ κ) (A B : CMatrix κ) :
+    (A * B).submatrix e e = A.submatrix e e * B.submatrix e e := by
+  classical
+  ext i j
+  simp only [Matrix.submatrix_apply, Matrix.mul_apply]
+  exact (Fintype.sum_equiv e
+    (fun x => A (e i) (e x) * B (e x) (e j))
+    (fun y => A (e i) y * B y (e j))
+    (by simp)).symm
+
+private theorem submatrix_equiv_star_renner {ι κ : Type*} [Fintype ι] [Fintype κ]
+    (e : ι ≃ κ) (A : CMatrix κ) :
+    (star A).submatrix e e = star (A.submatrix e e) := by
+  ext i j
+  simp [Matrix.star_eq_conjTranspose, Matrix.conjTranspose_apply]
+
+private theorem submatrix_equiv_symm_submatrix_equiv_renner {ι κ : Type*}
+    [Fintype ι] [Fintype κ] (e : ι ≃ κ) (A : CMatrix κ) :
+    (A.submatrix e e).submatrix e.symm e.symm = A := by
+  ext i j
+  simp
+
+private theorem unitaryTwirlIntegrand_takeDrop_submatrix
+    (n k : ℕ) (A : CMatrix (Prod (TensorPower a n) (TensorPower a k)))
+    (U : Matrix.unitaryGroup a ℂ) :
+    (unitaryTwirlIntegrand (a := a) (n + k)
+        (A.submatrix (tensorPowerTakeDropEquiv a n k)
+          (tensorPowerTakeDropEquiv a n k)) U).submatrix
+        (tensorPowerTakeDropEquiv a n k).symm
+        (tensorPowerTakeDropEquiv a n k).symm =
+      Matrix.kronecker
+          (unitaryTensorPowerMatrix U n : CMatrix (TensorPower a n))
+          (unitaryTensorPowerMatrix U k : CMatrix (TensorPower a k)) *
+        A *
+        star (Matrix.kronecker
+          (unitaryTensorPowerMatrix U n : CMatrix (TensorPower a n))
+          (unitaryTensorPowerMatrix U k : CMatrix (TensorPower a k))) := by
+  let e := tensorPowerTakeDropEquiv a n k
+  let Un : CMatrix (TensorPower a (n + k)) := unitaryTensorPowerMatrix U (n + k)
+  let Us : CMatrix (Prod (TensorPower a n) (TensorPower a k)) :=
+    Matrix.kronecker
+      (unitaryTensorPowerMatrix U n : CMatrix (TensorPower a n))
+      (unitaryTensorPowerMatrix U k : CMatrix (TensorPower a k))
+  have hU : Un.submatrix e.symm e.symm = Us := by
+    simpa [Un, Us, e] using
+      unitaryTensorPowerMatrix_takeDrop_submatrix (a := a) n k U
+  dsimp [unitaryTwirlIntegrand]
+  change (Un * A.submatrix e e * star Un).submatrix e.symm e.symm =
+    Us * A * star Us
+  rw [submatrix_equiv_mul_renner, submatrix_equiv_mul_renner,
+    submatrix_equiv_star_renner]
+  rw [hU, submatrix_equiv_symm_submatrix_equiv_renner]
+
+theorem rennerMIIDProjectorZero_eq_unitary_rankOneTensorPower
+    (m : ℕ) (ν : PureVector a) (U : Matrix.unitaryGroup a ℂ) :
+    rennerMIIDProjectorZero (a := a) m ν U =
+      (unitaryTensorPowerMatrix U m : CMatrix (TensorPower a m)) *
+        rankOneMatrix (ν.tensorPower m).amp *
+          star (unitaryTensorPowerMatrix U m : CMatrix (TensorPower a m)) := by
+  rw [rennerMIIDProjectorZero, rennerMIIDProjector, rennerMIIDProjectorId_zero_eq_rankOneTensorPower]
+  rw [submatrix_equiv_mul_renner, submatrix_equiv_mul_renner,
+    unitaryTensorPowerMatrix_addZero_submatrix,
+    rankOneMatrix_reindex_addZero_submatrix,
+    submatrix_equiv_star_renner, unitaryTensorPowerMatrix_addZero_submatrix]
+
+theorem rennerMIIDProjectorZero_eq_unitaryTwirlIntegrand
+    (m : ℕ) (ν : PureVector a) (U : Matrix.unitaryGroup a ℂ) :
+    rennerMIIDProjectorZero (a := a) m ν U =
+      unitaryTwirlIntegrand (a := a) m (rankOneMatrix (ν.tensorPower m).amp) U := by
+  rw [rennerMIIDProjectorZero_eq_unitary_rankOneTensorPower]
+  rfl
+
+private theorem rennerGammaIntegrand_takeDrop_submatrix [Nonempty a]
+    (ν : PureVector a) (n k r : ℕ) (U : Matrix.unitaryGroup a ℂ) :
+    (unitaryTwirlIntegrand (a := a) ((n + r) + k)
+        (((Matrix.kronecker
+            ((1 : CMatrix (TensorPower a (n + r))) -
+              rennerMIIDProjectorId (a := a) n r ν)
+            (rennerMIIDProjectorIdZero (a := a) k ν)).submatrix
+              (tensorPowerTakeDropEquiv a (n + r) k)
+              (tensorPowerTakeDropEquiv a (n + r) k))) U).submatrix
+        (tensorPowerTakeDropEquiv a (n + r) k).symm
+        (tensorPowerTakeDropEquiv a (n + r) k).symm =
+      Matrix.kronecker
+        ((1 : CMatrix (TensorPower a (n + r))) -
+          rennerMIIDProjector (a := a) n r ν U)
+        (rennerMIIDProjectorZero (a := a) k ν U) := by
+  let UL : CMatrix (TensorPower a (n + r)) := unitaryTensorPowerMatrix U (n + r)
+  let UR : CMatrix (TensorPower a k) := unitaryTensorPowerMatrix U k
+  let Pid : CMatrix (TensorPower a (n + r)) := rennerMIIDProjectorId (a := a) n r ν
+  let P0id : CMatrix (TensorPower a k) := rennerMIIDProjectorIdZero (a := a) k ν
+  have hsplit :=
+    unitaryTwirlIntegrand_takeDrop_submatrix (a := a) (n + r) k
+      (Matrix.kronecker ((1 : CMatrix (TensorPower a (n + r))) - Pid) P0id) U
+  rw [hsplit]
+  have hleft :
+      UL * ((1 : CMatrix (TensorPower a (n + r))) - Pid) * star UL =
+        (1 : CMatrix (TensorPower a (n + r))) -
+          rennerMIIDProjector (a := a) n r ν U := by
+    have hunit : UL * star UL = 1 := by
+      simpa [UL] using Matrix.UnitaryGroup.mul_star_self
+        (unitaryTensorPowerMatrix U (n + r))
+    dsimp [rennerMIIDProjector, UL, Pid] at hunit ⊢
+    calc
+      unitaryTensorPowerMatrix U (n + r) *
+            (1 - rennerMIIDProjectorId (a := a) n r ν) *
+            star (unitaryTensorPowerMatrix U (n + r) : CMatrix (TensorPower a (n + r))) =
+          unitaryTensorPowerMatrix U (n + r) * 1 *
+              star (unitaryTensorPowerMatrix U (n + r) : CMatrix (TensorPower a (n + r))) -
+            unitaryTensorPowerMatrix U (n + r) * rennerMIIDProjectorId (a := a) n r ν *
+              star (unitaryTensorPowerMatrix U (n + r) : CMatrix (TensorPower a (n + r))) := by
+            noncomm_ring
+      _ = 1 -
+            unitaryTensorPowerMatrix U (n + r) * rennerMIIDProjectorId (a := a) n r ν *
+              star (unitaryTensorPowerMatrix U (n + r) : CMatrix (TensorPower a (n + r))) := by
+            rw [Matrix.mul_one, hunit]
+  have hright :
+      UR * P0id * star UR =
+        rennerMIIDProjectorZero (a := a) k ν U := by
+    rw [rennerMIIDProjectorZero_eq_unitary_rankOneTensorPower]
+    dsimp [UR, P0id]
+    rw [rennerMIIDProjectorIdZero_eq_rankOneTensorPower]
+  have hstarK :
+      star (Matrix.kronecker UL UR) =
+        Matrix.kronecker (star UL) (star UR) := by
+    simpa [Matrix.star_eq_conjTranspose] using Matrix.conjTranspose_kronecker UL UR
+  rw [hstarK]
+  change
+    Matrix.kronecker UL UR * Matrix.kronecker (1 - Pid) P0id *
+        Matrix.kronecker (star UL) (star UR) =
+      Matrix.kronecker
+        ((1 : CMatrix (TensorPower a (n + r))) -
+          rennerMIIDProjector (a := a) n r ν U)
+        (rennerMIIDProjectorZero (a := a) k ν U)
+  have hmul1 :
+      Matrix.kronecker UL UR * Matrix.kronecker (1 - Pid) P0id =
+        Matrix.kronecker (UL * (1 - Pid)) (UR * P0id) :=
+    (Matrix.mul_kronecker_mul UL (1 - Pid) UR P0id).symm
+  have hmul2 :
+      Matrix.kronecker (UL * (1 - Pid)) (UR * P0id) *
+          Matrix.kronecker (star UL) (star UR) =
+        Matrix.kronecker ((UL * (1 - Pid)) * star UL)
+          ((UR * P0id) * star UR) :=
+    (Matrix.mul_kronecker_mul (UL * (1 - Pid)) (star UL)
+      (UR * P0id) (star UR)).symm
+  calc
+    Matrix.kronecker UL UR * Matrix.kronecker (1 - Pid) P0id *
+        Matrix.kronecker (star UL) (star UR) =
+        Matrix.kronecker (UL * (1 - Pid)) (UR * P0id) *
+          Matrix.kronecker (star UL) (star UR) := by
+          rw [hmul1]
+    _ = Matrix.kronecker ((UL * (1 - Pid)) * star UL)
+          ((UR * P0id) * star UR) := by
+          rw [hmul2]
+    _ = Matrix.kronecker
+          ((1 : CMatrix (TensorPower a (n + r))) -
+            rennerMIIDProjector (a := a) n r ν U)
+          (rennerMIIDProjectorZero (a := a) k ν U) := by
+          simpa [Matrix.mul_assoc, hleft, hright]
+
+theorem rennerMIIDProjectorIdZero_isHermitian
+    (m : ℕ) (ν : PureVector a) :
+    (rennerMIIDProjectorIdZero (a := a) m ν).IsHermitian := by
+  rw [rennerMIIDProjectorIdZero_eq_rankOneTensorPower]
+  exact rankOneMatrix_isHermitian (ν.tensorPower m).amp
+
+theorem rennerMIIDProjectorIdZero_posSemidef
+    (m : ℕ) (ν : PureVector a) :
+    (rennerMIIDProjectorIdZero (a := a) m ν).PosSemidef := by
+  rw [rennerMIIDProjectorIdZero_eq_rankOneTensorPower]
+  exact rankOneMatrix_pos (ν.tensorPower m).amp
+
+theorem rennerMIIDProjectorIdZero_idempotent
+    (m : ℕ) (ν : PureVector a) :
+    rennerMIIDProjectorIdZero (a := a) m ν *
+        rennerMIIDProjectorIdZero (a := a) m ν =
+      rennerMIIDProjectorIdZero (a := a) m ν := by
+  rw [rennerMIIDProjectorIdZero_eq_rankOneTensorPower]
+  exact (ν.tensorPower m).state_matrix_mul_self
+
+theorem rennerMIIDProjectorIdZero_le_one
+    (m : ℕ) (ν : PureVector a) :
+    rennerMIIDProjectorIdZero (a := a) m ν ≤
+      (1 : CMatrix (TensorPower a m)) := by
+  rw [Matrix.le_iff]
+  exact posSemidef_one_sub_of_posSemidef_idempotent
+    (rennerMIIDProjectorIdZero (a := a) m ν)
+    (rennerMIIDProjectorIdZero_posSemidef (a := a) m ν)
+    (rennerMIIDProjectorIdZero_idempotent (a := a) m ν)
+
+theorem rennerMIIDProjectorZero_posSemidef
+    (m : ℕ) (ν : PureVector a) (U : Matrix.unitaryGroup a ℂ) :
+    (rennerMIIDProjectorZero (a := a) m ν U).PosSemidef := by
+  simpa [rennerMIIDProjectorZero] using
+    (rennerMIIDProjector_posSemidef (a := a) (m := m) (r := 0) ν U).submatrix
+      (tensorPowerAddZeroEquiv a m)
+
+theorem rennerMIIDProjectorZero_isHermitian
+    (m : ℕ) (ν : PureVector a) (U : Matrix.unitaryGroup a ℂ) :
+    (rennerMIIDProjectorZero (a := a) m ν U).IsHermitian :=
+  (rennerMIIDProjectorZero_posSemidef (a := a) m ν U).isHermitian
+
+theorem rennerMIIDProjectorZero_idempotent
+    (m : ℕ) (ν : PureVector a) (U : Matrix.unitaryGroup a ℂ) :
+    rennerMIIDProjectorZero (a := a) m ν U *
+        rennerMIIDProjectorZero (a := a) m ν U =
+      rennerMIIDProjectorZero (a := a) m ν U := by
+  rw [rennerMIIDProjectorZero]
+  ext x y
+  simp only [Matrix.mul_apply, Matrix.submatrix_apply]
+  have hP := congrFun (congrFun
+    (rennerMIIDProjector_idempotent (a := a) (m := m) (r := 0) ν U)
+      ((tensorPowerAddZeroEquiv a m) x))
+      ((tensorPowerAddZeroEquiv a m) y)
+  simpa [Matrix.mul_apply] using hP
+
+theorem rennerMIIDProjectorZero_le_one
+    (m : ℕ) (ν : PureVector a) (U : Matrix.unitaryGroup a ℂ) :
+    rennerMIIDProjectorZero (a := a) m ν U ≤
+      (1 : CMatrix (TensorPower a m)) := by
+  rw [Matrix.le_iff]
+  exact posSemidef_one_sub_of_posSemidef_idempotent
+    (rennerMIIDProjectorZero (a := a) m ν U)
+    (rennerMIIDProjectorZero_posSemidef (a := a) m ν U)
+    (rennerMIIDProjectorZero_idempotent (a := a) m ν U)
+
+theorem PureVector.tensorPower_amp_eq_fin_prod (ν : PureVector a) :
+    ∀ (n : ℕ) (x : TensorPower a n),
+      (ν.tensorPower n).amp x = ∏ i : Fin n, ν.amp (tensorPowerEquiv n x i)
+  | 0, x => by
+      cases x
+      simp [PureVector.tensorPower]
+  | n + 1, (x0, xs) => by
+      change ν.amp x0 * (ν.tensorPower n).amp xs =
+        ∏ i : Fin (n + 1), ν.amp (tensorPowerEquiv (n + 1) (x0, xs) i)
+      rw [PureVector.tensorPower_amp_eq_fin_prod ν n xs, Fin.prod_univ_succ]
+      simp
+
+theorem PureVector.tensorPower_amp_perm (ν : PureVector a) (n : ℕ)
+    (σ : Equiv.Perm (Fin n)) (x : TensorPower a n) :
+    (ν.tensorPower n).amp ((permEquiv (a := a) n σ) x) =
+      (ν.tensorPower n).amp x := by
+  rw [PureVector.tensorPower_amp_eq_fin_prod, PureVector.tensorPower_amp_eq_fin_prod]
+  rw [tensorPowerEquiv_permEquiv]
+  exact Equiv.prod_comp σ.symm (fun i => ν.amp (tensorPowerEquiv n x i))
+
+theorem PureVector.tensorPower_amp_mem_symmetricSubspace
+    (ν : PureVector a) (n : ℕ) :
+    (ν.tensorPower n).amp ∈ symmetricSubspace (a := a) n := by
+  intro σ
+  ext x
+  exact PureVector.tensorPower_amp_perm (a := a) ν n σ x
+
+theorem State.pureTensorPower_supportedOnSymmetricSubspace
+    (ν : PureVector a) (n : ℕ) :
+    (ν.tensorPower n).state.SupportedOnSymmetricSubspace (a := a) := by
+  dsimp [State.SupportedOnSymmetricSubspace, PureVector.state]
+  apply rankOneMatrix_le_projection_of_mulVec_eq_self
+  · exact symmetricProjectionMatrix_posSemidef (a := a) n
+  · exact symmetricProjectionMatrix_idempotent (a := a) n
+  · exact (mem_symmetric_iff_symmetricProjectionMatrix_mulVec_eq_self
+      (a := a) n (ν.tensorPower n).amp).mp
+      (PureVector.tensorPower_amp_mem_symmetricSubspace (a := a) ν n)
+  · exact (ν.tensorPower n).trace_rankOne_eq_one
+
+theorem rennerMIIDProjectorIdZero_supportedOnSymmetricSubspace
+    (m : ℕ) (ν : PureVector a) :
+    (ν.tensorPower m).state.SupportedOnSymmetricSubspace (a := a) :=
+  State.pureTensorPower_supportedOnSymmetricSubspace (a := a) ν m
+
+theorem rennerMIIDProjectorZero_average_mul_symmetricProjectionMatrix
+    [Nonempty a] (m : ℕ) (ν : PureVector a) :
+    (∫ U : Matrix.unitaryGroup a ℂ,
+        rennerMIIDProjectorZero (a := a) m ν U
+        ∂unitaryHaarMeasure (a := a)) *
+        symmetricProjectionMatrix (a := a) m =
+      (((Fintype.card (TensorPowerProfile a m) : ℂ)⁻¹) : ℂ) •
+        symmetricProjectionMatrix (a := a) m := by
+  let A : CMatrix (TensorPower a m) := rankOneMatrix (ν.tensorPower m).amp
+  have hAvg :
+      (∫ U : Matrix.unitaryGroup a ℂ,
+          rennerMIIDProjectorZero (a := a) m ν U
+          ∂unitaryHaarMeasure (a := a)) =
+        unitaryTwirl m A := by
+    rw [unitaryTwirl]
+    congr 1
+    funext U
+    simpa [A] using
+      rennerMIIDProjectorZero_eq_unitaryTwirlIntegrand (a := a) m ν U
+  have htracePA :
+      (symmetricProjectionMatrix (a := a) m * A).trace = 1 := by
+    have hmulVec :
+        (symmetricProjectionMatrix (a := a) m).mulVec (ν.tensorPower m).amp =
+          (ν.tensorPower m).amp :=
+      (mem_symmetric_iff_symmetricProjectionMatrix_mulVec_eq_self
+        (a := a) m (ν.tensorPower m).amp).mp
+        (PureVector.tensorPower_amp_mem_symmetricSubspace (a := a) ν m)
+    have hmul :
+        symmetricProjectionMatrix (a := a) m * A = A := by
+      simpa [A] using
+        rankOneMatrix_mul_of_mulVec_eq_self
+          (symmetricProjectionMatrix (a := a) m) (ν.tensorPower m).amp hmulVec
+    rw [hmul]
+    exact (ν.tensorPower m).trace_rankOne_eq_one
+  rw [hAvg, unitaryTwirl_mul_symmetricProjectionMatrix_eq_trace_smul]
+  rw [htracePA, symmetricProjectionMatrix_trace_eq_profile_card]
+  simp
+
+private theorem rennerMIIDProjectorZero_integrable
+    [Nonempty a] (m : ℕ) (ν : PureVector a) :
+    Integrable
+      (fun U : Matrix.unitaryGroup a ℂ =>
+        rennerMIIDProjectorZero (a := a) m ν U)
+      (unitaryHaarMeasure (a := a)) := by
+  have h := unitaryTwirl_integrand_integrable (a := a) m
+    (rankOneMatrix (ν.tensorPower m).amp)
+  convert h using 1
+  ext U x y
+  rw [rennerMIIDProjectorZero_eq_unitaryTwirlIntegrand]
+
+private theorem rennerMIIDProjectorZero_continuous
+    (m : ℕ) (ν : PureVector a) :
+    Continuous fun U : Matrix.unitaryGroup a ℂ =>
+      rennerMIIDProjectorZero (a := a) m ν U := by
+  have h := unitaryTwirl_integrand_continuous (a := a) m
+    (rankOneMatrix (ν.tensorPower m).amp)
+  convert h using 1
+  ext U x y
+  rw [rennerMIIDProjectorZero_eq_unitaryTwirlIntegrand]
+
+namespace State
+
+/-- If a state on `n+k` tensor factors is supported on the global symmetric
+subspace, then after the source `n|k` split it is fixed by projecting the
+right `k` block onto its symmetric subspace. -/
+theorem splitRightSymmetricProjection_mul_of_supported {n k : ℕ}
+    {ρ : State (TensorPower a (n + k))}
+    (hρ : ρ.SupportedOnSymmetricSubspace (a := a)) :
+    Matrix.kronecker (1 : CMatrix (TensorPower a n))
+        (symmetricProjectionMatrix (a := a) k) *
+      (ρ.reindex (tensorPowerTakeDropEquiv a n k)).matrix =
+      (ρ.reindex (tensorPowerTakeDropEquiv a n k)).matrix := by
+  let e := tensorPowerTakeDropEquiv a n k
+  let Pfull : CMatrix (TensorPower a (n + k)) :=
+    symmetricProjectionMatrix (a := a) (n + k)
+  let Psplit : CMatrix (Prod (TensorPower a n) (TensorPower a k)) :=
+    Pfull.submatrix e.symm e.symm
+  let Q : CMatrix (Prod (TensorPower a n) (TensorPower a k)) :=
+    Matrix.kronecker (1 : CMatrix (TensorPower a n))
+      (symmetricProjectionMatrix (a := a) k)
+  let ρsplit : CMatrix (Prod (TensorPower a n) (TensorPower a k)) :=
+    (ρ.reindex e).matrix
+  have hfull_fixed : Pfull * ρ.matrix * Pfull = ρ.matrix := by
+    exact projection_sandwich_fixed_of_le ρ Pfull
+      (by simpa [Pfull] using symmetricProjectionMatrix_posSemidef (a := a) (n + k))
+      (by simpa [Pfull] using symmetricProjectionMatrix_idempotent (a := a) (n + k))
+      (by simpa [State.SupportedOnSymmetricSubspace, Pfull] using hρ)
+  have hsplit_fixed : Psplit * ρsplit * Psplit = ρsplit := by
+    have h := congrArg (fun M : CMatrix (TensorPower a (n + k)) =>
+      M.submatrix e.symm e.symm) hfull_fixed
+    change (Pfull * ρ.matrix * Pfull).submatrix e.symm e.symm =
+      ρ.matrix.submatrix e.symm e.symm at h
+    rw [submatrix_equiv_mul_renner, submatrix_equiv_mul_renner] at h
+    simpa [Psplit, ρsplit, Pfull, e, State.reindex_matrix, Matrix.mul_assoc] using h
+  have hQPs : Q * Psplit = Psplit := by
+    simpa [Q, Psplit, Pfull, e] using
+      kronecker_one_symmetricProjection_mul_reindexed_symmetricProjection
+        (a := a) n k
+  calc
+    Q * ρsplit = Q * (Psplit * ρsplit * Psplit) := by rw [hsplit_fixed]
+    _ = (Q * Psplit) * ρsplit * Psplit := by noncomm_ring
+    _ = Psplit * ρsplit * Psplit := by rw [hQPs]
+    _ = ρsplit := hsplit_fixed
+
+end State
+
+private noncomputable def deFinettiCMatrixEntryCLM {ι : Type v}
+    [Fintype ι] [DecidableEq ι] (i j : ι) : CMatrix ι →L[ℝ] ℂ :=
+  LinearMap.toContinuousLinearMap
+    ({ toFun := fun A => A i j
+       map_add' := by
+        intro A B
+        rfl
+       map_smul' := by
+        intro c A
+        simp [Matrix.smul_apply] } :
+      CMatrix ι →ₗ[ℝ] ℂ)
+
+private theorem integral_cMatrix_apply_apply {α : Type*} [MeasurableSpace α]
+    {μ : Measure α} {ι : Type v} [Fintype ι] [DecidableEq ι]
+    {f : α → CMatrix ι} (hf : Integrable f μ) (i j : ι) :
+    (∫ x, f x ∂μ) i j = ∫ x, f x i j ∂μ := by
+  simpa [deFinettiCMatrixEntryCLM] using
+    ((deFinettiCMatrixEntryCLM (ι := ι) i j).integral_comp_comm hf).symm
+
+private theorem integrable_cMatrix_apply_apply {α : Type*} [MeasurableSpace α]
+    {μ : Measure α} {ι : Type v} [Fintype ι] [DecidableEq ι]
+    {f : α → CMatrix ι} (hf : Integrable f μ) (i j : ι) :
+    Integrable (fun x => f x i j) μ :=
+  (deFinettiCMatrixEntryCLM (ι := ι) i j).integrable_comp hf
+
+private noncomputable def partialTraceBCLM {ι κ : Type v}
+    [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ] :
+    CMatrix (Prod ι κ) →L[ℝ] CMatrix ι :=
+  LinearMap.toContinuousLinearMap
+    ({ toFun := fun X => partialTraceB (a := ι) (b := κ) X
+       map_add' := by
+        intro X Y
+        exact partialTraceB_add (a := ι) (b := κ) X Y
+       map_smul' := by
+        intro c X
+        exact partialTraceB_smul (a := ι) (b := κ) c X } :
+      CMatrix (Prod ι κ) →ₗ[ℝ] CMatrix ι)
+
+private theorem partialTraceB_integral {α : Type*} [MeasurableSpace α]
+    {μ : Measure α} {ι κ : Type v} [Fintype ι] [DecidableEq ι]
+    [Fintype κ] [DecidableEq κ]
+    {f : α → CMatrix (Prod ι κ)} (hf : Integrable f μ) :
+    partialTraceB (a := ι) (b := κ) (∫ x, f x ∂μ) =
+      ∫ x, partialTraceB (a := ι) (b := κ) (f x) ∂μ := by
+  simpa [partialTraceBCLM] using
+    ((partialTraceBCLM (ι := ι) (κ := κ)).integral_comp_comm hf).symm
+
+private theorem partialTraceB_kronecker_one_left_mul {ι κ : Type v}
+    [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
+    (L : CMatrix ι) (X : CMatrix (Prod ι κ)) :
+    partialTraceB (a := ι) (b := κ)
+      (Matrix.kronecker L (1 : CMatrix κ) * X) =
+      L * partialTraceB (a := ι) (b := κ) X := by
+  ext i i'
+  simp [partialTraceB, Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
+    Matrix.one_apply, Fintype.sum_prod_type, Finset.mul_sum]
+  rw [Finset.sum_comm]
+
+private noncomputable def kroneckerOneMulConstCLM {ι κ : Type v}
+    [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
+    (X : CMatrix (Prod ι κ)) : CMatrix κ →L[ℝ] CMatrix (Prod ι κ) :=
+  LinearMap.toContinuousLinearMap
+    ({ toFun := fun P => Matrix.kronecker (1 : CMatrix ι) P * X
+       map_add' := by
+        intro P Q
+        ext i j
+        simp only [Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
+          Matrix.add_apply]
+        rw [← Finset.sum_add_distrib]
+        refine Finset.sum_congr rfl ?_
+        intro x hx
+        ring
+       map_smul' := by
+        intro c P
+        ext i j
+        simp only [Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
+          Matrix.smul_apply, RingHom.id_apply]
+        change ∑ x, (1 : CMatrix ι) i.1 x.1 * ((c : ℂ) * P i.2 x.2) *
+            X x j =
+          (c : ℂ) * ∑ x, (1 : CMatrix ι) i.1 x.1 * P i.2 x.2 * X x j
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro x hx
+        ring } :
+      CMatrix κ →ₗ[ℝ] CMatrix (Prod ι κ))
+
+private theorem integral_kronecker_one_mul_const {α : Type*} [MeasurableSpace α]
+    {μ : Measure α} {ι κ : Type v} [Fintype ι] [DecidableEq ι]
+    [Fintype κ] [DecidableEq κ]
+    {f : α → CMatrix κ} (hf : Integrable f μ) (X : CMatrix (Prod ι κ)) :
+    (∫ x, Matrix.kronecker (1 : CMatrix ι) (f x) * X ∂μ) =
+      Matrix.kronecker (1 : CMatrix ι) (∫ x, f x ∂μ) * X := by
+  simpa [kroneckerOneMulConstCLM] using
+    (kroneckerOneMulConstCLM (ι := ι) (κ := κ) X).integral_comp_comm hf
+
+private noncomputable def submatrixEquivSymmMulConstCLM {ι κ : Type v}
+    [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
+    (e : κ ≃ ι) (X : CMatrix ι) : CMatrix κ →L[ℝ] CMatrix ι :=
+  LinearMap.toContinuousLinearMap
+    ({ toFun := fun M => M.submatrix e.symm e.symm * X
+       map_add' := by
+        intro M N
+        ext i j
+        simp only [Matrix.mul_apply, Matrix.submatrix_apply, Matrix.add_apply]
+        rw [← Finset.sum_add_distrib]
+        refine Finset.sum_congr rfl ?_
+        intro x hx
+        ring
+       map_smul' := by
+        intro c M
+        ext i j
+        simp only [Matrix.mul_apply, Matrix.submatrix_apply, Matrix.smul_apply,
+          RingHom.id_apply, smul_eq_mul]
+        change ∑ x, ((c : ℂ) * M (e.symm i) (e.symm x)) * X x j =
+          (c : ℂ) * ∑ x, M (e.symm i) (e.symm x) * X x j
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro x hx
+        ring } :
+      CMatrix κ →ₗ[ℝ] CMatrix ι)
+
+private theorem integral_submatrix_equiv_symm_mul_const {α : Type*}
+    [MeasurableSpace α] {μ : Measure α} {ι κ : Type v}
+    [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
+    {f : α → CMatrix κ} (hf : Integrable f μ) (e : κ ≃ ι) (X : CMatrix ι) :
+    (∫ x, (f x).submatrix e.symm e.symm * X ∂μ) =
+      (∫ x, f x ∂μ).submatrix e.symm e.symm * X := by
+  simpa [submatrixEquivSymmMulConstCLM] using
+    (submatrixEquivSymmMulConstCLM e X).integral_comp_comm hf
+
+private noncomputable def definettiCMatrixEntryCLM {ι : Type v}
+    [Fintype ι] [DecidableEq ι] (i j : ι) : CMatrix ι →L[ℝ] ℂ :=
+  LinearMap.toContinuousLinearMap
+    ({ toFun := fun M => M i j
+       map_add' := by intro M N; simp
+       map_smul' := by intro c M; simp } : CMatrix ι →ₗ[ℝ] ℂ)
+
+private noncomputable def definettiCMatrixTraceCLM {ι : Type v}
+    [Fintype ι] [DecidableEq ι] : CMatrix ι →L[ℝ] ℂ :=
+  ∑ i, definettiCMatrixEntryCLM (ι := ι) i i
+
+private theorem integral_trace {α : Type*} [MeasurableSpace α]
+    {μ : Measure α} {ι : Type v} [Fintype ι] [DecidableEq ι]
+    {f : α → CMatrix ι} (hf : Integrable f μ) :
+    (∫ x, f x ∂μ).trace = ∫ x, (f x).trace ∂μ := by
+  rw [Matrix.trace]
+  change ∑ i, (∫ x, f x ∂μ) i i = ∫ x, ∑ i, f x i i ∂μ
+  rw [MeasureTheory.integral_finsetSum]
+  · refine Finset.sum_congr rfl ?_
+    intro i _
+    simpa [definettiCMatrixEntryCLM] using
+      ((definettiCMatrixEntryCLM (ι := ι) i i).integral_comp_comm hf).symm
+  · intro i _
+    exact (definettiCMatrixEntryCLM (ι := ι) i i).integrable_comp hf
+
+private noncomputable def definettiCMatrixEntryCLMComplex {ι : Type v}
+    [Fintype ι] [DecidableEq ι] (i j : ι) : CMatrix ι →L[ℂ] ℂ :=
+  LinearMap.toContinuousLinearMap
+    ({ toFun := fun M => M i j
+       map_add' := by intro M N; simp
+       map_smul' := by intro c M; simp [Matrix.smul_apply] } :
+      CMatrix ι →ₗ[ℂ] ℂ)
+
+private noncomputable def definettiCMatrixConjTransposeCLM {ι : Type v}
+    [Fintype ι] [DecidableEq ι] : CMatrix ι →L[ℝ] CMatrix ι :=
+  LinearMap.toContinuousLinearMap
+    ({ toFun := fun M => Matrix.conjTranspose M
+       map_add' := by intro M N; simp
+       map_smul' := by intro c M; ext i j; simp } : CMatrix ι →ₗ[ℝ] CMatrix ι)
+
+private theorem integral_matrix_conjTranspose {α : Type*} [MeasurableSpace α]
+    {μ : Measure α} {ι : Type v} [Fintype ι] [DecidableEq ι]
+    {f : α → CMatrix ι} (hf : Integrable f μ) :
+    Matrix.conjTranspose (∫ x, f x ∂μ) =
+      ∫ x, Matrix.conjTranspose (f x) ∂μ := by
+  simpa [definettiCMatrixConjTransposeCLM] using
+    ((definettiCMatrixConjTransposeCLM (ι := ι)).integral_comp_comm hf).symm
+
+private noncomputable def definettiCMatrixQuadraticCLM {ι : Type v}
+    [Fintype ι] [DecidableEq ι] (x : ι → ℂ) : CMatrix ι →L[ℂ] ℂ :=
+  ∑ i, ∑ j, (star (x i) * x j) •
+    definettiCMatrixEntryCLMComplex (ι := ι) i j
+
+private theorem definettiCMatrixQuadraticCLM_apply {ι : Type v}
+    [Fintype ι] [DecidableEq ι] (x : ι → ℂ) (A : CMatrix ι) :
+    definettiCMatrixQuadraticCLM x A = dotProduct (star x) (Matrix.mulVec A x) := by
+  simp [definettiCMatrixQuadraticCLM, definettiCMatrixEntryCLMComplex,
+    Matrix.mulVec, dotProduct]
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro j _
+  ring
+
+private theorem integral_dotProduct_mulVec {α : Type*} [MeasurableSpace α]
+    {μ : Measure α} {ι : Type v} [Fintype ι] [DecidableEq ι]
+    {f : α → CMatrix ι} (hf : Integrable f μ) (x : ι → ℂ) :
+    dotProduct (star x) (Matrix.mulVec (∫ t, f t ∂μ) x) =
+      ∫ t, dotProduct (star x) (Matrix.mulVec (f t) x) ∂μ := by
+  simp_rw [← definettiCMatrixQuadraticCLM_apply x]
+  exact
+    ((definettiCMatrixQuadraticCLM x).integral_comp_comm hf).symm
+
+private theorem integral_posSemidef_of_forall {α : Type*} [MeasurableSpace α]
+    {μ : Measure α} {ι : Type v} [Fintype ι] [DecidableEq ι]
+    {f : α → CMatrix ι} (hf : Integrable f μ)
+    (hpos : ∀ t, (f t).PosSemidef) :
+    (∫ t, f t ∂μ).PosSemidef := by
+  refine Matrix.PosSemidef.of_dotProduct_mulVec_nonneg ?_ ?_
+  · rw [Matrix.IsHermitian, integral_matrix_conjTranspose (hf := hf)]
+    apply integral_congr_ae
+    exact Filter.Eventually.of_forall fun t => (hpos t).isHermitian.eq
+  · intro x
+    rw [integral_dotProduct_mulVec (hf := hf) x]
+    exact integral_nonneg fun t => (hpos t).dotProduct_mulVec_nonneg x
+
+private theorem traceNorm_eq_trace_re_of_posSemidef {ι : Type v}
+    [Fintype ι] [DecidableEq ι] (A : CMatrix ι) (hA : A.PosSemidef) :
+    traceNorm A = A.trace.re := by
+  rw [traceNorm]
+  have hherm : Matrix.conjTranspose A = A := hA.isHermitian.eq
+  have hs : psdSqrt (Matrix.conjTranspose A * A) = A := by
+    rw [hherm]
+    simpa [psdSqrt, sq] using (CFC.sqrt_sq A hA.nonneg)
+  rw [hs]
+
+private theorem traceNorm_conjTranspose {ι : Type v} [Fintype ι] [DecidableEq ι]
+    (A : CMatrix ι) :
+    traceNorm (Matrix.conjTranspose A) = traceNorm A := by
+  apply le_antisymm
+  · obtain ⟨U, hU⟩ :=
+      traceNorm_variational_exists_unitary_abs_trace (Matrix.conjTranspose A)
+    let V : Matrix.unitaryGroup ι ℂ := U⁻¹
+    have hcoe : (V : CMatrix ι) = star (U : CMatrix ι) := by rfl
+    have hstar : Matrix.conjTranspose (star (U : CMatrix ι)) = (U : CMatrix ι) := by
+      rw [← Matrix.star_eq_conjTranspose, star_star]
+    have htrace :
+        ((Matrix.conjTranspose A * (U : CMatrix ι)).trace) =
+          star ((A * (V : CMatrix ι)).trace) := by
+      rw [hcoe]
+      calc
+        (Matrix.conjTranspose A * (U : CMatrix ι)).trace =
+            ((U : CMatrix ι) * Matrix.conjTranspose A).trace := by
+              rw [Matrix.trace_mul_comm]
+        _ = (Matrix.conjTranspose (A * star (U : CMatrix ι))).trace := by
+            rw [Matrix.conjTranspose_mul, hstar]
+        _ = star ((A * star (U : CMatrix ι)).trace) :=
+            Matrix.trace_conjTranspose _
+    calc
+      traceNorm (Matrix.conjTranspose A) =
+          Complex.abs ((Matrix.conjTranspose A * (U : CMatrix ι)).trace) := hU.symm
+      _ = Complex.abs ((A * (V : CMatrix ι)).trace) := by simp [htrace]
+      _ ≤ traceNorm A := traceNorm_variational_unitary_abs_trace_le A V
+  · obtain ⟨U, hU⟩ := traceNorm_variational_exists_unitary_abs_trace A
+    let V : Matrix.unitaryGroup ι ℂ := U⁻¹
+    have hcoe : (V : CMatrix ι) = star (U : CMatrix ι) := by rfl
+    have hstar : Matrix.conjTranspose (star (U : CMatrix ι)) = (U : CMatrix ι) := by
+      rw [← Matrix.star_eq_conjTranspose, star_star]
+    have htrace :
+        ((A * (U : CMatrix ι)).trace) =
+          star ((Matrix.conjTranspose A * (V : CMatrix ι)).trace) := by
+      rw [hcoe]
+      calc
+        (A * (U : CMatrix ι)).trace =
+            ((U : CMatrix ι) * A).trace := by rw [Matrix.trace_mul_comm]
+        _ = (Matrix.conjTranspose (Matrix.conjTranspose A * star (U : CMatrix ι))).trace := by
+            rw [Matrix.conjTranspose_mul, hstar, Matrix.conjTranspose_conjTranspose]
+        _ = star ((Matrix.conjTranspose A * star (U : CMatrix ι)).trace) :=
+            Matrix.trace_conjTranspose _
+    calc
+      traceNorm A = Complex.abs ((A * (U : CMatrix ι)).trace) := hU.symm
+      _ = Complex.abs ((Matrix.conjTranspose A * (V : CMatrix ι)).trace) := by
+            simp [htrace]
+      _ ≤ traceNorm (Matrix.conjTranspose A) :=
+          traceNorm_variational_unitary_abs_trace_le (Matrix.conjTranspose A) V
+
+private theorem trace_re_le_traceNorm {ι : Type v} [Fintype ι] [DecidableEq ι]
+    (A : CMatrix ι) :
+    A.trace.re ≤ traceNorm A := by
+  have hunit := traceNorm_variational_unitary_abs_trace_le A
+    (1 : Matrix.unitaryGroup ι ℂ)
+  have hre : A.trace.re ≤ Complex.abs A.trace := by
+    simpa [Complex.abs] using Complex.re_le_norm A.trace
+  have habs : Complex.abs A.trace ≤ traceNorm A := by
+    simpa using hunit
+  exact le_trans hre habs
+
+private theorem one_sub_projection_posSemidef {ι : Type v}
+    [Fintype ι] [DecidableEq ι] {P : CMatrix ι}
+    (hPpos : P.PosSemidef) (hPid : P * P = P) :
+    (1 - P).PosSemidef :=
+  posSemidef_one_sub_of_posSemidef_idempotent P hPpos hPid
+
+private theorem one_sub_projection_idempotent {ι : Type v}
+    [Fintype ι] [DecidableEq ι] {P : CMatrix ι}
+    (hPid : P * P = P) :
+    (1 - P) * (1 - P) = 1 - P := by
+  calc
+    (1 - P) * (1 - P) = 1 - P - P + P * P := by noncomm_ring
+    _ = 1 - P := by rw [hPid]; noncomm_ring
+
+private theorem rennerGentle_integral_traceNorm_bound {α : Type*}
+    [MeasurableSpace α] {μ : Measure α} {ι : Type v}
+    [Fintype ι] [DecidableEq ι]
+    (A P : α → CMatrix ι)
+    (hDInt : Integrable (fun t => (1 - P t) * A t) μ)
+    (hRInt : Integrable (fun t => A t * (1 - P t)) μ)
+    (hEInt : Integrable (fun t => (1 - P t) * A t * (1 - P t)) μ)
+    (hApos : ∀ t, (A t).PosSemidef)
+    (hPpos : ∀ t, (P t).PosSemidef)
+    (hPid : ∀ t, P t * P t = P t) :
+    traceNorm (∫ t, A t - P t * A t * P t ∂μ) ≤
+      3 * traceNorm (∫ t, (1 - P t) * A t ∂μ) := by
+  let D : CMatrix ι := ∫ t, (1 - P t) * A t ∂μ
+  let R : CMatrix ι := ∫ t, A t * (1 - P t) ∂μ
+  let E : CMatrix ι := ∫ t, (1 - P t) * A t * (1 - P t) ∂μ
+  have hQpos : ∀ t, (1 - P t).PosSemidef := fun t =>
+    one_sub_projection_posSemidef (P := P t) (hPpos t) (hPid t)
+  have hQherm : ∀ t, (1 - P t).IsHermitian := fun t => (hQpos t).isHermitian
+  have hEpos_point : ∀ t, ((1 - P t) * A t * (1 - P t)).PosSemidef := by
+    intro t
+    have h := (hApos t).conjTranspose_mul_mul_same (1 - P t)
+    rw [(hQherm t).eq] at h
+    simpa [Matrix.mul_assoc] using h
+  have hEpos : E.PosSemidef := by
+    exact integral_posSemidef_of_forall (hf := hEInt) hEpos_point
+  have hR_eq_starD : R = Matrix.conjTranspose D := by
+    calc
+      R = ∫ t, A t * (1 - P t) ∂μ := rfl
+      _ = ∫ t, Matrix.conjTranspose ((1 - P t) * A t) ∂μ := by
+        apply integral_congr_ae
+        exact Filter.Eventually.of_forall fun t => by
+          change A t * (1 - P t) = Matrix.conjTranspose ((1 - P t) * A t)
+          rw [Matrix.conjTranspose_mul, (hApos t).isHermitian.eq, (hQherm t).eq]
+      _ = Matrix.conjTranspose D := by
+        dsimp [D]
+        rw [← integral_matrix_conjTranspose (hf := hDInt)]
+  have hEtrace_eq_Dtrace : E.trace = D.trace := by
+    dsimp [E, D]
+    rw [integral_trace (hf := hEInt), integral_trace (hf := hDInt)]
+    apply integral_congr_ae
+    exact Filter.Eventually.of_forall fun t => by
+      have hQid : (1 - P t) * (1 - P t) = 1 - P t :=
+        one_sub_projection_idempotent (P := P t) (hPid t)
+      calc
+        (((1 - P t) * A t * (1 - P t)).trace) =
+            ((((1 - P t) * (1 - P t)) * A t).trace) := by
+              exact Matrix.trace_mul_cycle (1 - P t) (A t) (1 - P t)
+        _ = (((1 - P t) * A t).trace) := by
+              rw [hQid]
+  have hEnorm_le_Dnorm : traceNorm E ≤ traceNorm D := by
+    calc
+      traceNorm E = E.trace.re := traceNorm_eq_trace_re_of_posSemidef E hEpos
+      _ = D.trace.re := by rw [hEtrace_eq_Dtrace]
+      _ ≤ traceNorm D := trace_re_le_traceNorm D
+  have hRnorm : traceNorm R = traceNorm D := by
+    rw [hR_eq_starD, traceNorm_conjTranspose]
+  have hdecomp :
+      (∫ t, A t - P t * A t * P t ∂μ) = D + R - E := by
+    dsimp [D, R, E]
+    have hpoint :
+        (fun t => A t - P t * A t * P t) =
+          fun t => (1 - P t) * A t + A t * (1 - P t) -
+            (1 - P t) * A t * (1 - P t) := by
+      funext t
+      have hrhs :
+          (1 - P t) * A t + A t * (1 - P t) -
+              (1 - P t) * A t * (1 - P t) =
+            A t - P t * A t * P t := by
+        rw [show (1 - P t) * A t * (1 - P t) =
+            A t - P t * A t - A t * P t + P t * A t * P t by
+              noncomm_ring]
+        noncomm_ring
+      exact hrhs.symm
+    calc
+      (∫ t, A t - P t * A t * P t ∂μ)
+          = ∫ t, ((1 - P t) * A t + A t * (1 - P t) -
+              (1 - P t) * A t * (1 - P t)) ∂μ := by
+            rw [hpoint]
+      _ = ∫ t, ((1 - P t) * A t + A t * (1 - P t)) ∂μ -
+            ∫ t, (1 - P t) * A t * (1 - P t) ∂μ := by
+            simpa [Pi.add_apply, Pi.sub_apply] using
+              (integral_sub (hDInt.add hRInt) hEInt)
+      _ = ∫ t, (1 - P t) * A t ∂μ + ∫ t, A t * (1 - P t) ∂μ -
+            ∫ t, (1 - P t) * A t * (1 - P t) ∂μ := by
+            simpa [Pi.add_apply] using congrArg
+              (fun X => X - ∫ t, (1 - P t) * A t * (1 - P t) ∂μ)
+              (integral_add hDInt hRInt)
+  calc
+    traceNorm (∫ t, A t - P t * A t * P t ∂μ) =
+        traceNorm (D + R - E) := by rw [hdecomp]
+    _ = traceNorm (D + R + (-E)) := by rw [sub_eq_add_neg]
+    _ ≤ traceNorm (D + R) + traceNorm (-E) := traceNorm_add_le _ _
+    _ = traceNorm (D + R) + traceNorm E := by rw [traceNorm_neg]
+    _ ≤ (traceNorm D + traceNorm R) + traceNorm E := by
+          nlinarith [traceNorm_add_le D R]
+    _ ≤ (traceNorm D + traceNorm D) + traceNorm D := by
+          rw [hRnorm]
+          nlinarith [hEnorm_le_Dnorm]
+    _ = 3 * traceNorm D := by ring
+    _ = 3 * traceNorm (∫ t, (1 - P t) * A t ∂μ) := rfl
+
+private theorem matrix_mul_rankOneMatrix_mul_conjTranspose
+    {ι κ : Type*} [Fintype ι] [DecidableEq ι] [Fintype κ]
+    (M : Matrix κ ι ℂ) (ψ : ι → ℂ) :
+    M * rankOneMatrix ψ * Matrix.conjTranspose M = rankOneMatrix (M.mulVec ψ) := by
+  ext i j
+  simp [Matrix.mul_apply, Matrix.mulVec, rankOneMatrix_apply, dotProduct, map_sum,
+    Finset.mul_sum, Finset.sum_mul]
+  apply Finset.sum_congr rfl
+  intro x _hx
+  apply Finset.sum_congr rfl
+  intro y _hy
+  ring
+
+private noncomputable def contractedAmp {α β : Type*} [Fintype β]
+    (η : β → ℂ) (ψ : Prod α β → ℂ) : α → ℂ :=
+  fun x => ∑ y, star (η y) * ψ (x, y)
+
+private theorem partialTraceB_kronecker_rankOne_left_mul_rankOne
+    {α β : Type*} [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    (η : β → ℂ) (ψ : Prod α β → ℂ) :
+    partialTraceB (a := α) (b := β)
+      (Matrix.kronecker (1 : CMatrix α) (rankOneMatrix η) * rankOneMatrix ψ) =
+      rankOneMatrix (contractedAmp η ψ) := by
+  ext x x'
+  simp only [partialTraceB, Matrix.mul_apply, Matrix.kroneckerMap_apply, Matrix.kronecker,
+    rankOneMatrix_apply, contractedAmp, Matrix.one_apply]
+  calc
+    (∑ x_1 : β, ∑ x_2 : α × β,
+      (if x = x_2.1 then (1 : ℂ) else 0) * (η x_1 * star (η x_2.2)) *
+        (ψ x_2 * star (ψ (x', x_1)))) =
+        ∑ x_1 : β, ∑ y : β,
+          η x_1 * star (η y) * (ψ (x, y) * star (ψ (x', x_1))) := by
+          apply Finset.sum_congr rfl
+          intro x1 _hx1
+          rw [Fintype.sum_prod_type]
+          simp
+    _ = (∑ y, star (η y) * ψ (x, y)) *
+        star (∑ y, star (η y) * ψ (x', y)) := by
+          simp [Finset.mul_sum, Finset.sum_mul]
+          apply Finset.sum_congr rfl
+          intro x1 _hx1
+          apply Finset.sum_congr rfl
+          intro x2 _hx2
+          ring
+
+/-- Renner's `Γ^{n+k}` operator, in the finite-dimensional matrix form used by
+the later exponential-bound assembly.  It is the Haar twirl of
+`(I-P_id^{n,r}) ⊗ P_id^{k,0}` after the `n|k` tensor split. -/
+def rennerGammaMatrix [Nonempty a] (ν : PureVector a) (n k r : ℕ) :
+    CMatrix (TensorPower a ((n + r) + k)) :=
+  unitaryTwirl ((n + r) + k)
+    (((Matrix.kronecker
+        ((1 : CMatrix (TensorPower a (n + r))) -
+          rennerMIIDProjectorId (a := a) n r ν)
+        (rennerMIIDProjectorIdZero (a := a) k ν)).submatrix
+          (tensorPowerTakeDropEquiv a (n + r) k)
+          (tensorPowerTakeDropEquiv a (n + r) k)))
+
+namespace State
+
+/-- Renner's source operator
+`ρ_U^n = dim(Sym^k H) · tr_k((I^n ⊗ P_U^{k,0}) ρ^{n+k})`.
+
+This is intentionally a matrix, not a normalized state: the source scaling by
+the symmetric dimension is not pointwise trace-normalized. -/
+def rennerRhoUMatrix [Nonempty a] {n k : ℕ}
+    (ρ : State (TensorPower a (n + k))) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) : CMatrix (TensorPower a n) :=
+  ((Fintype.card (TensorPowerProfile a k) : ℝ) : ℂ) •
+    partialTraceB (a := TensorPower a n) (b := TensorPower a k)
+      ((Matrix.kronecker (1 : CMatrix (TensorPower a n))
+          (rennerMIIDProjectorZero (a := a) k ν U)) *
+        (ρ.reindex (tensorPowerTakeDropEquiv a n k)).matrix)
+
+theorem rennerRhoUMatrix_trace [Nonempty a] {n k : ℕ}
+    (ρ : State (TensorPower a (n + k))) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) :
+    (ρ.rennerRhoUMatrix (a := a) (n := n) (k := k) ν U).trace =
+      ((Fintype.card (TensorPowerProfile a k) : ℝ) : ℂ) *
+        (((Matrix.kronecker (1 : CMatrix (TensorPower a n))
+            (rennerMIIDProjectorZero (a := a) k ν U)) *
+          (ρ.reindex (tensorPowerTakeDropEquiv a n k)).matrix).trace) := by
+  rw [rennerRhoUMatrix, Matrix.trace_smul, partialTraceB_trace]
+  rfl
+
+theorem rennerRhoUMatrix_posSemidef_of_pure [Nonempty a] {n k : ℕ}
+    (ψ : PureVector (TensorPower a (n + k))) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) :
+    (ψ.state.rennerRhoUMatrix (a := a) (n := n) (k := k) ν U).PosSemidef := by
+  let e := tensorPowerTakeDropEquiv a n k
+  let η : TensorPower a k → ℂ :=
+    (unitaryTensorPowerMatrix U k : CMatrix (TensorPower a k)).mulVec
+      (ν.tensorPower k).amp
+  have hP :
+      rennerMIIDProjectorZero (a := a) k ν U = rankOneMatrix η := by
+    rw [rennerMIIDProjectorZero_eq_unitary_rankOneTensorPower]
+    exact matrix_mul_rankOneMatrix_mul_conjTranspose
+      (unitaryTensorPowerMatrix U k : CMatrix (TensorPower a k))
+      (ν.tensorPower k).amp
+  have hpt :
+      partialTraceB (a := TensorPower a n) (b := TensorPower a k)
+        (Matrix.kronecker (1 : CMatrix (TensorPower a n))
+            (rennerMIIDProjectorZero (a := a) k ν U) *
+          (ψ.state.reindex e).matrix) =
+        rankOneMatrix
+          (contractedAmp (α := TensorPower a n) (β := TensorPower a k) η
+          ((ψ.reindex e).amp)) := by
+    rw [hP, ← PureVector.reindex_state, PureVector.state_matrix]
+    exact partialTraceB_kronecker_rankOne_left_mul_rankOne η (ψ.reindex e).amp
+  rw [rennerRhoUMatrix, hpt]
+  change (((Fintype.card (TensorPowerProfile a k) : ℝ) •
+    rankOneMatrix
+      (contractedAmp (α := TensorPower a n) (β := TensorPower a k) η
+        ((ψ.reindex e).amp))).PosSemidef)
+  exact (rankOneMatrix_pos
+    (contractedAmp (α := TensorPower a n) (β := TensorPower a k) η
+      ((ψ.reindex e).amp))).smul (by positivity : 0 ≤ (Fintype.card (TensorPowerProfile a k) : ℝ))
+
+private theorem rennerRhoUMatrix_continuous [Nonempty a] {n k : ℕ}
+    (ρ : State (TensorPower a (n + k))) (ν : PureVector a) :
+    Continuous fun U : Matrix.unitaryGroup a ℂ =>
+      ρ.rennerRhoUMatrix (a := a) (n := n) (k := k) ν U := by
+  let X : CMatrix (Prod (TensorPower a n) (TensorPower a k)) :=
+    (ρ.reindex (tensorPowerTakeDropEquiv a n k)).matrix
+  have hP := rennerMIIDProjectorZero_continuous (a := a) k ν
+  have hK :
+      Continuous fun U : Matrix.unitaryGroup a ℂ =>
+        Matrix.kronecker (1 : CMatrix (TensorPower a n))
+            (rennerMIIDProjectorZero (a := a) k ν U) * X :=
+    (kroneckerOneMulConstCLM (ι := TensorPower a n) (κ := TensorPower a k) X).continuous.comp hP
+  have hPT :
+      Continuous fun U : Matrix.unitaryGroup a ℂ =>
+        partialTraceB (a := TensorPower a n) (b := TensorPower a k)
+          (Matrix.kronecker (1 : CMatrix (TensorPower a n))
+              (rennerMIIDProjectorZero (a := a) k ν U) * X) :=
+    (partialTraceBCLM (ι := TensorPower a n) (κ := TensorPower a k)).continuous.comp hK
+  simpa [rennerRhoUMatrix, X] using
+    hPT.const_smul (((Fintype.card (TensorPowerProfile a k) : ℝ) : ℂ))
+
+private theorem rennerRhoUMatrix_integrable [Nonempty a] {n k : ℕ}
+    (ρ : State (TensorPower a (n + k))) (ν : PureVector a) :
+    Integrable
+      (fun U : Matrix.unitaryGroup a ℂ =>
+        ρ.rennerRhoUMatrix (a := a) (n := n) (k := k) ν U)
+      (unitaryHaarMeasure (a := a)) :=
+  (rennerRhoUMatrix_continuous (a := a) (n := n) (k := k) ρ ν).integrable_of_hasCompactSupport
+    (HasCompactSupport.of_compactSpace _)
+
+/-- Renner's projected family
+`barρ_U = P_U^{m,r} ρ_U P_U^{m,r}` on the retained `m+r`
+systems.  Renner's source notation often writes the total retained length as
+`n`; here we keep the already-used Lean convention where the `m`-IID projector
+has parameters `(m,r)` and acts on `m+r` tensor factors. -/
+def rennerProjectedRhoUMatrix [Nonempty a] {m k r : ℕ}
+    (ρ : State (TensorPower a ((m + r) + k))) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) : CMatrix (TensorPower a (m + r)) :=
+  rennerMIIDProjector (a := a) m r ν U *
+    (ρ.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U) *
+      rennerMIIDProjector (a := a) m r ν U
+
+/-- Haar average of Renner's unprojected operator family. -/
+def rennerRhoUAverageMatrix [Nonempty a] {n k : ℕ}
+    (ρ : State (TensorPower a (n + k))) (ν : PureVector a) :
+    CMatrix (TensorPower a n) :=
+  ∫ U : Matrix.unitaryGroup a ℂ,
+    ρ.rennerRhoUMatrix (a := a) (n := n) (k := k) ν U
+    ∂unitaryHaarMeasure (a := a)
+
+/-- Haar average of Renner's projected operator family. -/
+def rennerProjectedRhoUAverageMatrix [Nonempty a] {m k r : ℕ}
+    (ρ : State (TensorPower a ((m + r) + k))) (ν : PureVector a) :
+    CMatrix (TensorPower a (m + r)) :=
+  ∫ U : Matrix.unitaryGroup a ℂ,
+    ρ.rennerProjectedRhoUMatrix (a := a) (m := m) (k := k) (r := r) ν U
+    ∂unitaryHaarMeasure (a := a)
+
+/-- The projected Renner family is fixed by the corresponding m-IID
+orthogonal-projector sandwich.  This is the matrix form of support in the
+projected m-IID span. -/
+theorem rennerProjectedRhoUMatrix_projector_sandwich [Nonempty a] {m k r : ℕ}
+    (ρ : State (TensorPower a ((m + r) + k))) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) :
+    rennerMIIDProjector (a := a) m r ν U *
+        ρ.rennerProjectedRhoUMatrix (a := a) (m := m) (k := k) (r := r) ν U *
+        rennerMIIDProjector (a := a) m r ν U =
+      ρ.rennerProjectedRhoUMatrix (a := a) (m := m) (k := k) (r := r) ν U := by
+  let P : CMatrix (TensorPower a (m + r)) := rennerMIIDProjector (a := a) m r ν U
+  let A : CMatrix (TensorPower a (m + r)) :=
+    ρ.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U
+  have hP : P * P = P := rennerMIIDProjector_idempotent (a := a) ν U
+  dsimp [rennerProjectedRhoUMatrix]
+  change P * (P * A * P) * P = P * A * P
+  calc
+    P * (P * A * P) * P = (P * P) * A * (P * P) := by noncomm_ring
+    _ = P * A * P := by rw [hP]
+
+theorem rennerProjectedRhoUMatrix_trace [Nonempty a] {m k r : ℕ}
+    (ρ : State (TensorPower a ((m + r) + k))) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) :
+    (ρ.rennerProjectedRhoUMatrix (a := a) (m := m) (k := k) (r := r) ν U).trace =
+      (rennerMIIDProjector (a := a) m r ν U *
+        ρ.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U).trace := by
+  let P : CMatrix (TensorPower a (m + r)) := rennerMIIDProjector (a := a) m r ν U
+  let A : CMatrix (TensorPower a (m + r)) :=
+    ρ.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U
+  have hP : P * P = P := rennerMIIDProjector_idempotent (a := a) ν U
+  dsimp [rennerProjectedRhoUMatrix]
+  change (P * A * P).trace = (P * A).trace
+  calc
+    (P * A * P).trace = (P * (P * A)).trace := by
+      simpa [Matrix.mul_assoc] using Matrix.trace_mul_cycle P A P
+    _ = ((P * P) * A).trace := by rw [Matrix.mul_assoc]
+    _ = (P * A).trace := by rw [hP]
+
+theorem rennerProjectedRhoUMatrix_posSemidef_of_rennerRhoUMatrix_posSemidef
+    [Nonempty a] {m k r : ℕ}
+    (ρ : State (TensorPower a ((m + r) + k))) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ)
+    (hρU : (ρ.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U).PosSemidef) :
+    (ρ.rennerProjectedRhoUMatrix (a := a) (m := m) (k := k) (r := r) ν U).PosSemidef := by
+  let P : CMatrix (TensorPower a (m + r)) := rennerMIIDProjector (a := a) m r ν U
+  let A : CMatrix (TensorPower a (m + r)) :=
+    ρ.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U
+  have hPherm : P.IsHermitian := rennerMIIDProjector_isHermitian (a := a) ν U
+  dsimp [rennerProjectedRhoUMatrix]
+  change (P * A * P).PosSemidef
+  simpa [hPherm.eq, Matrix.mul_assoc] using hρU.conjTranspose_mul_mul_same P
+
+theorem rennerProjectedRhoUMatrix_posSemidef_of_pure
+    [Nonempty a] {m k r : ℕ}
+    (ψ : PureVector (TensorPower a ((m + r) + k))) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) :
+    (ψ.state.rennerProjectedRhoUMatrix (a := a) (m := m) (k := k) (r := r) ν U).PosSemidef := by
+  exact rennerProjectedRhoUMatrix_posSemidef_of_rennerRhoUMatrix_posSemidef
+    (a := a) (m := m) (k := k) (r := r) ψ.state ν U
+    (rennerRhoUMatrix_posSemidef_of_pure (a := a) (n := m + r) (k := k) ψ ν U)
+
+theorem rennerProjectedRhoUMatrix_isHermitian_of_rennerRhoUMatrix_isHermitian
+    [Nonempty a] {m k r : ℕ}
+    (ρ : State (TensorPower a ((m + r) + k))) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ)
+    (hρU : (ρ.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U).IsHermitian) :
+    (ρ.rennerProjectedRhoUMatrix (a := a) (m := m) (k := k) (r := r) ν U).IsHermitian := by
+  let P : CMatrix (TensorPower a (m + r)) := rennerMIIDProjector (a := a) m r ν U
+  let A : CMatrix (TensorPower a (m + r)) :=
+    ρ.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U
+  have hPherm : P.IsHermitian := rennerMIIDProjector_isHermitian (a := a) ν U
+  have hAherm : A.IsHermitian := by
+    simpa [A] using hρU
+  dsimp [rennerProjectedRhoUMatrix]
+  change (P * A * P).IsHermitian
+  rw [Matrix.IsHermitian, Matrix.conjTranspose_mul, Matrix.conjTranspose_mul,
+    hPherm.eq, hAherm.eq]
+  rw [Matrix.mul_assoc]
+
+/-- Pointwise `Γ`-integrand rewrite for Renner's defect family:
+`(I-P_U^{m,r})ρ_U` is the partial trace of
+`((I-P_U^{m,r}) ⊗ P_U^{k,0})ρ^{m+r+k}`, with Renner's symmetric-dimension
+scaling. -/
+theorem rennerDefectRhoUMatrix_eq_gammaIntegrand_partialTrace
+    [Nonempty a] {m k r : ℕ}
+    (ρ : State (TensorPower a ((m + r) + k))) (ν : PureVector a)
+    (U : Matrix.unitaryGroup a ℂ) :
+    ((1 : CMatrix (TensorPower a (m + r))) -
+        rennerMIIDProjector (a := a) m r ν U) *
+        ρ.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U =
+      ((Fintype.card (TensorPowerProfile a k) : ℝ) : ℂ) •
+        partialTraceB (a := TensorPower a (m + r)) (b := TensorPower a k)
+          ((unitaryTwirlIntegrand (a := a) ((m + r) + k)
+              (((Matrix.kronecker
+                  ((1 : CMatrix (TensorPower a (m + r))) -
+                    rennerMIIDProjectorId (a := a) m r ν)
+                  (rennerMIIDProjectorIdZero (a := a) k ν)).submatrix
+                    (tensorPowerTakeDropEquiv a (m + r) k)
+                    (tensorPowerTakeDropEquiv a (m + r) k))) U).submatrix
+                (tensorPowerTakeDropEquiv a (m + r) k).symm
+                (tensorPowerTakeDropEquiv a (m + r) k).symm *
+              (ρ.reindex (tensorPowerTakeDropEquiv a (m + r) k)).matrix) := by
+  let L : CMatrix (TensorPower a (m + r)) :=
+    (1 : CMatrix (TensorPower a (m + r))) -
+      rennerMIIDProjector (a := a) m r ν U
+  let R : CMatrix (TensorPower a k) := rennerMIIDProjectorZero (a := a) k ν U
+  let X : CMatrix (Prod (TensorPower a (m + r)) (TensorPower a k)) :=
+    (ρ.reindex (tensorPowerTakeDropEquiv a (m + r) k)).matrix
+  let c : ℂ := ((Fintype.card (TensorPowerProfile a k) : ℝ) : ℂ)
+  have hsplit :
+      (unitaryTwirlIntegrand (a := a) ((m + r) + k)
+          (((Matrix.kronecker
+              ((1 : CMatrix (TensorPower a (m + r))) -
+                rennerMIIDProjectorId (a := a) m r ν)
+              (rennerMIIDProjectorIdZero (a := a) k ν)).submatrix
+                (tensorPowerTakeDropEquiv a (m + r) k)
+                (tensorPowerTakeDropEquiv a (m + r) k))) U).submatrix
+            (tensorPowerTakeDropEquiv a (m + r) k).symm
+            (tensorPowerTakeDropEquiv a (m + r) k).symm =
+        Matrix.kronecker L R := by
+    simpa [L, R] using
+      rennerGammaIntegrand_takeDrop_submatrix (a := a) ν m k r U
+  have hkr :
+      Matrix.kronecker L R * X =
+        Matrix.kronecker L (1 : CMatrix (TensorPower a k)) *
+          (Matrix.kronecker (1 : CMatrix (TensorPower a (m + r))) R * X) := by
+    have hmul :
+        Matrix.kronecker L (1 : CMatrix (TensorPower a k)) *
+            Matrix.kronecker (1 : CMatrix (TensorPower a (m + r))) R =
+          Matrix.kronecker L R := by
+      simpa using
+        (Matrix.mul_kronecker_mul L (1 : CMatrix (TensorPower a (m + r)))
+          (1 : CMatrix (TensorPower a k)) R).symm
+    calc
+      Matrix.kronecker L R * X =
+          (Matrix.kronecker L (1 : CMatrix (TensorPower a k)) *
+              Matrix.kronecker (1 : CMatrix (TensorPower a (m + r))) R) * X := by
+            rw [hmul]
+      _ = Matrix.kronecker L (1 : CMatrix (TensorPower a k)) *
+            (Matrix.kronecker (1 : CMatrix (TensorPower a (m + r))) R * X) := by
+            rw [Matrix.mul_assoc]
+  calc
+    L * ρ.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U =
+        L * (c • partialTraceB (a := TensorPower a (m + r)) (b := TensorPower a k)
+          (Matrix.kronecker (1 : CMatrix (TensorPower a (m + r))) R * X)) := by
+          rfl
+    _ = c • (L * partialTraceB (a := TensorPower a (m + r)) (b := TensorPower a k)
+          (Matrix.kronecker (1 : CMatrix (TensorPower a (m + r))) R * X)) := by
+          ext i j
+          simp only [Matrix.mul_apply, Matrix.smul_apply, smul_eq_mul]
+          rw [Finset.mul_sum]
+          apply Finset.sum_congr rfl
+          intro x hx
+          ring
+    _ = c • partialTraceB (a := TensorPower a (m + r)) (b := TensorPower a k)
+          (Matrix.kronecker L (1 : CMatrix (TensorPower a k)) *
+            (Matrix.kronecker (1 : CMatrix (TensorPower a (m + r))) R * X)) := by
+          rw [partialTraceB_kronecker_one_left_mul]
+    _ = c • partialTraceB (a := TensorPower a (m + r)) (b := TensorPower a k)
+          (Matrix.kronecker L R * X) := by
+          rw [hkr]
+    _ = c • partialTraceB (a := TensorPower a (m + r)) (b := TensorPower a k)
+          ((unitaryTwirlIntegrand (a := a) ((m + r) + k)
+              (((Matrix.kronecker
+                  ((1 : CMatrix (TensorPower a (m + r))) -
+                    rennerMIIDProjectorId (a := a) m r ν)
+                  (rennerMIIDProjectorIdZero (a := a) k ν)).submatrix
+                    (tensorPowerTakeDropEquiv a (m + r) k)
+                    (tensorPowerTakeDropEquiv a (m + r) k))) U).submatrix
+                (tensorPowerTakeDropEquiv a (m + r) k).symm
+                (tensorPowerTakeDropEquiv a (m + r) k).symm * X) := by
+          rw [hsplit]
+
+/-- Renner's `Γ^{n+k}` rewrite for the Haar-averaged defect operator. -/
+theorem rennerProjectedFamily_gamma_rewrite
+    [Nonempty a] {m k r : ℕ}
+    (ρ : State (TensorPower a ((m + r) + k))) (ν : PureVector a) :
+    (∫ U : Matrix.unitaryGroup a ℂ,
+        ((1 : CMatrix (TensorPower a (m + r))) -
+          rennerMIIDProjector (a := a) m r ν U) *
+          ρ.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U
+        ∂unitaryHaarMeasure (a := a)) =
+      ((Fintype.card (TensorPowerProfile a k) : ℝ) : ℂ) •
+        partialTraceB (a := TensorPower a (m + r)) (b := TensorPower a k)
+          ((QIT.rennerGammaMatrix (a := a) ν m k r).submatrix
+              (tensorPowerTakeDropEquiv a (m + r) k).symm
+              (tensorPowerTakeDropEquiv a (m + r) k).symm *
+            (ρ.reindex (tensorPowerTakeDropEquiv a (m + r) k)).matrix) := by
+  let e := tensorPowerTakeDropEquiv a (m + r) k
+  let X : CMatrix (Prod (TensorPower a (m + r)) (TensorPower a k)) :=
+    (ρ.reindex e).matrix
+  let A : CMatrix (TensorPower a ((m + r) + k)) :=
+    ((Matrix.kronecker
+      ((1 : CMatrix (TensorPower a (m + r))) -
+        rennerMIIDProjectorId (a := a) m r ν)
+      (rennerMIIDProjectorIdZero (a := a) k ν)).submatrix e e)
+  let c : ℂ := ((Fintype.card (TensorPowerProfile a k) : ℝ) : ℂ)
+  have hAint :
+      Integrable
+        (fun U : Matrix.unitaryGroup a ℂ =>
+          unitaryTwirlIntegrand (a := a) ((m + r) + k) A U)
+        (unitaryHaarMeasure (a := a)) :=
+    unitaryTwirl_integrand_integrable (a := a) ((m + r) + k) A
+  have hsplitInt :
+      Integrable
+        (fun U : Matrix.unitaryGroup a ℂ =>
+          (unitaryTwirlIntegrand (a := a) ((m + r) + k) A U).submatrix
+            e.symm e.symm * X)
+        (unitaryHaarMeasure (a := a)) :=
+    (submatrixEquivSymmMulConstCLM e X).integrable_comp hAint
+  calc
+    (∫ U : Matrix.unitaryGroup a ℂ,
+        ((1 : CMatrix (TensorPower a (m + r))) -
+          rennerMIIDProjector (a := a) m r ν U) *
+          ρ.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U
+        ∂unitaryHaarMeasure (a := a)) =
+        ∫ U : Matrix.unitaryGroup a ℂ,
+          c • partialTraceB (a := TensorPower a (m + r)) (b := TensorPower a k)
+            ((unitaryTwirlIntegrand (a := a) ((m + r) + k) A U).submatrix
+              e.symm e.symm * X)
+          ∂unitaryHaarMeasure (a := a) := by
+          apply integral_congr_ae
+          exact Filter.Eventually.of_forall (fun U => by
+            simpa [A, X, c, e] using
+              rennerDefectRhoUMatrix_eq_gammaIntegrand_partialTrace
+                (a := a) (m := m) (k := k) (r := r) ρ ν U)
+    _ = c • ∫ U : Matrix.unitaryGroup a ℂ,
+          partialTraceB (a := TensorPower a (m + r)) (b := TensorPower a k)
+            ((unitaryTwirlIntegrand (a := a) ((m + r) + k) A U).submatrix
+              e.symm e.symm * X)
+          ∂unitaryHaarMeasure (a := a) := by
+          rw [integral_smul]
+    _ = c • partialTraceB (a := TensorPower a (m + r)) (b := TensorPower a k)
+          (∫ U : Matrix.unitaryGroup a ℂ,
+            (unitaryTwirlIntegrand (a := a) ((m + r) + k) A U).submatrix
+              e.symm e.symm * X
+            ∂unitaryHaarMeasure (a := a)) := by
+          rw [partialTraceB_integral (hf := hsplitInt)]
+    _ = c • partialTraceB (a := TensorPower a (m + r)) (b := TensorPower a k)
+          ((∫ U : Matrix.unitaryGroup a ℂ,
+              unitaryTwirlIntegrand (a := a) ((m + r) + k) A U
+              ∂unitaryHaarMeasure (a := a)).submatrix e.symm e.symm * X) := by
+          rw [integral_submatrix_equiv_symm_mul_const (hf := hAint)]
+    _ = c • partialTraceB (a := TensorPower a (m + r)) (b := TensorPower a k)
+          ((QIT.rennerGammaMatrix (a := a) ν m k r).submatrix e.symm e.symm * X) := by
+          rfl
+
+/-- Renner's Haar-averaged source family recovers the ordinary partial trace
+over the last `k` systems, under the global symmetric-support hypothesis. -/
+theorem rennerTraceOutLastK_eq_haarAverage_rhoU [Nonempty a] {n k : ℕ}
+    (ρ : State (TensorPower a (n + k))) (ν : PureVector a)
+    (hρ : ρ.SupportedOnSymmetricSubspace (a := a)) :
+    (ρ.traceOutLastK (a := a) (n := n) (k := k)).matrix =
+      ρ.rennerRhoUAverageMatrix (a := a) (n := n) (k := k) ν := by
+  let X : CMatrix (Prod (TensorPower a n) (TensorPower a k)) :=
+    (ρ.reindex (tensorPowerTakeDropEquiv a n k)).matrix
+  let Pavg : CMatrix (TensorPower a k) :=
+    ∫ U : Matrix.unitaryGroup a ℂ,
+      rennerMIIDProjectorZero (a := a) k ν U
+      ∂unitaryHaarMeasure (a := a)
+  let P : CMatrix (TensorPower a k) := symmetricProjectionMatrix (a := a) k
+  let Q : CMatrix (Prod (TensorPower a n) (TensorPower a k)) :=
+    Matrix.kronecker (1 : CMatrix (TensorPower a n)) P
+  let c : ℂ := ((Fintype.card (TensorPowerProfile a k) : ℝ) : ℂ)
+  have hPint := rennerMIIDProjectorZero_integrable (a := a) k ν
+  have hKint :
+      Integrable
+        (fun U : Matrix.unitaryGroup a ℂ =>
+          Matrix.kronecker (1 : CMatrix (TensorPower a n))
+              (rennerMIIDProjectorZero (a := a) k ν U) * X)
+        (unitaryHaarMeasure (a := a)) :=
+    (kroneckerOneMulConstCLM (ι := TensorPower a n) (κ := TensorPower a k) X).integrable_comp hPint
+  have hPTint :
+      Integrable
+        (fun U : Matrix.unitaryGroup a ℂ =>
+          partialTraceB (a := TensorPower a n) (b := TensorPower a k)
+            (Matrix.kronecker (1 : CMatrix (TensorPower a n))
+              (rennerMIIDProjectorZero (a := a) k ν U) * X))
+        (unitaryHaarMeasure (a := a)) :=
+    (partialTraceBCLM (ι := TensorPower a n) (κ := TensorPower a k)).integrable_comp hKint
+  have hQX : Q * X = X := by
+    simpa [Q, P, X] using
+      State.splitRightSymmetricProjection_mul_of_supported (a := a) (n := n) (k := k)
+        (ρ := ρ) hρ
+  have hPavgP : Pavg * P = (c⁻¹) • P := by
+    simpa [Pavg, P, c] using
+      rennerMIIDProjectorZero_average_mul_symmetricProjectionMatrix (a := a) k ν
+  have hKavgX :
+      Matrix.kronecker (1 : CMatrix (TensorPower a n)) Pavg * X = c⁻¹ • X := by
+    calc
+      Matrix.kronecker (1 : CMatrix (TensorPower a n)) Pavg * X =
+          Matrix.kronecker (1 : CMatrix (TensorPower a n)) Pavg * (Q * X) := by
+            rw [hQX]
+      _ = (Matrix.kronecker (1 : CMatrix (TensorPower a n)) Pavg * Q) * X := by
+            rw [Matrix.mul_assoc]
+      _ = Matrix.kronecker (1 : CMatrix (TensorPower a n)) (Pavg * P) * X := by
+            dsimp [Q, P]
+            rw [← Matrix.mul_kronecker_mul]
+            simp
+      _ = Matrix.kronecker (1 : CMatrix (TensorPower a n)) (c⁻¹ • P) * X := by
+            rw [hPavgP]
+      _ = c⁻¹ • (Q * X) := by
+            simp [Q, P, Matrix.kronecker_smul, Matrix.smul_mul]
+      _ = c⁻¹ • X := by rw [hQX]
+  have hc_ne : c ≠ 0 := by
+    dsimp [c]
+    exact_mod_cast TensorPowerProfile.card_ne_zero (a := a) k
+  have haverage :
+      ρ.rennerRhoUAverageMatrix (a := a) (n := n) (k := k) ν =
+        c • partialTraceB (a := TensorPower a n) (b := TensorPower a k)
+          (Matrix.kronecker (1 : CMatrix (TensorPower a n)) Pavg * X) := by
+    rw [rennerRhoUAverageMatrix]
+    change (∫ U : Matrix.unitaryGroup a ℂ,
+        c • partialTraceB (a := TensorPower a n) (b := TensorPower a k)
+          (Matrix.kronecker (1 : CMatrix (TensorPower a n))
+            (rennerMIIDProjectorZero (a := a) k ν U) * X)
+        ∂unitaryHaarMeasure (a := a)) =
+      c • partialTraceB (a := TensorPower a n) (b := TensorPower a k)
+        (Matrix.kronecker (1 : CMatrix (TensorPower a n)) Pavg * X)
+    rw [integral_smul]
+    rw [← partialTraceB_integral (hf := hKint)]
+    rw [integral_kronecker_one_mul_const (hf := hPint)]
+  rw [haverage, hKavgX]
+  rw [traceOutLastK_matrix]
+  change partialTraceB (a := TensorPower a n) (b := TensorPower a k) X =
+    c • partialTraceB (a := TensorPower a n) (b := TensorPower a k) (c⁻¹ • X)
+  rw [partialTraceB_smul]
+  ext i j
+  simp [hc_ne, mul_assoc]
+
+/-- Renner's gentle-measurement bridge for the projected Haar family, in the
+rank-one source form used in the proof of the de Finetti theorem.  The
+pointwise positivity of `ρ_U` is obtained from the rank-one input
+`ψ.state`, matching Renner `sub.tex:858-860`. -/
+theorem rennerProjectedFamily_gentle_traceNorm_bound [Nonempty a] {m k r : ℕ}
+    (ψ : PureVector (TensorPower a ((m + r) + k))) (ν : PureVector a)
+    (hψsym : ψ.state.SupportedOnSymmetricSubspace (a := a)) :
+    traceNorm
+        ((ψ.state.traceOutLastK (a := a) (n := m + r) (k := k)).matrix -
+          ψ.state.rennerProjectedRhoUAverageMatrix (a := a) (m := m) (k := k) (r := r) ν)
+      ≤
+        3 * traceNorm
+          (∫ U : Matrix.unitaryGroup a ℂ,
+            ((1 : CMatrix (TensorPower a (m + r))) -
+              rennerMIIDProjector (a := a) m r ν U) *
+              ψ.state.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U
+            ∂unitaryHaarMeasure (a := a)) := by
+  let A : Matrix.unitaryGroup a ℂ → CMatrix (TensorPower a (m + r)) :=
+    fun U => ψ.state.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U
+  let P : Matrix.unitaryGroup a ℂ → CMatrix (TensorPower a (m + r)) :=
+    fun U => rennerMIIDProjector (a := a) m r ν U
+  have hAcont : Continuous A := by
+    simpa [A] using
+      rennerRhoUMatrix_continuous (a := a) (n := m + r) (k := k) ψ.state ν
+  have hPcont : Continuous P := by
+    simpa [P] using rennerMIIDProjector_continuous (a := a) m r ν
+  have hQcont : Continuous fun U : Matrix.unitaryGroup a ℂ =>
+      (1 : CMatrix (TensorPower a (m + r))) - P U :=
+    continuous_const.sub hPcont
+  have hAInt : Integrable A (unitaryHaarMeasure (a := a)) :=
+    hAcont.integrable_of_hasCompactSupport (HasCompactSupport.of_compactSpace _)
+  have hPAPInt :
+      Integrable (fun U : Matrix.unitaryGroup a ℂ => P U * A U * P U)
+        (unitaryHaarMeasure (a := a)) :=
+    ((hPcont.matrix_mul hAcont).matrix_mul hPcont).integrable_of_hasCompactSupport
+      (HasCompactSupport.of_compactSpace _)
+  have hDInt :
+      Integrable (fun U : Matrix.unitaryGroup a ℂ => (1 - P U) * A U)
+        (unitaryHaarMeasure (a := a)) :=
+    (hQcont.matrix_mul hAcont).integrable_of_hasCompactSupport
+      (HasCompactSupport.of_compactSpace _)
+  have hRInt :
+      Integrable (fun U : Matrix.unitaryGroup a ℂ => A U * (1 - P U))
+        (unitaryHaarMeasure (a := a)) :=
+    (hAcont.matrix_mul hQcont).integrable_of_hasCompactSupport
+      (HasCompactSupport.of_compactSpace _)
+  have hEInt :
+      Integrable (fun U : Matrix.unitaryGroup a ℂ => (1 - P U) * A U * (1 - P U))
+        (unitaryHaarMeasure (a := a)) :=
+    ((hQcont.matrix_mul hAcont).matrix_mul hQcont).integrable_of_hasCompactSupport
+      (HasCompactSupport.of_compactSpace _)
+  have hApos : ∀ U, (A U).PosSemidef := by
+    intro U
+    simpa [A] using
+      rennerRhoUMatrix_posSemidef_of_pure (a := a) (n := m + r) (k := k) ψ ν U
+  have hPpos : ∀ U, (P U).PosSemidef := by
+    intro U
+    simpa [P] using rennerMIIDProjector_posSemidef (a := a) (m := m) (r := r) ν U
+  have hPid : ∀ U, P U * P U = P U := by
+    intro U
+    simpa [P] using rennerMIIDProjector_idempotent (a := a) (m := m) (r := r) ν U
+  have hleft :
+      (ψ.state.traceOutLastK (a := a) (n := m + r) (k := k)).matrix -
+          ψ.state.rennerProjectedRhoUAverageMatrix (a := a) (m := m) (k := k) (r := r) ν =
+        ∫ U : Matrix.unitaryGroup a ℂ, A U - P U * A U * P U
+          ∂unitaryHaarMeasure (a := a) := by
+    have havg :=
+      rennerTraceOutLastK_eq_haarAverage_rhoU
+        (a := a) (n := m + r) (k := k) ψ.state ν hψsym
+    calc
+      (ψ.state.traceOutLastK (a := a) (n := m + r) (k := k)).matrix -
+          ψ.state.rennerProjectedRhoUAverageMatrix (a := a) (m := m) (k := k) (r := r) ν =
+          (∫ U : Matrix.unitaryGroup a ℂ, A U ∂unitaryHaarMeasure (a := a)) -
+            (∫ U : Matrix.unitaryGroup a ℂ, P U * A U * P U
+              ∂unitaryHaarMeasure (a := a)) := by
+            rw [havg]
+            rfl
+      _ = ∫ U : Matrix.unitaryGroup a ℂ, A U - P U * A U * P U
+            ∂unitaryHaarMeasure (a := a) := by
+            rw [integral_sub hAInt hPAPInt]
+  calc
+    traceNorm
+        ((ψ.state.traceOutLastK (a := a) (n := m + r) (k := k)).matrix -
+          ψ.state.rennerProjectedRhoUAverageMatrix (a := a) (m := m) (k := k) (r := r) ν)
+        =
+        traceNorm
+          (∫ U : Matrix.unitaryGroup a ℂ, A U - P U * A U * P U
+            ∂unitaryHaarMeasure (a := a)) := by
+          rw [hleft]
+    _ ≤ 3 * traceNorm
+          (∫ U : Matrix.unitaryGroup a ℂ, (1 - P U) * A U
+            ∂unitaryHaarMeasure (a := a)) :=
+        rennerGentle_integral_traceNorm_bound
+          (A := A) (P := P)
+          (μ := unitaryHaarMeasure (a := a))
+          hDInt hRInt hEInt hApos hPpos hPid
+    _ = 3 * traceNorm
+          (∫ U : Matrix.unitaryGroup a ℂ,
+            ((1 : CMatrix (TensorPower a (m + r))) -
+              rennerMIIDProjector (a := a) m r ν U) *
+              ψ.state.rennerRhoUMatrix (a := a) (n := m + r) (k := k) ν U
+            ∂unitaryHaarMeasure (a := a)) := by
+          rfl
+
+end State
 
 private theorem psdSqrt_permutationChannel_map {n : ℕ}
     (M : CMatrix (TensorPower a n)) (hM : M.PosSemidef)

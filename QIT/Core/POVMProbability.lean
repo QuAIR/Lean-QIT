@@ -24,7 +24,7 @@ open scoped ComplexOrder MatrixOrder NNReal
 
 namespace QIT
 
-universe u v
+universe u v w
 
 noncomputable section
 
@@ -73,6 +73,50 @@ theorem prob_eq_trace_re (M : POVM y a) (rho : State a) (outcome : y) :
     Complex.re ((rho.matrix * M.effects outcome).trace)
   rw [Channel.measure_map_state_diagonal M rho]
   simp [Matrix.diagonal]
+
+variable {b : Type w} [Fintype b] [DecidableEq b]
+
+/-- The state obtained by embedding a system into a larger finite space through
+an isometry. -/
+def isometryLiftState (rho : State a) (V : Matrix b a ℂ)
+    (_hV : Matrix.conjTranspose V * V = 1) : State b where
+  matrix := V * rho.matrix * Matrix.conjTranspose V
+  pos := rho.pos.mul_mul_conjTranspose_same V
+  trace_eq_one := by
+    calc
+      (V * rho.matrix * Matrix.conjTranspose V).trace =
+          ((Matrix.conjTranspose V * V) * rho.matrix).trace := by
+            rw [Matrix.trace_mul_cycle]
+      _ = rho.matrix.trace := by
+            rw [_hV, Matrix.one_mul]
+      _ = 1 := rho.trace_eq_one
+
+@[simp]
+theorem isometryLiftState_matrix (rho : State a) (V : Matrix b a ℂ)
+    (hV : Matrix.conjTranspose V * V = 1) :
+    (isometryLiftState rho V hV).matrix = V * rho.matrix * Matrix.conjTranspose V :=
+  rfl
+
+/-- Born-rule probabilities are preserved by compressing a POVM along the same
+isometry used to lift the state. -/
+theorem compressByIsometry_prob_eq (M : POVM y b) (rho : State a)
+    (V : Matrix b a ℂ) (hV : Matrix.conjTranspose V * V = 1) (outcome : y) :
+    ((M.compressByIsometry V hV).prob rho outcome : ℝ) =
+      (M.prob (isometryLiftState rho V hV) outcome : ℝ) := by
+  rw [prob_eq_trace_re, prob_eq_trace_re]
+  change Complex.re ((rho.matrix *
+      (Matrix.conjTranspose V * M.effects outcome * V)).trace) =
+    Complex.re (((V * rho.matrix * Matrix.conjTranspose V) *
+      M.effects outcome).trace)
+  congr 1
+  calc
+    (rho.matrix * (Matrix.conjTranspose V * M.effects outcome * V)).trace =
+        ((rho.matrix * Matrix.conjTranspose V * M.effects outcome) * V).trace := by
+          simp only [Matrix.mul_assoc]
+    _ = (V * (rho.matrix * Matrix.conjTranspose V * M.effects outcome)).trace := by
+          rw [Matrix.trace_mul_comm]
+    _ = ((V * rho.matrix * Matrix.conjTranspose V) * M.effects outcome).trace := by
+          simp only [Matrix.mul_assoc]
 
 end POVM
 

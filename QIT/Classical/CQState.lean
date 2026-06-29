@@ -70,6 +70,12 @@ theorem partialTraceA_cqState (E : Ensemble ι a) :
           smul_zero]]
   simp only [Matrix.single_apply, and_self_iff, if_true, one_mul]
 
+/-- The quantum marginal of an ensemble cq-state is the ensemble average state. -/
+theorem cqState_marginalB_eq_averageState (E : Ensemble ι a) :
+    E.cqState.marginalB = E.averageState := by
+  apply State.ext
+  exact partialTraceA_cqState E
+
 /-- Tracing out the quantum system gives the classical distribution diag(p). -/
 theorem partialTraceB_cqState (E : Ensemble ι a) :
     partialTraceB (E.cqState.matrix) = Matrix.diagonal (fun x => ((E.probs x : ℂ))) := by

@@ -8,6 +8,7 @@ module
 
 public import QIT.Measurements.Naimark
 public import QIT.Measurements.Projective
+public import QIT.Measurements.SquareRootMeasurement
 public import QIT.Measurements.Support
 public import QIT.Core.Measurement
 public import QIT.Measurements.Map

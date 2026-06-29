@@ -131,6 +131,179 @@ theorem posSemidef_trace_mul_unitary_abs_le_trace_re
     _ ≤ ∑ i, hP.1.eigenvalues i := hsum_le
     _ = P.trace.re := htrace_sum.symm
 
+private theorem contraction_column_norm_sq_le_one
+    (K : CMatrix a) (hK : Kᴴ * K ≤ 1) (j : a) :
+    (Finset.univ.sum fun i : a => ‖K i j‖ ^ 2) ≤ (1 : ℝ) := by
+  have hnon : 0 ≤ ((1 : CMatrix a) - Kᴴ * K) := sub_nonneg.mpr hK
+  have hpos : ((1 : CMatrix a) - Kᴴ * K).PosSemidef :=
+    Matrix.nonneg_iff_posSemidef.mp hnon
+  have hq := hpos.dotProduct_mulVec_nonneg (Pi.single j (1 : ℂ))
+  have heq :
+      star (Pi.single j (1 : ℂ)) ⬝ᵥ
+          (((1 : CMatrix a) - Kᴴ * K) *ᵥ Pi.single j (1 : ℂ)) =
+        1 - Finset.univ.sum (fun i : a => star (K i j) * K i j) := by
+    classical
+    simp [dotProduct, Matrix.mulVec, Matrix.mul_apply, Pi.single_apply]
+  rw [heq] at hq
+  have hqre : 0 ≤ (1 - Finset.univ.sum (fun i : a => star (K i j) * K i j)).re :=
+    hq.1
+  have hterm : ∀ i : a, (star (K i j) * K i j).re = ‖K i j‖ ^ 2 := by
+    intro i
+    rw [← Complex.normSq_eq_norm_sq]
+    have h := Complex.normSq_eq_conj_mul_self (z := K i j)
+    exact (congrArg Complex.re h.symm).trans (by simp)
+  have hsumre :
+      (Finset.univ.sum (fun i : a => star (K i j) * K i j)).re =
+        Finset.univ.sum (fun i : a => ‖K i j‖ ^ 2) := by
+    calc
+      (Finset.univ.sum (fun i : a => star (K i j) * K i j)).re =
+          Finset.univ.sum (fun i : a => (star (K i j) * K i j).re) := by
+            simp
+      _ = Finset.univ.sum (fun i : a => ‖K i j‖ ^ 2) :=
+            Finset.sum_congr rfl (fun i _ => hterm i)
+  have hqre' :
+      0 ≤ (1 : ℝ) - Finset.univ.sum (fun i : a => ‖K i j‖ ^ 2) := by
+    have hqre'' : 0 ≤ (1 : ℝ) -
+        (Finset.univ.sum (fun i : a => star (K i j) * K i j)).re := by
+      simpa [Complex.sub_re] using hqre
+    have hsum_expand :
+        Finset.univ.sum (fun i : a => ‖K i j‖ ^ 2) =
+          Finset.univ.sum (fun i : a =>
+            (K i j).re * (K i j).re + (K i j).im * (K i j).im) := by
+      refine Finset.sum_congr rfl ?_
+      intro i _
+      rw [← hterm i]
+      simp
+    simpa [hsum_expand] using hqre''
+  linarith
+
+private theorem contraction_entry_norm_bound
+    (K : CMatrix a) (hK : Kᴴ * K ≤ 1) (i j : a) :
+    ‖K i j‖ ≤ (1 : ℝ) := by
+  have hsum := contraction_column_norm_sq_le_one K hK j
+  have hterm_nonneg : 0 ≤ ‖K i j‖ ^ 2 := sq_nonneg _
+  have hterm_le_sum :
+      ‖K i j‖ ^ 2 ≤ Finset.univ.sum (fun x : a => ‖K x j‖ ^ 2) := by
+    classical
+    exact Finset.single_le_sum
+      (fun x _ => sq_nonneg (‖K x j‖))
+      (Finset.mem_univ i)
+  have hsq : ‖K i j‖ ^ 2 ≤ (1 : ℝ) ^ 2 := by
+    simpa using le_trans hterm_le_sum hsum
+  exact (sq_le_sq₀ (norm_nonneg _) zero_le_one).1 hsq
+
+/-- For a positive semidefinite matrix, every contraction trace pairing is
+bounded by the real trace.  The contraction hypothesis is the finite matrix
+order form `KᴴK ≤ I`. -/
+theorem posSemidef_trace_mul_contraction_abs_le_trace_re
+    (P : CMatrix a) (hP : P.PosSemidef) (K : CMatrix a) (hK : Kᴴ * K ≤ 1) :
+    Complex.abs ((P * K).trace) ≤ P.trace.re := by
+  classical
+  let E : Matrix.unitaryGroup a ℂ := hP.1.eigenvectorUnitary
+  let D : CMatrix a := Matrix.diagonal (fun i => ((hP.1.eigenvalues i : ℝ) : ℂ))
+  let K' : CMatrix a := ((E⁻¹ : Matrix.unitaryGroup a ℂ) : CMatrix a) * K * (E : CMatrix a)
+  have hPdiag : P = (E : CMatrix a) * D * (E⁻¹ : Matrix.unitaryGroup a ℂ) := by
+    simpa [E, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
+      using hP.1.spectral_theorem
+  have hK' : K'ᴴ * K' ≤ 1 := by
+    have hK'eq : K'ᴴ * K' = (E : CMatrix a)ᴴ * (Kᴴ * K) * (E : CMatrix a) := by
+      calc
+        K'ᴴ * K' =
+            (((E : CMatrix a)ᴴ * K * (E : CMatrix a))ᴴ *
+              ((E : CMatrix a)ᴴ * K * (E : CMatrix a))) := by
+                simp [K', Matrix.star_eq_conjTranspose]
+        _ = (E : CMatrix a)ᴴ * Kᴴ *
+              ((E : CMatrix a) * ((E : CMatrix a)ᴴ * K * (E : CMatrix a))) := by
+                simp [Matrix.conjTranspose_mul, Matrix.mul_assoc]
+        _ = (E : CMatrix a)ᴴ * Kᴴ *
+              (((E : CMatrix a) * (E : CMatrix a)ᴴ) * K * (E : CMatrix a)) := by
+                simp [Matrix.mul_assoc]
+        _ = (E : CMatrix a)ᴴ * Kᴴ * (K * (E : CMatrix a)) := by
+                rw [show (E : CMatrix a) * (E : CMatrix a)ᴴ = 1 by
+                  exact Unitary.coe_mul_star_self E]
+                simp [Matrix.mul_assoc]
+        _ = (E : CMatrix a)ᴴ * (Kᴴ * K) * (E : CMatrix a) := by
+                simp [Matrix.mul_assoc]
+    rw [hK'eq]
+    calc
+      (E : CMatrix a)ᴴ * (Kᴴ * K) * (E : CMatrix a) ≤
+          (E : CMatrix a)ᴴ * (1 : CMatrix a) * (E : CMatrix a) := by
+            -- matrix-order conjugation by a fixed matrix preserves positivity
+            have hnon : 0 ≤ (1 : CMatrix a) - Kᴴ * K := sub_nonneg.mpr hK
+            have hconj : 0 ≤
+                (E : CMatrix a)ᴴ * ((1 : CMatrix a) - Kᴴ * K) * (E : CMatrix a) :=
+              Matrix.nonneg_iff_posSemidef.mpr
+                ((Matrix.nonneg_iff_posSemidef.mp hnon).conjTranspose_mul_mul_same
+                  (E : CMatrix a))
+            have hdiff :
+                (E : CMatrix a)ᴴ * ((1 : CMatrix a) - Kᴴ * K) * (E : CMatrix a) =
+                  ((E : CMatrix a)ᴴ * (1 : CMatrix a) * (E : CMatrix a)) -
+                    ((E : CMatrix a)ᴴ * (Kᴴ * K) * (E : CMatrix a)) := by
+              noncomm_ring
+            exact sub_nonneg.mp (by simpa [hdiff] using hconj)
+      _ = 1 := by
+            calc
+              (E : CMatrix a)ᴴ * (1 : CMatrix a) * (E : CMatrix a) =
+                  (E : CMatrix a)ᴴ * (E : CMatrix a) := by
+                    simp
+              _ = 1 := by
+                    exact Unitary.coe_star_mul_self E
+  have htrace :
+      (P * K).trace = (D * K').trace := by
+    calc
+      (P * K).trace =
+          (((E : CMatrix a) * D * (E⁻¹ : Matrix.unitaryGroup a ℂ)) * K).trace := by
+            simp [hPdiag]
+      _ = ((E : CMatrix a) * D *
+            (((E⁻¹ : Matrix.unitaryGroup a ℂ) : CMatrix a) * K)).trace := by
+            simp [Matrix.mul_assoc]
+      _ = ((((E⁻¹ : Matrix.unitaryGroup a ℂ) : CMatrix a) * K) *
+            (E : CMatrix a) * D).trace := by
+            rw [Matrix.trace_mul_cycle]
+      _ = (D * K').trace := by
+            simpa [K', Matrix.mul_assoc] using
+              (Matrix.trace_mul_comm ((((E⁻¹ : Matrix.unitaryGroup a ℂ) : CMatrix a) * K) *
+                (E : CMatrix a)) D)
+  have hdiag :
+      (D * K').trace =
+        ∑ i, ((hP.1.eigenvalues i : ℝ) : ℂ) * K' i i := by
+    simpa [D] using trace_diagonal_mul_eq_sum
+      (fun i => ((hP.1.eigenvalues i : ℝ) : ℂ)) K'
+  have hsum_abs :
+      Complex.abs ((D * K').trace) ≤
+        ∑ i, ‖((hP.1.eigenvalues i : ℝ) : ℂ) * K' i i‖ := by
+    rw [hdiag]
+    simpa [Complex.abs] using
+      (norm_sum_le (s := Finset.univ)
+        (f := fun i => ((hP.1.eigenvalues i : ℝ) : ℂ) * K' i i))
+  have hterm :
+      (fun i => ‖((hP.1.eigenvalues i : ℝ) : ℂ) * K' i i‖) ≤
+        fun i => hP.1.eigenvalues i := by
+    intro i
+    have hlambda : 0 ≤ hP.1.eigenvalues i := hP.eigenvalues_nonneg i
+    have hentry : ‖K' i i‖ ≤ (1 : ℝ) :=
+      contraction_entry_norm_bound K' hK' i i
+    calc
+      ‖((hP.1.eigenvalues i : ℝ) : ℂ) * K' i i‖ =
+          hP.1.eigenvalues i * ‖K' i i‖ := by
+            simp [abs_of_nonneg hlambda]
+      _ ≤ hP.1.eigenvalues i * 1 :=
+            mul_le_mul_of_nonneg_left hentry hlambda
+      _ = hP.1.eigenvalues i := by simp
+  have hsum_le :
+      (∑ i, ‖((hP.1.eigenvalues i : ℝ) : ℂ) * K' i i‖) ≤
+        ∑ i, hP.1.eigenvalues i := by
+    exact Finset.sum_le_sum fun i _ => hterm i
+  have htrace_sum : P.trace.re = ∑ i, hP.1.eigenvalues i := by
+    have h := hP.1.trace_eq_sum_eigenvalues
+    exact (congrArg Complex.re h).trans (by simp)
+  calc
+    Complex.abs ((P * K).trace) =
+        Complex.abs ((D * K').trace) := by rw [htrace]
+    _ ≤ ∑ i, ‖((hP.1.eigenvalues i : ℝ) : ℂ) * K' i i‖ := hsum_abs
+    _ ≤ ∑ i, hP.1.eigenvalues i := hsum_le
+    _ = P.trace.re := htrace_sum.symm
+
 /-- The unitary-attainment half of the finite-dimensional trace-norm
 variational characterization: there is a unitary matrix attaining
 `|Tr(MU)| = ‖M‖₁`. -/
@@ -212,6 +385,75 @@ theorem traceNorm_variational_unitary_abs_trace_le
     Complex.abs ((M * (U : CMatrix a)).trace) =
         Complex.abs ((P * (Z : CMatrix a)).trace) := by rw [htrace]
     _ ≤ P.trace.re := hP_trace_abs_le
+    _ = traceNorm M := by rfl
+
+/-- The trace-norm variational upper bound for contractions.
+
+This extends `traceNorm_variational_unitary_abs_trace_le` from unitary test
+matrices to arbitrary finite-dimensional contractions, stated as `KᴴK ≤ I` in
+the matrix order. -/
+theorem traceNorm_variational_contraction_abs_trace_le
+    (M K : CMatrix a) (hK : Kᴴ * K ≤ 1) :
+    Complex.abs ((M * K).trace) ≤ traceNorm M := by
+  classical
+  let P : CMatrix a := psdSqrt (Mᴴ * M)
+  have hP_hm : P.IsHermitian := psdSqrt_isHermitian (Mᴴ * M)
+  have hP_sq : P * P = Mᴴ * M :=
+    psdSqrt_mul_self_of_posSemidef (Matrix.posSemidef_conjTranspose_mul_self M)
+  have hGram : P * Pᴴ = Mᴴ * (Mᴴ)ᴴ := by
+    rw [hP_hm.eq, hP_sq, Matrix.conjTranspose_conjTranspose]
+  obtain ⟨V, hV⟩ :=
+    ReferenceIsometry.exists_eq_mul_transpose_of_mul_conjTranspose_eq
+      (A := P) (B := Mᴴ) hGram (Nat.le_refl _)
+  let W : Matrix.unitaryGroup a ℂ :=
+    ⟨Matrix.transpose V.matrix, transpose_referenceIsometry_matrix_mem_unitary V⟩
+  have hM : M = (W : CMatrix a)ᴴ * P := by
+    have h := congrArg Matrix.conjTranspose hV
+    simpa [W, hP_hm.eq, Matrix.conjTranspose_mul] using h
+  let Z : CMatrix a := K * (W : CMatrix a)ᴴ
+  have hZ : Zᴴ * Z ≤ 1 := by
+    have hZeq : Zᴴ * Z = (W : CMatrix a) * (Kᴴ * K) * (W : CMatrix a)ᴴ := by
+      simp [Z, Matrix.conjTranspose_mul, Matrix.mul_assoc]
+    rw [hZeq]
+    calc
+      (W : CMatrix a) * (Kᴴ * K) * (W : CMatrix a)ᴴ ≤
+          (W : CMatrix a) * (1 : CMatrix a) * (W : CMatrix a)ᴴ := by
+            have hnon : 0 ≤ (1 : CMatrix a) - Kᴴ * K := sub_nonneg.mpr hK
+            have hconj : 0 ≤
+                (W : CMatrix a) * ((1 : CMatrix a) - Kᴴ * K) * (W : CMatrix a)ᴴ :=
+              by
+                have h :=
+                  (Matrix.nonneg_iff_posSemidef.mp hnon).conjTranspose_mul_mul_same
+                    ((W : CMatrix a)ᴴ)
+                simpa [Matrix.conjTranspose_conjTranspose] using
+                  (Matrix.nonneg_iff_posSemidef.mpr h)
+            have hdiff :
+                (W : CMatrix a) * ((1 : CMatrix a) - Kᴴ * K) * (W : CMatrix a)ᴴ =
+                  ((W : CMatrix a) * (1 : CMatrix a) * (W : CMatrix a)ᴴ) -
+                    ((W : CMatrix a) * (Kᴴ * K) * (W : CMatrix a)ᴴ) := by
+              noncomm_ring
+            exact sub_nonneg.mp (by simpa [hdiff] using hconj)
+      _ = 1 := by
+            rw [Matrix.mul_one]
+            change (W : CMatrix a) * star (W : CMatrix a) = 1
+            exact (Matrix.mem_unitaryGroup_iff.mp W.2)
+  have htrace : (M * K).trace = (P * Z).trace := by
+    calc
+      (M * K).trace = ((W : CMatrix a)ᴴ * P * K).trace := by
+        simp [hM, Matrix.mul_assoc]
+      _ = ((W : CMatrix a)ᴴ * (P * K)).trace := by
+        exact congrArg Matrix.trace
+          (Matrix.mul_assoc ((W : CMatrix a)ᴴ) P K)
+      _ = ((P * K) * (W : CMatrix a)ᴴ).trace := by
+        exact Matrix.trace_mul_comm ((W : CMatrix a)ᴴ) (P * K)
+      _ = (P * (K * (W : CMatrix a)ᴴ)).trace := by
+        simp [Matrix.mul_assoc]
+      _ = (P * Z).trace := rfl
+  calc
+    Complex.abs ((M * K).trace) = Complex.abs ((P * Z).trace) := by rw [htrace]
+    _ ≤ P.trace.re :=
+          posSemidef_trace_mul_contraction_abs_le_trace_re P
+            (psdSqrt_pos (Mᴴ * M)) Z hZ
     _ = traceNorm M := by rfl
 
 /-- Matrix-level packaging of the finite-dimensional trace-norm variational

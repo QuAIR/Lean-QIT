@@ -507,6 +507,24 @@ def petzRenyi (ρ σ : State a) (_hρ : ρ.matrix.PosDef) (_hσ : σ.matrix.PosD
   let B := CFC.rpow σ.matrix (1 - α)
   r * log2 ((A * B).trace.re)
 
+/-- Petz quantum Renyi divergence in the PSD branch used for `0 < α < 1`.
+
+For this order range no inverse power of the second state is needed.  This
+definition is the source-faithful kernel for Khatri--Wilde's
+`D_α(ρ ‖ σ)` comparison with a merely positive semidefinite `σ`. -/
+def petzRenyiPSD (ρ σ : State a)
+    (α : ℝ) (_hα_pos : 0 < α) (_hα_ne_one : α ≠ 1) : ℝ :=
+  let r := 1 / (α - 1)
+  let A := CFC.rpow ρ.matrix α
+  let B := CFC.rpow σ.matrix (1 - α)
+  r * log2 ((A * B).trace.re)
+
+theorem petzRenyiPSD_eq_petzRenyi
+    (ρ σ : State a) (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
+    (α : ℝ) (hα_pos : 0 < α) (hα_ne_one : α ≠ 1) :
+    ρ.petzRenyiPSD σ α hα_pos hα_ne_one =
+      ρ.petzRenyi σ hρ hσ α hα_pos hα_ne_one := rfl
+
 /-- Sandwiched quantum Renyi divergence D̃_α(ρ‖σ).
 
 D̃_α(ρ‖σ) = 1/(α-1) · log2 Tr((σ^((1-α)/2α) · ρ · σ^((1-α)/2α))^α). -/
@@ -517,14 +535,6 @@ def sandwichedRenyi (ρ σ : State a) (_hρ : ρ.matrix.PosDef) (_hσ : σ.matri
   let C := CFC.rpow σ.matrix s
   let M := CFC.rpow (C * ρ.matrix * C) α
   r * log2 (M.trace.re)
-
-/-- A normalized finite-dimensional state has a nonempty index type. -/
-theorem nonempty (ρ : State a) : Nonempty a := by
-  classical
-  by_contra h
-  haveI : IsEmpty a := not_nonempty_iff.mp h
-  have htrace := ρ.trace_eq_one
-  simp [Matrix.trace] at htrace
 
 /-- Real powers of density matrices are positive semidefinite. -/
 theorem rpowMatrix_posSemidef (ρ : State a) (s : ℝ) :

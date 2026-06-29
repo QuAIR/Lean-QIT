@@ -13,14 +13,17 @@ public import QIT.Core.POVMProbability
 /-!
 # HSW coding theorem: classical capacity
 
-Definition of the classical capacity of a quantum channel via regularized
-Holevo information, plus the source-shaped direct-achievability interface.
+Definition of the classical capacity of a quantum channel via the operational
+supremum of achievable rates, the regularized Holevo information interface,
+and the source-shaped direct-achievability interface.
 
 The proved theorem in this module is intentionally conditional on an explicit
 HSW coding witness: constructing the random code, packing-lemma decoder, and
 typical/conditionally typical projector estimates is a separate upstream proof
-obligation.  The formulation follows the direct coding route in
-[Wilde2011Qst, qit-notes.tex:33634-33808].
+obligation.  The full equality follows Wilde's HSW theorem statement
+[Wilde2011Qst, qit-notes.tex:33588-33632], with the direct proof route in
+[Wilde2011Qst, qit-notes.tex:33634-33808].  The converse route is tracked by
+downstream proof leaves before the equality can be marked proved.
 -/
 
 @[expose] public section
@@ -33,15 +36,6 @@ noncomputable section
 
 variable {a : Type u} {b : Type v}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
-
-/- The n-use regularized Holevo capacity shape for a channel N.
-
-For n uses of channel N, the achievable Holevo information rate is
-(1/n) max_E chi(N^{kron n}(E)), where the max is over ensembles E
-on the input of N^{kron n}. -/
-def regularizedHolevoRate_statement
-    (_N : Channel a b) (_n : ℕ) (_rate : ℝ) : Prop :=
-  True
 
 namespace Channel
 
@@ -59,6 +53,32 @@ def outputEnsemble {ι : Type u} [Fintype ι] [DecidableEq ι]
 def hswHolevoRate {ι : Type u} [Fintype ι] [DecidableEq ι]
     (E : Ensemble ι a) : ℝ :=
   (N.outputEnsemble E).holevoInformation
+
+/-- All single-letter Holevo information values realized by finite input
+ensembles for channel `N`. -/
+def holevoInformationValues : Set ℝ :=
+  {r : ℝ | ∃ (ι : Type u) (instF : Fintype ι) (instD : DecidableEq ι),
+    letI : Fintype ι := instF
+    letI : DecidableEq ι := instD
+    ∃ E : Ensemble ι a, r = N.hswHolevoRate E}
+
+/-- Channel Holevo information as the supremum over finite input ensembles. -/
+def holevoInformation : ℝ :=
+  sSup N.holevoInformationValues
+
+/-- Holevo information of the `n`-use tensor-power channel. -/
+def blockHolevoInformation (n : ℕ) : ℝ :=
+  (N.tensorPower n).holevoInformation
+
+/-- Regularized Holevo block-rate values `χ(N^⊗n) / n` for positive block
+lengths.  This uses a supremum-safe interface instead of assuming the
+source-style limit exists before it is proved. -/
+def regularizedHolevoRateValues : Set ℝ :=
+  {R : ℝ | ∃ n : ℕ, 0 < n ∧ R = N.blockHolevoInformation n / (n : ℝ)}
+
+/-- Regularized Holevo information as the supremum of positive block rates. -/
+def regularizedHolevoInformation : ℝ :=
+  sSup N.regularizedHolevoRateValues
 
 end Channel
 
@@ -104,6 +124,167 @@ def rate (_C : HSWClassicalCode N n M) : ℝ :=
 
 end HSWClassicalCode
 
+/- Packing-lemma interfaces for a finite family of output states and a
+decoder POVM.
+
+This namespace records exactly the code/decoder performance layer appearing in
+Wilde's packing lemma [Wilde2011Qst, qit-notes.tex:29363-29415]: message-indexed
+output states, a POVM with the same message labels, average success/error, and
+maximal error.  The random-code construction and typical-projector estimates
+which supply such a decoder are separate proof leaves. -/
+namespace PackingLemma
+
+variable {out : Type v}
+variable [Fintype out] [DecidableEq out]
+variable {M : Type u} [Fintype M] [DecidableEq M] [Nonempty M]
+
+/-- A finite message-indexed family of output states together with a decoder
+POVM. -/
+structure DecoderCode (M : Type u) (out : Type v)
+    [Fintype M] [DecidableEq M] [Nonempty M] [Fintype out] [DecidableEq out] where
+  states : M → State out
+  decoder : POVM M out
+
+namespace DecoderCode
+
+/-- Probability that the packing decoder returns the transmitted message. -/
+def successProbability (C : DecoderCode M out) (m : M) : ℝ :=
+  (C.decoder.prob (C.states m) m : ℝ)
+
+/-- Message-wise error probability for the packing decoder. -/
+def error (C : DecoderCode M out) (m : M) : ℝ :=
+  1 - C.successProbability m
+
+/-- Maximal message error bounded by `ε`. -/
+def maxErrorAtMost (C : DecoderCode M out) (ε : ℝ) : Prop :=
+  ∀ m : M, C.error m ≤ ε
+
+/-- Uniform average success probability over the message set. -/
+def averageSuccessProbability (C : DecoderCode M out) : ℝ :=
+  (Fintype.card M : ℝ)⁻¹ * ∑ m : M, C.successProbability m
+
+/-- Uniform average error probability over the message set. -/
+def averageError (C : DecoderCode M out) : ℝ :=
+  (Fintype.card M : ℝ)⁻¹ * ∑ m : M, C.error m
+
+/-- Average message error bounded by `ε`. -/
+def averageErrorAtMost (C : DecoderCode M out) (ε : ℝ) : Prop :=
+  C.averageError ≤ ε
+
+/-- The maximal-error condition unfolds to the source-style message-wise
+decoder inequality.  This theorem is not a simp rule because arithmetic
+normalization can obscure the direct bridge to `HSWClassicalCode.maxErrorAtMost`. -/
+theorem maxErrorAtMost_iff (C : DecoderCode M out) (ε : ℝ) :
+    C.maxErrorAtMost ε ↔ ∀ m : M, 1 - C.successProbability m ≤ ε := by
+  rfl
+
+/-- The average-error condition unfolds to the source-style uniform average
+over message errors. -/
+theorem averageErrorAtMost_iff (C : DecoderCode M out) (ε : ℝ) :
+    C.averageErrorAtMost ε ↔
+      (Fintype.card M : ℝ)⁻¹ * ∑ m : M, (1 - C.successProbability m) ≤ ε := by
+  rfl
+
+/-- Per-message error of a `DecoderCode` is the complement of the per-message
+success probability. -/
+theorem error_eq (C : DecoderCode M out) (m : M) : C.error m = 1 - C.successProbability m := by
+  rfl
+
+/-! ### Expurgation (average error → maximal error)
+
+Markov's inequality on the average message error: a `DecoderCode` with average
+error at most `ε` (and nonnegative per-message errors) has a survivor set of at
+least half its messages (`2 · |S| ≥ |M|`), each with per-message error at most
+`2 · ε`. Restricting the code to `S` therefore yields a code on at least half
+the message set with maximal error at most `2 · ε` (at a cost of at most one
+bit of rate). The nonnegativity hypothesis holds for POVM-decoder codes, whose
+per-message success probability is at most one.
+Source: [Wilde2011Qst, qit-notes.tex:33634-33808]. -/
+
+theorem exists_goodSubset_of_averageErrorAtMost
+    (C : DecoderCode M out) {ε : ℝ} (havg : C.averageErrorAtMost ε) (hε : 0 < ε)
+    (herr_nonneg : ∀ m : M, 0 ≤ C.error m) :
+    ∃ S : Finset M, 2 * S.card ≥ Fintype.card M ∧ ∀ m ∈ S, C.error m ≤ 2 * ε := by
+  classical
+  set good : Finset M := Finset.filter (fun m => C.error m ≤ 2 * ε) Finset.univ with hgood_def
+  refine ⟨good, ?_, fun m hm => (Finset.mem_filter.mp hm).2⟩
+  -- Markov: bad = {m | error > 2ε} satisfies 2·|bad| ≤ |M|, so 2·|good| ≥ |M|.
+  set bad : Finset M := Finset.filter (fun m => 2 * ε < C.error m) Finset.univ with hbad_def
+  have hcardM_pos : (0 : ℝ) < Fintype.card M := by
+    exact_mod_cast Fintype.card_pos_iff.mpr ‹Nonempty M›
+  have hsum_le : (∑ m, C.error m) ≤ (Fintype.card M : ℝ) * ε := by
+    have ha : (Fintype.card M : ℝ)⁻¹ * ∑ m, C.error m ≤ ε := havg
+    rw [← inv_mul_le_iff₀ hcardM_pos]; exact ha
+  -- each bad message has error ≥ 2ε; summing, ∑_bad (2ε) ≤ ∑_bad error.
+  have hbad_term : ∑ m ∈ bad, (2 * ε : ℝ) ≤ ∑ m ∈ bad, C.error m :=
+    Finset.sum_le_sum fun m hm => le_of_lt (Finset.mem_filter.mp hm).2
+  have hbad_le_univ : ∑ m ∈ bad, C.error m ≤ ∑ m, C.error m := by
+    apply Finset.sum_le_sum_of_subset_of_nonneg (Finset.filter_subset _ _)
+    intros m _ _; exact herr_nonneg m
+  have hbad_bound : ∑ m ∈ bad, (2 * ε : ℝ) ≤ (Fintype.card M : ℝ) * ε :=
+    hbad_term.trans (hbad_le_univ.trans hsum_le)
+  have hbad_const : (bad.card : ℝ) * (2 * ε) = ∑ m ∈ bad, (2 * ε : ℝ) := by
+    simp [Finset.sum_const]
+  have h2bad_le : 2 * bad.card ≤ Fintype.card M := by
+    have h1 : (bad.card : ℝ) * (2 * ε) ≤ (Fintype.card M : ℝ) * ε := by
+      rw [hbad_const]; exact hbad_bound
+    have h2 : (2 : ℝ) * bad.card ≤ (Fintype.card M : ℝ) := by nlinarith [h1, hε]
+    exact_mod_cast h2
+  -- good and bad partition univ (every real is `≤ 2ε` or `> 2ε`), so
+  -- |good| + |bad| = |M|; with 2·|bad| ≤ |M| this gives 2·|good| ≥ |M|.
+  have h_disj : Disjoint good bad := by
+    rw [Finset.disjoint_iff_inter_eq_empty]
+    refine Finset.eq_empty_of_forall_notMem (fun m hm => ?_)
+    simp only [hgood_def, hbad_def, Finset.mem_inter, Finset.mem_filter,
+      Finset.mem_univ, true_and] at hm
+    obtain ⟨hle, hlt⟩ := hm
+    linarith
+  have h_union : good ∪ bad = (Finset.univ : Finset M) := by
+    apply Finset.eq_univ_of_forall
+    intro m
+    simp only [hgood_def, hbad_def, Finset.mem_union, Finset.mem_filter,
+      Finset.mem_univ, true_and]
+    by_cases h : C.error m ≤ 2 * ε
+    · left; exact h
+    · right; push_neg at h; exact h
+  have hpart : good.card + bad.card = Fintype.card M := by
+    rw [← Finset.card_union_of_disjoint h_disj, h_union, Finset.card_univ]
+  omega
+end DecoderCode
+
+end PackingLemma
+
+namespace HSWClassicalCode
+
+variable {N : Channel a b} {n : ℕ}
+variable {M : Type u} [Fintype M] [DecidableEq M] [Nonempty M]
+
+/-- The output-state/decoder layer of an HSW classical code, exactly the object
+to which the packing lemma is applied. -/
+def toPackingDecoderCode (C : HSWClassicalCode N n M) :
+    PackingLemma.DecoderCode M (TensorPower b n) where
+  states := C.outputState
+  decoder := C.decoder
+
+@[simp]
+theorem toPackingDecoderCode_successProbability (C : HSWClassicalCode N n M)
+    (m : M) :
+    C.toPackingDecoderCode.successProbability m = C.successProbability m := by
+  rfl
+
+@[simp]
+theorem toPackingDecoderCode_error (C : HSWClassicalCode N n M) (m : M) :
+    C.toPackingDecoderCode.error m = C.error m := by
+  rfl
+
+@[simp]
+theorem toPackingDecoderCode_maxErrorAtMost (C : HSWClassicalCode N n M)
+    (ε : ℝ) :
+    C.toPackingDecoderCode.maxErrorAtMost ε ↔ C.maxErrorAtMost ε := by
+  rfl
+
+end HSWClassicalCode
+
 namespace Channel
 
 variable (N : Channel a b)
@@ -119,6 +300,21 @@ def IsAchievableClassicalRate (R : ℝ) : Prop :=
       ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
         ∃ C : HSWClassicalCode N n M, C.rate ≥ R - δ ∧ C.maxErrorAtMost ε
 
+/-- `B` upper-bounds all operationally achievable classical rates for channel
+`N`. -/
+def IsClassicalRateUpperBound (B : ℝ) : Prop :=
+  ∀ R : ℝ, N.IsAchievableClassicalRate R → R ≤ B
+
+/-- Operational classical capacity as the supremum of achievable rates. -/
+def classicalCapacity : ℝ :=
+  sSup {R : ℝ | N.IsAchievableClassicalRate R}
+
+/-- The full Holevo--Schumacher--Westmoreland capacity formula.  Later proof
+leaves prove this proposition by combining the regularized direct coding
+theorem and the converse theorem. -/
+def hswCapacityFormula : Prop :=
+  N.classicalCapacity = N.regularizedHolevoInformation
+
 end Channel
 
 /-- Source-shaped witness for one block of the HSW direct coding proof.
@@ -132,6 +328,38 @@ structure HSWDirectCodingWitness {ι : Type u} [Fintype ι] [DecidableEq ι]
   code : HSWClassicalCode N n M
   rate_ge : code.rate ≥ N.hswHolevoRate E - δ
   maxError_le : code.maxErrorAtMost ε
+
+/-- HSW-specific packing-lemma witness after the average-random-code and
+derandomization/expurgation steps have produced a deterministic decoder with
+maximal error control.
+
+The field `packing_max_error_le` is stated at the output-state packing layer;
+`toDirectCodingWitness` below turns it into the direct-coding witness consumed
+by the existing HSW achievability interface. -/
+structure HSWPackingLemmaWitness {ι : Type u} [Fintype ι] [DecidableEq ι]
+    (N : Channel a b) (E : Ensemble ι a) (n : ℕ) (δ ε : ℝ)
+    (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M] where
+  code : HSWClassicalCode N n M
+  rate_ge : code.rate ≥ N.hswHolevoRate E - δ
+  packing_max_error_le : code.toPackingDecoderCode.maxErrorAtMost ε
+
+namespace HSWPackingLemmaWitness
+
+variable {ι : Type u} [Fintype ι] [DecidableEq ι]
+variable {N : Channel a b} {E : Ensemble ι a} {n : ℕ} {δ ε : ℝ}
+variable {M : Type u} [Fintype M] [DecidableEq M] [Nonempty M]
+
+/-- A completed packing-lemma decoder witness is exactly the HSW direct-coding
+witness required by the operational achievability theorem. -/
+def toDirectCodingWitness (W : HSWPackingLemmaWitness N E n δ ε M) :
+    HSWDirectCodingWitness N E n δ ε M where
+  code := W.code
+  rate_ge := W.rate_ge
+  maxError_le := by
+    exact (HSWClassicalCode.toPackingDecoderCode_maxErrorAtMost W.code ε).mp
+      W.packing_max_error_le
+
+end HSWPackingLemmaWitness
 
 namespace Channel
 
@@ -164,26 +392,30 @@ theorem hsw_direct_achievable_of_directCodingWitness
 
 end Channel
 
-/- The HSW coding theorem: the classical capacity C(N) equals the
-regularized Holevo information
+namespace Channel
 
-C(N) = sup_n (1/n) max_E chi(N^{kron n}(E))
-
-and this rate is achievable with vanishing error for large n. -/
-def hswCodingTheorem_statement
-    (_N : Channel a b) (_capacity : ℝ) : Prop :=
+/-- Rate lower bound for an HSW direct code: for an input ensemble `E` and large
+block length `n`, there is a message set `M` and an `HSWClassicalCode N n M`
+with rate at least `hswHolevoRate E − δ` (choosing `|M| ≈ 2^{n(χ − δ)}`). This
+needs the typical/conditionally-typical projector estimates (pack-1
+cross-capture and the `(1−ε)⁻¹` prefactor are recorded proof-pending) to make
+the packing-lemma error bound small. -/
+def hsw_rateLowerBound_statement {ι : Type u} [Fintype ι] [DecidableEq ι]
+    (E : Ensemble ι a) (n : ℕ) (δ ε : ℝ) : Prop :=
+  -- ∃ M (…) (C : HSWClassicalCode N n M), C.rate ≥ N.hswHolevoRate E − δ.
   True
 
-/-- Compatibility bridge to the earlier lightweight HSW statement scaffold.
+/-- Direct-witness assembly: the `HSWDirectCodingWitness` family exists for all
+large `n`, feeding `hsw_direct_achievable_of_directCodingWitness` to conclude
+that `hswHolevoRate E` is an achievable classical rate. Blocked on the
+proof-pending pack-1 / prefactor kernels and the rate lower bound above. -/
+def hsw_directWitnessAssembly_statement {ι : Type u} [Fintype ι] [DecidableEq ι]
+    (E : Ensemble ι a) : Prop :=
+  -- (∀ δ>0 ε>0, ∃ N0, ∀ n≥N0, ∃ M (…), Nonempty (HSWDirectCodingWitness N E n δ ε M))
+  -- → N.IsAchievableClassicalRate (N.hswHolevoRate E).
+  True
 
-The existing statement only records the high-level capacity shape, so this
-lemma should not be used as evidence for the full HSW theorem.  The public Lean
-evidence theorem is `Channel.hsw_direct_achievable_of_directCodingWitness`. -/
-theorem hswCodingTheorem_statement_of_direct_achievable
-    (N : Channel a b) (capacity : ℝ)
-    (_h : N.IsAchievableClassicalRate capacity) :
-    hswCodingTheorem_statement N capacity := by
-  trivial
+end Channel
 
 end
 

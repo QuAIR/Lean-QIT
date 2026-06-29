@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Entropy
+public import QIT.Information.EntropyTensorPower
 public import QIT.Information.Renyi
 public import Mathlib.Analysis.Complex.Order
 public import Mathlib.Data.Real.Basic
@@ -204,6 +205,42 @@ namespace State
 `-log₂ μ` lies within `n δ` of `n S(ρ)`, and zero eigenvalues are excluded. -/
 def typicalEigenvalue (ρ : State a) (n : ℕ) (δ μ : ℝ) : Prop :=
   0 < μ ∧ |(-log2 μ) - (n : ℝ) * ρ.vonNeumann| ≤ (n : ℝ) * δ
+
+/-- pack-4 eigenvalue upper bound (equipartition, upper half): every eigenvalue
+accepted by the typicality predicate satisfies
+`μ ≤ 2^{-n(S(ρ) − δ)}`. This is the upper half of the usual
+`2^{-(S + δ)n} ≤ μ ≤ 2^{-(S − δ)n}` equipartition envelope; it follows from
+the left inequality of the predicate's centered-log bound. -/
+theorem typicalEigenvalue_le_eigenvalueUpperBound
+    (ρ : State a) (n : ℕ) (δ μ : ℝ)
+    (h : typicalEigenvalue ρ n δ μ) :
+    μ ≤ 2 ^ (-((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ)) := by
+  obtain ⟨hμ_pos, habs⟩ := h
+  -- Left half of the absolute-value bound:
+  --   -((n:ℝ)*δ) ≤ (-log2 μ) - (n:ℝ)*S(ρ),  i.e.  -log2 μ ≥ (n:ℝ)*S(ρ) - (n:ℝ)*δ.
+  have hleft : -((n : ℝ) * δ) ≤ (-log2 μ) - (n : ℝ) * ρ.vonNeumann :=
+    (abs_le.mp habs).1
+  -- Hence log2 μ ≤ -((n:ℝ)*S(ρ) - (n:ℝ)*δ).
+  have hlog_le : log2 μ ≤ -((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ) := by linarith
+  have hl2_pos : (0 : ℝ) < Real.log 2 := Real.log_pos (by norm_num : (1 : ℝ) < 2)
+  -- Convert log2 to Real.log: log2 μ · Real.log 2 = Real.log μ.
+  have hid : log2 μ * Real.log 2 = Real.log μ := by
+    unfold log2; field_simp
+  -- Multiply the log2 inequality by Real.log 2 > 0 to land in Real.log:
+  --   Real.log μ ≤ -((n:ℝ)*S(ρ) - (n:ℝ)*δ) · Real.log 2.
+  have hlogμ_le : Real.log μ ≤ -((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ) * Real.log 2 := by
+    linarith [mul_le_mul_of_nonneg_right hlog_le hl2_pos.le]
+  -- Exponentiate: μ = Real.exp (Real.log μ) ≤ Real.exp (exponent · Real.log 2) = 2^{exponent}.
+  have hbase_pos : (0 : ℝ) < 2 := by norm_num
+  have hμ_exp : μ = Real.exp (Real.log μ) := (Real.exp_log hμ_pos).symm
+  rw [hμ_exp]
+  -- `2^{x} = Real.exp (x · Real.log 2)` for the base-2 rpow, so the bound
+  -- `Real.log μ ≤ -((n:ℝ)*S − (n:ℝ)*δ) · Real.log 2` exponentiates to
+  -- `μ ≤ 2^{-((n:ℝ)*S − (n:ℝ)*δ)}`.
+  have hexp : Real.exp (-((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ) * Real.log 2) =
+      2 ^ (-((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ)) := by
+    rw [Real.rpow_def_of_pos hbase_pos, mul_comm]
+  refine le_trans (Real.exp_le_exp.mpr hlogμ_le) (le_of_eq hexp)
 
 /-- The finite tensor-power spectral typical-subspace projector. -/
 def typicalSubspaceProjector (ρ : State a) (n : ℕ) (δ : ℝ) :
@@ -545,6 +582,398 @@ theorem typicalSubspaceProjector_estimates (ρ : State a) (n : ℕ) (δ : ℝ) :
   typical_weight_lower_bound := by
     intro hn hδ
     exact ρ.one_sub_logDeviationSecondMoment_div_sq_le_typicalSubspaceSpectralWeight hn hδ
+
+/-! ## Linear-in-`n` variance bound and high-probability `1 − ε` form
+
+The centered log-eigenvalue second moment of `ρ^{⊗ n}` is exactly `n` times
+the single-system second moment. The eigenvalues of `ρ^{⊗ n}` are the
+`n`-fold products `μ = μ₁ … μₙ` of the eigenvalues of `ρ` (the
+`eigenvalueMultiset_tensorPower` keystone), so under the product distribution
+the per-symbol centered deviations `(-log₂ μⱼ − S(ρ))` are independent with
+mean `0`. The variance-of-a-sum identity collapses the cross-terms, leaving
+`n · typicalLogDeviationSecondMoment ρ 1` [Wilde2011Qst, qit-notes.tex:33634-33808].
+
+The proof mirrors the entropy-additivity route: a per-element centered-
+deviation product split (a `Real.log_mul` rewrite, with the `0 log 0 := 0`
+convention absorbing zero eigenvalues through the `μ` prefactor), a
+single-step Kronecker-bind inner-sum identity (the variance-of-a-sum step,
+closed by `ring`), and an induction on `n`.
+-/
+
+/-- The per-element centered log deviation `cd(S, μ) = -log2 μ − S`. -/
+private def centeredLogDev (S μ : ℝ) : ℝ := -log2 μ - S
+
+/-- For nonneg `x, y` with `x * y > 0`, the centered log deviation of the
+product splits additively:
+`cd(Sx + Sy, x * y) = cd(Sx, x) + cd(Sy, y)`.
+The strict-positivity guard keeps `Real.log_mul` applicable. -/
+private lemma centeredLogDev_prod {x y Sx Sy : ℝ}
+    (hxnn : 0 ≤ x) (hynn : 0 ≤ y) (hxy : 0 < x * y) :
+    centeredLogDev (Sx + Sy) (x * y) =
+      centeredLogDev Sx x + centeredLogDev Sy y := by
+  have hxp : 0 < x := by
+    rcases lt_or_eq_of_le hxnn with h | h
+    · exact h
+    · nlinarith
+  have hyp : 0 < y := by
+    rcases lt_or_eq_of_le hynn with h | h
+    · exact h
+    · nlinarith
+  have hlog2 : log2 (x * y) = log2 x + log2 y := by
+    simp only [log2, log2]
+    rw [Real.log_mul (ne_of_gt hxp) (ne_of_gt hyp)]; ring
+  simp only [centeredLogDev, centeredLogDev, centeredLogDev]
+  rw [hlog2]; ring
+
+/-- The single-system spectrum has mean-zero centered log deviation:
+`Σ_{x ∈ spec(ρ)} x · cd(S(ρ), x) = 0`. This centering is what collapses the
+variance-of-a-sum cross-terms. -/
+private lemma eigenvalueMultiset_centered_sum (ρ : State a) :
+    (Multiset.map (fun x => x * centeredLogDev ρ.vonNeumann x)
+      (eigenvalueMultiset ρ.pos.isHermitian)).sum = 0 := by
+  -- `Σ x · (-log2 x − S) = -Σ xlog2 x − S · Σ x = S − S · 1 = 0`.
+  have hS : ρ.vonNeumann = -((eigenvalueMultiset ρ.pos.isHermitian).map xlog2).sum :=
+    vonNeumann_eq_neg_sum_eigenvalueMultiset ρ
+  have hSum : (eigenvalueMultiset ρ.pos.isHermitian).sum = 1 :=
+    eigenvalueMultiset_sum ρ
+  -- Distribute `x . (-log2 x - S) = -(x . log2 x) - x . S` per element.
+  rw [Multiset.map_congr rfl (fun x _ => by
+      show x * centeredLogDev ρ.vonNeumann x =
+        -(x * log2 x) + -(x * ρ.vonNeumann)
+      simp only [centeredLogDev]
+      ring)]
+  rw [multiset_sum_add_distrib]
+  -- First summand: `Σ -(x·log2 x) = -Σ xlog2 x` after `x·log2 x = xlog2 x`.
+  have hxl : ∀ x : ℝ, x * log2 x = xlog2 x := fun x => by
+    by_cases hzx : x = 0 <;> simp [xlog2, hzx]
+  -- Pull the negation out of each summand (`simp` handles `Σ -f = -(Σ f)`).
+  simp only [Multiset.sum_map_neg, Multiset.map_congr rfl (fun x _ => hxl x),
+    Multiset.map_congr rfl (fun x _ =>
+      (show -(x * ρ.vonNeumann) = x * (-ρ.vonNeumann) from by ring))]
+  rw [multiset_sum_mul_const, Multiset.map_id', hSum, ← hS]
+  ring
+
+/-! ### Inner-sum variance-of-a-sum step
+
+`Σ_{y ∈ t} (x · y) · (px + py)² = x · px² · (Σ t) + 2 · (x · px) · (Σ_t y·py)
++ x · (Σ_t y · py²)`, a pure polynomial identity over a multiset (proved by
+induction with `ring`). Here `px`, `py` are arbitrary per-element reals. -/
+
+private lemma inner_variance_sum (t : Multiset ℝ) (x px : ℝ) (g : ℝ → ℝ) :
+    (t.map fun y => x * y * (px + g y) ^ 2).sum =
+      x * px ^ 2 * t.sum +
+        2 * (x * px) * (t.map fun y => y * g y).sum +
+        x * (t.map fun y => y * g y ^ 2).sum := by
+  classical
+  induction t using Multiset.induction_on with
+  | empty => simp
+  | cons a t ih =>
+    rw [Multiset.map_cons, Multiset.sum_cons, ih]
+    simp only [Multiset.map_cons, Multiset.sum_cons]
+    ring
+
+/-! ### Scaled-by-`(Real.log 2)²` linearity over the tensor-power spectrum -/
+
+/-- Kronecker-bind second-moment step (variance-of-a-sum). For multisets
+`s, t`, per-element reals `px : ℝ` (for `x ∈ s`) and `gy` (for `y ∈ t`), if
+the product-eigenvalue centered deviation splits as
+`(x * y) · q(x * y)² = (x * y) · (px + gy)²` for every `(x, y)`, then
+`Σ_{(x,y)} (x*y)·q(x*y)² = (Σ t)·(Σ_s x·px²) + 2·(Σ_s x·px)·(Σ_t y·gy) +
+(Σ s)·(Σ_t y·gy²)`. This is a pure polynomial-multiset identity (the square
+expands and the `x`, `y` prefactors factor out of the disjoint sums), closed
+by `Multiset.induction_on` with `ring` at each step. -/
+
+private lemma kronecker_second_moment_step
+    (s t : Multiset ℝ) (q : ℝ → ℝ) (pxOf : ℝ → ℝ) (gyOf : ℝ → ℝ)
+    (hsplit : ∀ x ∈ s, ∀ y ∈ t,
+      x * y * q (x * y) ^ 2 = x * y * (pxOf x + gyOf y) ^ 2) :
+    (Multiset.map (fun μ => μ * q μ ^ 2)
+      (s.bind fun x => t.map fun y => x * y)).sum =
+      t.sum * (s.map fun x => x * pxOf x ^ 2).sum +
+        2 * (s.map fun x => x * pxOf x).sum * (t.map fun y => y * gyOf y).sum +
+        s.sum * (t.map fun y => y * gyOf y ^ 2).sum := by
+  classical
+  induction s using Multiset.induction_on with
+  | empty =>
+    simp
+  | cons a s ih =>
+    -- `hsplit` specialized to the tail `s` (for the IH).
+    have hsplit_s : ∀ x ∈ s, ∀ y ∈ t,
+        x * y * q (x * y) ^ 2 = x * y * (pxOf x + gyOf y) ^ 2 := by
+      intro x hx y hy
+      exact hsplit x (Multiset.mem_cons.mpr (Or.inr hx)) y hy
+    rw [Multiset.cons_bind, Multiset.map_add, Multiset.sum_add, ih hsplit_s]
+    -- Inner sum over `y ∈ t` of `a·y·q(a·y)²`, split per `hsplit`.
+    have hinner : (t.map fun y => a * y * q (a * y) ^ 2).sum =
+        a * (pxOf a) ^ 2 * t.sum +
+          2 * (a * pxOf a) * (t.map fun y => y * gyOf y).sum +
+          a * (t.map fun y => y * gyOf y ^ 2).sum := by
+      have hsp : ∀ y ∈ t,
+          a * y * q (a * y) ^ 2 = a * y * (pxOf a + gyOf y) ^ 2 :=
+        fun y hy => hsplit a (Multiset.mem_cons.mpr (Or.inl rfl)) y hy
+      rw [Multiset.map_congr rfl hsp]
+      exact inner_variance_sum t a (pxOf a) gyOf
+    -- Flatten `map f (map g t)` into `map (fun y => (a·y)·q(a·y)²) t` so
+    -- `hinner` matches.
+    rw [Multiset.map_map,
+        show (fun μ => μ * q μ ^ 2) ∘ (fun y => a * y) =
+          (fun y => a * y * q (a * y) ^ 2) from rfl]
+    rw [hinner]
+    simp only [Multiset.map_cons, Multiset.sum_cons]
+    ring
+
+/-- The second-moment sum over the tensor-power spectrum, with each centered
+deviation scaled by `Real.log 2` (so `Real.log_mul` linearizes the log of
+products; the `0 log 0 := 0` convention absorbs zero eigenvalues through the
+`μ` prefactor), equals `n` times the single-system analogue. -/
+private lemma secondMoment_tensorPower_scaled (ρ : State a) (n : ℕ) :
+    (Multiset.map (fun μ => μ *
+        (Real.log 2 * centeredLogDev ((n : ℝ) * ρ.vonNeumann) μ) ^ 2)
+      (tensorPowerMultiset (eigenvalueMultiset ρ.pos.isHermitian) n)).sum =
+      n * (Multiset.map (fun x => x *
+        (Real.log 2 * centeredLogDev ρ.vonNeumann x) ^ 2)
+        (eigenvalueMultiset ρ.pos.isHermitian)).sum := by
+  induction n with
+  | zero =>
+    rw [tensorPowerMultiset_zero]
+    simp only [Multiset.map_singleton, Multiset.sum_singleton,
+      Nat.cast_zero, zero_mul, centeredLogDev, log2, Real.log_one]
+    ring
+  | succ k ih =>
+    rw [tensorPowerMultiset_succ]
+    -- Per-element product split: `(x*y)·(L·cd((k+1)S, x*y))² =
+    -- (x*y)·(L·cd(S,x) + L·cd(kS,y))²`. The `(x*y)` prefactor absorbs the
+    -- zero-eigenvalue case; the strictly-positive case uses `Real.log_mul`.
+    have hsplit : ∀ x ∈ eigenvalueMultiset ρ.pos.isHermitian,
+        ∀ y ∈ tensorPowerMultiset (eigenvalueMultiset ρ.pos.isHermitian) k,
+          x * y * (Real.log 2 * centeredLogDev (↑(k + 1) * ρ.vonNeumann) (x * y)) ^ 2 =
+          x * y * (Real.log 2 * centeredLogDev ρ.vonNeumann x +
+                    Real.log 2 * centeredLogDev ((k : ℝ) * ρ.vonNeumann) y) ^ 2 := by
+      intro x hx y hy
+      have hxnn : 0 ≤ x := eigenvalueMultiset_nonneg ρ x hx
+      have hynn : 0 ≤ y := tensorPowerMultiset_nonneg ρ k y hy
+      by_cases hxy : x * y = 0
+      · rw [hxy, zero_mul, zero_mul]
+      · have hpos : 0 < x * y :=
+          lt_of_le_of_ne (mul_nonneg hxnn hynn) (Ne.symm hxy)
+        rw [show ((↑(k + 1) : ℝ)) * ρ.vonNeumann =
+              (ρ.vonNeumann + (k : ℝ) * ρ.vonNeumann) from by push_cast; ring]
+        rw [centeredLogDev_prod hxnn hynn hpos]
+        ring
+    -- Apply the variance-of-a-sum step.
+    rw [kronecker_second_moment_step
+        (eigenvalueMultiset ρ.pos.isHermitian)
+        (tensorPowerMultiset (eigenvalueMultiset ρ.pos.isHermitian) k)
+        (fun μ => Real.log 2 * centeredLogDev (↑(k + 1) * ρ.vonNeumann) μ)
+        (fun x => Real.log 2 * centeredLogDev ρ.vonNeumann x)
+        (fun y => Real.log 2 * centeredLogDev ((k : ℝ) * ρ.vonNeumann) y)
+        hsplit]
+    -- Trace-1 sums: `s.sum = 1`, `TP.sum = 1`.
+    rw [eigenvalueMultiset_sum, tensorPowerMultiset_sum]
+    -- Cross-term vanishes: `Σ_x x·(L·cd(S,x)) = L · Σ_x x·cd(S,x) = L·0 = 0`.
+    have hCentered : (Multiset.map (fun x => x *
+        (Real.log 2 * centeredLogDev ρ.vonNeumann x))
+        (eigenvalueMultiset ρ.pos.isHermitian)).sum = 0 := by
+      have h := eigenvalueMultiset_centered_sum ρ
+      -- Reorder the summand to `(Real.log 2) * (x · cd)` so `sum_map_mul_left`
+      -- pulls the `Real.log 2` factor out of the sum.
+      rw [Multiset.map_congr rfl (fun x _ =>
+            (show x * (Real.log 2 * centeredLogDev ρ.vonNeumann x) =
+              Real.log 2 * (x * centeredLogDev ρ.vonNeumann x) from by ring))]
+      rw [Multiset.sum_map_mul_left, h]
+      ring
+    -- Recognize the IH in the surviving `k`-fold second moment, then close by
+    -- polynomial arithmetic (`hCentered` kills the cross-term).
+    rw [show ((tensorPowerMultiset (eigenvalueMultiset ρ.pos.isHermitian) k).map
+          (fun y => y * (Real.log 2 * centeredLogDev ((k : ℝ) * ρ.vonNeumann) y) ^ 2)).sum
+        = (Multiset.map (fun μ => μ *
+            (Real.log 2 * centeredLogDev ((k : ℝ) * ρ.vonNeumann) μ) ^ 2)
+          (tensorPowerMultiset (eigenvalueMultiset ρ.pos.isHermitian) k)).sum from rfl]
+    rw [ih]
+    -- The cross-term's first factor is exactly `hCentered`; rewrite to `0`.
+    rw [hCentered, mul_zero, zero_mul]
+    push_cast
+    ring
+
+/-- Bridge: the `Finset.univ` definition of `typicalLogDeviationSecondMoment`
+is the multiset sum over the tensor-power spectrum, with bare (unscaled)
+centered deviations. -/
+private lemma typicalLogDeviationSecondMoment_eq_multiset (ρ : State a) (m : ℕ) :
+    ρ.typicalLogDeviationSecondMoment m =
+      (Multiset.map (fun μ => μ *
+        (centeredLogDev ((m : ℝ) * ρ.vonNeumann) μ) ^ 2)
+        (tensorPowerMultiset (eigenvalueMultiset ρ.pos.isHermitian) m)).sum := by
+  classical
+  unfold typicalLogDeviationSecondMoment
+  -- The `let μ := ...` summand zeta-reduces to its body; restate without `let`.
+  show (∑ i : TensorPower a m,
+      (ρ.tensorPower m).pos.isHermitian.eigenvalues i *
+        (-log2 ((ρ.tensorPower m).pos.isHermitian.eigenvalues i) -
+          (m : ℝ) * ρ.vonNeumann) ^ 2) =
+    (Multiset.map (fun μ => μ *
+      (centeredLogDev ((m : ℝ) * ρ.vonNeumann) μ) ^ 2)
+      (tensorPowerMultiset (eigenvalueMultiset ρ.pos.isHermitian) m)).sum
+  -- Convert the `Finset` sum to a multiset sum over `Finset.univ.val`.
+  rw [Finset.sum_eq_multiset_sum]
+  -- Restate the LHS map in composed form `((fun μ => μ·body μ) ∘ eig)`.
+  conv_lhs => rw [show (fun (i : TensorPower a m) =>
+        (ρ.tensorPower m).pos.isHermitian.eigenvalues i *
+          (-log2 ((ρ.tensorPower m).pos.isHermitian.eigenvalues i) -
+            (m : ℝ) * ρ.vonNeumann) ^ 2) =
+      (fun μ => μ * (-log2 μ - (m : ℝ) * ρ.vonNeumann) ^ 2) ∘
+        (ρ.tensorPower m).pos.isHermitian.eigenvalues from rfl]
+  -- `(fun μ => μ·body μ) ∘ eig` unfolds to `map (fun μ => μ·body μ) (map eig)`.
+  rw [← Multiset.map_map]
+  -- `map eig univ.val = eigenvalueMultiset (tensorPower.pos.isHermitian)`.
+  rw [show (Multiset.map (ρ.tensorPower m).pos.isHermitian.eigenvalues
+        Finset.univ.val) =
+      eigenvalueMultiset ((ρ.tensorPower m).pos.isHermitian) from rfl]
+  -- Apply the tensor-power spectrum keystone.
+  rw [eigenvalueMultiset_tensorPower ρ m]
+  rfl
+
+/-- The centered log-eigenvalue second moment is exactly linear in `n`:
+`typicalLogDeviationSecondMoment ρ n = n · typicalLogDeviationSecondMoment ρ 1`.
+
+The eigenvalues of `ρ^{⊗ n}` are the `n`-fold products of the eigenvalues of
+`ρ` (`eigenvalueMultiset_tensorPower`); under the product distribution the
+per-symbol centered deviations `(-log₂ μⱼ − S(ρ))` are independent with mean
+`0`, so the variance-of-a-sum identity collapses the cross-terms and leaves
+`n` copies of the single-system second moment
+[Wilde2011Qst, qit-notes.tex:33634-33808]. -/
+theorem typicalLogDeviationSecondMoment_tensorPower (ρ : State a) (n : ℕ) :
+    ρ.typicalLogDeviationSecondMoment n =
+      n * ρ.typicalLogDeviationSecondMoment 1 := by
+  rw [typicalLogDeviationSecondMoment_eq_multiset ρ n,
+      typicalLogDeviationSecondMoment_eq_multiset ρ 1]
+  -- Both sides are bare-`cd` multiset sums. Relate to the `(L·cd)²` scaled
+  -- form via the factor `μ · (L·cd)² = L² · (μ · cd²)`.
+  have hFactor : ∀ (s : Multiset ℝ) (C : ℝ),
+      (s.map (fun μ => μ * (Real.log 2 * centeredLogDev C μ) ^ 2)).sum =
+        (Real.log 2) ^ 2 *
+          (s.map (fun μ => μ * (centeredLogDev C μ) ^ 2)).sum := by
+    intro s C
+    induction s using Multiset.induction_on with
+    | empty => simp
+    | cons a s ih =>
+      rw [Multiset.map_cons, Multiset.sum_cons, ih,
+          Multiset.map_cons, Multiset.sum_cons]; ring
+  have hL2 : (Real.log 2) ^ 2 ≠ 0 :=
+    pow_ne_zero 2 (Real.log_pos (by norm_num : (1 : ℝ) < 2)).ne'
+  -- The scaled workhorse: `Σ_{μ ∈ TP_n} μ·(L·cd(nS,μ))² = n·Σ_{x∈s} x·(L·cd(S,x))²`.
+  have hScaleN := secondMoment_tensorPower_scaled ρ n
+  -- Fold both `(L·cd)²` sums into `L² ·` bare-`cd²` sums, by instantiating
+  -- `hFactor` explicitly at each multiset/centering pair (avoiding the
+  -- ambiguity of a bare `rw [hFactor] at hScaleN`).
+  have hFn : (Multiset.map (fun μ => μ *
+        (Real.log 2 * centeredLogDev ((n : ℝ) * ρ.vonNeumann) μ) ^ 2)
+        (tensorPowerMultiset (eigenvalueMultiset ρ.pos.isHermitian) n)).sum =
+      (Real.log 2) ^ 2 *
+        (Multiset.map (fun μ => μ *
+          (centeredLogDev ((n : ℝ) * ρ.vonNeumann) μ) ^ 2)
+          (tensorPowerMultiset (eigenvalueMultiset ρ.pos.isHermitian) n)).sum :=
+    hFactor _ _
+  have hF1 : (Multiset.map (fun x => x *
+        (Real.log 2 * centeredLogDev ρ.vonNeumann x) ^ 2)
+        (eigenvalueMultiset ρ.pos.isHermitian)).sum =
+      (Real.log 2) ^ 2 *
+        (Multiset.map (fun x => x *
+          (centeredLogDev ρ.vonNeumann x) ^ 2)
+          (eigenvalueMultiset ρ.pos.isHermitian)).sum :=
+    hFactor _ _
+  -- Substitute into `hScaleN`: `L² · T_n = n · (L² · T_1)`.
+  have hKey : (Real.log 2) ^ 2 *
+      (Multiset.map (fun μ => μ *
+        (centeredLogDev ((n : ℝ) * ρ.vonNeumann) μ) ^ 2)
+        (tensorPowerMultiset (eigenvalueMultiset ρ.pos.isHermitian) n)).sum =
+      (Real.log 2) ^ 2 *
+        ((n : ℝ) * (Multiset.map (fun x => x *
+          (centeredLogDev ρ.vonNeumann x) ^ 2)
+          (eigenvalueMultiset ρ.pos.isHermitian)).sum) := by
+    rw [← hFn, hScaleN, hF1]; ring
+  -- Cancel the left factor `L² ≠ 0`.
+  have hEq :
+      (Multiset.map (fun μ => μ *
+        (centeredLogDev ((n : ℝ) * ρ.vonNeumann) μ) ^ 2)
+        (tensorPowerMultiset (eigenvalueMultiset ρ.pos.isHermitian) n)).sum =
+      (n : ℝ) * (Multiset.map (fun x => x *
+        (centeredLogDev ρ.vonNeumann x) ^ 2)
+        (eigenvalueMultiset ρ.pos.isHermitian)).sum :=
+    mul_left_cancel₀ hL2 hKey
+  -- The LHS of the goal is exactly `hEq`'s LHS; close by `hEq` after
+  -- recognizing the single-system RHS.
+  conv_lhs => rw [hEq]
+  -- The goal RHS is `n · Σ_{μ ∈ TP_1} μ·cd((1:ℝ)*S, μ)²`. Recognize
+  -- `TP s 1 = s` and `(1:ℝ)*S = S`.
+  have hTP1 : tensorPowerMultiset (eigenvalueMultiset ρ.pos.isHermitian) 1 =
+      eigenvalueMultiset ρ.pos.isHermitian := by
+    -- `tensorPowerMultiset s 1 = s.bind (fun x => {1}.map (fun y => x*y))`,
+    -- and `{1}.map (· * x) = {x}`, so each `x` maps to the singleton `{x}`;
+    -- the bind over `s` of singletons is `s` itself.
+    rw [tensorPowerMultiset_succ, tensorPowerMultiset_zero]
+    induction (eigenvalueMultiset ρ.pos.isHermitian) using Multiset.induction_on with
+    | empty => simp
+    | cons a s ih =>
+      rw [Multiset.cons_bind, Multiset.map_singleton, ih]
+      simp only [mul_one, Multiset.singleton_add]
+  rw [hTP1]
+  -- Both sides agree: unfold `centeredLogDev`, reduce `↑1 → 1`, then `1*S = S`.
+  simp only [centeredLogDev, Nat.cast_one, one_mul]
+
+/-- The centered log-eigenvalue second moment is bounded by a constant
+(the single-system second moment) times `n`. This is the linear-in-`n`
+variance bound consumed by the high-probability form below. -/
+theorem typicalLogDeviationSecondMoment_le_tensorPower (ρ : State a) (n : ℕ) :
+    ρ.typicalLogDeviationSecondMoment n ≤
+      n * ρ.typicalLogDeviationSecondMoment 1 :=
+  (ρ.typicalLogDeviationSecondMoment_tensorPower n).le
+
+/-- High-probability `1 − ε` form of the typical-subspace weight: for any
+`0 < ε, δ`, once `n` reaches the threshold `C / (ε · δ²)` (with
+`C = typicalLogDeviationSecondMoment ρ 1`), the typical spectral weight is at
+least `1 − ε` [Wilde2011Qst, qit-notes.tex:33634-33808].
+
+Combining the linear-in-`n` variance bound with the spectral Chebyshev
+bridge gives `atypicalWeight ≤ (n · C) / (n δ)² = C / (n · δ²) ≤ ε` once
+`n ≥ C / (ε · δ²)`, hence `typicalWeight = 1 − atypicalWeight ≥ 1 − ε`. -/
+theorem typicalSubspaceSpectralWeight_high_probability
+    (ρ : State a) {n : ℕ} {δ ε : ℝ} (hn : 0 < n) (hδ : 0 < δ) (hε : 0 < ε)
+    (hthresh : (ρ.typicalLogDeviationSecondMoment 1 / (ε * δ ^ 2)) ≤ n) :
+    1 - ε ≤ ρ.typicalSubspaceSpectralWeight n δ := by
+  -- Chebyshev lower bound.
+  refine le_trans ?_
+    (ρ.one_sub_logDeviationSecondMoment_div_sq_le_typicalSubspaceSpectralWeight hn hδ)
+  -- It suffices to show `secondMoment n / (n δ)² ≤ ε`.
+  -- Substitute the linearity `secondMoment n = (n : ℝ) · C`.
+  have hLin : ρ.typicalLogDeviationSecondMoment n =
+      (n : ℝ) * ρ.typicalLogDeviationSecondMoment 1 :=
+    by exact_mod_cast ρ.typicalLogDeviationSecondMoment_tensorPower n
+  have hnR : 0 < (n : ℝ) := by exact_mod_cast hn
+  have hδ2pos : 0 < δ ^ 2 := sq_pos_of_pos hδ
+  have hεδ2pos : 0 < ε * δ ^ 2 := mul_pos hε hδ2pos
+  -- From the threshold `C / (ε δ²) ≤ (n : ℝ)`: `C ≤ (n : ℝ) · (ε δ²)`.
+  have hCle : ρ.typicalLogDeviationSecondMoment 1 ≤ (n : ℝ) * (ε * δ ^ 2) := by
+    have := (div_le_iff₀ hεδ2pos).mp (by exact_mod_cast hthresh)
+    linarith [show (n : ℝ) * (ε * δ ^ 2) = (n : ℝ) * ε * δ ^ 2 from by ring]
+  -- Reduce `(n · C) / ((n:ℝ)·δ)²` to `C / ((n:ℝ)·δ²) ≤ ε`.
+  have hred : (n : ℝ) * ρ.typicalLogDeviationSecondMoment 1 / ((n : ℝ) * δ) ^ 2 =
+      ρ.typicalLogDeviationSecondMoment 1 / ((n : ℝ) * δ ^ 2) := by field_simp
+  rw [hLin, hred]
+  -- Goal: `1 - ε ≤ 1 - C / ((n:ℝ)·δ²)`, i.e. `C / ((n:ℝ)·δ²) ≤ ε`.
+  have hrearrange : ρ.typicalLogDeviationSecondMoment 1 ≤ ε * ((n : ℝ) * δ ^ 2) := by
+    linarith [show (n : ℝ) * (ε * δ ^ 2) = ε * ((n : ℝ) * δ ^ 2) from by ring]
+  linarith [(div_le_iff₀ (mul_pos hnR hδ2pos)).mpr hrearrange]
+
+
+/-- Dual form: the atypical spectral weight is at most `ε` past the
+threshold `n ≥ C / (ε δ²)`. -/
+theorem atypicalSubspaceSpectralWeight_high_probability
+    (ρ : State a) {n : ℕ} {δ ε : ℝ} (hn : 0 < n) (hδ : 0 < δ) (hε : 0 < ε)
+    (hthresh : (ρ.typicalLogDeviationSecondMoment 1 / (ε * δ ^ 2)) ≤ n) :
+    ρ.atypicalSubspaceSpectralWeight n δ ≤ ε := by
+  have hpart := ρ.typicalSubspaceSpectralWeight_add_atypical n δ
+  have htyp := ρ.typicalSubspaceSpectralWeight_high_probability hn hδ hε hthresh
+  linarith
 
 /-- Schumacher data compression theorem: rate S(rho) is achievable.
 
