@@ -15,6 +15,7 @@ public import QIT.Information.EntanglementAssistedLowerBound
 public import QIT.Information.PositionNaimarkTrace
 public import QIT.Information.EntanglementAssistedHTLowerBound
 public import QIT.Information.EntanglementAssistedPetzLowerBound
+public import QIT.Information.EntanglementAssistedPetzAdditivity
 public import QIT.Information.HypothesisTestingMutualInformation
 public import QIT.Information.ComparatorTest
 public import QIT.Information.HypothesisTestingDPI

@@ -8,6 +8,7 @@ module
 
 public import QIT.Information.HSW
 public import QIT.Information.Holevo
+public import QIT.Information.EntropyTensorPower
 
 /-!
 # HSW converse: regularized Holevo upper-bounds classical capacity
@@ -39,6 +40,20 @@ noncomputable section
 
 variable {a b : Type u} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 variable (N : Channel a b)
+
+/-- The classical-register marginal of a cq state has Shannon entropy:
+`S(ω_X) = -Σ_x xlog₂ p_x` (the base-2 Shannon entropy of the ensemble's
+distribution). Routes the diagonal-state entropy bridge through
+`Ensemble.partialTraceB_cqState`, which identifies the marginal with `diag(p)`.
+This is the `H(p)` term in the cq-Holevo identity `I(X;B)_ω = χ`. -/
+theorem cqState_marginalA_vonNeumann {ι : Type v} [Fintype ι] [DecidableEq ι]
+    (E : Ensemble ι a) :
+    State.vonNeumann E.cqState.marginalA = -(∑ x, xlog2 ((E.probs x : ℝ))) := by
+  have hρ : E.cqState.marginalA.matrix =
+      Matrix.diagonal fun x => ((E.probs x : ℝ) : ℂ) := by
+    rw [State.marginalA_matrix, Ensemble.partialTraceB_cqState]
+  rw [State.vonNeumann_eq_neg_sum_xlog2_of_diagonal E.cqState.marginalA
+      (fun x => (E.probs x : ℝ)) hρ]
 
 /-- Alicki–Fannes–Winter continuity of the conditional von-Neumann entropy:
 for states `ρ, σ` on `A ⊗ B` with trace distance `½‖ρ − σ‖₁ ≤ ε`, the conditional

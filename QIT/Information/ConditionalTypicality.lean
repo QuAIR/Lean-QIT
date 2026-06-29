@@ -1018,36 +1018,242 @@ theorem averageState_le_of_probDomination {a : Type u} {ι : Type u}
     linarith [hdom x, this]
   exact (E.states x).pos.smul hcoeff_nonneg
 
-/-- **pack-4 pruned-distribution reduction (proof-pending).** The HSW
-`(1 − ε)⁻¹` prefactor on the expected pruned-distribution codeword output:
-if codewords are drawn from the law `p'` obtained by restricting the i.i.d. law
-`p^{⊗ n}` to the typical set (atypical mass `≤ ε`) and renormalizing, then the
-expected codeword output satisfies
-`𝔼_{p'}[σ^{X'^n}] ≤ (1 − ε)⁻¹ · σ̄^{⊗ n}`
-in Loewner order, where `σ̄ = E₀.averageState` is the ensemble's per-symbol
-average output state.
+/-- **n-block product-of-expectations identity.** The expectation of the
+codeword product state under the i.i.d. product law equals the tensor power
+of the average state:
 
-Recorded as a `Prop` WITHOUT a proof. The coefficient-domination kernel
-`averageState_le_of_probDomination` (above) discharges the Loewner-sum step once
-the pointwise bound `p'(x^n) ≤ p^{⊗ n}(x^n) / (1 − ε)` is in hand; the missing
-piece is the n-block product-probability / typical-set-restriction /
-renormalization infrastructure that turns the abstract ensemble pair `(E, E')`
-into the concrete pruned i.i.d. law `p'` and establishes its pointwise bound
-against `p^{⊗ n}`. That infrastructure is not present in the repository.
-Source: [Wilde2011Qst, qit-notes.tex:33634-33808]. -/
-def pack4_prunedReduction_statement {a : Type u} {ι : Type u}
+`Σ_{x : Fin n → ι} (∏ i, probs (x i)) • (⊗_i σ^{x_i}).matrix = σ̄^{⊗ n}.matrix`
+
+where `σ̄` has matrix `Σ_j (probs j) • (symStates j).matrix`. This is the
+crux of the pruned-distribution reduction: the i.i.d. law's expected codeword
+output is exactly the tensor power of the per-symbol average, so any
+Loewner-order bound on `σ̄^{⊗ n}` transfers to the expected pruned output.
+
+The proof inducts on `n` at the matrix-entry level. In the successor step
+the sum over `Fin (n + 1) → ι` is split head/tail via `Fin.consEquiv`, the
+probability product splits via `Fin.prod_univ_succ`, the head sum collapses
+to `σ̄.matrix` by hypothesis, and the tail sum is the induction hypothesis. -/
+theorem averageState_eq_tensorPower_of_iid {a ι : Type*} [Fintype a] [DecidableEq a]
+    [Fintype ι] [DecidableEq ι] (symStates : ι → State a) (probs : ι → ℝ≥0)
+    (σbar : State a) (hσbar : σbar.matrix = ∑ j, (probs j) • (symStates j).matrix) :
+    ∀ (n : ℕ) (X Y : TensorPower a n),
+      (∑ x : Fin n → ι,
+          (∏ i, probs (x i)) • (productState (fun i => symStates (x i))).matrix) X Y =
+        (σbar.tensorPower n).matrix X Y
+  | 0, X, Y => by
+    -- n = 0: there is a unique empty codeword, the empty probability product
+    -- is 1, and `productState` / `σbar.tensorPower 0` are both `State.unit`.
+    let e : Fin 0 → ι := fun i => i.elim0
+    have hsub : ∀ x : Fin 0 → ι, x = e := fun x => by funext i; exact i.elim0
+    have huniv : (Finset.univ : Finset (Fin 0 → ι)) = {e} := by
+      ext x
+      simp only [Finset.mem_univ, Finset.mem_singleton]
+      exact ⟨fun _ => hsub x, fun hx => trivial⟩
+    -- The sum over the singleton index set equals its single summand.
+    rw [huniv, Finset.sum_singleton]
+    -- Empty probability product is 1 (`Fin.prod_univ_zero`).
+    rw [Fin.prod_univ_zero, one_smul, productState_zero, State.tensorPower_zero]
+  | n + 1, (X0, Xs), (Y0, Ys) => by
+    -- n + 1: unfold both sides into head/tail Kronecker factors. The codeword
+    -- sum is transported through the head/tail bijection
+    -- `ι × (Fin n → ι) ≃ Fin (n+1) → ι` (`Fin.cons`); after splitting the
+    -- probability product and the Kronecker entry, the double sum factors via
+    -- `Fintype.sum_mul_sum` into `(σbar.matrix X0 Y0) * ((σbar.tensorPower n).matrix Xs Ys)`,
+    -- matching the RHS Kronecker expansion.
+    -- Define the head/tail entry functions we will sum.
+    let head : ι → ℂ := fun x0 => (probs x0 : ℂ) * (symStates x0).matrix X0 Y0
+    let tail : (Fin n → ι) → ℂ := fun xs =>
+      (∏ i, probs (xs i)) • (productState (fun i => symStates (xs i))).matrix Xs Ys
+    -- Pointwise summand identity: under `Fin.cons`, the codeword summand at
+    -- entry `(X0,Xs),(Y0,Ys)` equals `head x0 * tail xs`.
+    have hsummand : ∀ (x0 : ι) (xs : Fin n → ι),
+        (∏ i, probs ((Fin.cons x0 xs : Fin (n + 1) → ι) i)) •
+          (productState (fun i => symStates ((Fin.cons x0 xs : Fin (n + 1) → ι) i))).matrix
+            (X0, Xs) (Y0, Ys) =
+        head x0 * tail xs := by
+      intro x0 xs
+      -- Split the probability product (head * tail).
+      have hprod : ∏ i, probs ((Fin.cons x0 xs : Fin (n + 1) → ι) i) =
+          probs x0 * ∏ i, probs (xs i) := by
+        rw [Fin.prod_univ_succ, Fin.cons_zero]
+        simp only [Fin.cons_succ]
+      -- Unfold the productState matrix entry to its head/tail Kronecker product.
+      have hentry :
+          (productState fun i => symStates ((Fin.cons x0 xs : Fin (n + 1) → ι) i)).matrix
+            (X0, Xs) (Y0, Ys) =
+            (symStates x0).matrix X0 Y0 *
+              (productState fun i => symStates (xs i)).matrix Xs Ys := by
+        -- Reduce `productState (cons head/tail)` to `(symStates head).prod (productState tail)`
+        -- by `productState_succ` and `Fin.cons_zero`/`Fin.cons_succ`, then read off the
+        -- matrix entry via `prod_matrix_kronecker` + `kronecker_apply`.
+        have htail_eq : (fun j : Fin n =>
+            symStates ((Fin.cons x0 xs : Fin (n + 1) → ι) j.succ)) =
+            (fun j : Fin n => symStates (xs j)) := by
+          funext j; simp only [Fin.cons_succ]
+        conv_lhs => rw [productState_succ, htail_eq]
+        rw [State.prod_matrix_kronecker]
+        simp only [Fin.cons_zero]
+        rfl
+      -- Split the `ℝ≥0 → ℂ` smul across the `ℂ` product.
+      rw [hprod, hentry]
+      -- Coerce both scalars to `ℂ` explicitly so the only remaining algebra is
+      -- commutativity of `ℂ` (no opaque `∏` of coerced elements for `ring`).
+      have hkey : ((probs x0 * ∏ i, probs (xs i) : ℝ≥0) •
+            ((symStates x0).matrix X0 Y0 * (productState fun i => symStates (xs i)).matrix Xs Ys : ℂ)) =
+          ((probs x0 : ℂ) * (symStates x0).matrix X0 Y0) *
+            ((∏ i, probs (xs i)) • (productState fun i => symStates (xs i)).matrix Xs Ys) := by
+        rw [Algebra.smul_def, Algebra.smul_def]
+        -- Split the product-scalar cast without unfolding the `∏`.
+        rw [show ((algebraMap ℝ≥0 ℂ) (probs x0 * ∏ i, probs (xs i))) =
+              (algebraMap ℝ≥0 ℂ) (probs x0) * (algebraMap ℝ≥0 ℂ) (∏ i, probs (xs i)) from
+            map_mul _ _ _]
+        rw [IsScalarTower.algebraMap_apply ℝ≥0 ℝ ℂ, NNReal.algebraMap_eq_coe,
+          Complex.coe_algebraMap, IsScalarTower.algebraMap_apply ℝ≥0 ℝ ℂ,
+          NNReal.algebraMap_eq_coe, Complex.coe_algebraMap]
+        ring
+      rw [hkey]
+    -- The head-sum is `σbar.matrix X0 Y0` by `hσbar` (entrywise).
+    have hhead_sum : ∑ x0, head x0 = σbar.matrix X0 Y0 := by
+      rw [hσbar]
+      simp only [Matrix.sum_apply, Matrix.smul_apply, head]
+      refine Finset.sum_congr rfl fun x _ => ?_
+      rw [Algebra.smul_def, IsScalarTower.algebraMap_apply ℝ≥0 ℝ ℂ,
+        NNReal.algebraMap_eq_coe, Complex.coe_algebraMap]
+    -- The tail-sum is `(σbar.tensorPower n).matrix Xs Ys` by the IH.
+    have htail_sum : ∑ xs, tail xs = (σbar.tensorPower n).matrix Xs Ys := by
+      have key : (∑ xs : Fin n → ι,
+          (∏ i, probs (xs i)) • (productState (fun i => symStates (xs i))).matrix) Xs Ys
+          = (σbar.tensorPower n).matrix Xs Ys :=
+        averageState_eq_tensorPower_of_iid symStates probs σbar hσbar n Xs Ys
+      simp only [Matrix.sum_apply, Matrix.smul_apply, tail] at key ⊢
+      exact key
+    -- RHS: `(σbar.tensorPower (n+1)).matrix (X0,Xs) (Y0,Ys)` is the head/tail
+    -- Kronecker product `σbar.matrix X0 Y0 * (σbar.tensorPower n).matrix Xs Ys`.
+    rw [show (σbar.tensorPower (n + 1)).matrix (X0, Xs) (Y0, Ys) =
+        σbar.matrix X0 Y0 * (σbar.tensorPower n).matrix Xs Ys from by
+        rw [State.tensorPower_succ, State.prod_matrix_kronecker]
+        rfl]
+    -- Combine: RHS = head-sum * tail-sum.
+    rw [← hhead_sum, ← htail_sum]
+    -- Push the LHS entry application into the sum, factor via `sum_mul_sum`,
+    -- then transport the `(x0,xs)`-product-type sum back to the codeword sum.
+    rw [Matrix.sum_apply]
+    rw [Fintype.sum_mul_sum head tail]
+    rw [← Fintype.sum_prod_type (f := fun p : ι × (Fin n → ι) => head p.1 * tail p.2)]
+    exact (Fintype.sum_equiv (Fin.consEquiv (fun _ => ι))
+      (fun p => head p.1 * tail p.2)
+      (fun x => (∏ i, probs (x i)) • (productState (fun i => symStates (x i))).matrix (X0, Xs) (Y0, Ys))
+      (fun p => (hsummand p.1 p.2).symm)).symm
+
+
+/-- **pack-4 pruned-distribution reduction.** The HSW `(1 − ε)⁻¹` prefactor on
+the expected pruned-distribution codeword output. Let `symStates : ι → State a`
+be the per-symbol channel outputs, `probs : ι → ℝ≥0` the input law, and
+`σbar` the per-symbol average output state with matrix
+`σbar.matrix = Σ_j (probs j) • (symStates j).matrix`. If a pruned ensemble
+`E_pruned : Ensemble (Fin n → ι) (TensorPower a n)` has
+
+* codeword-product outputs `E_pruned.states x = productState (fun i => symStates (x i))`
+  (same family as the i.i.d. law), and
+* pruned weights pointwise dominated by `(1 − ε)⁻¹` times the i.i.d. product
+  law, `(E_pruned.probs x : ℝ) ≤ (1 − ε)⁻¹ * ∏ i, (probs (x i) : ℝ)`,
+
+then the expected pruned codeword output is Loewner-bounded by the renormalized
+tensor power:
+
+`E_pruned.averageState.matrix ≤ ((1 − ε)⁻¹ : ℝ) • (σbar.tensorPower n).matrix`.
+
+This is the `(1 − ε)⁻¹` renormalization step of the HSW packing argument: the
+typical-set restriction discards atypical mass `≤ ε` and renormalizes the
+surviving mass by `(1 − ε)⁻¹`, so the expected pruned output is dominated by the
+renormalized i.i.d. average `σ̄^{⊗ n}`. The hypothesis `ε < 1` keeps the inverse
+well-defined and nonneg.
+
+Proof route: unfold `E_pruned.averageState.matrix` and `(σbar.tensorPower n).matrix`
+into their per-codeword sums (the latter via `averageState_eq_tensorPower_of_iid`),
+rewrite the pruned states via `hstates`, and reduce to positive-semidefiniteness
+of the single difference sum
+`Σ_x ((1 − ε)⁻¹ * ∏_i probs (x_i) − E_pruned.probs x) • (productState ...).matrix`,
+which follows from `Matrix.posSemidef_sum` plus each coefficient nonneg
+(pointwise domination `hdom`, with `ε < 1` giving `(1 − ε)⁻¹ ≥ 0`) and each
+`productState.matrix` positive semidefinite. This mirrors
+`averageState_le_of_probDomination` with the i.i.d. law substituted for the
+dominating ensemble's weights. Source: [Wilde2011Qst, qit-notes.tex:33634-33808]. -/
+theorem pack4_prunedReduction_statement {a : Type u} {ι : Type u}
     [Fintype a] [DecidableEq a] [Fintype ι] [DecidableEq ι]
-    (E₀ : Ensemble ι a) {n : ℕ} (ε : ℝ) : Prop :=
-  ∀ (E_pruned : Ensemble (Fin n → ι) (TensorPower a n)),
-    -- The pruned ensemble's codeword outputs coincide entrywise with the i.i.d.
-    -- product outputs `⊗_i σ^{x_i}` (same state family as the unpruned law):
-    (∀ x : Fin n → ι, E_pruned.states x = E₀.averageState.tensorPower n) →
-    -- The pruned weights are pointwise dominated by `(1 − ε)⁻¹` times the i.i.d.
-    -- weights `p^{⊗ n}(x)` — the prerequisite `p'(x) ≤ p^{⊗ n}(x) / (1 − ε)`:
-    (∀ x : Fin n → ι,
-      (E_pruned.probs x : ℝ) ≤ (1 - ε)⁻¹ * ∏ i, (E₀.probs (x i) : ℝ)) →
-    -- Conclusion: the expected pruned codeword output is Loewner-bounded by
-    -- `(1 − ε)⁻¹ · σ̄^{⊗ n}`.
-    E_pruned.averageState.matrix ≤ ((1 - ε)⁻¹ : ℝ) • (E₀.averageState.tensorPower n).matrix
+    (symStates : ι → State a) (probs : ι → ℝ≥0) (σbar : State a)
+    (hσbar : σbar.matrix = ∑ j, (probs j) • (symStates j).matrix)
+    {n : ℕ} {ε : ℝ} (hε : ε < 1)
+    (E_pruned : Ensemble (Fin n → ι) (TensorPower a n))
+    (hstates : ∀ x : Fin n → ι,
+      E_pruned.states x = productState (fun i => symStates (x i)))
+    (hdom : ∀ x : Fin n → ι,
+      (E_pruned.probs x : ℝ) ≤ (1 - ε)⁻¹ * ∏ i, (probs (x i) : ℝ)) :
+    E_pruned.averageState.matrix ≤ ((1 - ε)⁻¹ : ℝ) • (σbar.tensorPower n).matrix := by
+  -- `(1 − ε)⁻¹` is nonneg because `ε < 1` gives `0 < 1 − ε`.
+  have hε_pos : 0 < 1 - ε := by linarith
+  have hinv_nonneg : 0 ≤ (1 - ε)⁻¹ :=
+    inv_nonneg.mpr (le_of_lt hε_pos)
+  -- Replace the RHS tensor-power matrix by the i.i.d. product sum (entrywise).
+  have hiid : ∀ X Y,
+      (∑ x : Fin n → ι,
+          (∏ i, probs (x i)) • (productState (fun i => symStates (x i))).matrix) X Y =
+        (σbar.tensorPower n).matrix X Y :=
+    averageState_eq_tensorPower_of_iid symStates probs σbar hσbar n
+  -- Lift the entrywise identity to a matrix equality.
+  have hiid_matrix :
+      (∑ x : Fin n → ι,
+          (∏ i, probs (x i)) • (productState (fun i => symStates (x i))).matrix) =
+        (σbar.tensorPower n).matrix := by
+    ext X Y; exact hiid X Y
+  rw [Matrix.le_iff]
+  -- Reduce to positive-semidefiniteness of the difference, with the RHS
+  -- rewritten as the i.i.d. product sum.
+  rw [← hiid_matrix]
+  have hkey :
+      ((1 - ε)⁻¹ •
+          (∑ x : Fin n → ι,
+              (∏ i, probs (x i)) • (productState (fun i => symStates (x i))).matrix)
+          : CMatrix (TensorPower a n)) -
+        E_pruned.averageState.matrix =
+      ∑ x : Fin n → ι,
+        (((1 - ε)⁻¹ * ∏ i, (probs (x i) : ℝ) - (E_pruned.probs x : ℝ)) : ℝ) •
+          (productState (fun i => symStates (x i))).matrix := by
+    -- First rewrite the pruned average state's member states via `hstates`.
+    have hpruned_sum :
+        E_pruned.averageState.matrix =
+          ∑ x : Fin n → ι,
+            (E_pruned.probs x) • (productState (fun i => symStates (x i))).matrix := by
+      rw [Ensemble.averageState_matrix]
+      exact Finset.sum_congr rfl fun x _ => by rw [hstates x]
+    rw [hpruned_sum]
+    ext i j
+    simp only [Matrix.sub_apply, Finset.smul_sum, Matrix.smul_apply, Matrix.sum_apply]
+    -- Coerce both the outer `ℝ` smul and the per-codeword `ℝ≥0` smul to the
+    -- common `algebraMap … * _` form, then normalize via `push_cast` + `ring`.
+    simp only [Algebra.smul_def,
+      IsScalarTower.algebraMap_apply ℝ≥0 ℝ ℂ,
+      NNReal.algebraMap_eq_coe, Complex.coe_algebraMap]
+    -- Combine the two sums into one via `sum_sub_distrib`, then close per-index.
+    rw [← Finset.sum_sub_distrib]
+    apply Finset.sum_congr rfl
+    intro x _
+    push_cast
+    ring
+  rw [hkey]
+  -- Each summand is PSD: the real coefficient is nonneg (`hdom` + `(1−ε)⁻¹ ≥ 0`
+  -- and each `probs` coerces nonneg), and `productState.matrix` is PSD.
+  refine Matrix.posSemidef_sum Finset.univ fun x _ => ?_
+  have hprod_nonneg : 0 ≤ ∏ i, (probs (x i) : ℝ) := by
+    apply Finset.prod_nonneg
+    intro i _
+    exact NNReal.coe_nonneg _
+  have hcoeff_nonneg :
+      0 ≤ ((1 - ε)⁻¹ * ∏ i, (probs (x i) : ℝ) - (E_pruned.probs x : ℝ) : ℝ) := by
+    have hlhs_nonneg : 0 ≤ (1 - ε)⁻¹ * ∏ i, (probs (x i) : ℝ) :=
+      mul_nonneg hinv_nonneg hprod_nonneg
+    have hpr_nonneg : 0 ≤ (E_pruned.probs x : ℝ) := NNReal.coe_nonneg _
+    linarith [hdom x, hlhs_nonneg, hpr_nonneg]
+  exact (productState (fun i => symStates (x i))).pos.smul hcoeff_nonneg
 
 end QIT

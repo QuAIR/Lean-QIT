@@ -63,6 +63,19 @@ def eigenvalueMultiset {n : Type u} [Fintype n] [DecidableEq n]
     {M : CMatrix n} (hM : M.IsHermitian) : Multiset ℝ :=
   Multiset.map hM.eigenvalues Finset.univ.val
 
+/-- The eigenvalue multiset is invariant under a propositional matrix equality
+and under the choice of `IsHermitian` proof (the latter by proof irrelevance,
+since `Matrix.IsHermitian` is a `Prop`). This transports a spectral statement
+across an equation `M₁ = M₂` so that, e.g., the diagonal-spectrum lemma can be
+applied to a state whose matrix is propositionally — not definitionally —
+diagonal. -/
+lemma eigenvalueMultiset_eq_of_eq {n : Type u} [Fintype n] [DecidableEq n]
+    {M₁ M₂ : CMatrix n} (heq : M₁ = M₂)
+    (hH : M₁.IsHermitian) (hH' : M₂.IsHermitian) :
+    eigenvalueMultiset hH = eigenvalueMultiset hH' := by
+  subst heq
+  rfl
+
 /-- The Kronecker product of two Hermitian matrices is Hermitian. -/
 theorem kronecker_isHermitian (A : CMatrix a) (B : CMatrix b)
     (hA : A.IsHermitian) (hB : B.IsHermitian) :
@@ -329,6 +342,29 @@ lemma eigenvalueMultiset_nonneg (ρ : State a) :
   simp only [Multiset.mem_map, Finset.mem_val]
   rintro x ⟨i, _, rfl⟩
   exact ρ.pos.eigenvalues_nonneg i
+
+/-- **Diagonal-state entropy bridge.** If a state's matrix is the real
+diagonal matrix `Matrix.diagonal (fun i => (p i : ℂ))`, then its von Neumann
+entropy equals the Shannon entropy of the diagonal distribution:
+`S(ρ) = -∑ i, xlog2 (p i)`.
+
+The spectrum of a real diagonal matrix is its diagonal entries (with
+multiplicity) via `eigenvalueMultiset_diagonal_ofReal`; `eigenvalueMultiset_eq_of_eq`
+transports that statement across the propositional equality `ρ.matrix = …`,
+and `vonNeumann_eq_neg_sum_eigenvalueMultiset` turns the entropy into a
+multiset sum. This is the bridge used by the maximally-correlated and
+classical-quantum mutual-information computations. -/
+lemma vonNeumann_eq_neg_sum_xlog2_of_diagonal
+    (ρ : State a) (p : a → ℝ)
+    (hρ : ρ.matrix = Matrix.diagonal fun i => (p i : ℂ)) :
+    vonNeumann ρ = -(∑ i, xlog2 (p i)) := by
+  have hD : (Matrix.diagonal fun i => (p i : ℂ)).IsHermitian := hρ ▸ ρ.pos.isHermitian
+  have hSpec : eigenvalueMultiset ρ.pos.isHermitian = Multiset.map p Finset.univ.val := by
+    rw [eigenvalueMultiset_eq_of_eq hρ ρ.pos.isHermitian hD,
+      eigenvalueMultiset_diagonal_ofReal p hD]
+  rw [vonNeumann_eq_neg_sum_eigenvalueMultiset, hSpec]
+  simp only [Multiset.map_map, Finset.sum_eq_multiset_sum]
+  rfl
 
 /-! ### `xlog2` of a product of nonneg reals
 
