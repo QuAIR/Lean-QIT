@@ -7,8 +7,8 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.PositionBasedCoding
-public import QIT.Information.DeFinetti
-public import QIT.Core.SDP.HermitianPSDTraceDuality
+public import QIT.Symmetry.DeFinetti
+public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import Mathlib.Data.Complex.BigOperators
 
 /-!

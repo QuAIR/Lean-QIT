@@ -6,10 +6,10 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.HypothesisTesting
+public import QIT.HypothesisTesting.Basic
 public import QIT.HypothesisTesting.Audenaert
-public import QIT.Information.Renyi
-public import QIT.Information.SymmetricSubspace
+public import QIT.Information.Renyi.Renyi
+public import QIT.Symmetry.SymmetricSubspace
 public import QIT.States.Schatten
 public import Mathlib.Analysis.SpecialFunctions.Log.ENNRealLogExp
 public import Mathlib.Analysis.SpecialFunctions.Pow.Deriv

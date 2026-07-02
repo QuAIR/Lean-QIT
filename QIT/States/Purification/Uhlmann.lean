@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Information.Fidelity
+public import QIT.States.Geometry.Fidelity
 public import QIT.Core.Channel
 public import QIT.States.Purification.Canonical
 public import QIT.States.Purification.Equivalence

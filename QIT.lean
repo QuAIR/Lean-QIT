@@ -14,6 +14,12 @@ public import QIT.Channels
 public import QIT.Measurements
 public import QIT.Classical
 public import QIT.Information
+public import QIT.OneShot
+public import QIT.HypothesisTesting
+public import QIT.Asymptotic
+public import QIT.Symmetry
+public import QIT.Coding
+public import QIT.Protocols
 public import QIT.Security
 public import QIT.Entanglement
 public import QIT.Nonlocality

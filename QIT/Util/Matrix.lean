@@ -103,6 +103,44 @@ theorem partialTraceA_trace [Fintype a] [Fintype b] (X : CMatrix (Prod a b)) :
   simp [partialTraceA, Matrix.diag]
   rw [Fintype.sum_prod_type, Finset.sum_comm]
 
+/-- Multiplication by a right Kronecker factor commutes with tracing out the
+left subsystem. -/
+theorem partialTraceA_mul_kronecker_one_right [Fintype a] [Fintype b] [DecidableEq a]
+    (X : CMatrix (Prod a b)) (U : CMatrix b) :
+    partialTraceA (a := a) (b := b) (X * Matrix.kronecker (1 : CMatrix a) U) =
+      partialTraceA (a := a) (b := b) X * U := by
+  ext j j'
+  simp [partialTraceA, Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
+    Matrix.one_apply, Fintype.sum_prod_type, Finset.sum_mul]
+  rw [Finset.sum_comm]
+
+/-- Trace pairing against `I_A ⊗ U` can be computed after tracing out `A`. -/
+theorem partialTraceA_mul_trace_eq_trace_mul_kronecker_one_right
+    [Fintype a] [Fintype b] [DecidableEq a]
+    (X : CMatrix (Prod a b)) (U : CMatrix b) :
+    ((partialTraceA (a := a) (b := b) X) * U).trace =
+      (X * Matrix.kronecker (1 : CMatrix a) U).trace := by
+  rw [← partialTraceA_mul_kronecker_one_right X U]
+  exact partialTraceA_trace (a := a) (b := b)
+    (X * Matrix.kronecker (1 : CMatrix a) U)
+
+/-- Trace pairing against a left identity Kronecker factor reduces to the
+partial trace over the left subsystem. -/
+theorem trace_kronecker_one_mul_eq_trace_mul_partialTraceA
+    [Fintype a] [Fintype b] [DecidableEq a]
+    (M : CMatrix (Prod a b)) (T : CMatrix b) :
+    (Matrix.kronecker (1 : CMatrix a) T * M).trace =
+      (T * partialTraceA (a := a) (b := b) M).trace := by
+  calc
+    (Matrix.kronecker (1 : CMatrix a) T * M).trace =
+        (M * Matrix.kronecker (1 : CMatrix a) T).trace := by
+      rw [Matrix.trace_mul_comm]
+    _ = ((partialTraceA (a := a) (b := b) M) * T).trace := by
+      exact (partialTraceA_mul_trace_eq_trace_mul_kronecker_one_right
+        (a := a) (b := b) M T).symm
+    _ = (T * partialTraceA (a := a) (b := b) M).trace := by
+      rw [Matrix.trace_mul_comm]
+
 /-- Taking `Tr_B` preserves the full matrix trace. -/
 theorem partialTraceB_trace [Fintype a] [Fintype b] (X : CMatrix (Prod a b)) :
     (partialTraceB (a := a) (b := b) X).trace = X.trace := by

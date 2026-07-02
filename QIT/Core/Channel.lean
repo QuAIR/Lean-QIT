@@ -47,6 +47,29 @@ def applyState (Phi : Channel a b) (rho : State a) : State b where
   trace_eq_one := by
     rw [Phi.tracePreserving rho.matrix, rho.trace_eq_one]
 
+variable {c : Type w}
+variable [Fintype c] [DecidableEq c]
+
+/-- Composition of finite-dimensional quantum channels. -/
+def comp (Psi : Channel b c) (Phi : Channel a b) : Channel a c where
+  map := Psi.map.comp Phi.map
+  completelyPositive :=
+    MatrixMap.isCompletelyPositive_comp Psi.map Phi.map
+      Psi.completelyPositive Phi.completelyPositive
+  tracePreserving :=
+    MatrixMap.isTracePreserving_comp Psi.map Phi.map
+      Psi.tracePreserving Phi.tracePreserving
+  mapsPositive := by
+    intro X hX
+    exact Psi.mapsPositive (Phi.map X) (Phi.mapsPositive X hX)
+
+/-- Applying a composed channel is the same as applying the two channels in
+sequence. -/
+theorem applyState_comp (Psi : Channel b c) (Phi : Channel a b) (rho : State a) :
+    (Psi.comp Phi).applyState rho = Psi.applyState (Phi.applyState rho) := by
+  apply State.ext
+  rfl
+
 def prepareMap {x : Type w} [Fintype x] [DecidableEq x]
     (rho : x → State b) : MatrixMap x b where
   toFun X := ∑ x, X x x • (rho x).matrix

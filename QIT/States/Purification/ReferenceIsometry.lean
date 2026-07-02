@@ -178,6 +178,49 @@ theorem applyPureVector_purifies [Fintype a] [DecidableEq a]
   rw [V.partialTraceA_applyMatrix]
   exact hΨ
 
+variable {r₃ : Type*} {r₄ : Type*}
+variable [Fintype r₃] [DecidableEq r₃] [Fintype r₄] [DecidableEq r₄]
+
+/-- Product of two reference isometries, with matrix convention matching the
+recursive `TensorPower` convention. -/
+def prod (V : ReferenceIsometry r₁ r₂) (W : ReferenceIsometry r₃ r₄) :
+    ReferenceIsometry (Prod r₁ r₃) (Prod r₂ r₄) where
+  matrix := Matrix.kronecker V.matrix W.matrix
+  isometry := by
+    change (V.matrix.kronecker W.matrix).conjTranspose *
+        V.matrix.kronecker W.matrix = 1
+    rw [show (V.matrix.kronecker W.matrix).conjTranspose =
+        Matrix.kronecker V.matrix.conjTranspose W.matrix.conjTranspose from
+      Matrix.conjTranspose_kronecker V.matrix W.matrix]
+    rw [show Matrix.kronecker V.matrix.conjTranspose W.matrix.conjTranspose *
+          Matrix.kronecker V.matrix W.matrix =
+        Matrix.kronecker (V.matrix.conjTranspose * V.matrix)
+          (W.matrix.conjTranspose * W.matrix) from by
+      exact (Matrix.mul_kronecker_mul V.matrix.conjTranspose V.matrix
+        W.matrix.conjTranspose W.matrix).symm]
+    rw [V.isometry, W.isometry]
+    exact Matrix.one_kronecker_one
+
+/-- Tensor power of a reference isometry on recursive tensor-power labels. -/
+def tensorPower (V : ReferenceIsometry r₁ r₂) :
+    (n : ℕ) → ReferenceIsometry (TensorPower r₁ n) (TensorPower r₂ n)
+  | 0 =>
+      { matrix := fun _ _ => 1
+        isometry := by
+          ext x y
+          cases x
+          cases y
+          rw [Matrix.mul_apply]
+          simp [TensorPower, Matrix.conjTranspose]
+          change (1 : ℂ) = (1 : ℂ)
+          rfl }
+  | n + 1 => V.prod (tensorPower V n)
+
+@[simp]
+theorem tensorPower_succ (V : ReferenceIsometry r₁ r₂) (n : ℕ) :
+    V.tensorPower (n + 1) = V.prod (V.tensorPower n) :=
+  rfl
+
 end ReferenceIsometry
 
 end

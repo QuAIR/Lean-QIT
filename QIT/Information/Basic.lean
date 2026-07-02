@@ -6,20 +6,18 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Information.Entropy
+public import QIT.Information.Entropy.Entropy
 public import QIT.States.TraceNorm.Distance
 public import QIT.States.TraceNorm.Spectral
 public import QIT.States.TraceNorm.PositivePart
 public import QIT.States.TraceNorm.PositivePartBlock
 public import QIT.States.TraceNorm.Variational
-public import QIT.Information.Fidelity
-public import QIT.Information.FuchsVdG
+public import QIT.States.Geometry.Fidelity
+public import QIT.States.Geometry.FuchsVdG
 public import QIT.Information.Renyi
-public import QIT.Information.ConditionalRenyi
-public import QIT.Information.RenyiDPI
-public import QIT.Information.HypothesisTestingMutualInformation
-public import QIT.Information.Smooth
-public import QIT.Information.CQGuessing
+public import QIT.HypothesisTesting.MutualInformation
+public import QIT.OneShot.Smooth
+public import QIT.OneShot.CQGuessing
 
 /-!
 # Basic information quantities

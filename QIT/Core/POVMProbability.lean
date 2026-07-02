@@ -63,6 +63,17 @@ theorem sum_prob (M : POVM y a) (rho : State a) :
       rfl
     _ = 1 := by simpa using htrace_re
 
+/-- A single POVM outcome probability is at most one. -/
+theorem prob_le_one (M : POVM y a) (rho : State a) (outcome : y) :
+    (M.prob rho outcome : ℝ) ≤ 1 := by
+  have hle_nn :
+      M.prob rho outcome ≤ ∑ y, M.prob rho y :=
+    Finset.single_le_sum
+      (fun y _ => (show (0 : ℝ≥0) ≤ M.prob rho y from zero_le))
+      (Finset.mem_univ outcome)
+  rw [M.sum_prob rho] at hle_nn
+  exact_mod_cast hle_nn
+
 /-- The `NNReal` probability is the real part of the Born-rule trace formula. -/
 theorem prob_eq_trace_re (M : POVM y a) (rho : State a) (outcome : y) :
     (M.prob rho outcome : ℝ) =

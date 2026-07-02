@@ -6,8 +6,8 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Information.EntanglementAssisted
-public import QIT.Information.SymmetricSubspace
+public import QIT.Coding.EntanglementAssisted.EntanglementAssisted
+public import QIT.Symmetry.SymmetricSubspace
 
 /-!
 # Position-based coding

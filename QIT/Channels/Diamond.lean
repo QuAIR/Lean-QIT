@@ -7,7 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Core.Channel
-public import QIT.Core.SDP.HermitianPSDTraceDuality
+public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import QIT.States.TraceNorm.PositivePart
 public import QIT.States.TraceNorm.Variational
 public import QIT.Util.BlockMatrix
@@ -1432,6 +1432,44 @@ namespace Channel
 variable {a : Type u} {b : Type v} {r : Type w}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 variable [Fintype r] [DecidableEq r]
+
+/-- Channel form of tracing out the second tensor factor. -/
+def traceOutRight (a : Type u) (b : Type v)
+    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b] :
+    Channel (Prod a b) a where
+  map := MatrixMap.partialTraceB a b
+  completelyPositive :=
+    (MatrixMap.partialTraceB_traceNonincreasingCP (a := a) (b := b)).completelyPositive
+  tracePreserving := by
+    intro X
+    exact QIT.partialTraceB_trace (a := a) (b := b) X
+  mapsPositive :=
+    (MatrixMap.partialTraceB_traceNonincreasingCP (a := a) (b := b)).mapsPositive
+
+/-- Channel form of tracing out the first tensor factor. -/
+def traceOutLeft (a : Type u) (b : Type v)
+    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b] :
+    Channel (Prod a b) b where
+  map := MatrixMap.partialTraceA a b
+  completelyPositive :=
+    (MatrixMap.partialTraceA_traceNonincreasingCP (a := a) (b := b)).completelyPositive
+  tracePreserving := by
+    intro X
+    exact QIT.partialTraceA_trace (a := a) (b := b) X
+  mapsPositive :=
+    (MatrixMap.partialTraceA_traceNonincreasingCP (a := a) (b := b)).mapsPositive
+
+@[simp]
+theorem traceOutRight_applyState (ρ : State (Prod a b)) :
+    (traceOutRight a b).applyState ρ = ρ.marginalA := by
+  apply State.ext
+  rfl
+
+@[simp]
+theorem traceOutLeft_applyState (ρ : State (Prod a b)) :
+    (traceOutLeft a b).applyState ρ = ρ.marginalB := by
+  apply State.ext
+  rfl
 
 /-- The map underlying a CPTP channel is trace-nonincreasing CP. -/
 theorem traceNonincreasingCP_map (Φ : Channel a b) :

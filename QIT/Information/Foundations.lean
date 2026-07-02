@@ -6,27 +6,20 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Information.Entropy
-public import QIT.Information.EntropyTensorPower
-public import QIT.Information.Fidelity
-public import QIT.Information.FuchsVdG
+public import QIT.Information.Entropy.Entropy
+public import QIT.Information.Entropy.EntropyTensorPower
+public import QIT.States.Geometry.Fidelity
+public import QIT.States.Geometry.FuchsVdG
 public import QIT.Information.Renyi
-public import QIT.Information.RenyiDPI
-public import QIT.Information.ConditionalRenyi
-public import QIT.Information.ConditionalRenyiTraceBridge
-public import QIT.Information.CQGuessing
-public import QIT.Information.Smooth
-public import QIT.Information.SmoothEndpoint
-public import QIT.Information.Typicality
-public import QIT.Information.ConditionalTypicality
-public import QIT.Information.AEP
+public import QIT.OneShot.CQGuessing
+public import QIT.OneShot.Smooth
+public import QIT.OneShot.SmoothEndpoint
 
 /-!
 # Information foundations
 
-Low-conflict facade for entropy, fidelity, Rényi, smooth entropy, typicality,
-and AEP infrastructure.  This file intentionally preserves the existing flat
-module paths while giving downstream work a stable grouped import.
+Low-conflict facade for entropy, fidelity, Rényi, and smooth entropy
+infrastructure.
 -/
 
 @[expose] public section

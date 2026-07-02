@@ -7,7 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Util.Matrix
-public import QIT.Core.SDP.HermitianPSDTraceDuality
+public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import QIT.States.TraceNorm.PositivePartBlock
 public import Mathlib.Analysis.CStarAlgebra.Basic
 public import Mathlib.Analysis.CStarAlgebra.Matrix

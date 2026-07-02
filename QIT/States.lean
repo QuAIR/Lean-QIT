@@ -20,15 +20,17 @@ public import QIT.States.Purification.GramFactorization
 public import QIT.States.Purification.GramFacts
 public import QIT.States.Purification.PartialIsometry
 public import QIT.States.Purification.Predicate
+public import QIT.States.Purification.PureGeometry
 public import QIT.States.Purification.ReferenceExtension
 public import QIT.States.Purification.ReferenceIsometry
 public import QIT.States.Purification.ReferenceUnitary
+public import QIT.States.Purification.Schatten
 public import QIT.States.Purification.Uhlmann
 public import QIT.States.TraceNorm.Distance
 public import QIT.States.TraceNorm.PositivePart
 public import QIT.States.TraceNorm.Spectral
 public import QIT.States.TraceNorm.Variational
-public import QIT.Information.Fidelity
+public import QIT.States.Geometry
 
 /-!
 # State interfaces

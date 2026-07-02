@@ -8,7 +8,7 @@ module
 
 public import QIT.Security.ExtractorAnalytic
 public import QIT.States.TraceNorm.PositivePart
-public import QIT.Information.CQGuessing
+public import QIT.OneShot.CQGuessing
 
 /-!
 # Public-seed trace-distance bridge for extractors

@@ -467,7 +467,7 @@ theorem traceNorm_eq_max_unitary_abs_trace (M : CMatrix a) :
   ⟨traceNorm_variational_exists_unitary_abs_trace M,
     traceNorm_variational_unitary_abs_trace_le M⟩
 
-private theorem partialTraceA_mul_kronecker_one_right
+private theorem variational_partialTraceA_mul_kronecker_one_right
     {b : Type v} [Fintype b] (X : CMatrix (Prod a b)) (U : CMatrix b) :
     partialTraceA (a := a) (b := b) (X * Matrix.kronecker (1 : CMatrix a) U) =
       partialTraceA (a := a) (b := b) X * U := by
@@ -476,11 +476,11 @@ private theorem partialTraceA_mul_kronecker_one_right
     Matrix.one_apply, Fintype.sum_prod_type, Finset.sum_mul]
   rw [Finset.sum_comm]
 
-private theorem partialTraceA_mul_trace_eq_trace_mul_kronecker_one_right
+private theorem variational_partialTraceA_mul_trace_eq_trace_mul_kronecker_one_right
     {b : Type v} [Fintype b] (X : CMatrix (Prod a b)) (U : CMatrix b) :
     ((partialTraceA (a := a) (b := b) X) * U).trace =
       (X * Matrix.kronecker (1 : CMatrix a) U).trace := by
-  rw [← partialTraceA_mul_kronecker_one_right X U]
+  rw [← variational_partialTraceA_mul_kronecker_one_right X U]
   exact partialTraceA_trace (a := a) (b := b)
     (X * Matrix.kronecker (1 : CMatrix a) U)
 
@@ -567,7 +567,7 @@ theorem traceNorm_partialTraceA_le_matrix
     _ = Complex.abs ((X * (Ubig : CMatrix (Prod a b))).trace) := by
           congr 1
           simpa [Ubig] using
-            partialTraceA_mul_trace_eq_trace_mul_kronecker_one_right X
+            variational_partialTraceA_mul_trace_eq_trace_mul_kronecker_one_right X
               (U : CMatrix b)
     _ ≤ traceNorm X := traceNorm_variational_unitary_abs_trace_le X Ubig
 

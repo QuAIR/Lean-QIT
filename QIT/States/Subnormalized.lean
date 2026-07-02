@@ -9,7 +9,7 @@ module
 public import QIT.States.PosSqrt
 public import QIT.States.TraceNorm.Distance
 public import QIT.Channels.Diamond
-public import QIT.Information.Fidelity
+public import QIT.States.Geometry.Fidelity
 public import QIT.Util.BlockMatrix
 
 /-!

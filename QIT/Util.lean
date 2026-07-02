@@ -8,6 +8,7 @@ module
 
 public import QIT.Util.Matrix
 public import QIT.Util.BlockMatrix
+public import QIT.Util.RpowOperatorConvex
 
 /-!
 # QIT utilities

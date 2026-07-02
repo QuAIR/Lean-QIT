@@ -8,6 +8,7 @@ module
 
 public import QIT.States.PosSqrt
 public import Mathlib.Analysis.CStarAlgebra.Matrix
+public import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Order
 public import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.Rpow.Order
 
 /-!
@@ -50,12 +51,40 @@ order lemmas (`CFC.sqrt_le_sqrt`, operator monotonicity of `CFC.rpow`) apply to
 noncomputable instance instCMatrixNonUnitalCStarAlgebra (n : Type u)
     [Fintype n] [DecidableEq n] : NonUnitalCStarAlgebra (Matrix n n ℂ) := ⟨⟩
 
+noncomputable local instance instCMatrixCStarAlgebraForRpowOrder (n : Type u)
+    [Fintype n] [DecidableEq n] : CStarAlgebra (CMatrix n) := {}
+
 /-- Operator monotonicity of the square root: `A ≤ B` implies
 `psdSqrt A ≤ psdSqrt B`. -/
 theorem psdSqrt_le_psdSqrt_of_le {A B : CMatrix a} (hAB : A ≤ B) :
     psdSqrt A ≤ psdSqrt B := by
   show CFC.sqrt A ≤ CFC.sqrt B
   exact CFC.sqrt_le_sqrt _ _ hAB
+
+/-- Negative powers of positive definite matrices are antitone for exponents in `[0, 1]`.
+
+This packages the currently available CFC order route: inverse antitonicity
+followed by operator monotonicity of `x ↦ x^t` on `[0,1]`. -/
+theorem cMatrix_rpow_neg_le_rpow_neg_of_posDef_le {A B : CMatrix a}
+    (hA : A.PosDef) (hB : B.PosDef)
+    {t : ℝ} (ht0 : 0 ≤ t) (ht1 : t ≤ 1) (hAB : A ≤ B) :
+    CFC.rpow B (-t) ≤ CFC.rpow A (-t) := by
+  have htIcc : t ∈ Set.Icc (0 : ℝ) 1 := ⟨ht0, ht1⟩
+  have hinv : CFC.rpow B (-1 : ℝ) ≤ CFC.rpow A (-1 : ℝ) := by
+    exact CStarAlgebra.rpow_neg_one_le_rpow_neg_one
+      (a := A) (b := B) hAB hA.isStrictlyPositive
+  have hpow :
+      CFC.rpow (CFC.rpow B (-1 : ℝ)) t ≤
+        CFC.rpow (CFC.rpow A (-1 : ℝ)) t :=
+    CFC.rpow_le_rpow htIcc hinv
+  have hBpow :
+      CFC.rpow (CFC.rpow B (-1 : ℝ)) t = CFC.rpow B ((-1 : ℝ) * t) := by
+    exact CFC.rpow_rpow B (-1 : ℝ) t (by norm_num) hB.isStrictlyPositive
+  have hApow :
+      CFC.rpow (CFC.rpow A (-1 : ℝ)) t = CFC.rpow A ((-1 : ℝ) * t) := by
+    exact CFC.rpow_rpow A (-1 : ℝ) t (by norm_num) hA.isStrictlyPositive
+  rw [hBpow, hApow] at hpow
+  simpa [neg_mul, one_mul] using hpow
 
 /-- For a positive semidefinite matrix `S` with `S ≤ 1`, one has `S ≤ psdSqrt S`:
 in the eigenbasis of `S` (with eigenvalues `λ ∈ [0,1]`), `psdSqrt S - S` is the

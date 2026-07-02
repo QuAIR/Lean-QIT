@@ -6,20 +6,20 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Information.CQGuessing
-public import QIT.Information.Smooth
-public import QIT.Information.SmoothEndpoint
-public import QIT.Information.HypothesisTestingMutualInformation
-public import QIT.Information.ComparatorTest
-public import QIT.Information.HypothesisTestingDPI
-public import QIT.Information.HypothesisTestingPetzComparison
+public import QIT.OneShot.CQGuessing
+public import QIT.OneShot.Smooth
+public import QIT.OneShot.SmoothEndpoint
+public import QIT.HypothesisTesting.MutualInformation
+public import QIT.HypothesisTesting.ComparatorTest
+public import QIT.HypothesisTesting.DPI
+public import QIT.HypothesisTesting.PetzComparison
 
 /-!
-# One-shot information facade
+# Compatibility one-shot information facade
 
-Grouped import surface for smooth entropy, hypothesis-testing information, and
-one-shot comparison lemmas.  This facade is additive: existing module paths stay
-valid for active proof branches.
+Compatibility grouped import surface for downstream code that still imports the
+information-layer one-shot facade. New one-shot modules live under
+`QIT.OneShot.*`; use the top-level `QIT.OneShot` facade for new work.
 -/
 
 @[expose] public section

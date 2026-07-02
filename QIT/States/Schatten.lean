@@ -9,7 +9,12 @@ module
 public import QIT.States.PosSqrt
 public import Mathlib.Analysis.MeanInequalities
 public import Mathlib.Analysis.Convex.SpecificFunctions.Pow
+public import Mathlib.Analysis.SpecialFunctions.ExpDeriv
 public import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.Rpow.Basic
+public import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.Rpow.Isometric
+public import Mathlib.Analysis.CStarAlgebra.Matrix
+public import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Basic
+public import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Continuity
 public import Mathlib.LinearAlgebra.Lagrange
 
 /-!
@@ -307,11 +312,106 @@ omit [DecidableEq a] in
 theorem Supports.refl (M : CMatrix a) : Supports M M :=
   fun _ h => h
 
+omit [DecidableEq a] in
 /-- Support domination is transitive. -/
 theorem Supports.trans {M N P : CMatrix a}
     (hMN : Supports M N) (hNP : Supports N P) :
-    Supports M P :=
-  fun v hPv => hMN v (hNP v hPv)
+    Supports M P := by
+  intro v hv
+  exact hMN v (hNP v hv)
+
+/-- A positive-definite right-hand matrix supports every matrix: its kernel is
+zero. -/
+theorem Supports.of_right_posDef (M N : CMatrix a) (hN : N.PosDef) :
+    Supports M N := by
+  intro v hv
+  have hvzero : N.mulVec v = N.mulVec 0 := by
+    simpa using hv
+  have hv0 : v = 0 :=
+    (Matrix.mulVec_injective_of_isUnit hN.isUnit) hvzero
+  simp [hv0]
+
+omit [DecidableEq a] in
+/-- Support domination is closed under adding supported left-hand matrices. -/
+theorem Supports.add_left {M P N : CMatrix a}
+    (hM : Supports M N) (hP : Supports P N) :
+    Supports (M + P) N := by
+  intro v hv
+  simp [Matrix.add_mulVec, hM v hv, hP v hv]
+
+omit [DecidableEq a] in
+/-- Support domination is closed under scalar multiplication on the left. -/
+theorem Supports.smul_left {M N : CMatrix a} (c : ℂ)
+    (hM : Supports M N) :
+    Supports (c • M) N := by
+  intro v hv
+  simp [Matrix.smul_mulVec, hM v hv]
+
+omit [DecidableEq a] in
+/-- If multiplying on the right by `N` fixes `M`, then the right kernel of
+`N` is contained in the right kernel of `M`. -/
+theorem Supports.of_mul_right_eq_self {M N : CMatrix a}
+    (h : M * N = M) :
+    Supports M N := by
+  intro v hv
+  have hmul := congrArg (fun A : CMatrix a => Matrix.mulVec A v) h.symm
+  calc
+    Matrix.mulVec M v = Matrix.mulVec (M * N) v := by
+      simpa using hmul
+    _ = Matrix.mulVec M (Matrix.mulVec N v) := by
+      rw [Matrix.mulVec_mulVec]
+    _ = 0 := by
+      simp [hv]
+
+omit [DecidableEq a] in
+/-- A PSD summand is supported by the PSD sum. -/
+theorem Supports.left_of_posSemidef_add {M N : CMatrix a}
+    (hM : M.PosSemidef) (hN : N.PosSemidef) :
+    Supports M (M + N) := by
+  intro v hv
+  let qM : ℂ := dotProduct (star v) (Matrix.mulVec M v)
+  let qN : ℂ := dotProduct (star v) (Matrix.mulVec N v)
+  let f : Bool → ℂ := fun b => cond b qM qN
+  have hsum_zero : ∑ b : Bool, f b = 0 := by
+    have h := congrArg (fun w => dotProduct (star v) w) hv
+    simp [f, qM, qN, Matrix.add_mulVec, dotProduct_add] at h ⊢
+    exact h
+  have hnonneg : ∀ b ∈ (Finset.univ : Finset Bool), 0 ≤ f b := by
+    intro b _hb
+    cases b <;> simp [f, qM, qN, hM.dotProduct_mulVec_nonneg,
+      hN.dotProduct_mulVec_nonneg]
+  have hqM_zero : qM = 0 :=
+    (Finset.sum_eq_zero_iff_of_nonneg hnonneg).mp hsum_zero true
+      (Finset.mem_univ true)
+  exact (hM.dotProduct_mulVec_zero_iff v).mp hqM_zero
+
+omit [DecidableEq a] in
+/-- A PSD summand is supported by the PSD sum, right-hand version. -/
+theorem Supports.right_of_posSemidef_add {M N : CMatrix a}
+    (hM : M.PosSemidef) (hN : N.PosSemidef) :
+    Supports N (M + N) := by
+  simpa [add_comm] using
+    (Supports.left_of_posSemidef_add (M := N) (N := M) hN hM)
+
+omit [DecidableEq a] in
+/-- A PSD matrix is supported by any sum containing a positive scalar multiple
+of itself as a PSD summand. -/
+theorem Supports.of_pos_smul_right_add {M N : CMatrix a}
+    (hM : M.PosSemidef) (hN : N.PosSemidef) {ε : ℝ} (hε : 0 < ε) :
+    Supports M (N + ε • M) := by
+  have hscaled :
+      Supports ((ε : ℝ) • M) (N + ε • M) := by
+    simpa using
+      (Supports.right_of_posSemidef_add
+        (M := N) (N := ((ε : ℝ) • M)) hN
+        (Matrix.PosSemidef.smul hM (le_of_lt hε)))
+  intro v hv
+  have hscaled_zero := hscaled v hv
+  have hεC : ε ≠ 0 := ne_of_gt hε
+  have hmul :
+      ε • Matrix.mulVec M v = 0 := by
+    simpa [Matrix.smul_mulVec] using hscaled_zero
+  exact smul_eq_zero.mp hmul |>.resolve_left hεC
 
 /-- Entrywise support domination for real diagonal matrices. -/
 theorem Supports.diagonal_of_real_zero_imp_zero {d e : a → ℝ}
@@ -329,6 +429,97 @@ theorem Supports.diagonal_of_real_zero_imp_zero {d e : a → ℝ}
     have hvi : v i = 0 := by
       simpa [Matrix.mulVec, dotProduct, Matrix.diagonal, heC] using hi
     simp [Matrix.mulVec, dotProduct, Matrix.diagonal, hvi]
+
+variable {r : Type v} [Fintype r] [DecidableEq r]
+
+/-- Rectangular isometry conjugation only adds zero eigenvalues.
+
+This charpoly identity is the finite-dimensional spectral bridge needed when a
+positive matrix is embedded as `V A Vᴴ` with `Vᴴ V = I`.  Downstream
+power-trace invariance lemmas can combine it with the Hermitian eigenvalue
+API; the proof itself is just Mathlib's rectangular `AB`/`BA` characteristic
+polynomial identity. -/
+theorem charpoly_isometry_conj
+    (V : Matrix r a ℂ) (A : CMatrix a)
+    (hV : Matrix.conjTranspose V * V = (1 : CMatrix a)) :
+    Polynomial.X ^ Fintype.card a *
+        (V * A * Matrix.conjTranspose V).charpoly =
+      Polynomial.X ^ Fintype.card r * A.charpoly := by
+  have h :=
+    Matrix.charpoly_mul_comm' (A := V * A) (B := Matrix.conjTranspose V)
+  have hleft : (V * A) * Matrix.conjTranspose V =
+      V * A * Matrix.conjTranspose V := by
+    simp [Matrix.mul_assoc]
+  have hright : Matrix.conjTranspose V * (V * A) = A := by
+    calc
+      Matrix.conjTranspose V * (V * A) =
+          (Matrix.conjTranspose V * V) * A := by
+            rw [Matrix.mul_assoc]
+      _ = (1 : CMatrix a) * A := by rw [hV]
+      _ = A := by simp
+  rw [hleft, hright] at h
+  exact h
+
+/-- The zero roots contributed by powers of `X` do not affect sums of positive
+real powers of real parts. -/
+theorem roots_X_pow_map_re_rpow_sum_zero (n : ℕ) {p : ℝ} (hp : 0 < p) :
+    ((Polynomial.X ^ n : ℂ[X]).roots.map (fun z : ℂ => z.re ^ p)).sum = 0 := by
+  rw [Polynomial.roots_X_pow, Multiset.map_nsmul, Multiset.sum_nsmul,
+    Multiset.map_singleton, Multiset.sum_singleton]
+  have hz : Complex.re 0 ^ p = (0 : ℝ) := by
+    simpa using Real.zero_rpow (ne_of_gt hp)
+  rw [hz]
+  simp
+
+/-- If two characteristic-polynomial identities differ only by powers of `X`,
+then the positive real-power sums over their nonzero roots agree.
+
+This is the root-level handoff for rectangular isometry embeddings: the
+extra roots produced by `V A Vᴴ` are zeros, and positive powers kill them. -/
+theorem roots_re_rpow_sum_eq_of_X_pow_mul_eq
+    {P Q : ℂ[X]} {m n : ℕ} {p : ℝ} (hp : 0 < p)
+    (hP : P ≠ 0) (hQ : Q ≠ 0)
+    (h : Polynomial.X ^ m * P = Polynomial.X ^ n * Q) :
+    (P.roots.map (fun z : ℂ => z.re ^ p)).sum =
+      (Q.roots.map (fun z : ℂ => z.re ^ p)).sum := by
+  have hXm : (Polynomial.X ^ m : ℂ[X]) ≠ 0 := by simp
+  have hXn : (Polynomial.X ^ n : ℂ[X]) ≠ 0 := by simp
+  have hleft_ne : (Polynomial.X ^ m : ℂ[X]) * P ≠ 0 := mul_ne_zero hXm hP
+  have hright_ne : (Polynomial.X ^ n : ℂ[X]) * Q ≠ 0 := mul_ne_zero hXn hQ
+  have hroots := congrArg Polynomial.roots h
+  rw [Polynomial.roots_mul hleft_ne, Polynomial.roots_mul hright_ne] at hroots
+  have hsum :=
+    congrArg (fun s : Multiset ℂ => (s.map (fun z : ℂ => z.re ^ p)).sum) hroots
+  simp only [Multiset.map_add, Multiset.sum_add] at hsum
+  rw [roots_X_pow_map_re_rpow_sum_zero m hp,
+    roots_X_pow_map_re_rpow_sum_zero n hp] at hsum
+  simpa using hsum
+
+/-- Rectangular isometry conjugation as a non-unital star algebra homomorphism.
+
+This is the right algebraic object for non-unital continuous functional
+calculus: `X ↦ V X Vᴴ` preserves products and stars whenever `Vᴴ V = I`, but
+it does not preserve the unit unless `V` is square unitary. -/
+noncomputable def isometryConjNonUnitalStarAlgHom
+    (V : Matrix r a ℂ) (hV : Matrix.conjTranspose V * V = (1 : CMatrix a)) :
+    CMatrix a →⋆ₙₐ[ℂ] CMatrix r where
+  toFun A := V * A * Matrix.conjTranspose V
+  map_zero' := by simp
+  map_add' A B := by simp [Matrix.mul_add, Matrix.add_mul]
+  map_mul' A B := by
+    calc
+      V * (A * B) * Matrix.conjTranspose V =
+          V * A * (Matrix.conjTranspose V * V) * B * Matrix.conjTranspose V := by
+            rw [hV]
+            simp [Matrix.mul_assoc]
+      _ = (V * A * Matrix.conjTranspose V) *
+            (V * B * Matrix.conjTranspose V) := by
+            simp [Matrix.mul_assoc]
+  map_smul' c A := by
+    ext i j
+    simp [Matrix.mul_apply, Finset.mul_sum, Finset.sum_mul, mul_assoc]
+  map_star' A := by
+    simp [Matrix.star_eq_conjTranspose, Matrix.conjTranspose_mul, Matrix.mul_assoc]
 
 /-- Support domination is invariant under simultaneous unitary conjugation. -/
 theorem Supports.unitary_conj {M N : CMatrix a} (h : Supports M N)
@@ -408,6 +599,57 @@ theorem posSemidef_diagonal_re_nonneg {B : CMatrix a} (hB : B.PosSemidef) (i : a
   rw [posSemidef_diagonal_re_eq_eigenvalue_weighted_sum hB i]
   exact Finset.sum_nonneg fun j _ =>
     mul_nonneg (hB.eigenvalues_nonneg j) (Complex.normSq_nonneg _)
+
+/-- A PSD matrix with a zero diagonal entry has the corresponding row and
+column equal to zero. This is the finite-dimensional kernel fact used when a
+supported input is moved into the spectral basis of a singular reference. -/
+theorem posSemidef_zero_diag_zero_row_col
+    {A : CMatrix a} (hA : A.PosSemidef) {i : a} (hii : A i i = 0) (j : a) :
+    A i j = 0 ∧ A j i = 0 := by
+  classical
+  set e : a → ℂ := Pi.single i 1 with he
+  have hei : e i = (1 : ℂ) := by
+    rw [he, Pi.single_apply, if_pos rfl]
+  have hek : ∀ k, k ≠ i → e k = 0 := fun k hk => by
+    rw [he, Pi.single_apply, if_neg hk]
+  have hmulVec : Matrix.mulVec A e = fun k => A k i := by
+    ext k
+    rw [Matrix.mulVec, dotProduct, Finset.sum_eq_single i]
+    · simp [hei]
+    · intro m _ hm
+      simp [hek m hm]
+    · simp [hei]
+  have hform : dotProduct (star e) (Matrix.mulVec A e) = A i i := by
+    rw [hmulVec, dotProduct, Finset.sum_eq_single i]
+    · simp [hei]
+    · intro k _ hk
+      simp [hek k hk]
+    · simp [hei]
+  have hcol : Matrix.mulVec A e = 0 :=
+    (hA.dotProduct_mulVec_zero_iff e).mp (by rw [hform, hii])
+  have hji : A j i = 0 := by
+    have h1 : (fun k => A k i) j = 0 := by
+      rw [← hmulVec, hcol]
+      simp
+    exact h1
+  refine ⟨?_, hji⟩
+  have hherm : star A = A := hA.isHermitian.eq
+  have hij : A i j = star (A j i) := by
+    rw [show A i j = star A i j from by rw [hherm], Matrix.star_apply A i j]
+  rw [hij, hji, star_zero]
+
+/-- Real zero diagonal form of `posSemidef_zero_diag_zero_row_col`. -/
+theorem posSemidef_zero_diag_re_zero_row_col
+    {A : CMatrix a} (hA : A.PosSemidef) {i : a}
+    (hii : (A i i).re = 0) (j : a) :
+    A i j = 0 ∧ A j i = 0 := by
+  have hdiag_nonneg : 0 ≤ A i i := Matrix.PosSemidef.diag_nonneg hA (i := i)
+  have hdiag_im : (A i i).im = 0 := (Complex.nonneg_iff.mp hdiag_nonneg).2.symm
+  have hdiag : A i i = 0 := by
+    apply Complex.ext
+    · simpa using hii
+    · simpa using hdiag_im
+  exact posSemidef_zero_diag_zero_row_col hA hdiag j
 
 /-- Trace pairing with a PSD left factor, expanded in that factor's eigenbasis. -/
 theorem posSemidef_trace_mul_eq_eigenvalue_conjugate_diag_sum
@@ -827,6 +1069,573 @@ theorem cMatrix_rpow_eq_eigenbasis_diagonal
   rw [hA.isHermitian.cfc_eq]
   simp [Matrix.IsHermitian.cfc, Unitary.conjStarAlgAut_apply, Function.comp_def]
 
+/-- Finite-dimensional complex powers of a positive-definite matrix, expressed
+in its spectral basis.
+
+This is the matrix-valued analytic family needed for Riesz-Thorin style
+interpolation. The real-axis compatibility theorem below connects it back to
+the repository's existing `CFC.rpow` API. -/
+def cMatrixPosDefComplexPower
+    (A : CMatrix a) (hA : A.PosDef) (z : ℂ) : CMatrix a :=
+  (hA.posSemidef.isHermitian.eigenvectorUnitary : CMatrix a) *
+    Matrix.diagonal
+      (fun i =>
+        Complex.exp (z * ((Real.log (hA.posSemidef.isHermitian.eigenvalues i) : ℝ) : ℂ))) *
+      star (hA.posSemidef.isHermitian.eigenvectorUnitary : CMatrix a)
+
+/-- The positive-definite complex-power path is complex differentiable as a
+matrix-valued function. -/
+theorem cMatrixPosDefComplexPower_differentiable
+    {A : CMatrix a} (hA : A.PosDef) :
+    Differentiable ℂ (fun z : ℂ => cMatrixPosDefComplexPower A hA z) := by
+  let U : Matrix.unitaryGroup a ℂ := hA.posSemidef.isHermitian.eigenvectorUnitary
+  let D : ℂ → CMatrix a := fun z =>
+    Matrix.diagonal
+      (fun i =>
+        Complex.exp (z * ((Real.log (hA.posSemidef.isHermitian.eigenvalues i) : ℝ) : ℂ)))
+  have hD : Differentiable ℂ D := by
+    apply differentiable_pi.2
+    intro i
+    apply differentiable_pi.2
+    intro j
+    by_cases hij : i = j
+    · subst j
+      simp [D, Matrix.diagonal]
+    · simp [D, Matrix.diagonal, hij]
+  change Differentiable ℂ fun z : ℂ => (U : CMatrix a) * D z * star (U : CMatrix a)
+  have hD_entry (r c : a) : Differentiable ℂ fun z : ℂ => D z r c := by
+    exact differentiable_pi.mp (differentiable_pi.mp hD r) c
+  apply differentiable_pi.2
+  intro i
+  apply differentiable_pi.2
+  intro j
+  simp only [Matrix.mul_apply]
+  have houter' : Differentiable ℂ
+      (∑ x, fun z : ℂ => (∑ y, (U : CMatrix a) i y * D z y x) *
+        star (U : CMatrix a) x j) :=
+    Differentiable.sum (u := Finset.univ)
+      (A := fun x z => (∑ y, (U : CMatrix a) i y * D z y x) *
+        star (U : CMatrix a) x j)
+      (fun x _ => by
+        have hinner' : Differentiable ℂ
+            (∑ y, fun z : ℂ => (U : CMatrix a) i y * D z y x) :=
+          Differentiable.sum (u := Finset.univ)
+            (A := fun y z => (U : CMatrix a) i y * D z y x)
+            (fun y _ => (hD_entry y x).const_mul ((U : CMatrix a) i y))
+        have hinner : Differentiable ℂ fun z : ℂ =>
+            ∑ y, (U : CMatrix a) i y * D z y x := by
+          convert hinner' using 1
+          ext z
+          simp
+        exact hinner.mul_const (star (U : CMatrix a) x j))
+  convert houter' using 1
+  ext z
+  simp
+
+/-- Positive-definite complex powers are differentiable along every complex
+affine path `z ↦ m * z + c`.
+
+This avoids instance ambiguity when composing matrix-valued complex powers with
+scalar affine maps in downstream interpolation proofs. -/
+theorem cMatrixPosDefComplexPower_affine_differentiable
+    {A : CMatrix a} (hA : A.PosDef) (m c : ℂ) :
+    Differentiable ℂ fun z : ℂ => cMatrixPosDefComplexPower A hA (m * z + c) := by
+  let U : Matrix.unitaryGroup a ℂ := hA.posSemidef.isHermitian.eigenvectorUnitary
+  let D : ℂ → CMatrix a := fun z =>
+    Matrix.diagonal
+      (fun i =>
+        Complex.exp
+          ((m * z + c) *
+            ((Real.log (hA.posSemidef.isHermitian.eigenvalues i) : ℝ) : ℂ)))
+  have hD : Differentiable ℂ D := by
+    apply differentiable_pi.2
+    intro i
+    apply differentiable_pi.2
+    intro j
+    by_cases hij : i = j
+    · subst j
+      simp [D, Matrix.diagonal]
+      fun_prop
+    · simp [D, Matrix.diagonal, hij]
+  change Differentiable ℂ fun z : ℂ => (U : CMatrix a) * D z * star (U : CMatrix a)
+  have hD_entry (r c' : a) : Differentiable ℂ fun z : ℂ => D z r c' := by
+    exact differentiable_pi.mp (differentiable_pi.mp hD r) c'
+  apply differentiable_pi.2
+  intro i
+  apply differentiable_pi.2
+  intro j
+  simp only [Matrix.mul_apply]
+  have houter' : Differentiable ℂ
+      (∑ x, fun z : ℂ => (∑ y, (U : CMatrix a) i y * D z y x) *
+        star (U : CMatrix a) x j) :=
+    Differentiable.sum (u := Finset.univ)
+      (A := fun x z => (∑ y, (U : CMatrix a) i y * D z y x) *
+        star (U : CMatrix a) x j)
+      (fun x _ => by
+        have hinner' : Differentiable ℂ
+            (∑ y, fun z : ℂ => (U : CMatrix a) i y * D z y x) :=
+          Differentiable.sum (u := Finset.univ)
+            (A := fun y z => (U : CMatrix a) i y * D z y x)
+            (fun y _ => (hD_entry y x).const_mul ((U : CMatrix a) i y))
+        have hinner : Differentiable ℂ fun z : ℂ =>
+            ∑ y, (U : CMatrix a) i y * D z y x := by
+          convert hinner' using 1
+          ext z
+          simp
+        exact hinner.mul_const (star (U : CMatrix a) x j))
+  convert houter' using 1
+  ext z
+  simp
+
+/-- On real exponents, the spectral complex-power family is exactly
+`CFC.rpow`. -/
+theorem cMatrixPosDefComplexPower_ofReal
+    {A : CMatrix a} (hA : A.PosDef) (s : ℝ) :
+    cMatrixPosDefComplexPower A hA (s : ℂ) = CFC.rpow A s := by
+  unfold cMatrixPosDefComplexPower
+  rw [cMatrix_rpow_eq_eigenbasis_diagonal hA.posSemidef s]
+  have hdiag :
+      Matrix.diagonal
+          (fun i =>
+            Complex.exp
+              ((s : ℂ) *
+                ((Real.log (hA.posSemidef.isHermitian.eigenvalues i) : ℝ) : ℂ))) =
+        Matrix.diagonal
+          (fun i => ((hA.posSemidef.isHermitian.eigenvalues i ^ s : ℝ) : ℂ)) := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      have hpos : 0 < hA.posSemidef.isHermitian.eigenvalues i := hA.eigenvalues_pos i
+      have harg :
+          (s : ℂ) * ((Real.log (hA.posSemidef.isHermitian.eigenvalues i) : ℝ) : ℂ) =
+            ((Real.log (hA.posSemidef.isHermitian.eigenvalues i) * s : ℝ) : ℂ) := by
+        norm_num [mul_comm]
+      simp [Matrix.diagonal, harg, Real.rpow_def_of_pos hpos, Complex.ofReal_exp]
+    · simp [Matrix.diagonal, hij]
+  rw [hdiag]
+
+/-- Positive-definite complex powers multiply by adding exponents.
+
+This is the source-aligned algebraic rule needed to factor the Beigi endpoint
+weighted map into imaginary unitary rotations and the real unital CP endpoint.
+-/
+theorem cMatrixPosDefComplexPower_add
+    {A : CMatrix a} (hA : A.PosDef) (z w : ℂ) :
+    cMatrixPosDefComplexPower A hA z *
+        cMatrixPosDefComplexPower A hA w =
+      cMatrixPosDefComplexPower A hA (z + w) := by
+  let U : Matrix.unitaryGroup a ℂ := hA.posSemidef.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := hA.posSemidef.isHermitian.eigenvalues
+  let Z : CMatrix a :=
+    Matrix.diagonal
+      (fun i => Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)))
+  let W : CMatrix a :=
+    Matrix.diagonal
+      (fun i => Complex.exp (w * ((Real.log (d i) : ℝ) : ℂ)))
+  let ZW : CMatrix a :=
+    Matrix.diagonal
+      (fun i => Complex.exp ((z + w) * ((Real.log (d i) : ℝ) : ℂ)))
+  have hdiag : Z * W = ZW := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      have harg :
+          z * ((Real.log (d i) : ℝ) : ℂ) +
+              w * ((Real.log (d i) : ℝ) : ℂ) =
+            (z + w) * ((Real.log (d i) : ℝ) : ℂ) := by ring
+      have hmul :
+          Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)) *
+              Complex.exp (w * ((Real.log (d i) : ℝ) : ℂ)) =
+            Complex.exp ((z + w) * ((Real.log (d i) : ℝ) : ℂ)) := by
+        rw [← Complex.exp_add, harg]
+      simpa [Z, W, ZW, Matrix.mul_apply, Matrix.diagonal] using hmul
+    · simp [Z, W, ZW, Matrix.mul_apply, Matrix.diagonal, hij]
+  have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 :=
+    Unitary.coe_star_mul_self U
+  change ((U : CMatrix a) * Z * star (U : CMatrix a)) *
+      ((U : CMatrix a) * W * star (U : CMatrix a)) =
+    (U : CMatrix a) * ZW * star (U : CMatrix a)
+  calc
+    ((U : CMatrix a) * Z * star (U : CMatrix a)) *
+        ((U : CMatrix a) * W * star (U : CMatrix a)) =
+        (U : CMatrix a) * (Z * W) * star (U : CMatrix a) := by
+          calc
+            ((U : CMatrix a) * Z * star (U : CMatrix a)) *
+                ((U : CMatrix a) * W * star (U : CMatrix a)) =
+                (U : CMatrix a) * Z * (star (U : CMatrix a) *
+                  (U : CMatrix a)) * W * star (U : CMatrix a) := by
+                    noncomm_ring
+            _ = (U : CMatrix a) * Z * 1 * W * star (U : CMatrix a) := by
+                  rw [hUstarU]
+            _ = (U : CMatrix a) * (Z * W) * star (U : CMatrix a) := by
+                  simp [Matrix.mul_assoc]
+    _ = (U : CMatrix a) * ZW * star (U : CMatrix a) := by rw [hdiag]
+
+/-- Complex powers satisfy the boundary identity
+`(A^z)ᴴ A^z = A^(2 Re z)` for positive-definite matrices.
+
+This is the finite-dimensional matrix-power endpoint used by the
+Riesz-Thorin interpolation route. -/
+theorem cMatrixPosDefComplexPower_star_mul_self
+    {A : CMatrix a} (hA : A.PosDef) (z : ℂ) :
+    star (cMatrixPosDefComplexPower A hA z) *
+        cMatrixPosDefComplexPower A hA z =
+      CFC.rpow A (2 * z.re) := by
+  let U : Matrix.unitaryGroup a ℂ := hA.posSemidef.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := hA.posSemidef.isHermitian.eigenvalues
+  let D : CMatrix a :=
+    Matrix.diagonal
+      (fun i => Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)))
+  have hDpow :
+      star D * D =
+        Matrix.diagonal (fun i => ((d i ^ (2 * z.re) : ℝ) : ℂ)) := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      have hpos : 0 < d i := hA.eigenvalues_pos i
+      have harg_re : (z * ((Real.log (d i) : ℝ) : ℂ)).re = z.re * Real.log (d i) := by
+        simp [Complex.mul_re]
+      have hnormSq :
+          Complex.normSq (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ))) =
+            d i ^ (2 * z.re) := by
+        rw [Complex.normSq_eq_norm_sq, Complex.norm_exp, harg_re]
+        calc
+          (Real.exp (z.re * Real.log (d i))) ^ 2 =
+              Real.exp (Real.log (d i) * (2 * z.re)) := by
+                rw [sq, ← Real.exp_add]
+                congr 1
+                ring
+          _ = d i ^ (2 * z.re) := by
+                rw [Real.rpow_def_of_pos hpos]
+      have hstar_mul :
+          (starRingEnd ℂ) (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ))) *
+              Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)) =
+            ((d i ^ (2 * z.re) : ℝ) : ℂ) := by
+        rw [← Complex.normSq_eq_conj_mul_self]
+        exact_mod_cast hnormSq
+      simpa [D, Matrix.mul_apply, Matrix.diagonal, Matrix.conjTranspose_apply] using hstar_mul
+    · have hji : ¬ j = i := fun h => hij h.symm
+      simp [D, Matrix.mul_apply, Matrix.diagonal, hij, hji]
+  have hUct : Matrix.conjTranspose (U : CMatrix a) = star (U : CMatrix a) := by
+    rw [← Matrix.star_eq_conjTranspose]
+  have hstarUct : Matrix.conjTranspose (star (U : CMatrix a)) = (U : CMatrix a) := by
+    rw [← Matrix.star_eq_conjTranspose, star_star]
+  have hDct : Matrix.conjTranspose D = star D := by
+    rw [← Matrix.star_eq_conjTranspose]
+  have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 :=
+    Unitary.coe_star_mul_self U
+  change Matrix.conjTranspose ((U : CMatrix a) * D * star (U : CMatrix a)) *
+      ((U : CMatrix a) * D * star (U : CMatrix a)) = CFC.rpow A (2 * z.re)
+  calc
+    Matrix.conjTranspose ((U : CMatrix a) * D * star (U : CMatrix a)) *
+        ((U : CMatrix a) * D * star (U : CMatrix a)) =
+        (U : CMatrix a) * (star D * D) * star (U : CMatrix a) := by
+          rw [Matrix.conjTranspose_mul, Matrix.conjTranspose_mul]
+          rw [hstarUct, hDct, hUct]
+          have hcollapse :
+              star (U : CMatrix a) *
+                  ((U : CMatrix a) * (D * star (U : CMatrix a))) =
+                D * star (U : CMatrix a) := by
+            calc
+              star (U : CMatrix a) *
+                  ((U : CMatrix a) * (D * star (U : CMatrix a))) =
+                  (star (U : CMatrix a) * (U : CMatrix a)) *
+                    (D * star (U : CMatrix a)) := by
+                    rw [Matrix.mul_assoc]
+              _ = 1 * (D * star (U : CMatrix a)) := by rw [hUstarU]
+              _ = D * star (U : CMatrix a) := by rw [Matrix.one_mul]
+          calc
+            (U : CMatrix a) * (star D * star (U : CMatrix a)) *
+                ((U : CMatrix a) * D * star (U : CMatrix a)) =
+                (U : CMatrix a) * star D *
+                  (star (U : CMatrix a) *
+                    ((U : CMatrix a) * (D * star (U : CMatrix a)))) := by
+                  noncomm_ring
+            _ = (U : CMatrix a) * star D * (D * star (U : CMatrix a)) := by
+                  rw [hcollapse]
+            _ = (U : CMatrix a) * (star D * D) * star (U : CMatrix a) := by
+                  noncomm_ring
+    _ = (U : CMatrix a) *
+          Matrix.diagonal (fun i => ((d i ^ (2 * z.re) : ℝ) : ℂ)) *
+            star (U : CMatrix a) := by rw [hDpow]
+    _ = CFC.rpow A (2 * z.re) := by
+          rw [cMatrix_rpow_eq_eigenbasis_diagonal hA.posSemidef (2 * z.re)]
+
+/-- Positive-definite complex powers are normal; the opposite boundary product
+also reduces to the real power `A^(2 Re z)`.
+
+This is the companion endpoint to
+`cMatrixPosDefComplexPower_star_mul_self` and is needed when the interpolation
+family is used on the Schrödinger side of a trace pairing. -/
+theorem cMatrixPosDefComplexPower_mul_star_self
+    {A : CMatrix a} (hA : A.PosDef) (z : ℂ) :
+    cMatrixPosDefComplexPower A hA z *
+        star (cMatrixPosDefComplexPower A hA z) =
+      CFC.rpow A (2 * z.re) := by
+  let U : Matrix.unitaryGroup a ℂ := hA.posSemidef.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := hA.posSemidef.isHermitian.eigenvalues
+  let D : CMatrix a :=
+    Matrix.diagonal
+      (fun i => Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)))
+  have hDpow :
+      D * star D =
+        Matrix.diagonal (fun i => ((d i ^ (2 * z.re) : ℝ) : ℂ)) := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      have hpos : 0 < d i := hA.eigenvalues_pos i
+      have harg_re : (z * ((Real.log (d i) : ℝ) : ℂ)).re = z.re * Real.log (d i) := by
+        simp [Complex.mul_re]
+      have hnormSq :
+          Complex.normSq (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ))) =
+            d i ^ (2 * z.re) := by
+        rw [Complex.normSq_eq_norm_sq, Complex.norm_exp, harg_re]
+        calc
+          (Real.exp (z.re * Real.log (d i))) ^ 2 =
+              Real.exp (Real.log (d i) * (2 * z.re)) := by
+                rw [sq, ← Real.exp_add]
+                congr 1
+                ring
+          _ = d i ^ (2 * z.re) := by
+                rw [Real.rpow_def_of_pos hpos]
+      have hstar_mul :
+          (starRingEnd ℂ) (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ))) *
+              Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)) =
+            ((d i ^ (2 * z.re) : ℝ) : ℂ) := by
+        rw [← Complex.normSq_eq_conj_mul_self]
+        exact_mod_cast hnormSq
+      simpa [D, Matrix.mul_apply, Matrix.diagonal, Matrix.conjTranspose_apply, mul_comm]
+        using hstar_mul
+    · have hji : ¬ j = i := fun h => hij h.symm
+      simp [D, Matrix.mul_apply, Matrix.diagonal, hij, hji]
+  have hUct : Matrix.conjTranspose (U : CMatrix a) = star (U : CMatrix a) := by
+    rw [← Matrix.star_eq_conjTranspose]
+  have hstarUct : Matrix.conjTranspose (star (U : CMatrix a)) = (U : CMatrix a) := by
+    rw [← Matrix.star_eq_conjTranspose, star_star]
+  have hDct : Matrix.conjTranspose D = star D := by
+    rw [← Matrix.star_eq_conjTranspose]
+  have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 :=
+    Unitary.coe_star_mul_self U
+  change ((U : CMatrix a) * D * star (U : CMatrix a)) *
+      Matrix.conjTranspose ((U : CMatrix a) * D * star (U : CMatrix a)) =
+    CFC.rpow A (2 * z.re)
+  calc
+    ((U : CMatrix a) * D * star (U : CMatrix a)) *
+        Matrix.conjTranspose ((U : CMatrix a) * D * star (U : CMatrix a)) =
+        (U : CMatrix a) * (D * star D) * star (U : CMatrix a) := by
+          rw [Matrix.conjTranspose_mul, Matrix.conjTranspose_mul]
+          rw [hstarUct, hDct, hUct]
+          have hcollapse :
+              star (U : CMatrix a) *
+                  ((U : CMatrix a) * (star D * star (U : CMatrix a))) =
+                star D * star (U : CMatrix a) := by
+            calc
+              star (U : CMatrix a) *
+                  ((U : CMatrix a) * (star D * star (U : CMatrix a))) =
+                  (star (U : CMatrix a) * (U : CMatrix a)) *
+                    (star D * star (U : CMatrix a)) := by
+                    rw [Matrix.mul_assoc]
+              _ = 1 * (star D * star (U : CMatrix a)) := by rw [hUstarU]
+              _ = star D * star (U : CMatrix a) := by rw [Matrix.one_mul]
+          calc
+            ((U : CMatrix a) * D * star (U : CMatrix a)) *
+                ((U : CMatrix a) * (star D * star (U : CMatrix a))) =
+                (U : CMatrix a) * D *
+                  (star (U : CMatrix a) *
+                    ((U : CMatrix a) * (star D * star (U : CMatrix a)))) := by
+                  noncomm_ring
+            _ = (U : CMatrix a) * D * (star D * star (U : CMatrix a)) := by
+                  rw [hcollapse]
+            _ = (U : CMatrix a) * (D * star D) * star (U : CMatrix a) := by
+                  noncomm_ring
+    _ = (U : CMatrix a) *
+          Matrix.diagonal (fun i => ((d i ^ (2 * z.re) : ℝ) : ℂ)) *
+            star (U : CMatrix a) := by rw [hDpow]
+    _ = CFC.rpow A (2 * z.re) := by
+          rw [cMatrix_rpow_eq_eigenbasis_diagonal hA.posSemidef (2 * z.re)]
+
+/-- Complex powers sandwich real powers by adding twice the real part of the
+complex exponent:
+`A^z A^t (A^z)ᴴ = A^(t + 2 Re z)`.
+
+This finite-dimensional identity is the algebraic spine of the strip
+interpolation family used for sandwiched Renyi DPI. -/
+theorem cMatrixPosDefComplexPower_mul_rpow_mul_star
+    {A : CMatrix a} (hA : A.PosDef) (z : ℂ) (t : ℝ) :
+    cMatrixPosDefComplexPower A hA z * CFC.rpow A t *
+        star (cMatrixPosDefComplexPower A hA z) =
+      CFC.rpow A (t + 2 * z.re) := by
+  let U : Matrix.unitaryGroup a ℂ := hA.posSemidef.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := hA.posSemidef.isHermitian.eigenvalues
+  let Z : CMatrix a :=
+    Matrix.diagonal
+      (fun i => Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)))
+  let R : CMatrix a := Matrix.diagonal (fun i => ((d i ^ t : ℝ) : ℂ))
+  have hdiag :
+      Z * R * star Z =
+        Matrix.diagonal (fun i => ((d i ^ (t + 2 * z.re) : ℝ) : ℂ)) := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      have hpos : 0 < d i := hA.eigenvalues_pos i
+      have harg_re : (z * ((Real.log (d i) : ℝ) : ℂ)).re = z.re * Real.log (d i) := by
+        simp [Complex.mul_re]
+      have hnormSq :
+          Complex.normSq (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ))) =
+            d i ^ (2 * z.re) := by
+        rw [Complex.normSq_eq_norm_sq, Complex.norm_exp, harg_re]
+        calc
+          (Real.exp (z.re * Real.log (d i))) ^ 2 =
+              Real.exp (Real.log (d i) * (2 * z.re)) := by
+                rw [sq, ← Real.exp_add]
+                congr 1
+                ring
+          _ = d i ^ (2 * z.re) := by
+                rw [Real.rpow_def_of_pos hpos]
+      have hstar_mul :
+          (starRingEnd ℂ) (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ))) *
+              Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)) =
+            ((d i ^ (2 * z.re) : ℝ) : ℂ) := by
+        rw [← Complex.normSq_eq_conj_mul_self]
+        exact_mod_cast hnormSq
+      have hmul :
+          Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)) *
+              ((d i ^ t : ℝ) : ℂ) *
+              (starRingEnd ℂ)
+                (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ))) =
+            ((d i ^ (t + 2 * z.re) : ℝ) : ℂ) := by
+        calc
+          Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)) *
+              ((d i ^ t : ℝ) : ℂ) *
+              (starRingEnd ℂ)
+                (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ))) =
+              ((d i ^ t : ℝ) : ℂ) *
+                (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)) *
+                  (starRingEnd ℂ)
+                    (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)))) := by
+                ring
+          _ = ((d i ^ t : ℝ) : ℂ) * ((d i ^ (2 * z.re) : ℝ) : ℂ) := by
+                rw [mul_comm
+                  (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)))
+                  ((starRingEnd ℂ)
+                    (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ))))]
+                rw [hstar_mul]
+          _ = ((d i ^ t * d i ^ (2 * z.re) : ℝ) : ℂ) := by norm_num
+          _ = ((d i ^ (t + 2 * z.re) : ℝ) : ℂ) := by
+                rw [Real.rpow_add hpos]
+      simpa [Z, R, Matrix.mul_apply, Matrix.diagonal, Matrix.conjTranspose_apply]
+        using hmul
+    · have hji : ¬ j = i := fun h => hij h.symm
+      simp [Z, R, Matrix.mul_apply, Matrix.diagonal, hij, hji]
+  have hUct : Matrix.conjTranspose (U : CMatrix a) = star (U : CMatrix a) := by
+    rw [← Matrix.star_eq_conjTranspose]
+  have hstarUct : Matrix.conjTranspose (star (U : CMatrix a)) = (U : CMatrix a) := by
+    rw [← Matrix.star_eq_conjTranspose, star_star]
+  have hZct : Matrix.conjTranspose Z = star Z := by
+    rw [← Matrix.star_eq_conjTranspose]
+  have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 :=
+    Unitary.coe_star_mul_self U
+  rw [cMatrix_rpow_eq_eigenbasis_diagonal hA.posSemidef t,
+    cMatrix_rpow_eq_eigenbasis_diagonal hA.posSemidef (t + 2 * z.re)]
+  change ((U : CMatrix a) * Z * star (U : CMatrix a)) *
+      ((U : CMatrix a) * R * star (U : CMatrix a)) *
+        Matrix.conjTranspose ((U : CMatrix a) * Z * star (U : CMatrix a)) =
+      (U : CMatrix a) *
+        Matrix.diagonal (fun i => ((d i ^ (t + 2 * z.re) : ℝ) : ℂ)) *
+          star (U : CMatrix a)
+  calc
+    ((U : CMatrix a) * Z * star (U : CMatrix a)) *
+        ((U : CMatrix a) * R * star (U : CMatrix a)) *
+          Matrix.conjTranspose ((U : CMatrix a) * Z * star (U : CMatrix a)) =
+        (U : CMatrix a) * (Z * R * star Z) * star (U : CMatrix a) := by
+          rw [Matrix.conjTranspose_mul, Matrix.conjTranspose_mul]
+          rw [hstarUct, hZct, hUct]
+          calc
+            ((U : CMatrix a) * Z * star (U : CMatrix a)) *
+                ((U : CMatrix a) * R * star (U : CMatrix a)) *
+                  ((U : CMatrix a) * (star Z * star (U : CMatrix a))) =
+                ((U : CMatrix a) * Z * (star (U : CMatrix a) * (U : CMatrix a))) *
+                  R * (star (U : CMatrix a) * (U : CMatrix a)) *
+                    star Z * star (U : CMatrix a) := by
+                  noncomm_ring
+            _ = (U : CMatrix a) * (Z * R * star Z) * star (U : CMatrix a) := by
+                  rw [hUstarU]
+                  simp [Matrix.mul_assoc]
+    _ = (U : CMatrix a) *
+        Matrix.diagonal (fun i => ((d i ^ (t + 2 * z.re) : ℝ) : ℂ)) *
+          star (U : CMatrix a) := by rw [hdiag]
+
+/-- On the imaginary axis, positive-definite complex powers are unitary. -/
+theorem cMatrixPosDefComplexPower_star_mul_self_of_re_eq_zero
+    {A : CMatrix a} (hA : A.PosDef) {z : ℂ} (hz : z.re = 0) :
+    star (cMatrixPosDefComplexPower A hA z) *
+        cMatrixPosDefComplexPower A hA z = 1 := by
+  let U : Matrix.unitaryGroup a ℂ := hA.posSemidef.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := hA.posSemidef.isHermitian.eigenvalues
+  let D : CMatrix a :=
+    Matrix.diagonal
+      (fun i => Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)))
+  have hDunit : star D * D = (1 : CMatrix a) := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      have harg_re : (z * ((Real.log (d i) : ℝ) : ℂ)).re = 0 := by
+        simp [Complex.mul_re, hz]
+      have hnorm : ‖Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ))‖ = 1 := by
+        rw [Complex.norm_exp, harg_re, Real.exp_zero]
+      have hnormSq :
+          Complex.normSq (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ))) = 1 := by
+        rw [Complex.normSq_eq_norm_sq, hnorm]
+        norm_num
+      have hstar_mul :
+          (starRingEnd ℂ) (Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ))) *
+              Complex.exp (z * ((Real.log (d i) : ℝ) : ℂ)) = 1 := by
+        rw [← Complex.normSq_eq_conj_mul_self]
+        exact_mod_cast hnormSq
+      simpa [D, Matrix.mul_apply, Matrix.diagonal, Matrix.conjTranspose_apply] using hstar_mul
+    · have hji : ¬ j = i := fun h => hij h.symm
+      simp [D, Matrix.mul_apply, Matrix.diagonal, hij, hji]
+  have hUct : Matrix.conjTranspose (U : CMatrix a) = star (U : CMatrix a) := by
+    rw [← Matrix.star_eq_conjTranspose]
+  have hstarUct : Matrix.conjTranspose (star (U : CMatrix a)) = (U : CMatrix a) := by
+    rw [← Matrix.star_eq_conjTranspose, star_star]
+  have hDct : Matrix.conjTranspose D = star D := by
+    rw [← Matrix.star_eq_conjTranspose]
+  have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 :=
+    Unitary.coe_star_mul_self U
+  change Matrix.conjTranspose ((U : CMatrix a) * D * star (U : CMatrix a)) *
+      ((U : CMatrix a) * D * star (U : CMatrix a)) = 1
+  calc
+    Matrix.conjTranspose ((U : CMatrix a) * D * star (U : CMatrix a)) *
+        ((U : CMatrix a) * D * star (U : CMatrix a)) =
+        (U : CMatrix a) * (star D * D) * star (U : CMatrix a) := by
+          rw [Matrix.conjTranspose_mul, Matrix.conjTranspose_mul]
+          rw [hstarUct, hDct, hUct]
+          have hcollapse :
+              star (U : CMatrix a) *
+                  ((U : CMatrix a) * (D * star (U : CMatrix a))) =
+                D * star (U : CMatrix a) := by
+            calc
+              star (U : CMatrix a) *
+                  ((U : CMatrix a) * (D * star (U : CMatrix a))) =
+                  (star (U : CMatrix a) * (U : CMatrix a)) *
+                    (D * star (U : CMatrix a)) := by
+                    rw [Matrix.mul_assoc]
+              _ = 1 * (D * star (U : CMatrix a)) := by rw [hUstarU]
+              _ = D * star (U : CMatrix a) := by rw [Matrix.one_mul]
+          calc
+            (U : CMatrix a) * (star D * star (U : CMatrix a)) *
+                ((U : CMatrix a) * D * star (U : CMatrix a)) =
+                (U : CMatrix a) * star D *
+                  (star (U : CMatrix a) *
+                    ((U : CMatrix a) * (D * star (U : CMatrix a)))) := by
+                  noncomm_ring
+            _ = (U : CMatrix a) * star D * (D * star (U : CMatrix a)) := by
+                  rw [hcollapse]
+            _ = (U : CMatrix a) * (star D * D) * star (U : CMatrix a) := by
+                  noncomm_ring
+    _ = (U : CMatrix a) * 1 * star (U : CMatrix a) := by rw [hDunit]
+    _ = 1 := by simp
 /-- Positive real powers do not enlarge the support of a PSD matrix. In the
 finite-dimensional kernel-inclusion convention, `A^α` is supported by `A`
 for every `0 < α`. -/
@@ -900,6 +1709,7 @@ theorem PosSemidef.zero_diag_zero_row_col
     rw [show A i j = star A i j from by rw [hherm], Matrix.star_apply A i j]
   rw [hij, hji, star_zero]
 
+omit [Fintype a] [DecidableEq a] in
 /-- For a positive semidefinite matrix, a diagonal entry with zero real part is
 zero as a complex number. -/
 theorem PosSemidef.diag_eq_zero_of_re_eq_zero
@@ -1206,6 +2016,494 @@ theorem psdTracePower_eq_sum_eigenvalues_rpow
     Unitary.coe_star_mul_self, one_mul, Matrix.trace_diagonal]
   simp [Function.comp_apply]
 
+/-- PSD power traces are invariant under rectangular isometry conjugation.
+
+For `Vᴴ V = I`, the matrix `V A Vᴴ` has the same nonzero spectrum as `A`,
+with only additional zero eigenvalues. Positive powers kill the additional
+zero roots, so the `Tr(A^p)` expression is unchanged for `p > 0`. -/
+theorem psdTracePower_isometry_conj
+    {r : Type v} [Fintype r] [DecidableEq r]
+    (V : Matrix r a ℂ) {A : CMatrix a} (hA : A.PosSemidef)
+    (hV : Matrix.conjTranspose V * V = (1 : CMatrix a))
+    {p : ℝ} (hp : 0 < p) :
+    psdTracePower (V * A * Matrix.conjTranspose V)
+        (hA.mul_mul_conjTranspose_same V) p =
+      psdTracePower A hA p := by
+  rw [psdTracePower_eq_sum_eigenvalues_rpow,
+    psdTracePower_eq_sum_eigenvalues_rpow]
+  have hpoly := Matrix.charpoly_isometry_conj (V := V) A hV
+  have hP : (V * A * Matrix.conjTranspose V).charpoly ≠ 0 :=
+    (Matrix.charpoly_monic _).ne_zero
+  have hQ : A.charpoly ≠ 0 :=
+    (Matrix.charpoly_monic _).ne_zero
+  have hroot :=
+    Matrix.roots_re_rpow_sum_eq_of_X_pow_mul_eq (p := p) hp hP hQ hpoly
+  have hVA := hA.mul_mul_conjTranspose_same V
+  have hrootsVA := hVA.isHermitian.roots_charpoly_eq_eigenvalues
+  have hrootsA := hA.isHermitian.roots_charpoly_eq_eigenvalues
+  rw [hrootsVA, hrootsA] at hroot
+  simpa using hroot
+
+section RpowContinuity
+
+open scoped Matrix.Norms.L2Operator
+
+local instance cMatrixNonUnitalCStarAlgebraForSchattenContinuity
+    (n : Type*) [Fintype n] [DecidableEq n] :
+    NonUnitalCStarAlgebra (Matrix n n ℂ) := ⟨⟩
+
+local instance cMatrixCStarAlgebraForSchattenContinuity
+    (n : Type*) [Fintype n] [DecidableEq n] :
+    CStarAlgebra (Matrix n n ℂ) := ⟨⟩
+
+local instance matrixNormalCFCForSchattenContinuity
+    (n : Type*) [Fintype n] [DecidableEq n] :
+    ContinuousFunctionalCalculus ℂ (Matrix n n ℂ) IsStarNormal :=
+  IsStarNormal.instContinuousFunctionalCalculus
+
+local instance matrixNormalIsometricCFCForSchattenContinuity
+    (n : Type*) [Fintype n] [DecidableEq n] :
+    IsometricContinuousFunctionalCalculus ℂ (Matrix n n ℂ) IsStarNormal :=
+  IsStarNormal.instIsometricContinuousFunctionalCalculus
+
+/-- Positive real powers commute with rectangular isometry conjugation.
+
+The proof uses the non-unital CFC functoriality for the star homomorphism
+`X ↦ V X Vᴴ`. The positivity of the exponent is exactly what makes
+`x ↦ x^s` vanish at zero, so the non-unital calculus applies. -/
+theorem cMatrix_rpow_isometry_conj
+    {r : Type v} [Fintype r] [DecidableEq r]
+    (V : Matrix r a ℂ) {A : CMatrix a} (hA : A.PosSemidef)
+    (hV : Matrix.conjTranspose V * V = (1 : CMatrix a))
+    {s : ℝ} (hs : 0 < s) :
+    CFC.rpow (V * A * Matrix.conjTranspose V) s =
+      V * CFC.rpow A s * Matrix.conjTranspose V := by
+  change (V * A * Matrix.conjTranspose V) ^ s =
+    V * (A ^ s) * Matrix.conjTranspose V
+  let φ := Matrix.isometryConjNonUnitalStarAlgHom V hV
+  have hA_nonneg : 0 ≤ A := Matrix.nonneg_iff_posSemidef.mpr hA
+  have hVA : (V * A * Matrix.conjTranspose V).PosSemidef :=
+    hA.mul_mul_conjTranspose_same V
+  have hVA_nonneg : 0 ≤ V * A * Matrix.conjTranspose V :=
+    Matrix.nonneg_iff_posSemidef.mpr hVA
+  rw [CFC.rpow_eq_cfc_real (a := V * A * Matrix.conjTranspose V)
+    (y := s) hVA_nonneg]
+  rw [CFC.rpow_eq_cfc_real (a := A) (y := s) hA_nonneg]
+  have hf0 : (fun x : ℝ => x ^ s) 0 = 0 :=
+    Real.zero_rpow (ne_of_gt hs)
+  have hmap := NonUnitalStarAlgHom.map_cfcₙ (φ := φ) (R := ℝ) (S := ℂ)
+    (f := fun x : ℝ => x ^ s) (a := A)
+    (hf₀ := hf0)
+    (hf := (Real.continuous_rpow_const (le_of_lt hs)).continuousOn)
+    (hφ := by
+      dsimp [φ, Matrix.isometryConjNonUnitalStarAlgHom]
+      refine continuous_matrix ?_
+      intro i j
+      change Continuous fun A : CMatrix a =>
+        (V * A * Matrix.conjTranspose V) i j
+      simp only [Matrix.mul_apply]
+      fun_prop)
+    (ha := by cfc_tac)
+    (hφa := by cfc_tac)
+  rw [cfcₙ_eq_cfc (f := fun x : ℝ => x ^ s) (a := A)
+      ((Real.continuous_rpow_const (le_of_lt hs)).continuousOn) hf0] at hmap
+  have hphiA : φ A = V * A * Matrix.conjTranspose V := rfl
+  rw [hphiA] at hmap
+  rw [cfcₙ_eq_cfc (f := fun x : ℝ => x ^ s)
+      (a := V * A * Matrix.conjTranspose V)
+      ((Real.continuous_rpow_const (le_of_lt hs)).continuousOn) hf0] at hmap
+  simpa [φ, Matrix.isometryConjNonUnitalStarAlgHom] using hmap.symm
+
+/-- Real positive matrix powers are continuous along PSD-constrained
+convergent filters.  This is the finite-dimensional CFC continuity step needed
+to pass from positive-definite regularizations back to PSD witnesses. -/
+theorem cMatrix_rpow_tendsto_of_tendsto_posSemidef
+    {X : Type*} {l : Filter X} {F : X → CMatrix a} {A : CMatrix a}
+    {p : ℝ} (hp : 0 < p)
+    (hF : Filter.Tendsto F l (nhds A))
+    (hFpsd : ∀ᶠ x in l, (F x).PosSemidef)
+    (hA : A.PosSemidef) :
+    Filter.Tendsto (fun x => CFC.rpow (F x) p) l
+      (nhds (CFC.rpow A p)) := by
+  let f : ℝ≥0 → ℝ≥0 := fun x => x ^ p
+  have hcontOn :
+      ContinuousOn (fun A : CMatrix a => cfc f A)
+        {A : CMatrix a | 0 ≤ A} := by
+    exact ContinuousOn.cfc_nnreal_of_mem_nhdsSet
+      (A := CMatrix a) (s := Set.univ) (f := f)
+      (by simp)
+      continuousOn_id
+      (by intro x hx; exact hx)
+      (by simpa [f] using
+        (NNReal.continuousOn_rpow_const (s := Set.univ) (.inr hp.le)))
+  have hcont := hcontOn.continuousWithinAt
+    (by simpa using (Matrix.nonneg_iff_posSemidef.mpr hA))
+  have hwithin : Filter.Tendsto F l
+      (nhdsWithin A {A : CMatrix a | 0 ≤ A}) := by
+    rw [tendsto_nhdsWithin_iff]
+    exact ⟨hF, hFpsd.mono fun x hx => by
+      simpa using (Matrix.nonneg_iff_posSemidef.mpr hx)⟩
+  have hnn : Filter.Tendsto (fun x => cfc f (F x)) l (nhds (cfc f A)) :=
+    hcont.tendsto.comp hwithin
+  have hsource : cfc f A = CFC.rpow A p := by
+    simp [f, CFC.rpow_def]
+  have hevent : (fun x => cfc f (F x)) =ᶠ[l]
+      (fun x => CFC.rpow (F x) p) := by
+    filter_upwards [hFpsd] with x hx
+    simp [f, CFC.rpow_def]
+  rw [← hsource]
+  exact hnn.congr' hevent
+
+/-- Real matrix powers are continuous on the positive-definite cone, for any
+real exponent.  This is the finite-dimensional CFC continuity step used when
+high-`α` formulas contain negative reference powers but the limiting reference
+is already positive definite. -/
+theorem cMatrix_rpow_tendsto_of_tendsto_posDef
+    {X : Type*} {l : Filter X} {F : X → CMatrix a} {A : CMatrix a}
+    (p : ℝ)
+    (hF : Filter.Tendsto F l (nhds A))
+    (hFpd : ∀ᶠ x in l, (F x).PosDef)
+    (hA : A.PosDef) :
+    Filter.Tendsto (fun x => CFC.rpow (F x) p) l
+      (nhds (CFC.rpow A p)) := by
+  change Filter.Tendsto (fun x => (F x) ^ p) l (nhds (A ^ p))
+  have hcont :=
+    (CFC.continuousOn_rpow (A := CMatrix a) p).continuousWithinAt
+      (by simpa using (Matrix.PosDef.isStrictlyPositive hA))
+  have hwithin : Filter.Tendsto F l
+      (nhdsWithin A {A : CMatrix a | IsStrictlyPositive A}) := by
+    rw [tendsto_nhdsWithin_iff]
+    exact ⟨hF, hFpd.mono fun x hx => by
+      simpa using (Matrix.PosDef.isStrictlyPositive hx)⟩
+  exact hcont.tendsto.comp hwithin
+
+/-- The real trace of a matrix power is continuous along positive-definite
+convergent filters, for any real exponent. -/
+theorem cMatrix_rpow_trace_re_tendsto_of_tendsto_posDef
+    {X : Type*} {l : Filter X} {F : X → CMatrix a} {A : CMatrix a}
+    (p : ℝ)
+    (hF : Filter.Tendsto F l (nhds A))
+    (hFpd : ∀ᶠ x in l, (F x).PosDef)
+    (hA : A.PosDef) :
+    Filter.Tendsto (fun x => ((CFC.rpow (F x) p).trace).re) l
+      (nhds ((CFC.rpow A p).trace.re)) := by
+  have hpow := cMatrix_rpow_tendsto_of_tendsto_posDef p hF hFpd hA
+  have htraceCont : Continuous fun M : CMatrix a => M.trace :=
+    Continuous.matrix_trace continuous_id
+  exact (Complex.continuous_re.tendsto _).comp (htraceCont.tendsto _ |>.comp hpow)
+
+/-- The real trace of a positive matrix power is continuous along
+PSD-constrained convergent filters. -/
+theorem cMatrix_rpow_trace_re_tendsto_of_tendsto_posSemidef
+    {X : Type*} {l : Filter X} {F : X → CMatrix a} {A : CMatrix a}
+    {p : ℝ} (hp : 0 < p)
+    (hF : Filter.Tendsto F l (nhds A))
+    (hFpsd : ∀ᶠ x in l, (F x).PosSemidef)
+    (hA : A.PosSemidef) :
+    Filter.Tendsto (fun x => ((CFC.rpow (F x) p).trace).re) l
+      (nhds ((CFC.rpow A p).trace.re)) := by
+  have hpow := cMatrix_rpow_tendsto_of_tendsto_posSemidef hp hF hFpsd hA
+  have htraceCont : Continuous fun M : CMatrix a => M.trace :=
+    Continuous.matrix_trace continuous_id
+  exact (Complex.continuous_re.tendsto _).comp (htraceCont.tendsto _ |>.comp hpow)
+
+omit [Fintype a] in
+/-- Adding a nonnegative scalar multiple of the identity preserves positive
+semidefiniteness. -/
+theorem cMatrix_posSemidef_add_nonneg_smul_one_posSemidef
+    {A : CMatrix a} (hA : A.PosSemidef) {ε : ℝ} (hε : 0 ≤ ε) :
+    (A + ε • (1 : CMatrix a)).PosSemidef :=
+  Matrix.PosSemidef.add hA (Matrix.PosSemidef.smul Matrix.PosSemidef.one hε)
+
+/-- Right-regularizing a PSD matrix by `ε I` preserves the positive-power trace
+in the limit `ε → 0+`. -/
+theorem cMatrix_rpow_trace_re_tendsto_add_pos_smul_one
+    {A : CMatrix a} (hA : A.PosSemidef) {p : ℝ} (hp : 0 < p) :
+    Filter.Tendsto
+      (fun ε : ℝ => ((CFC.rpow (A + ε • (1 : CMatrix a)) p).trace).re)
+      (nhdsWithin (0 : ℝ) (Set.Ioi 0))
+      (nhds ((CFC.rpow A p).trace.re)) := by
+  have hpath : Filter.Tendsto (fun ε : ℝ => A + ε • (1 : CMatrix a))
+      (nhdsWithin (0 : ℝ) (Set.Ioi 0)) (nhds A) := by
+    have hcont : Continuous fun ε : ℝ => A + ε • (1 : CMatrix a) := by
+      fun_prop
+    simpa using (hcont.continuousWithinAt (x := (0 : ℝ))
+      (s := Set.Ioi (0 : ℝ))).tendsto
+  have hpsd : ∀ᶠ ε in nhdsWithin (0 : ℝ) (Set.Ioi 0),
+      (A + ε • (1 : CMatrix a)).PosSemidef := by
+    filter_upwards [self_mem_nhdsWithin] with ε hε
+    exact cMatrix_posSemidef_add_nonneg_smul_one_posSemidef hA hε.le
+  exact cMatrix_rpow_trace_re_tendsto_of_tendsto_posSemidef hp hpath hpsd hA
+
+omit [Fintype a] in
+/-- The right-regularization path `A + ε I` tends to `A` as `ε → 0+`. -/
+theorem cMatrix_tendsto_add_pos_smul_one
+    {A : CMatrix a} :
+    Filter.Tendsto (fun ε : ℝ => A + ε • (1 : CMatrix a))
+      (nhdsWithin (0 : ℝ) (Set.Ioi 0)) (nhds A) := by
+  have hcont : Continuous fun ε : ℝ => A + ε • (1 : CMatrix a) := by
+    fun_prop
+  simpa using (hcont.continuousWithinAt (x := (0 : ℝ))
+    (s := Set.Ioi (0 : ℝ))).tendsto
+
+/-- If `B` is already on the PSD `q`-unit sphere, then normalizing the
+positive-definite regularization `B + δ I` converges back to `B`. -/
+theorem cMatrix_normalized_regularized_tendsto_of_psdTracePower_eq_one
+    {B : CMatrix a} (hB : B.PosSemidef) {q : ℝ} (hq : 0 < q)
+    (hBq : psdTracePower B hB q = 1) :
+    Filter.Tendsto
+      (fun δ : ℝ =>
+        let Bδ : CMatrix a := B + δ • (1 : CMatrix a)
+        let scale : ℝ := ((CFC.rpow Bδ q).trace.re) ^ (-(1 / q))
+        scale • Bδ)
+      (nhdsWithin (0 : ℝ) (Set.Ioi 0)) (nhds B) := by
+  have htrace := cMatrix_rpow_trace_re_tendsto_add_pos_smul_one hB hq
+  have hscale : Filter.Tendsto
+      (fun δ : ℝ => ((CFC.rpow (B + δ • (1 : CMatrix a)) q).trace.re) ^
+        (-(1 / q)))
+      (nhdsWithin (0 : ℝ) (Set.Ioi 0)) (nhds (1 : ℝ)) := by
+    have hcont : ContinuousAt (fun x : ℝ => x ^ (-(1 / q))) (1 : ℝ) :=
+      Real.continuousAt_rpow_const 1 (-(1 / q)) (Or.inl one_ne_zero)
+    have htrace_one : Filter.Tendsto
+        (fun ε : ℝ => (trace (CFC.rpow (B + ε • (1 : CMatrix a)) q)).re)
+        (nhdsWithin (0 : ℝ) (Set.Ioi 0)) (nhds (1 : ℝ)) := by
+      have hBq' : (trace (B ^ q)).re = (1 : ℝ) := by
+        simpa [psdTracePower] using hBq
+      simpa [hBq'] using htrace
+    simpa using hcont.tendsto.comp htrace_one
+  have hpath := cMatrix_tendsto_add_pos_smul_one (A := B)
+  simpa using hscale.smul hpath
+
+end RpowContinuity
+
+/-- Real powers commute with nonnegative real scalar multiplication of a PSD
+matrix. -/
+theorem cMatrix_rpow_real_smul_posSemidef_schatten
+    {A : CMatrix a} (hA : A.PosSemidef) {lambda s : ℝ} (hlambda : 0 ≤ lambda) :
+    CFC.rpow (lambda • A : CMatrix a) s =
+      (lambda ^ s : ℝ) • CFC.rpow A s := by
+  let U : Matrix.unitaryGroup a ℂ := hA.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := hA.isHermitian.eigenvalues
+  have hd : ∀ i, 0 ≤ d i := fun i => hA.eigenvalues_nonneg i
+  have hA_spec :
+      A = (U : CMatrix a) * (Matrix.diagonal fun i => (d i : ℂ)) *
+        star (U : CMatrix a) := by
+    simpa [U, d, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
+      using hA.isHermitian.spectral_theorem
+  have hscaled_spec :
+      (lambda • A : CMatrix a) =
+        (U : CMatrix a) *
+          (Matrix.diagonal fun i => ((lambda * d i : ℝ) : ℂ)) *
+            star (U : CMatrix a) := by
+    rw [hA_spec]
+    have hdiag :
+        (lambda • (Matrix.diagonal fun i => (d i : ℂ)) : CMatrix a) =
+          Matrix.diagonal fun i => ((lambda * d i : ℝ) : ℂ) := by
+      ext i j
+      by_cases hij : i = j
+      · subst j
+        simp [Matrix.smul_apply]
+      · simp [Matrix.smul_apply, Matrix.diagonal, hij]
+    calc
+      (lambda • (((U : CMatrix a) *
+          (Matrix.diagonal fun i => (d i : ℂ))) * star (U : CMatrix a)) :
+          CMatrix a)
+          = (lambda • ((U : CMatrix a) *
+              (Matrix.diagonal fun i => (d i : ℂ))) : CMatrix a) *
+                star (U : CMatrix a) := by
+              rw [Matrix.smul_mul]
+      _ = ((U : CMatrix a) *
+              (lambda • (Matrix.diagonal fun i => (d i : ℂ)) : CMatrix a)) *
+                star (U : CMatrix a) := by
+              rw [Matrix.mul_smul]
+      _ = (U : CMatrix a) *
+          (Matrix.diagonal fun i => ((lambda * d i : ℝ) : ℂ)) *
+            star (U : CMatrix a) := by
+              rw [hdiag]
+  have hscaled_nonneg : ∀ i, 0 ≤ lambda * d i := fun i =>
+    mul_nonneg hlambda (hd i)
+  rw [hscaled_spec]
+  rw [cMatrix_rpow_unitary_conj_diagonal_ofReal U (fun i => lambda * d i)
+    hscaled_nonneg s]
+  rw [cMatrix_rpow_eq_eigenbasis_diagonal hA s]
+  have hdiag_pow :
+      Matrix.diagonal (fun i => (((lambda * d i) ^ s : ℝ) : ℂ)) =
+        ((lambda ^ s : ℝ) •
+          Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ)) : CMatrix a) := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      simp [Matrix.smul_apply, Real.mul_rpow hlambda (hd _)]
+    · simp [Matrix.smul_apply, Matrix.diagonal, hij]
+  rw [hdiag_pow]
+  calc
+    (U : CMatrix a) *
+          (((lambda ^ s : ℝ) •
+            Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ)) : CMatrix a)) *
+        star (U : CMatrix a)
+        = ((lambda ^ s : ℝ) •
+            ((U : CMatrix a) *
+              Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ))) : CMatrix a) *
+            star (U : CMatrix a) := by
+          rw [Matrix.mul_smul]
+    _ = ((lambda ^ s : ℝ) •
+          (((U : CMatrix a) *
+            Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ))) *
+              star (U : CMatrix a)) : CMatrix a) := by
+          rw [Matrix.smul_mul]
+
+/-- Real powers of an identity-regularized PSD matrix are diagonalized in the
+same eigenbasis as the original PSD matrix.  This is the spectral form needed
+for source regularization `σ + εI`; it reuses the existing unitary-diagonal
+functional calculus rather than introducing a new CFC route. -/
+theorem cMatrix_rpow_add_nonneg_smul_one_eigenbasis_diagonal
+    {A : CMatrix a} (hA : A.PosSemidef) {ε : ℝ} (hε : 0 ≤ ε) (s : ℝ) :
+    CFC.rpow (A + ε • (1 : CMatrix a)) s =
+      (hA.isHermitian.eigenvectorUnitary : CMatrix a) *
+        Matrix.diagonal
+          (fun i => (((hA.isHermitian.eigenvalues i + ε) ^ s : ℝ) : ℂ)) *
+        star (hA.isHermitian.eigenvectorUnitary : CMatrix a) := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hA.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := hA.isHermitian.eigenvalues
+  let D : CMatrix a := Matrix.diagonal fun i => (d i : ℂ)
+  have hd : ∀ i, 0 ≤ d i := fun i => hA.eigenvalues_nonneg i
+  have hA_spec :
+      A = (U : CMatrix a) * D * star (U : CMatrix a) := by
+    simpa [U, d, D, Matrix.IsHermitian.spectral_theorem,
+      Unitary.conjStarAlgAut_apply] using hA.isHermitian.spectral_theorem
+  have hone_spec :
+      (1 : CMatrix a) = (U : CMatrix a) * (1 : CMatrix a) *
+        star (U : CMatrix a) := by
+    symm
+    simp
+  have hsmul :
+      (ε • ((U : CMatrix a) * (1 : CMatrix a) *
+        star (U : CMatrix a)) : CMatrix a) =
+        (U : CMatrix a) * (ε • (1 : CMatrix a)) * star (U : CMatrix a) := by
+    calc
+      (ε • (((U : CMatrix a) * (1 : CMatrix a)) *
+          star (U : CMatrix a)) : CMatrix a)
+          = (ε • ((U : CMatrix a) * (1 : CMatrix a)) : CMatrix a) *
+              star (U : CMatrix a) := by
+              rw [Matrix.smul_mul]
+      _ = ((U : CMatrix a) * (ε • (1 : CMatrix a))) *
+              star (U : CMatrix a) := by
+              rw [Matrix.mul_smul]
+      _ = (U : CMatrix a) * (ε • (1 : CMatrix a)) *
+              star (U : CMatrix a) := by
+              rfl
+  have hdiag_add :
+      D + ε • (1 : CMatrix a) =
+        Matrix.diagonal (fun i => (((d i + ε : ℝ)) : ℂ)) := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      simp [D, Matrix.smul_apply, Matrix.diagonal, add_comm]
+    · simp [D, Matrix.smul_apply, Matrix.diagonal, hij]
+  have hreg_spec :
+      A + ε • (1 : CMatrix a) =
+        (U : CMatrix a) *
+          Matrix.diagonal (fun i => (((d i + ε : ℝ)) : ℂ)) *
+            star (U : CMatrix a) := by
+    rw [hA_spec, hone_spec, hsmul]
+    calc
+      (U : CMatrix a) * D * star (U : CMatrix a) +
+          (U : CMatrix a) * (ε • (1 : CMatrix a)) * star (U : CMatrix a)
+          = (U : CMatrix a) * (D + ε • (1 : CMatrix a)) *
+              star (U : CMatrix a) := by
+              noncomm_ring
+      _ = (U : CMatrix a) *
+          Matrix.diagonal (fun i => (((d i + ε : ℝ)) : ℂ)) *
+            star (U : CMatrix a) := by
+              rw [hdiag_add]
+  rw [hreg_spec]
+  exact
+    cMatrix_rpow_unitary_conj_diagonal_ofReal U (fun i => d i + ε)
+      (fun i => add_nonneg (hd i) hε) s
+
+/-- PSD power traces are homogeneous under nonnegative real scalar
+multiplication. -/
+theorem psdTracePower_real_smul_posSemidef
+    {A : CMatrix a} (hA : A.PosSemidef) {lambda p : ℝ} (hlambda : 0 ≤ lambda) :
+    psdTracePower (lambda • A : CMatrix a) (Matrix.PosSemidef.smul hA hlambda) p =
+      lambda ^ p * psdTracePower A hA p := by
+  rw [psdTracePower, cMatrix_rpow_real_smul_posSemidef_schatten hA hlambda,
+    Matrix.trace_smul]
+  simp [psdTracePower]
+
+/-- A normalized positive `q`-power trace with `q > 0` makes a PSD matrix an
+effect: every eigenvalue is at most one. -/
+theorem posSemidef_le_one_of_psdTracePower_le_one
+    {B : CMatrix a} (hB : B.PosSemidef) {q : ℝ} (hq : 0 < q)
+    (hBq : psdTracePower B hB q ≤ 1) :
+    B ≤ 1 := by
+  classical
+  rw [Matrix.le_iff]
+  let U : Matrix.unitaryGroup a ℂ := hB.isHermitian.eigenvectorUnitary
+  let D : CMatrix a := Matrix.diagonal
+    (fun i => ((hB.isHermitian.eigenvalues i : ℝ) : ℂ))
+  have hdiag : B = (U : CMatrix a) * D * star (U : CMatrix a) := by
+    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
+      using hB.isHermitian.spectral_theorem
+  have hpower_sum :
+      ∑ i, hB.isHermitian.eigenvalues i ^ q ≤ 1 := by
+    simpa [psdTracePower_eq_sum_eigenvalues_rpow B hB q] using hBq
+  have heig_le_one : ∀ i, hB.isHermitian.eigenvalues i ≤ 1 := by
+    intro i
+    have hnonneg (j : a) : 0 ≤ hB.isHermitian.eigenvalues j :=
+      hB.eigenvalues_nonneg j
+    have hpow_nonneg (j : a) : 0 ≤ hB.isHermitian.eigenvalues j ^ q :=
+      Real.rpow_nonneg (hnonneg j) q
+    have hpow_le_sum :
+        hB.isHermitian.eigenvalues i ^ q ≤
+          ∑ j, hB.isHermitian.eigenvalues j ^ q := by
+      calc
+        hB.isHermitian.eigenvalues i ^ q
+            ≤ hB.isHermitian.eigenvalues i ^ q +
+                ∑ j ∈ Finset.univ.erase i, hB.isHermitian.eigenvalues j ^ q :=
+              le_add_of_nonneg_right (Finset.sum_nonneg fun j _ => hpow_nonneg j)
+        _ = ∑ j, hB.isHermitian.eigenvalues j ^ q := by
+              rw [add_comm]
+              exact Finset.sum_erase_add (s := Finset.univ)
+                (f := fun j => hB.isHermitian.eigenvalues j ^ q) (Finset.mem_univ i)
+    have hpow_le_one :
+        hB.isHermitian.eigenvalues i ^ q ≤ 1 :=
+      hpow_le_sum.trans hpower_sum
+    have hpow_le_one_pow :
+        hB.isHermitian.eigenvalues i ^ q ≤ (1 : ℝ) ^ q := by
+      simpa using hpow_le_one
+    exact (Real.rpow_le_rpow_iff (hnonneg i) zero_le_one hq).mp hpow_le_one_pow
+  have hUstar : (U : CMatrix a) * star (U : CMatrix a) = 1 := by
+    simp [U]
+  have hsub :
+      1 - B = (U : CMatrix a) * (1 - D) * star (U : CMatrix a) := by
+    rw [hdiag]
+    calc
+      1 - (U : CMatrix a) * D * star (U : CMatrix a) =
+          (U : CMatrix a) * 1 * star (U : CMatrix a) -
+            (U : CMatrix a) * D * star (U : CMatrix a) := by
+            rw [Matrix.mul_one, hUstar]
+      _ = (U : CMatrix a) * (1 - D) * star (U : CMatrix a) := by
+            noncomm_ring
+  have hdiag_sub :
+      (1 : CMatrix a) - D =
+        Matrix.diagonal fun i => (((1 : ℝ) - hB.isHermitian.eigenvalues i : ℝ) : ℂ) := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      simp [D]
+    · simp [D, Matrix.diagonal, hij]
+  rw [hsub]
+  rw [Matrix.IsUnit.posSemidef_star_right_conjugate_iff (Unitary.isUnit_coe :
+    IsUnit (U : CMatrix a))]
+  rw [hdiag_sub]
+  rw [Matrix.posSemidef_diagonal_iff]
+  intro i
+  have hnonneg : 0 ≤ (1 : ℝ) - hB.isHermitian.eigenvalues i := by
+    exact sub_nonneg.mpr (heig_le_one i)
+  exact_mod_cast hnonneg
+
 /-- PSD power traces are invariant under unitary conjugation. -/
 theorem psdTracePower_unitary_conj
     (U : Matrix.unitaryGroup a ℂ) {A : CMatrix a} (hA : A.PosSemidef)
@@ -1328,6 +2626,773 @@ theorem supports_conjugate_diagonal_re_eq_zero
     simp [Matrix.mul_apply, hMU]
   simpa [U] using congrArg Complex.re hentry
 
+/-- Kernel support domination kills the entire zero-eigenvalue column of the
+supported matrix in the supporting PSD matrix's spectral basis.  This
+right-support version does not require the supported matrix itself to be PSD. -/
+theorem supports_conjugate_entry_eq_zero_of_right_zero
+    {M N : CMatrix a} (hN : N.PosSemidef)
+    (hSupport : Matrix.Supports M N)
+    {i j : a} (hj : hN.isHermitian.eigenvalues j = 0) :
+    (star (hN.isHermitian.eigenvectorUnitary : CMatrix a) * M *
+      (hN.isHermitian.eigenvectorUnitary : CMatrix a)) i j = 0 := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hN.isHermitian.eigenvectorUnitary
+  let v : a → ℂ := ⇑(hN.isHermitian.eigenvectorBasis j)
+  have hNv : N.mulVec v = 0 := by
+    have h := hN.isHermitian.mulVec_eigenvectorBasis j
+    rw [hj] at h
+    simpa [v] using h
+  have hMv : M.mulVec v = 0 := hSupport v hNv
+  have hMU : ∀ k, (M * (U : CMatrix a)) k j = 0 := by
+    intro k
+    have hk := congrFun hMv k
+    simpa [v, U, Matrix.mulVec, dotProduct, Matrix.mul_apply,
+      Matrix.IsHermitian.eigenvectorUnitary_apply] using hk
+  calc
+    (star (hN.isHermitian.eigenvectorUnitary : CMatrix a) * M *
+        (hN.isHermitian.eigenvectorUnitary : CMatrix a)) i j =
+        (star (U : CMatrix a) * (M * (U : CMatrix a))) i j := by
+          simp [U, Matrix.mul_assoc]
+    _ = ∑ k, (star (U : CMatrix a)) i k * (M * (U : CMatrix a)) k j := by
+          simp [Matrix.mul_apply]
+    _ = 0 := by
+          simp [hMU]
+
+/-- Kernel support domination plus PSD of the supported matrix kills the
+entire row and column in zero-eigenvalue directions of the supporting matrix's
+spectral basis. -/
+theorem supports_conjugate_entry_eq_zero_of_left_or_right_zero
+    {M N : CMatrix a} (hM : M.PosSemidef) (hN : N.PosSemidef)
+    (hSupport : Matrix.Supports M N)
+    {i j : a}
+    (hzero : hN.isHermitian.eigenvalues i = 0 ∨
+      hN.isHermitian.eigenvalues j = 0) :
+    (star (hN.isHermitian.eigenvectorUnitary : CMatrix a) * M *
+      (hN.isHermitian.eigenvectorUnitary : CMatrix a)) i j = 0 := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hN.isHermitian.eigenvectorUnitary
+  let M' : CMatrix a := star (U : CMatrix a) * M * (U : CMatrix a)
+  have hM' : M'.PosSemidef := by
+    simpa [M'] using posSemidef_unitary_conj hM U
+  rcases hzero with hi | hj
+  · have hdiag :
+        (M' i i).re = 0 := by
+      simpa [M', U] using
+        supports_conjugate_diagonal_re_eq_zero (M := M) (N := N) hN hSupport
+          (i := i) hi
+    exact (posSemidef_zero_diag_re_zero_row_col hM' hdiag j).1
+  · have hdiag :
+        (M' j j).re = 0 := by
+      simpa [M', U] using
+        supports_conjugate_diagonal_re_eq_zero (M := M) (N := N) hN hSupport
+          (i := j) hj
+    exact (posSemidef_zero_diag_re_zero_row_col hM' hdiag i).2
+
+/-- The spectral support projector of a supporting PSD matrix fixes every PSD
+matrix supported by it, on both the left and the right.
+
+This is the finite-dimensional support-compression algebra needed when a
+singular reference is first restricted to its support before applying a
+full-rank argument. -/
+theorem supportProjector_fixes_of_supports
+    {M N : CMatrix a} (hM : M.PosSemidef) (hN : N.PosSemidef)
+    (hSupport : Matrix.Supports M N) :
+    let Pi : CMatrix a :=
+      psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian
+    Pi * M = M ∧ M * Pi = M := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hN.isHermitian.eigenvectorUnitary
+  let P : CMatrix a := Matrix.diagonal (fun i =>
+    if 0 < hN.isHermitian.eigenvalues i then (1 : ℂ) else 0)
+  let M' : CMatrix a := star (U : CMatrix a) * M * (U : CMatrix a)
+  have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 := by
+    simp [U, Unitary.coe_star_mul_self hN.isHermitian.eigenvectorUnitary]
+  have hUUstar : (U : CMatrix a) * star (U : CMatrix a) = 1 := by
+    simp [U]
+  have hPi_spec :
+      psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian =
+        (U : CMatrix a) * P * star (U : CMatrix a) := by
+    simpa [U, P] using psdInvSqrt_support_eq hN
+  have hM_reconstruct : (U : CMatrix a) * M' * star (U : CMatrix a) = M := by
+    calc
+      (U : CMatrix a) * M' * star (U : CMatrix a)
+          = (U : CMatrix a) * (star (U : CMatrix a) * M *
+              (U : CMatrix a)) * star (U : CMatrix a) := by rfl
+      _ = ((U : CMatrix a) * star (U : CMatrix a)) * M *
+            ((U : CMatrix a) * star (U : CMatrix a)) := by noncomm_ring
+      _ = M := by simp [hUUstar]
+  have hP_left : P * M' = M' := by
+    ext i j
+    by_cases hi : 0 < hN.isHermitian.eigenvalues i
+    · simp [P, Matrix.mul_apply, Matrix.diagonal, hi]
+    · have hzero : hN.isHermitian.eigenvalues i = 0 := by
+        have hnn := hN.eigenvalues_nonneg i
+        exact le_antisymm (not_lt.mp hi) hnn
+      have hMij : M' i j = 0 := by
+        simpa [M', U] using
+          supports_conjugate_entry_eq_zero_of_left_or_right_zero
+            (M := M) (N := N) hM hN hSupport (i := i) (j := j)
+            (Or.inl hzero)
+      simp [P, Matrix.mul_apply, Matrix.diagonal, hi, hMij]
+  have hP_right : M' * P = M' := by
+    ext i j
+    by_cases hj : 0 < hN.isHermitian.eigenvalues j
+    · simp [P, Matrix.mul_apply, Matrix.diagonal, hj]
+    · have hzero : hN.isHermitian.eigenvalues j = 0 := by
+        have hnn := hN.eigenvalues_nonneg j
+        exact le_antisymm (not_lt.mp hj) hnn
+      have hMij : M' i j = 0 := by
+        simpa [M', U] using
+          supports_conjugate_entry_eq_zero_of_left_or_right_zero
+            (M := M) (N := N) hM hN hSupport (i := i) (j := j)
+            (Or.inr hzero)
+      simp [P, Matrix.mul_apply, Matrix.diagonal, hj, hMij]
+  constructor
+  · calc
+      (psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian) * M
+          = ((U : CMatrix a) * P * star (U : CMatrix a)) *
+              ((U : CMatrix a) * M' * star (U : CMatrix a)) := by
+                rw [hPi_spec, hM_reconstruct]
+      _ = (U : CMatrix a) * (P * M') * star (U : CMatrix a) := by
+            calc
+              ((U : CMatrix a) * P * star (U : CMatrix a)) *
+                  ((U : CMatrix a) * M' * star (U : CMatrix a))
+                  = (U : CMatrix a) * P * (star (U : CMatrix a) *
+                      (U : CMatrix a)) * M' * star (U : CMatrix a) := by
+                    noncomm_ring
+              _ = (U : CMatrix a) * P * 1 * M' * star (U : CMatrix a) := by
+                    rw [hUstarU]
+              _ = (U : CMatrix a) * (P * M') * star (U : CMatrix a) := by
+                    noncomm_ring
+      _ = M := by
+            rw [hP_left, hM_reconstruct]
+  · calc
+      M * (psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian)
+          = ((U : CMatrix a) * M' * star (U : CMatrix a)) *
+              ((U : CMatrix a) * P * star (U : CMatrix a)) := by
+                rw [hPi_spec, hM_reconstruct]
+      _ = (U : CMatrix a) * (M' * P) * star (U : CMatrix a) := by
+            calc
+              ((U : CMatrix a) * M' * star (U : CMatrix a)) *
+                  ((U : CMatrix a) * P * star (U : CMatrix a))
+                  = (U : CMatrix a) * M' * (star (U : CMatrix a) *
+                      (U : CMatrix a)) * P * star (U : CMatrix a) := by
+                    noncomm_ring
+              _ = (U : CMatrix a) * M' * 1 * P * star (U : CMatrix a) := by
+                    rw [hUstarU]
+              _ = (U : CMatrix a) * (M' * P) * star (U : CMatrix a) := by
+                    noncomm_ring
+      _ = M := by
+            rw [hP_right, hM_reconstruct]
+
+/-- If a PSD matrix is supported by `N`, then it is also supported by the
+spectral support projector of `N`. -/
+theorem Supports.of_supportProjector
+    {M N : CMatrix a} (hM : M.PosSemidef) (hN : N.PosSemidef)
+    (hSupport : Matrix.Supports M N) :
+    Matrix.Supports M
+      (psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian) := by
+  intro v hv
+  let Pi : CMatrix a :=
+    psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian
+  have hfix :=
+    (supportProjector_fixes_of_supports (M := M) (N := N) hM hN hSupport).2
+  have hmv := congrArg (fun A : CMatrix a => Matrix.mulVec A v) hfix.symm
+  calc
+    Matrix.mulVec M v = Matrix.mulVec (M * Pi) v := by
+      simpa [Pi] using hmv
+    _ = Matrix.mulVec M (Matrix.mulVec Pi v) := by
+      rw [Matrix.mulVec_mulVec]
+    _ = 0 := by
+      simp [Pi, hv]
+
+/-- The spectral support projector fixes every matrix supported by a PSD
+reference on the right.  Unlike `supportProjector_fixes_of_supports`, this
+single-sided form does not require the supported matrix to be PSD. -/
+theorem supportProjector_right_fixes_of_supports
+    {M N : CMatrix a} (hN : N.PosSemidef)
+    (hSupport : Matrix.Supports M N) :
+    let Pi : CMatrix a :=
+      psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian
+    M * Pi = M := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hN.isHermitian.eigenvectorUnitary
+  let P : CMatrix a := Matrix.diagonal (fun i =>
+    if 0 < hN.isHermitian.eigenvalues i then (1 : ℂ) else 0)
+  let M' : CMatrix a := star (U : CMatrix a) * M * (U : CMatrix a)
+  have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 := by
+    simp [U, Unitary.coe_star_mul_self hN.isHermitian.eigenvectorUnitary]
+  have hUUstar : (U : CMatrix a) * star (U : CMatrix a) = 1 := by
+    simp [U]
+  have hPi_spec :
+      psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian =
+        (U : CMatrix a) * P * star (U : CMatrix a) := by
+    simpa [U, P] using psdInvSqrt_support_eq hN
+  have hM_reconstruct : (U : CMatrix a) * M' * star (U : CMatrix a) = M := by
+    calc
+      (U : CMatrix a) * M' * star (U : CMatrix a)
+          = (U : CMatrix a) * (star (U : CMatrix a) * M *
+              (U : CMatrix a)) * star (U : CMatrix a) := by rfl
+      _ = ((U : CMatrix a) * star (U : CMatrix a)) * M *
+            ((U : CMatrix a) * star (U : CMatrix a)) := by noncomm_ring
+      _ = M := by simp [hUUstar]
+  have hP_right : M' * P = M' := by
+    ext i j
+    by_cases hj : 0 < hN.isHermitian.eigenvalues j
+    · simp [P, Matrix.mul_apply, Matrix.diagonal, hj]
+    · have hzero : hN.isHermitian.eigenvalues j = 0 := by
+        have hnn := hN.eigenvalues_nonneg j
+        exact le_antisymm (not_lt.mp hj) hnn
+      have hMij : M' i j = 0 := by
+        simpa [M', U] using
+          supports_conjugate_entry_eq_zero_of_right_zero
+            (M := M) (N := N) hN hSupport (i := i) (j := j) hzero
+      simp [P, Matrix.mul_apply, Matrix.diagonal, hj, hMij]
+  calc
+    M * (psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian)
+        = ((U : CMatrix a) * M' * star (U : CMatrix a)) *
+            ((U : CMatrix a) * P * star (U : CMatrix a)) := by
+              rw [hPi_spec, hM_reconstruct]
+    _ = (U : CMatrix a) * (M' * P) * star (U : CMatrix a) := by
+          calc
+            ((U : CMatrix a) * M' * star (U : CMatrix a)) *
+                ((U : CMatrix a) * P * star (U : CMatrix a))
+                = (U : CMatrix a) * M' * (star (U : CMatrix a) *
+                    (U : CMatrix a)) * P * star (U : CMatrix a) := by
+                  noncomm_ring
+            _ = (U : CMatrix a) * M' * 1 * P * star (U : CMatrix a) := by
+                  rw [hUstarU]
+            _ = (U : CMatrix a) * (M' * P) * star (U : CMatrix a) := by
+                  noncomm_ring
+    _ = M := by
+          rw [hP_right, hM_reconstruct]
+
+/-- The spectral support projector of a PSD matrix is supported by that PSD
+matrix. -/
+theorem supportProjector_supports
+    (N : CMatrix a) (hN : N.PosSemidef) :
+    Matrix.Supports
+      (psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian)
+      N := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hN.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := fun i => hN.isHermitian.eigenvalues i
+  let p : a → ℝ := fun i => if 0 < hN.isHermitian.eigenvalues i then 1 else 0
+  let D : CMatrix a :=
+    Matrix.diagonal fun i => ((d i : ℝ) : ℂ)
+  let P : CMatrix a := Matrix.diagonal (fun i =>
+    ((p i : ℝ) : ℂ))
+  have hN_spec : N = (U : CMatrix a) * D * star (U : CMatrix a) := by
+    simpa [U, D, d, Matrix.IsHermitian.spectral_theorem,
+      Unitary.conjStarAlgAut_apply]
+      using hN.isHermitian.spectral_theorem
+  have hPi_spec :
+      psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian =
+        (U : CMatrix a) * P * star (U : CMatrix a) := by
+    have hP :
+        P = Matrix.diagonal (fun i =>
+          if 0 < hN.isHermitian.eigenvalues i then (1 : ℂ) else 0) := by
+      ext i j
+      by_cases hij : i = j
+      · subst j
+        by_cases hi : 0 < hN.isHermitian.eigenvalues i
+        · simp [P, p, hi]
+        · simp [P, p, hi]
+      · simp [P, Matrix.diagonal, hij]
+    rw [hP]
+    simpa [U] using psdInvSqrt_support_eq hN
+  have hdiag : Matrix.Supports P D := by
+    change Matrix.Supports
+      (Matrix.diagonal fun i => ((p i : ℝ) : ℂ))
+      (Matrix.diagonal fun i => ((d i : ℝ) : ℂ))
+    apply Matrix.Supports.diagonal_of_real_zero_imp_zero
+    intro i hi
+    have hnot : ¬ 0 < hN.isHermitian.eigenvalues i := by
+      change hN.isHermitian.eigenvalues i = 0 at hi
+      rw [hi]
+      exact lt_irrefl 0
+    simp [p, d, hi]
+  have hconj := Matrix.Supports.unitary_conj hdiag U
+  change Matrix.Supports
+      ((U : CMatrix a) * P * star (U : CMatrix a))
+      ((U : CMatrix a) * D * star (U : CMatrix a)) at hconj
+  rw [← hPi_spec, ← hN_spec] at hconj
+  exact hconj
+
+/-- The positive spectral support indices of a PSD matrix.  Compressing to
+this subtype turns the reference into a positive-definite matrix on its
+support. -/
+def psdSupportIndex (N : CMatrix a) (hN : N.PosSemidef) : Type u :=
+  {i : a // 0 < hN.isHermitian.eigenvalues i}
+
+instance psdSupportIndex_fintype (N : CMatrix a) (hN : N.PosSemidef) :
+    Fintype (psdSupportIndex N hN) := by
+  unfold psdSupportIndex
+  infer_instance
+
+instance psdSupportIndex_decidableEq (N : CMatrix a) (hN : N.PosSemidef) :
+    DecidableEq (psdSupportIndex N hN) := by
+  unfold psdSupportIndex
+  infer_instance
+
+/-- The rectangular isometry whose columns are the eigenvectors of the
+positive spectral support of a PSD matrix. -/
+def psdSupportIsometry (N : CMatrix a) (hN : N.PosSemidef) :
+    Matrix a (psdSupportIndex N hN) ℂ :=
+  fun row idx => (hN.isHermitian.eigenvectorUnitary : CMatrix a) row idx.1
+
+/-- The support-column matrix is an isometry. -/
+theorem psdSupportIsometry_isometry (N : CMatrix a) (hN : N.PosSemidef) :
+    Matrix.conjTranspose (psdSupportIsometry N hN) *
+        psdSupportIsometry N hN =
+      (1 : CMatrix (psdSupportIndex N hN)) := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hN.isHermitian.eigenvectorUnitary
+  ext i j
+  have h :=
+    congrArg (fun M : CMatrix a => M i.1 j.1)
+      (Unitary.coe_star_mul_self U)
+  by_cases hij : i = j
+  · subst j
+    simpa [psdSupportIsometry, U, Matrix.mul_apply, Matrix.conjTranspose_apply,
+      Matrix.one_apply] using h
+  · have hval : (i : psdSupportIndex N hN).1 ≠ j.1 := by
+      intro hraw
+      exact hij (Subtype.ext hraw)
+    simpa [psdSupportIsometry, U, Matrix.mul_apply, Matrix.conjTranspose_apply,
+      Matrix.one_apply, hij, hval] using h
+
+/-- The range projection of the support isometry is the spectral support
+projector of the PSD matrix. -/
+theorem psdSupportIsometry_mul_conjTranspose_eq_supportProjector
+    (N : CMatrix a) (hN : N.PosSemidef) :
+    psdSupportIsometry N hN *
+        Matrix.conjTranspose (psdSupportIsometry N hN) =
+      psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hN.isHermitian.eigenvectorUnitary
+  let P : CMatrix a := Matrix.diagonal (fun i =>
+    if 0 < hN.isHermitian.eigenvalues i then (1 : ℂ) else 0)
+  have hPi_spec :
+      psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian =
+        (U : CMatrix a) * P * star (U : CMatrix a) := by
+    simpa [U, P] using psdInvSqrt_support_eq hN
+  rw [hPi_spec]
+  ext i j
+  let f : a → ℂ := fun x =>
+    (U : CMatrix a) i x * star ((U : CMatrix a) j x)
+  have hsub :
+      (∑ x : psdSupportIndex N hN,
+          (U : CMatrix a) i x.1 * star ((U : CMatrix a) j x.1)) =
+        ∑ x ∈ (Finset.univ : Finset a) with
+          0 < hN.isHermitian.eigenvalues x, f x := by
+    simpa [f] using
+      (Finset.sum_subtype_eq_sum_filter
+        (s := (Finset.univ : Finset a))
+        (p := fun x => 0 < hN.isHermitian.eigenvalues x)
+        (f := f))
+  simp only [psdSupportIsometry, Matrix.mul_apply, Matrix.conjTranspose_apply,
+    Matrix.diagonal, P, U]
+  rw [hsub]
+  simp [Finset.sum_filter, f, U]
+
+/-- Compression to the positive spectral support of a PSD reference. -/
+def psdSupportCompress (N : CMatrix a) (hN : N.PosSemidef)
+    (M : CMatrix a) : CMatrix (psdSupportIndex N hN) :=
+  Matrix.conjTranspose (psdSupportIsometry N hN) * M *
+    psdSupportIsometry N hN
+
+/-- Support compression preserves positive semidefiniteness. -/
+theorem psdSupportCompress_posSemidef
+    (N : CMatrix a) (hN : N.PosSemidef)
+    {M : CMatrix a} (hM : M.PosSemidef) :
+    (psdSupportCompress N hN M).PosSemidef := by
+  simpa [psdSupportCompress] using
+    Matrix.PosSemidef.conjTranspose_mul_mul_same hM
+      (psdSupportIsometry N hN)
+
+/-- Compressing an operator already embedded into the positive spectral support
+recovers the operator on that support. -/
+theorem psdSupportCompress_isometry_conj
+    (N : CMatrix a) (hN : N.PosSemidef)
+    (X : CMatrix (psdSupportIndex N hN)) :
+    psdSupportCompress N hN
+        (psdSupportIsometry N hN * X *
+          Matrix.conjTranspose (psdSupportIsometry N hN)) =
+      X := by
+  let V : Matrix a (psdSupportIndex N hN) ℂ := psdSupportIsometry N hN
+  calc
+    psdSupportCompress N hN (V * X * Matrix.conjTranspose V)
+        = Matrix.conjTranspose V * (V * X * Matrix.conjTranspose V) * V := by
+          rfl
+    _ = (Matrix.conjTranspose V * V) * X * (Matrix.conjTranspose V * V) := by
+          simp [Matrix.mul_assoc]
+    _ = X := by
+          rw [psdSupportIsometry_isometry N hN]
+          simp
+
+/-- Embedding into the positive spectral support preserves trace. -/
+theorem psdSupportIsometry_conj_trace
+    (N : CMatrix a) (hN : N.PosSemidef)
+    (X : CMatrix (psdSupportIndex N hN)) :
+    (psdSupportIsometry N hN * X *
+        Matrix.conjTranspose (psdSupportIsometry N hN)).trace = X.trace := by
+  let V : Matrix a (psdSupportIndex N hN) ℂ := psdSupportIsometry N hN
+  calc
+    (V * X * Matrix.conjTranspose V).trace =
+        ((V * X) * Matrix.conjTranspose V).trace := by
+          simp [Matrix.mul_assoc]
+    _ = (Matrix.conjTranspose V * (V * X)).trace := by
+          rw [Matrix.trace_mul_comm]
+    _ = ((Matrix.conjTranspose V * V) * X).trace := by
+          simp [Matrix.mul_assoc]
+    _ = X.trace := by
+          rw [psdSupportIsometry_isometry N hN]
+          simp
+
+/-- Operators embedded into the positive spectral support of a PSD reference
+are supported by that reference. -/
+theorem psdSupportIsometry_conj_supports
+    (N : CMatrix a) (hN : N.PosSemidef)
+    (X : CMatrix (psdSupportIndex N hN)) :
+    Matrix.Supports
+      (psdSupportIsometry N hN * X *
+        Matrix.conjTranspose (psdSupportIsometry N hN))
+      N := by
+  let V : Matrix a (psdSupportIndex N hN) ℂ := psdSupportIsometry N hN
+  let Pi : CMatrix a :=
+    psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian
+  have hVV : V * Matrix.conjTranspose V = Pi := by
+    simpa [V, Pi] using
+      psdSupportIsometry_mul_conjTranspose_eq_supportProjector N hN
+  have hfix : (V * X * Matrix.conjTranspose V) * Pi =
+      V * X * Matrix.conjTranspose V := by
+    calc
+      (V * X * Matrix.conjTranspose V) * Pi =
+          (V * X * Matrix.conjTranspose V) *
+            (V * Matrix.conjTranspose V) := by rw [hVV]
+      _ = V * X * (Matrix.conjTranspose V * V) * Matrix.conjTranspose V := by
+            simp [Matrix.mul_assoc]
+      _ = V * X * Matrix.conjTranspose V := by
+            rw [psdSupportIsometry_isometry N hN]
+            simp [Matrix.mul_assoc]
+  have hMPi :
+      Matrix.Supports (V * X * Matrix.conjTranspose V) Pi :=
+    Matrix.Supports.of_mul_right_eq_self hfix
+  have hPiN : Matrix.Supports Pi N := by
+    simpa [Pi] using supportProjector_supports N hN
+  exact Matrix.Supports.trans hMPi hPiN
+
+/-- A matrix supported by `N` is exactly recovered after compression to the
+positive spectral support of `N` and re-embedding by the support isometry. -/
+theorem psdSupportCompress_reconstruct_of_supports
+    {M N : CMatrix a} (hM : M.PosSemidef) (hN : N.PosSemidef)
+    (hSupport : Matrix.Supports M N) :
+    let V : Matrix a (psdSupportIndex N hN) ℂ := psdSupportIsometry N hN
+    V * psdSupportCompress N hN M * Matrix.conjTranspose V = M := by
+  classical
+  dsimp
+  let V : Matrix a (psdSupportIndex N hN) ℂ := psdSupportIsometry N hN
+  let Pi : CMatrix a :=
+    psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian
+  have hVV : V * Matrix.conjTranspose V = Pi := by
+    simpa [V, Pi] using
+      psdSupportIsometry_mul_conjTranspose_eq_supportProjector N hN
+  have hfix :=
+    supportProjector_fixes_of_supports (M := M) (N := N) hM hN hSupport
+  calc
+    V * psdSupportCompress N hN M * Matrix.conjTranspose V
+        = (V * Matrix.conjTranspose V) * M *
+            (V * Matrix.conjTranspose V) := by
+          simp [psdSupportCompress, V, Matrix.mul_assoc]
+    _ = Pi * M * Pi := by rw [hVV]
+    _ = M := by
+          rw [show Pi * M = M from by simpa [Pi] using hfix.1]
+          rw [show M * Pi = M from by simpa [Pi] using hfix.2]
+
+/-- Compression to the positive spectral support preserves trace for supported
+PSD matrices. -/
+theorem psdSupportCompress_trace_of_supports
+    {M N : CMatrix a} (hM : M.PosSemidef) (hN : N.PosSemidef)
+    (hSupport : Matrix.Supports M N) :
+    (psdSupportCompress N hN M).trace = M.trace := by
+  classical
+  let V : Matrix a (psdSupportIndex N hN) ℂ := psdSupportIsometry N hN
+  have hrec :
+      V * psdSupportCompress N hN M * Matrix.conjTranspose V = M := by
+    simpa [V] using
+      psdSupportCompress_reconstruct_of_supports
+        (M := M) (N := N) hM hN hSupport
+  have htrace := congrArg Matrix.trace hrec
+  rw [Matrix.trace_mul_cycle, psdSupportIsometry_isometry, Matrix.one_mul] at htrace
+  exact htrace
+
+/-- Compression to the positive support preserves trace for any matrix with
+right support contained in the PSD reference. -/
+theorem psdSupportCompress_trace_of_supports_right
+    {M N : CMatrix a} (hN : N.PosSemidef)
+    (hSupport : Matrix.Supports M N) :
+    (psdSupportCompress N hN M).trace = M.trace := by
+  classical
+  let V : Matrix a (psdSupportIndex N hN) ℂ := psdSupportIsometry N hN
+  let Pi : CMatrix a :=
+    psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian
+  have hVV : V * Matrix.conjTranspose V = Pi := by
+    simpa [V, Pi] using
+      psdSupportIsometry_mul_conjTranspose_eq_supportProjector N hN
+  have hright : M * Pi = M := by
+    simpa [Pi] using
+      supportProjector_right_fixes_of_supports (M := M) (N := N) hN hSupport
+  calc
+    (psdSupportCompress N hN M).trace =
+        (Matrix.conjTranspose V * M * V).trace := by
+          rfl
+    _ = ((V * Matrix.conjTranspose V) * M).trace := by
+          rw [Matrix.trace_mul_cycle]
+    _ = (M * (V * Matrix.conjTranspose V)).trace := by
+          rw [Matrix.trace_mul_comm]
+    _ = (M * Pi).trace := by
+          rw [hVV]
+    _ = M.trace := by
+          rw [hright]
+
+/-- A matrix whose right support and conjugate-transpose right support are both
+contained in a PSD reference is recovered after support compression and
+re-embedding. -/
+theorem psdSupportCompress_reconstruct_of_supports_right_and_conjTranspose
+    {M N : CMatrix a} (hN : N.PosSemidef)
+    (hSupport : Matrix.Supports M N)
+    (hSupport_star : Matrix.Supports (Matrix.conjTranspose M) N) :
+    psdSupportIsometry N hN * psdSupportCompress N hN M *
+        Matrix.conjTranspose (psdSupportIsometry N hN) = M := by
+  classical
+  let V : Matrix a (psdSupportIndex N hN) ℂ := psdSupportIsometry N hN
+  let Pi : CMatrix a :=
+    psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian
+  have hVV : V * Matrix.conjTranspose V = Pi := by
+    simpa [V, Pi] using
+      psdSupportIsometry_mul_conjTranspose_eq_supportProjector N hN
+  have hright : M * Pi = M := by
+    simpa [Pi] using
+      supportProjector_right_fixes_of_supports (M := M) (N := N) hN hSupport
+  have hstar_right : Matrix.conjTranspose M * Pi = Matrix.conjTranspose M := by
+    simpa [Pi] using
+      supportProjector_right_fixes_of_supports
+        (M := Matrix.conjTranspose M) (N := N) hN hSupport_star
+  have hPiHerm : Matrix.conjTranspose Pi = Pi := by
+    calc
+      Matrix.conjTranspose Pi =
+          Matrix.conjTranspose (V * Matrix.conjTranspose V) := by rw [hVV]
+      _ = V * Matrix.conjTranspose V := by
+          simp [Matrix.conjTranspose_mul, Matrix.conjTranspose_conjTranspose]
+      _ = Pi := hVV
+  have hleft : Pi * M = M := by
+    have h := congrArg Matrix.conjTranspose hstar_right
+    simpa [Matrix.conjTranspose_mul, Matrix.conjTranspose_conjTranspose, hPiHerm]
+      using h
+  calc
+    psdSupportIsometry N hN * psdSupportCompress N hN M *
+        Matrix.conjTranspose (psdSupportIsometry N hN)
+        = V * psdSupportCompress N hN M * Matrix.conjTranspose V := by
+          rfl
+    _ = (V * Matrix.conjTranspose V) * M *
+          (V * Matrix.conjTranspose V) := by
+          simp [psdSupportCompress, V, Matrix.mul_assoc]
+    _ = Pi * M * Pi := by rw [hVV]
+    _ = M := by rw [hleft, hright]
+
+/-- A PSD reference is reconstructed from its support compression. -/
+theorem psdSupportCompress_reconstruct_self
+    (N : CMatrix a) (hN : N.PosSemidef) :
+    let V : Matrix a (psdSupportIndex N hN) ℂ := psdSupportIsometry N hN
+    V * psdSupportCompress N hN N * Matrix.conjTranspose V = N := by
+  exact
+    psdSupportCompress_reconstruct_of_supports
+      (M := N) (N := N) hN hN (Matrix.Supports.refl N)
+
+/-- A PSD reference and its support compression have the same trace. -/
+theorem psdSupportCompress_trace_self
+    (N : CMatrix a) (hN : N.PosSemidef) :
+    (psdSupportCompress N hN N).trace = N.trace :=
+  psdSupportCompress_trace_of_supports
+    (M := N) (N := N) hN hN (Matrix.Supports.refl N)
+
+/-- If a trace-one PSD matrix is supported by a PSD reference, then the
+reference has nonempty positive spectral support. -/
+theorem psdSupportIndex_nonempty_of_trace_one_supports
+    {M N : CMatrix a} (hM : M.PosSemidef) (hN : N.PosSemidef)
+    (hMtr : M.trace = 1) (hSupport : Matrix.Supports M N) :
+    Nonempty (psdSupportIndex N hN) := by
+  classical
+  by_contra hnon
+  haveI : IsEmpty (psdSupportIndex N hN) := not_nonempty_iff.mp hnon
+  have htrace :=
+    psdSupportCompress_trace_of_supports
+      (M := M) (N := N) hM hN hSupport
+  have hzero : (psdSupportCompress N hN M).trace = 0 := by
+    simp [Matrix.trace]
+  have hone : (psdSupportCompress N hN M).trace = 1 := by
+    calc
+      (psdSupportCompress N hN M).trace = 0 := hzero
+      _ = M.trace := by simpa using htrace
+      _ = 1 := hMtr
+  exact zero_ne_one (hzero.symm.trans hone)
+
+/-- Compressing a PSD matrix to its own positive spectral support gives the
+diagonal matrix of strictly positive eigenvalues. -/
+theorem psdSupportCompress_self_eq_diagonal
+    (N : CMatrix a) (hN : N.PosSemidef) :
+    psdSupportCompress N hN N =
+      (Matrix.diagonal fun i : psdSupportIndex N hN =>
+        ((hN.isHermitian.eigenvalues i.1 : ℝ) : ℂ)) := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hN.isHermitian.eigenvectorUnitary
+  let D : CMatrix a :=
+    Matrix.diagonal fun i => ((hN.isHermitian.eigenvalues i : ℝ) : ℂ)
+  have hspec :
+      N = (U : CMatrix a) * D * star (U : CMatrix a) := by
+    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
+      using hN.isHermitian.spectral_theorem
+  have hdiag :
+      star (U : CMatrix a) * N * (U : CMatrix a) = D := by
+    have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 := by
+      simp [U]
+    calc
+      star (U : CMatrix a) * N * (U : CMatrix a)
+          = star (U : CMatrix a) *
+              ((U : CMatrix a) * D * star (U : CMatrix a)) *
+                (U : CMatrix a) := by rw [hspec]
+      _ = (star (U : CMatrix a) * (U : CMatrix a)) * D *
+            (star (U : CMatrix a) * (U : CMatrix a)) := by
+            noncomm_ring
+      _ = D := by simp [hUstarU]
+  ext i j
+  have hentry :=
+    congrArg (fun M : CMatrix a => M i.1 j.1) hdiag
+  by_cases hij : i = j
+  · subst j
+    simpa [psdSupportCompress, psdSupportIsometry, U, D, Matrix.mul_apply,
+      Matrix.conjTranspose_apply, Matrix.diagonal, Matrix.one_apply] using hentry
+  · have hval : (i : psdSupportIndex N hN).1 ≠ j.1 := by
+      intro hraw
+      exact hij (Subtype.ext hraw)
+    simpa [psdSupportCompress, psdSupportIsometry, U, D, Matrix.mul_apply,
+      Matrix.conjTranspose_apply, Matrix.diagonal, Matrix.one_apply, hij, hval]
+      using hentry
+
+/-- A PSD reference becomes positive definite after compression to its
+positive spectral support. -/
+theorem psdSupportCompress_self_posDef
+    (N : CMatrix a) (hN : N.PosSemidef) :
+    (psdSupportCompress N hN N).PosDef := by
+  rw [psdSupportCompress_self_eq_diagonal]
+  rw [Matrix.posDef_diagonal_iff]
+  intro i
+  change 0 < ((hN.isHermitian.eigenvalues i.1 : ℝ) : ℂ)
+  exact_mod_cast i.2
+
+/-- A state supported by a PSD reference compresses to a state on the
+reference's positive spectral support. -/
+noncomputable def psdSupportCompressedState
+    (ρ : State a) {σ : CMatrix a} (hσ : σ.PosSemidef)
+    (hSupport : Matrix.Supports ρ.matrix σ) :
+    State (psdSupportIndex σ hσ) where
+  matrix := psdSupportCompress σ hσ ρ.matrix
+  pos := psdSupportCompress_posSemidef σ hσ ρ.pos
+  trace_eq_one := by
+    have htrace :=
+      psdSupportCompress_trace_of_supports
+        (M := ρ.matrix) (N := σ) ρ.pos hσ hSupport
+    simpa [htrace] using ρ.trace_eq_one
+
+@[simp]
+theorem psdSupportCompressedState_matrix
+    (ρ : State a) {σ : CMatrix a} (hσ : σ.PosSemidef)
+    (hSupport : Matrix.Supports ρ.matrix σ) :
+    (psdSupportCompressedState ρ hσ hSupport).matrix =
+      psdSupportCompress σ hσ ρ.matrix := rfl
+
+theorem psdSupportCompressedState_reference_posDef
+    {σ : CMatrix a} (hσ : σ.PosSemidef) :
+    (psdSupportCompress σ hσ σ).PosDef :=
+  psdSupportCompress_self_posDef σ hσ
+
+theorem psdSupportCompressedState_support_nonempty
+    (ρ : State a) {σ : CMatrix a} (hσ : σ.PosSemidef)
+    (hSupport : Matrix.Supports ρ.matrix σ) :
+    Nonempty (psdSupportIndex σ hσ) :=
+  psdSupportIndex_nonempty_of_trace_one_supports
+    ρ.pos hσ ρ.trace_eq_one hSupport
+
+/-- Any nonzero real power of a PSD reference is recovered by compressing the
+reference to its positive spectral support, taking the power there, and
+embedding back.  This is the support-domain power identity needed for the
+high-`α` finite branch, where the reference exponent is negative. -/
+theorem cMatrix_rpow_psdSupportCompress_reconstruct_self
+    (N : CMatrix a) (hN : N.PosSemidef) {s : ℝ} (hs : s ≠ 0) :
+    let V : Matrix a (psdSupportIndex N hN) ℂ := psdSupportIsometry N hN
+    V * CFC.rpow (psdSupportCompress N hN N) s * Matrix.conjTranspose V =
+      CFC.rpow N s := by
+  classical
+  dsimp
+  let U : Matrix.unitaryGroup a ℂ := hN.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := fun i => hN.isHermitian.eigenvalues i
+  have hcomp :
+      psdSupportCompress N hN N =
+        (Matrix.diagonal fun i : psdSupportIndex N hN =>
+          ((d i.1 : ℝ) : ℂ)) := by
+    simpa [d] using psdSupportCompress_self_eq_diagonal N hN
+  have hcomp_pow :
+      CFC.rpow (psdSupportCompress N hN N) s =
+        (Matrix.diagonal fun i : psdSupportIndex N hN =>
+          ((d i.1 ^ s : ℝ) : ℂ)) := by
+    rw [hcomp]
+    exact cMatrix_rpow_diagonal_ofReal
+      (fun i : psdSupportIndex N hN => d i.1)
+      (fun i => le_of_lt i.2) s
+  have hNpow :
+      CFC.rpow N s =
+        (U : CMatrix a) *
+          Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ)) *
+            star (U : CMatrix a) := by
+    simpa [U, d] using cMatrix_rpow_eq_eigenbasis_diagonal hN s
+  rw [show N ^ s =
+        (U : CMatrix a) *
+          Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ)) *
+            star (U : CMatrix a) from hNpow,
+      show (psdSupportCompress N hN N) ^ s =
+        (Matrix.diagonal fun i : psdSupportIndex N hN =>
+          ((d i.1 ^ s : ℝ) : ℂ)) from hcomp_pow]
+  ext i j
+  let f : a → ℂ := fun x =>
+    (U : CMatrix a) i x * ((d x ^ s : ℝ) : ℂ) *
+      star ((U : CMatrix a) j x)
+  have hsub :
+      (∑ x : psdSupportIndex N hN,
+          (U : CMatrix a) i x.1 * ((d x.1 ^ s : ℝ) : ℂ) *
+            star ((U : CMatrix a) j x.1)) =
+        ∑ x ∈ (Finset.univ : Finset a) with 0 < d x, f x := by
+    simpa [f, d] using
+      (Finset.sum_subtype_eq_sum_filter
+        (s := (Finset.univ : Finset a))
+        (p := fun x => 0 < d x)
+        (f := f))
+  have hfilter :
+      (∑ x ∈ (Finset.univ : Finset a) with 0 < d x, f x) =
+        ∑ x, f x := by
+    rw [Finset.sum_filter]
+    apply Finset.sum_congr rfl
+    intro x hx
+    by_cases hxpos : 0 < d x
+    · simp [hxpos]
+    · have hdx : d x = 0 := by
+        exact le_antisymm (not_lt.mp hxpos) (hN.eigenvalues_nonneg x)
+      have hxpow : d x ^ s = 0 := by
+        simpa [hdx] using Real.zero_rpow hs
+      simp [hxpos, f, hxpow]
+  simpa [psdSupportIsometry, Matrix.mul_apply, Matrix.conjTranspose_apply,
+    Matrix.diagonal, f, U] using hsub.trans hfilter
+
 /-- Schur-Horn/Jensen control of diagonal `q`-powers by the spectral
 `q`-power trace for PSD matrices. -/
 theorem posSemidef_sum_diagonal_re_rpow_le_psdTracePower
@@ -1379,6 +3444,110 @@ theorem psdTracePower_nonneg (A : CMatrix a) (hA : A.PosSemidef) (p : ℝ) :
     0 ≤ psdTracePower A hA p :=
   (Matrix.PosSemidef.trace_nonneg (cMatrix_rpow_posSemidef (A := A) (s := p) hA)).1
 
+private theorem cMatrix_rpow_kronecker_nonneg_for_psdTracePower
+    {b : Type v} [Fintype b] [DecidableEq b]
+    {A : CMatrix a} {B : CMatrix b} (hA : A.PosSemidef) (hB : B.PosSemidef)
+    {s : ℝ} (_hs0 : 0 ≤ s) :
+    CFC.rpow (Matrix.kronecker A B) s =
+      Matrix.kronecker (CFC.rpow A s) (CFC.rpow B s) := by
+  let UA := hA.isHermitian.eigenvectorUnitary
+  let UB := hB.isHermitian.eigenvectorUnitary
+  let U : Matrix.unitaryGroup (Prod a b) ℂ :=
+    ⟨Matrix.kronecker (UA : CMatrix a) (UB : CMatrix b),
+      Matrix.kronecker_mem_unitary UA.2 UB.2⟩
+  let da : a -> ℝ := hA.isHermitian.eigenvalues
+  let db : b -> ℝ := hB.isHermitian.eigenvalues
+  let dprod : Prod a b -> ℝ := fun i => da i.1 * db i.2
+  have hda : ∀ i, 0 ≤ da i := by
+    intro i
+    exact hA.eigenvalues_nonneg i
+  have hdb : ∀ i, 0 ≤ db i := by
+    intro i
+    exact hB.eigenvalues_nonneg i
+  have hdprod : ∀ i, 0 ≤ dprod i := by
+    intro i
+    exact mul_nonneg (hda i.1) (hdb i.2)
+  have hA_spec :
+      A = Unitary.conjStarAlgAut ℂ _ UA
+        (Matrix.diagonal (fun i => (da i : ℂ))) := by
+    simpa [UA, da, Function.comp_def] using hA.isHermitian.spectral_theorem
+  have hB_spec :
+      B = Unitary.conjStarAlgAut ℂ _ UB
+        (Matrix.diagonal (fun i => (db i : ℂ))) := by
+    simpa [UB, db, Function.comp_def] using hB.isHermitian.spectral_theorem
+  have hAB_spec :
+      Matrix.kronecker A B =
+        Unitary.conjStarAlgAut ℂ _ U
+          (Matrix.diagonal (fun i => (dprod i : ℂ))) := by
+    rw [hA_spec, hB_spec]
+    simp [U, dprod, Unitary.conjStarAlgAut_apply, star_eq_conjTranspose,
+      Matrix.conjTranspose_kronecker, Matrix.mul_kronecker_mul,
+      Matrix.diagonal_kronecker_diagonal, Matrix.mul_assoc]
+  have hA_rpow :
+      CFC.rpow A s =
+        Unitary.conjStarAlgAut ℂ _ UA
+          (Matrix.diagonal (fun i => ((da i ^ s : ℝ) : ℂ))) := by
+    rw [hA_spec]
+    simpa [Unitary.conjStarAlgAut_apply] using
+      cMatrix_rpow_unitary_conj_diagonal_ofReal UA da hda s
+  have hB_rpow :
+      CFC.rpow B s =
+        Unitary.conjStarAlgAut ℂ _ UB
+          (Matrix.diagonal (fun i => ((db i ^ s : ℝ) : ℂ))) := by
+    rw [hB_spec]
+    simpa [Unitary.conjStarAlgAut_apply] using
+      cMatrix_rpow_unitary_conj_diagonal_ofReal UB db hdb s
+  have hleft :
+      CFC.rpow (Matrix.kronecker A B) s =
+        Unitary.conjStarAlgAut ℂ _ U
+          (Matrix.diagonal (fun i => ((dprod i ^ s : ℝ) : ℂ))) := by
+    rw [hAB_spec]
+    simpa [Unitary.conjStarAlgAut_apply] using
+      cMatrix_rpow_unitary_conj_diagonal_ofReal U dprod hdprod s
+  have hdiag :
+      Matrix.diagonal (fun i : Prod a b => ((dprod i ^ s : ℝ) : ℂ)) =
+        Matrix.diagonal (fun i : Prod a b => (((da i.1 ^ s) * (db i.2 ^ s) : ℝ) : ℂ)) := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      simp [dprod, Real.mul_rpow (hda i.1) (hdb i.2)]
+    · simp [Matrix.diagonal, hij]
+  have hright :
+      Matrix.kronecker (CFC.rpow A s) (CFC.rpow B s) =
+        Unitary.conjStarAlgAut ℂ _ U
+          (Matrix.diagonal
+            (fun i : Prod a b => (((da i.1 ^ s) * (db i.2 ^ s) : ℝ) : ℂ))) := by
+    rw [hA_rpow, hB_rpow]
+    simp [U, Unitary.conjStarAlgAut_apply, star_eq_conjTranspose,
+      Matrix.conjTranspose_kronecker, Matrix.mul_kronecker_mul,
+      Matrix.diagonal_kronecker_diagonal, Matrix.mul_assoc]
+  rw [hleft, hdiag, hright]
+
+/-- PSD power traces multiply over Kronecker products. -/
+theorem psdTracePower_kronecker
+    {b : Type v} [Fintype b] [DecidableEq b]
+    {A : CMatrix a} {B : CMatrix b} (hA : A.PosSemidef) (hB : B.PosSemidef)
+    {p : Real} (hp : 0 <= p) :
+    psdTracePower (Matrix.kronecker A B) (hA.kronecker hB) p =
+      psdTracePower A hA p * psdTracePower B hB p := by
+  rw [psdTracePower, cMatrix_rpow_kronecker_nonneg_for_psdTracePower hA hB hp]
+  change (Matrix.kroneckerMap (fun x y => x * y) (CFC.rpow A p)
+      (CFC.rpow B p)).trace.re =
+    psdTracePower A hA p * psdTracePower B hB p
+  rw [Matrix.trace_kronecker]
+  have hAim : ((CFC.rpow A p).trace).im = 0 := by
+    have htrace_nonneg : 0 <= (CFC.rpow A p).trace :=
+      Matrix.PosSemidef.trace_nonneg
+        (cMatrix_rpow_posSemidef (A := A) (s := p) hA)
+    exact htrace_nonneg.2.symm
+  have hBim : ((CFC.rpow B p).trace).im = 0 := by
+    have htrace_nonneg : 0 <= (CFC.rpow B p).trace :=
+      Matrix.PosSemidef.trace_nonneg
+        (cMatrix_rpow_posSemidef (A := B) (s := p) hB)
+    exact htrace_nonneg.2.symm
+  rw [Complex.mul_re, hAim, hBim]
+  simp [psdTracePower]
+
 /-- A nonzero PSD matrix has strictly positive `p`-power trace. -/
 theorem psdTracePower_pos_of_ne_zero
     (A : CMatrix a) (hA : A.PosSemidef) {p : ℝ}
@@ -1400,6 +3569,73 @@ theorem psdTracePower_pos_of_ne_zero
     ⟨i, Finset.mem_univ i,
       Real.rpow_pos_of_pos (lt_of_le_of_ne (hA.eigenvalues_nonneg i) (Ne.symm hi)) p⟩
 
+/-- Scaling a positive-definite matrix by the inverse `q`-power trace factor
+normalizes its `q`-power trace to one. -/
+theorem psdTracePower_normalized_real_smul_eq_one_of_posDef [Nonempty a]
+    {C : CMatrix a} (hC : C.PosDef) {q : ℝ} (hq : 0 < q) :
+    psdTracePower
+        (((psdTracePower C hC.posSemidef q) ^ (-(1 / q))) • C : CMatrix a)
+        (Matrix.PosSemidef.smul hC.posSemidef
+          (Real.rpow_nonneg (psdTracePower_nonneg C hC.posSemidef q) (-(1 / q))))
+        q = 1 := by
+  let S : ℝ := psdTracePower C hC.posSemidef q
+  have hCne : C ≠ 0 := by
+    intro hzero
+    have htr : (0 : ℂ) < C.trace := Matrix.PosDef.trace_pos hC
+    rw [hzero] at htr
+    simp at htr
+  have hSpos : 0 < S := by
+    simpa [S] using psdTracePower_pos_of_ne_zero C hC.posSemidef hCne
+  have hSnonneg : 0 ≤ S := le_of_lt hSpos
+  have hscale_nonneg : 0 ≤ S ^ (-(1 / q)) := Real.rpow_nonneg hSnonneg _
+  change psdTracePower ((S ^ (-(1 / q))) • C : CMatrix a)
+      (Matrix.PosSemidef.smul hC.posSemidef
+        (Real.rpow_nonneg hSnonneg (-(1 / q)))) q = 1
+  rw [psdTracePower_real_smul_posSemidef hC.posSemidef hscale_nonneg]
+  have hpow : (S ^ (-(1 / q))) ^ q = S⁻¹ := by
+    calc
+      (S ^ (-(1 / q))) ^ q = S ^ (-(1 / q) * q) := by
+        rw [← Real.rpow_mul hSpos.le]
+      _ = S ^ (-1 : ℝ) := by
+        congr 1
+        field_simp [ne_of_gt hq]
+      _ = S⁻¹ := by
+        rw [Real.rpow_neg_one]
+  rw [hpow]
+  change S⁻¹ * S = 1
+  field_simp [ne_of_gt hSpos]
+
+/-- Scaling a nonzero PSD matrix by the inverse `q`-power trace factor
+normalizes its `q`-power trace to one. -/
+theorem psdTracePower_normalized_real_smul_eq_one_of_ne_zero
+    {C : CMatrix a} (hC : C.PosSemidef) (hCne : C ≠ 0) {q : ℝ}
+    (hq : 0 < q) :
+    psdTracePower
+        (((psdTracePower C hC q) ^ (-(1 / q))) • C : CMatrix a)
+        (Matrix.PosSemidef.smul hC
+          (Real.rpow_nonneg (psdTracePower_nonneg C hC q) (-(1 / q))))
+        q = 1 := by
+  let S : ℝ := psdTracePower C hC q
+  have hSpos : 0 < S := by
+    simpa [S] using psdTracePower_pos_of_ne_zero C hC hCne
+  have hSnonneg : 0 ≤ S := le_of_lt hSpos
+  have hscale_nonneg : 0 ≤ S ^ (-(1 / q)) := Real.rpow_nonneg hSnonneg _
+  change psdTracePower ((S ^ (-(1 / q))) • C : CMatrix a)
+      (Matrix.PosSemidef.smul hC
+        (Real.rpow_nonneg hSnonneg (-(1 / q)))) q = 1
+  rw [psdTracePower_real_smul_posSemidef hC hscale_nonneg]
+  have hpow : (S ^ (-(1 / q))) ^ q = S⁻¹ := by
+    calc
+      (S ^ (-(1 / q))) ^ q = S ^ (-(1 / q) * q) := by
+        rw [← Real.rpow_mul hSpos.le]
+      _ = S ^ (-1 : ℝ) := by
+        congr 1
+        field_simp [ne_of_gt hq]
+      _ = S⁻¹ := by
+        rw [Real.rpow_neg_one]
+  rw [hpow]
+  change S⁻¹ * S = 1
+  field_simp [ne_of_gt hSpos]
 /-- If a nonzero PSD matrix is supported on a PSD matrix, then pairing it
 with any real power of the supporting matrix has strictly positive trace. -/
 theorem trace_mul_cMatrix_rpow_pos_of_support
@@ -1486,6 +3722,15 @@ theorem psdTracePower_one (A : CMatrix a) (hA : A.PosSemidef) :
     psdTracePower A hA (1 : ℝ) = A.trace.re := by
   simp [psdTracePower, CFC.rpow_one A (ha := Matrix.nonneg_iff_posSemidef.mpr hA)]
 
+@[simp]
+theorem psdTracePower_two (A : CMatrix a) (hA : A.PosSemidef) :
+    psdTracePower A hA (2 : ℝ) = (A * A).trace.re := by
+  rw [psdTracePower]
+  have hpow : CFC.rpow A (2 : ℝ) = A * A := by
+    simpa [pow_two] using
+      (CFC.rpow_natCast A 2 (Matrix.nonneg_iff_posSemidef.mpr hA))
+  rw [hpow]
+
 /-- The spectral Schatten `p`-norm expression `(Tr A^p)^(1/p)` for PSD
 matrices.  This is the quantity that the Holder variational theorem identifies
 with an optimization over normalized positive side states. -/
@@ -1502,6 +3747,102 @@ theorem psdSchattenPNorm_eq (A : CMatrix a) (hA : A.PosSemidef) (p : ℝ) :
 theorem psdSchattenPNorm_nonneg (A : CMatrix a) (hA : A.PosSemidef) (p : ℝ) :
     0 ≤ psdSchattenPNorm A hA p :=
   Real.rpow_nonneg (psdTracePower_nonneg A hA p) _
+
+/-- PSD Schatten `p`-norm expressions multiply over Kronecker products. -/
+theorem psdSchattenPNorm_kronecker
+    {b : Type v} [Fintype b] [DecidableEq b]
+    {A : CMatrix a} {B : CMatrix b} (hA : A.PosSemidef) (hB : B.PosSemidef)
+    {p : Real} (hp : 0 < p) :
+    psdSchattenPNorm (Matrix.kronecker A B) (hA.kronecker hB) p =
+      psdSchattenPNorm A hA p * psdSchattenPNorm B hB p := by
+  rw [psdSchattenPNorm, psdSchattenPNorm, psdSchattenPNorm,
+    psdTracePower_kronecker hA hB (le_of_lt hp)]
+  exact Real.mul_rpow (psdTracePower_nonneg A hA p)
+    (psdTracePower_nonneg B hB p)
+
+/-- A nonzero PSD matrix has strictly positive spectral Schatten `p`-norm
+expression. -/
+theorem psdSchattenPNorm_pos_of_ne_zero
+    (A : CMatrix a) (hA : A.PosSemidef) {p : ℝ}
+    (hAne : A ≠ 0) :
+    0 < psdSchattenPNorm A hA p :=
+  Real.rpow_pos_of_pos (psdTracePower_pos_of_ne_zero A hA hAne) (1 / p)
+
+/-- PSD Schatten `p`-norm expressions are homogeneous under nonnegative real
+scalar multiplication. -/
+theorem psdSchattenPNorm_real_smul
+    {A : CMatrix a} (hA : A.PosSemidef) {lambda p : Real}
+    (hlambda : 0 <= lambda) (hp : 0 < p) :
+    psdSchattenPNorm (lambda • A : CMatrix a)
+        (Matrix.PosSemidef.smul hA hlambda) p =
+      lambda * psdSchattenPNorm A hA p := by
+  rw [psdSchattenPNorm, psdTracePower_real_smul_posSemidef hA hlambda]
+  have hbase : 0 <= lambda ^ p := Real.rpow_nonneg hlambda p
+  have htrace : 0 <= psdTracePower A hA p := psdTracePower_nonneg A hA p
+  rw [show (lambda ^ p * psdTracePower A hA p).rpow (1 / p) =
+      (lambda ^ p) ^ (1 / p) * (psdTracePower A hA p) ^ (1 / p) by
+    exact Real.mul_rpow hbase htrace]
+  have hp_ne : p ≠ 0 := ne_of_gt hp
+  have hpow : (lambda ^ p) ^ (1 / p) = lambda := by
+    calc
+      (lambda ^ p) ^ (1 / p) = lambda ^ (p * (1 / p)) := by
+        rw [← Real.rpow_mul hlambda]
+      _ = lambda ^ (1 : Real) := by
+        congr 1
+        field_simp [hp_ne]
+      _ = lambda := Real.rpow_one lambda
+  rw [hpow]
+  simp [psdSchattenPNorm, one_div]
+
+/-- The PSD Schatten expression is insensitive to the particular PSD proof
+attached to definitionally equal matrices. -/
+theorem psdSchattenPNorm_congr
+    {A B : CMatrix a} (hAB : A = B)
+    (hA : A.PosSemidef) (hB : B.PosSemidef) (p : Real) :
+    psdSchattenPNorm A hA p = psdSchattenPNorm B hB p := by
+  subst B
+  simp [psdSchattenPNorm, psdTracePower]
+
+/-- The PSD Schatten expression of the zero matrix is zero for nonzero
+exponents. -/
+theorem psdSchattenPNorm_zero (p : Real) (hp : p ≠ 0) :
+    psdSchattenPNorm (0 : CMatrix a) Matrix.PosSemidef.zero p = 0 := by
+  rw [psdSchattenPNorm, psdTracePower]
+  rw [CFC.zero_rpow (A := CMatrix a) hp]
+  rw [Matrix.trace_zero]
+  change (0 : Real) ^ (1 / p) = 0
+  rw [one_div]
+  exact Real.zero_rpow (inv_ne_zero hp)
+
+/-- Strict positivity of the PSD Schatten expression forces strict positivity
+of the underlying positive power trace when `p > 1`. -/
+theorem psdTracePower_pos_of_psdSchattenPNorm_pos_of_one_lt
+    {A : CMatrix a} (hA : A.PosSemidef) {p : Real}
+    (hp : 1 < p) (hnorm : 0 < psdSchattenPNorm A hA p) :
+    0 < psdTracePower A hA p := by
+  have hp_pos : 0 < p := lt_trans zero_lt_one hp
+  have hexp_ne : 1 / p ≠ 0 := one_div_ne_zero (ne_of_gt hp_pos)
+  have htrace_nonneg : 0 <= psdTracePower A hA p :=
+    psdTracePower_nonneg A hA p
+  have htrace_ne : psdTracePower A hA p ≠ 0 := by
+    intro htrace_zero
+    have hnorm_zero : psdSchattenPNorm A hA p = 0 := by
+      rw [psdSchattenPNorm, htrace_zero]
+      exact Real.zero_rpow hexp_ne
+    exact (ne_of_gt hnorm) hnorm_zero
+  exact lt_of_le_of_ne htrace_nonneg (Ne.symm htrace_ne)
+
+/-- A positive-definite matrix has strictly positive spectral Schatten
+`p`-norm expression on any nonempty finite space. -/
+theorem psdSchattenPNorm_pos_of_posDef [Nonempty a]
+    {A : CMatrix a} (hA : A.PosDef) {p : ℝ} :
+    0 < psdSchattenPNorm A hA.posSemidef p := by
+  have hAne : A ≠ 0 := by
+    intro hzero
+    have htr : (0 : ℂ) < A.trace := Matrix.PosDef.trace_pos hA
+    rw [hzero] at htr
+    simp at htr
+  exact psdSchattenPNorm_pos_of_ne_zero A hA.posSemidef hAne
 
 /-- At `p = 1`, the PSD Schatten expression is the real trace. -/
 @[simp]
@@ -1725,6 +4066,125 @@ theorem posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
           mul_le_mul_of_nonneg_left hBnorm_le (psdSchattenPNorm_nonneg M hM p)
     _ = psdSchattenPNorm M hM p := by rw [mul_one]
 
+/-- Dual `q`-unit-ball criterion for PSD Schatten expressions.
+
+If a positive matrix pairs against every PSD test matrix no larger than that
+test matrix's `p`-Schatten expression, then its `q`-power trace is at most one.
+The proof tests the bound on `B^(q-1)`, so this is the reverse direction needed
+to turn trace-pairing estimates into the rotated-adjoint `q`-ball contraction
+in the sandwiched Renyi DPI route. -/
+theorem psdTracePower_le_one_of_trace_mul_le_psdSchattenPNorm
+    {B : CMatrix a} (hB : B.PosSemidef) {p q : ℝ}
+    (hpq : p.HolderConjugate q)
+    (hbound : ∀ M : CMatrix a, ∀ hM : M.PosSemidef,
+      ((M * B).trace).re ≤ psdSchattenPNorm M hM p) :
+    psdTracePower B hB q ≤ 1 := by
+  classical
+  let S : ℝ := psdTracePower B hB q
+  let M : CMatrix a := CFC.rpow B (q - 1)
+  have hM : M.PosSemidef := by
+    simpa [M] using cMatrix_rpow_posSemidef (A := B) (s := q - 1) hB
+  have hp_pos : 0 < p := hpq.pos
+  have hp_nonneg : 0 ≤ p := le_of_lt hp_pos
+  have hq_pos : 0 < q := hpq.symm.pos
+  have hq_sub_pos : 0 < q - 1 := hpq.symm.sub_one_pos
+  have hq_sub_nonneg : 0 ≤ q - 1 := le_of_lt hq_sub_pos
+  have hS_nonneg : 0 ≤ S := by
+    simpa [S] using psdTracePower_nonneg B hB q
+  have htrace_eq : ((M * B).trace).re = S := by
+    let U : Matrix.unitaryGroup a ℂ := hB.isHermitian.eigenvectorUnitary
+    let d : a → ℝ := fun i => hB.isHermitian.eigenvalues i
+    have hMdiag :
+        M =
+          (U : CMatrix a) *
+            Matrix.diagonal (fun i => ((d i ^ (q - 1) : ℝ) : ℂ)) *
+              star (U : CMatrix a) := by
+      simpa [M, U, d] using cMatrix_rpow_eq_eigenbasis_diagonal hB (q - 1)
+    have hBdiag :
+        B =
+          (U : CMatrix a) *
+            Matrix.diagonal (fun i => ((d i : ℝ) : ℂ)) *
+              star (U : CMatrix a) := by
+      simpa [U, d, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
+        using hB.isHermitian.spectral_theorem
+    have hterm : ∀ i, d i ^ (q - 1) * d i = d i ^ q := by
+      intro i
+      have hd_nonneg : 0 ≤ d i := hB.eigenvalues_nonneg i
+      by_cases hzero : d i = 0
+      · simp [hzero, Real.zero_rpow (ne_of_gt hq_sub_pos),
+          Real.zero_rpow (ne_of_gt hq_pos)]
+      · have hd_pos : 0 < d i := lt_of_le_of_ne hd_nonneg (Ne.symm hzero)
+        calc
+          d i ^ (q - 1) * d i =
+              d i ^ (q - 1) * d i ^ (1 : ℝ) := by rw [Real.rpow_one]
+          _ = d i ^ ((q - 1) + 1) := by
+                rw [← Real.rpow_add hd_pos]
+          _ = d i ^ q := by ring_nf
+    calc
+      ((M * B).trace).re =
+          ((((U : CMatrix a) *
+                Matrix.diagonal (fun i => ((d i ^ (q - 1) : ℝ) : ℂ)) *
+                  star (U : CMatrix a)) *
+              ((U : CMatrix a) *
+                Matrix.diagonal (fun i => ((d i : ℝ) : ℂ)) *
+                  star (U : CMatrix a))).trace).re := by
+            rw [hMdiag, hBdiag]
+      _ = ∑ i, d i ^ (q - 1) * d i := by
+            simpa using
+              trace_mul_unitary_conj_diagonal_ofReal_re
+                U (fun i => d i ^ (q - 1)) d
+      _ = ∑ i, d i ^ q := by
+            exact Finset.sum_congr rfl fun i _ => hterm i
+      _ = S := by
+            simpa [S, d] using (psdTracePower_eq_sum_eigenvalues_rpow B hB q).symm
+  have hM_power : psdTracePower M hM p = S := by
+    have hmul : (q - 1) * p = q := hpq.symm.sub_one_mul_conj
+    have hpow : CFC.rpow M p = CFC.rpow B q := by
+      simpa [M] using
+        cMatrix_rpow_rpow_of_nonneg hB hq_sub_nonneg hp_nonneg hmul
+    calc
+      psdTracePower M hM p = (CFC.rpow M p).trace.re := rfl
+      _ = (CFC.rpow B q).trace.re := by rw [hpow]
+      _ = S := rfl
+  have hS_le_norm : S ≤ psdSchattenPNorm M hM p := by
+    simpa [htrace_eq] using hbound M hM
+  have hM_trace_re : (CFC.rpow M p).trace.re = S := by
+    change psdTracePower M hM p = S
+    exact hM_power
+  have hM_pow_trace_re : (trace (M ^ p)).re = S := by
+    simpa using hM_trace_re
+  have hS_le_rpow : S ≤ S ^ p⁻¹ := by
+    simpa [psdSchattenPNorm, hM_pow_trace_re, one_div] using hS_le_norm
+  by_contra hnot
+  have hS_gt_one : 1 < S := lt_of_not_ge hnot
+  have hS_pow_le : S ^ p ≤ S := by
+    have hle := (Real.le_rpow_inv_iff_of_pos hS_nonneg hS_nonneg hp_pos).mp
+      hS_le_rpow
+    simpa using hle
+  have hS_lt_pow : S < S ^ p :=
+    Real.self_lt_rpow_of_one_lt hS_gt_one hpq.lt
+  linarith
+
+/-- Dual PSD Schatten `q`-unit-ball criterion as an equivalence.
+
+This packages the Holder upper bound and the extremal reverse test into the
+exact form used by the sandwiched Renyi DPI route: a positive witness has
+normalized `q`-power trace iff it pairs against every positive test operator no
+larger than that operator's PSD `p`-Schatten expression. -/
+theorem psdTracePower_le_one_iff_trace_mul_le_psdSchattenPNorm
+    {B : CMatrix a} (hB : B.PosSemidef) {p q : ℝ}
+    (hpq : p.HolderConjugate q) :
+    psdTracePower B hB q ≤ 1 ↔
+      ∀ M : CMatrix a, ∀ hM : M.PosSemidef,
+        ((M * B).trace).re ≤ psdSchattenPNorm M hM p := by
+  constructor
+  · intro hBq M hM
+    exact
+      posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
+        hM hB hpq (le_of_lt hpq.symm.lt) hBq
+  · intro hbound
+    exact psdTracePower_le_one_of_trace_mul_le_psdSchattenPNorm hB hpq hbound
+
 /-- Source-shaped PSD trace Holder upper bound for the positive-power side of
 the variational formula.  The exponent is written as `r = 1 / q`, where `p` and
 `q` are Holder conjugates; equivalently `r = 1 - 1 / p`. -/
@@ -1819,6 +4279,22 @@ theorem psd_trace_rpow_reverse_holder_variational
     _ ≤ ∑ i, x i * w i ^ r := hscalar_r
     _ = ((M * CFC.rpow N r).trace).re := htrace.symm
 
+/-- Reverse-Holder witness handoff for `0 < p < 1`.
+
+To upper-bound a PSD Schatten expression in the subunit range, it is enough to
+find one normalized supporting side-state whose reverse-Holder trace objective
+is bounded by the desired scalar. This is the finite-dimensional variational
+step used by the `1 / 2 ≤ α < 1` sandwiched-Renyi DPI route. -/
+theorem psdSchattenPNorm_le_of_reverseHolder_trace_le
+    {M N : CMatrix a} (hM : M.PosSemidef) (hN : N.PosSemidef)
+    (hNtr : N.trace.re = 1)
+    (hSupport : Matrix.Supports M N)
+    {p C : ℝ} (hp0 : 0 < p) (hp1 : p < 1)
+    (htrace_le : ((M * CFC.rpow N (1 - 1 / p)).trace).re ≤ C) :
+    psdSchattenPNorm M hM p ≤ C :=
+  (psd_trace_rpow_reverse_holder_variational
+    hM hN hNtr hSupport hp0 hp1 rfl).trans htrace_le
+
 /-- Reverse-Holder normalized PSD side-state objective values for a fixed
 PSD matrix and exponent parameter. -/
 def psdTraceReverseHolderStateValueSet (M : CMatrix a) (p : ℝ) : Set ℝ :=
@@ -1865,13 +4341,19 @@ def psdTraceReverseHolderOptimizer
       (fun i => (((hM.isHermitian.eigenvalues i ^ p) / S : ℝ) : ℂ)) *
     star (U : CMatrix a)
 
-/-- The reverse-Holder optimizer attains the Schatten expression whenever
-`Tr M^p` is strictly positive. -/
-theorem psdTraceReverseHolderOptimizer_mem
+/-- The explicit reverse-Holder optimizer is a normalized supporting PSD
+side-state and attains the Schatten expression whenever `Tr M^p` is strictly
+positive. -/
+theorem psdTraceReverseHolderOptimizer_props
     {M : CMatrix a} (hM : M.PosSemidef)
     {p : ℝ} (hp0 : 0 < p)
     (hSpos : 0 < psdTracePower M hM p) :
-    psdSchattenPNorm M hM p ∈ psdTraceReverseHolderStateValueSet M p := by
+    ∃ _hN : (psdTraceReverseHolderOptimizer M hM p).PosSemidef,
+      (psdTraceReverseHolderOptimizer M hM p).trace.re = 1 ∧
+        Matrix.Supports M (psdTraceReverseHolderOptimizer M hM p) ∧
+          psdSchattenPNorm M hM p =
+            ((M * CFC.rpow (psdTraceReverseHolderOptimizer M hM p)
+                (1 - 1 / p)).trace).re := by
   classical
   let U : Matrix.unitaryGroup a ℂ := hM.isHermitian.eigenvectorUnitary
   let d : a → ℝ := fun i => hM.isHermitian.eigenvalues i
@@ -1954,12 +4436,147 @@ theorem psdTraceReverseHolderOptimizer_mem
       psdSchattenPNorm M hM p = (∑ i, d i ^ p) ^ (1 / p) := by
     rw [psdSchattenPNorm, psdTracePower_eq_sum_eigenvalues_rpow]
     simp [d]
-  refine ⟨N, hN, hNtr, hSupport, ?_⟩
+  have hattain :
+      psdSchattenPNorm M hM p =
+        ((M * CFC.rpow N (1 - 1 / p)).trace).re := by
+    calc
+      psdSchattenPNorm M hM p = (∑ i, d i ^ p) ^ (1 / p) := hnorm
+      _ = ∑ i, d i * n i ^ r := hscalar.symm
+      _ = ((M * CFC.rpow N (1 - 1 / p)).trace).re := by
+        simpa [r] using htrace.symm
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · simpa [psdTraceReverseHolderOptimizer, U, d, S, n, N] using hN
+  · simpa [psdTraceReverseHolderOptimizer, U, d, S, n, N] using hNtr
+  · simpa [psdTraceReverseHolderOptimizer, U, d, S, n, N] using hSupport
+  · simpa [psdTraceReverseHolderOptimizer, U, d, S, n, N] using hattain
+
+/-- The explicit reverse-Holder optimizer is the normalized positive power
+`M^p / Tr(M^p)`.
+
+The definition above is spectral, because that form is convenient for the
+reverse-Holder proof.  This theorem exposes the source-shaped power-state form
+needed by the low-`α` sandwiched Renyi DPI route. -/
+theorem psdTraceReverseHolderOptimizer_eq_inv_tracePower_smul_rpow
+    {M : CMatrix a} (hM : M.PosSemidef)
+    {p : ℝ} :
+    psdTraceReverseHolderOptimizer M hM p =
+      (((psdTracePower M hM p)⁻¹ : ℝ) : ℂ) • CFC.rpow M p := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hM.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := fun i => hM.isHermitian.eigenvalues i
+  let S : ℝ := psdTracePower M hM p
+  let D : CMatrix a :=
+    Matrix.diagonal (fun i => ((d i ^ p : ℝ) : ℂ))
+  have hpow :
+      CFC.rpow M p = (U : CMatrix a) * D * star (U : CMatrix a) := by
+    simpa [U, d, D] using cMatrix_rpow_eq_eigenbasis_diagonal hM p
+  have hdiag :
+      (Matrix.diagonal (fun i => (((d i ^ p) / S : ℝ) : ℂ)) : CMatrix a) =
+        (((S⁻¹ : ℝ) : ℂ) • D) := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      simp [D, Matrix.smul_apply, div_eq_mul_inv, mul_comm]
+    · simp [D, Matrix.smul_apply, Matrix.diagonal, hij]
+  have hsmul :
+      (U : CMatrix a) * ((((S⁻¹ : ℝ) : ℂ) • D)) *
+          star (U : CMatrix a) =
+        (((S⁻¹ : ℝ) : ℂ) • ((U : CMatrix a) * D * star (U : CMatrix a))) := by
+    calc
+      (U : CMatrix a) * ((((S⁻¹ : ℝ) : ℂ) • D)) *
+          star (U : CMatrix a) =
+          (((S⁻¹ : ℝ) : ℂ) • ((U : CMatrix a) * D)) *
+            star (U : CMatrix a) := by
+            rw [Matrix.mul_smul]
+      _ = (((S⁻¹ : ℝ) : ℂ) • (((U : CMatrix a) * D) *
+            star (U : CMatrix a))) := by
+            rw [Matrix.smul_mul]
+      _ = (((S⁻¹ : ℝ) : ℂ) • ((U : CMatrix a) * D *
+            star (U : CMatrix a))) := rfl
   calc
-    psdSchattenPNorm M hM p = (∑ i, d i ^ p) ^ (1 / p) := hnorm
-    _ = ∑ i, d i * n i ^ r := hscalar.symm
-    _ = ((M * CFC.rpow N (1 - 1 / p)).trace).re := by
-      simpa [r] using htrace.symm
+    psdTraceReverseHolderOptimizer M hM p =
+        (U : CMatrix a) *
+          (Matrix.diagonal (fun i => (((d i ^ p) / S : ℝ) : ℂ)) : CMatrix a) *
+          star (U : CMatrix a) := by
+          simp [psdTraceReverseHolderOptimizer, U, d, S]
+    _ = (U : CMatrix a) * ((((S⁻¹ : ℝ) : ℂ) • D)) *
+          star (U : CMatrix a) := by
+          rw [hdiag]
+    _ = (((S⁻¹ : ℝ) : ℂ) • ((U : CMatrix a) * D * star (U : CMatrix a))) := by
+          exact hsmul
+    _ = (((psdTracePower M hM p)⁻¹ : ℝ) : ℂ) • CFC.rpow M p := by
+          rw [hpow]
+
+/-- The reverse-Holder optimizer attains the Schatten expression whenever
+`Tr M^p` is strictly positive. -/
+theorem psdTraceReverseHolderOptimizer_mem
+    {M : CMatrix a} (hM : M.PosSemidef)
+    {p : ℝ} (hp0 : 0 < p)
+    (hSpos : 0 < psdTracePower M hM p) :
+    psdSchattenPNorm M hM p ∈ psdTraceReverseHolderStateValueSet M p := by
+  rcases psdTraceReverseHolderOptimizer_props hM hp0 hSpos with
+    ⟨hN, hNtr, hSupport, hattain⟩
+  exact ⟨psdTraceReverseHolderOptimizer M hM p, hN, hNtr, hSupport, hattain⟩
+
+/-- The explicit reverse-Holder optimizer is full-rank whenever the reference
+PSD matrix has strictly positive spectrum.  This is the full-rank side-state
+upgrade needed before using negative powers in the low-`α` DPI route. -/
+theorem psdTraceReverseHolderOptimizer_posDef
+    {M : CMatrix a} (hM : M.PosSemidef)
+    {p : ℝ}
+    (hSpos : 0 < psdTracePower M hM p)
+    (heig_pos : ∀ i, 0 < hM.isHermitian.eigenvalues i) :
+    (psdTraceReverseHolderOptimizer M hM p).PosDef := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hM.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := fun i => hM.isHermitian.eigenvalues i
+  let S : ℝ := psdTracePower M hM p
+  let n : a → ℝ := fun i => d i ^ p / S
+  have hSposS : 0 < S := by
+    simpa [S] using hSpos
+  have hn_pos : ∀ i, 0 < n i := by
+    intro i
+    exact div_pos (Real.rpow_pos_of_pos (by simpa [d] using heig_pos i) p) hSposS
+  have hdiag :
+      (Matrix.diagonal (fun i => ((n i : ℝ) : ℂ)) : CMatrix a).PosDef := by
+    rw [Matrix.posDef_diagonal_iff]
+    intro i
+    change 0 < ((n i : ℝ) : ℂ)
+    exact_mod_cast hn_pos i
+  have hconj :
+      ((U : CMatrix a) *
+          (Matrix.diagonal (fun i => ((n i : ℝ) : ℂ)) : CMatrix a) *
+          star (U : CMatrix a)).PosDef := by
+    rw [Matrix.IsUnit.posDef_star_right_conjugate_iff
+      (Unitary.isUnit_coe : IsUnit (U : CMatrix a))]
+    exact hdiag
+  simpa [psdTraceReverseHolderOptimizer, U, d, S, n] using hconj
+
+/-- Full-rank input version of `psdTraceReverseHolderOptimizer_posDef`. -/
+theorem psdTraceReverseHolderOptimizer_posDef_of_posDef
+    {M : CMatrix a} (hM : M.PosSemidef) (hMdef : M.PosDef)
+    {p : ℝ}
+    (hSpos : 0 < psdTracePower M hM p) :
+    (psdTraceReverseHolderOptimizer M hM p).PosDef :=
+  psdTraceReverseHolderOptimizer_posDef hM hSpos (by
+    intro i
+    simpa using hMdef.eigenvalues_pos i)
+
+/-- Direct side-state form of the reverse-Holder optimizer.
+
+For a nonzero PSD power trace in the subunit range, there is a normalized PSD
+side-state supporting `M` whose reverse-Holder trace objective attains the PSD
+Schatten expression. -/
+theorem exists_psdTraceReverseHolder_sideState_attaining
+    {M : CMatrix a} (hM : M.PosSemidef)
+    {p : ℝ} (hp0 : 0 < p)
+    (hSpos : 0 < psdTracePower M hM p) :
+    ∃ N : CMatrix a, ∃ _hN : N.PosSemidef,
+      N.trace.re = 1 ∧ Matrix.Supports M N ∧
+        psdSchattenPNorm M hM p =
+          ((M * CFC.rpow N (1 - 1 / p)).trace).re := by
+  simpa [psdTraceReverseHolderStateValueSet] using
+    (psdTraceReverseHolderOptimizer_mem hM hp0 hSpos)
 
 /-- Exact reverse-Holder variational formula as a minimum, in the nonzero
 power-trace case. -/
@@ -2101,6 +4718,50 @@ theorem psdTraceHolderUnitBall_sSup_eq
     (hpq : p.HolderConjugate q) :
     sSup (psdTraceHolderUnitBallValueSet M q) = psdSchattenPNorm M hM p :=
   (psdTraceHolderUnitBall_isGreatest hM hpq).csSup_eq
+
+/-- To prove a PSD Schatten `p`-norm bound from the Holder variational formula,
+it suffices to bound every normalized PSD `q`-unit-ball trace pairing.
+
+This is the reusable variational handoff needed by the sandwiched-Renyi DPI
+route: the channel-specific work can focus on transporting arbitrary positive
+dual witnesses through the Heisenberg adjoint. -/
+theorem psdSchattenPNorm_le_of_traceHolderUnitBall_le
+    {b : Type v} [Fintype b] [DecidableEq b]
+    {M : CMatrix a} {N : CMatrix b} (hM : M.PosSemidef) (hN : N.PosSemidef)
+    {p q : ℝ} (hpq : p.HolderConjugate q)
+    (hbound : ∀ B : CMatrix a, ∀ hB : B.PosSemidef,
+      psdTracePower B hB q ≤ 1 → ((M * B).trace).re ≤ psdSchattenPNorm N hN p) :
+    psdSchattenPNorm M hM p ≤ psdSchattenPNorm N hN p := by
+  rcases (psdTraceHolderUnitBall_isGreatest hM hpq).1 with ⟨B, hB, hBq, hval⟩
+  rw [hval]
+  exact hbound B hB hBq
+
+/-- A PSD power-trace inequality implies the matching PSD Schatten expression
+inequality for positive exponents. -/
+theorem psdSchattenPNorm_le_of_psdTracePower_le
+    {b : Type v} [Fintype b] [DecidableEq b]
+    {M : CMatrix a} {N : CMatrix b} (hM : M.PosSemidef) (hN : N.PosSemidef)
+    {p : ℝ} (hp : 0 < p)
+    (hpower : psdTracePower M hM p ≤ psdTracePower N hN p) :
+    psdSchattenPNorm M hM p ≤ psdSchattenPNorm N hN p := by
+  rw [psdSchattenPNorm, psdSchattenPNorm]
+  exact Real.rpow_le_rpow
+    (psdTracePower_nonneg M hM p) hpower
+    (one_div_nonneg.mpr (le_of_lt hp))
+
+/-- A PSD Schatten `p`-norm inequality implies the matching `p`-power trace
+inequality when both power traces are strictly positive. -/
+theorem psdTracePower_le_of_psdSchattenPNorm_le
+    {b : Type v} [Fintype b] [DecidableEq b]
+    {M : CMatrix a} {N : CMatrix b} (hM : M.PosSemidef) (hN : N.PosSemidef)
+    {p : ℝ} (hp : 0 < p)
+    (hMpos : 0 < psdTracePower M hM p)
+    (hNpos : 0 < psdTracePower N hN p)
+    (hnorm : psdSchattenPNorm M hM p ≤ psdSchattenPNorm N hN p) :
+    psdTracePower M hM p ≤ psdTracePower N hN p := by
+  rw [psdSchattenPNorm] at hnorm
+  exact (Real.rpow_le_rpow_iff (le_of_lt hMpos) (le_of_lt hNpos)
+    (one_div_pos.2 hp)).mp hnorm
 
 end
 

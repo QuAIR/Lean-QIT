@@ -23,7 +23,7 @@ open scoped ComplexOrder MatrixOrder
 
 namespace QIT
 
-universe u v w x
+universe u v w x y
 
 noncomputable section
 
@@ -192,6 +192,24 @@ def krausAdjoint {κ : Type w} [Fintype κ]
     (K : κ → Matrix b a ℂ) (E : CMatrix b) : CMatrix a :=
   ∑ k : κ, Matrix.conjTranspose (K k) * E * K k
 
+omit [DecidableEq a] [DecidableEq b] in
+/-- Kraus Heisenberg adjoints preserve positive semidefinite effects. -/
+theorem krausAdjoint_mapsPositive {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ) :
+    ∀ E : CMatrix b, E.PosSemidef → (krausAdjoint K E).PosSemidef := by
+  intro E hE
+  rw [krausAdjoint]
+  exact Matrix.posSemidef_sum Finset.univ fun k _ =>
+    Matrix.PosSemidef.conjTranspose_mul_mul_same hE (K k)
+
+omit [Fintype a] [DecidableEq a] [DecidableEq b] in
+/-- Kraus Heisenberg adjoints commute with subtraction. -/
+theorem krausAdjoint_sub_apply {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ) (E F : CMatrix b) :
+    krausAdjoint K (E - F) = krausAdjoint K E - krausAdjoint K F := by
+  ext i j
+  simp [krausAdjoint, Matrix.mul_sub, Matrix.sub_mul, Finset.sum_sub_distrib]
+
 /-- Trace duality between a Kraus map and its Heisenberg adjoint. -/
 theorem ofKraus_trace_duality {κ : Type w} [Fintype κ]
     (K : κ → Matrix b a ℂ) (X : CMatrix a) (E : CMatrix b) :
@@ -210,6 +228,24 @@ theorem ofKraus_trace_duality {κ : Type w} [Fintype κ]
     _ = (X * (KkH * E * Kk)).trace := by
           simp only [Matrix.mul_assoc]
     _ = (X * (Matrix.conjTranspose (K k) * E * K k)).trace := by rfl
+
+/-- Conjugating each Kraus operator on the output/input sides conjugates the
+corresponding Kraus map around the original map. -/
+theorem ofKraus_conjugated_apply {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ) (T : CMatrix b) (S X : CMatrix a) :
+    ofKraus (fun k => T * K k * S) X =
+      T * ofKraus K (S * X * star S) * star T := by
+  change (∑ k, (T * K k * S) * X * Matrix.conjTranspose (T * K k * S)) =
+    T * (∑ k, K k * (S * X * star S) * Matrix.conjTranspose (K k)) * star T
+  rw [Finset.mul_sum, Finset.sum_mul]
+  apply Finset.sum_congr rfl
+  intro k _
+  have hTct : Matrix.conjTranspose T = star T := by
+    rw [← Matrix.star_eq_conjTranspose]
+  have hSct : Matrix.conjTranspose S = star S := by
+    rw [← Matrix.star_eq_conjTranspose]
+  rw [Matrix.conjTranspose_mul, Matrix.conjTranspose_mul, hSct, hTct]
+  simp [Matrix.mul_assoc]
 
 /-- A trace-preserving Kraus map has unital Heisenberg adjoint. -/
 theorem krausAdjoint_one_of_tracePreserving {κ : Type w} [Fintype κ]
@@ -251,6 +287,309 @@ theorem krausAdjoint_one_of_tracePreserving {κ : Type w} [Fintype κ]
     _ = X.trace := htrace
     _ = (1 : CMatrix a) i j := by rw [hXtrace, hOne]
 
+/-- A Kraus map is trace-preserving when its Heisenberg adjoint is unital. -/
+theorem ofKraus_isTracePreserving_of_krausAdjoint_one {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ) (hK : krausAdjoint K (1 : CMatrix b) = 1) :
+    IsTracePreserving (ofKraus K) := by
+  intro X
+  have hdual := ofKraus_trace_duality K X (1 : CMatrix b)
+  rw [Matrix.mul_one] at hdual
+  rw [hK, Matrix.mul_one] at hdual
+  exact hdual
+
+/-- A trace-preserving Kraus map has a unital positive Heisenberg adjoint, so
+effects are pulled back to effects. -/
+theorem krausAdjoint_effect_of_tracePreserving {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ) (hTP : IsTracePreserving (ofKraus K))
+    {E : CMatrix b} (hEpos : E.PosSemidef) (hEle : E ≤ 1) :
+    (krausAdjoint K E).PosSemidef ∧ krausAdjoint K E ≤ 1 := by
+  refine ⟨krausAdjoint_mapsPositive K E hEpos, ?_⟩
+  rw [Matrix.le_iff]
+  have hcomp : (1 - E).PosSemidef := by
+    rwa [← Matrix.le_iff]
+  have hcompAdj : (krausAdjoint K (1 - E)).PosSemidef :=
+    krausAdjoint_mapsPositive K (1 - E) hcomp
+  have hone := krausAdjoint_one_of_tracePreserving K hTP
+  have hsub := krausAdjoint_sub_apply K (1 : CMatrix b) E
+  rw [hone] at hsub
+  rwa [← hsub]
+
+section KrausKadison
+
+variable {κ : Type w} [Fintype κ] [DecidableEq κ]
+
+/-- A PSD idempotent has PSD complement. -/
+theorem posSemidef_one_sub_of_posSemidef_idempotent
+    {ι : Type*} [Fintype ι] [DecidableEq ι] (P : CMatrix ι)
+    (hPpos : P.PosSemidef) (hPid : P * P = P) :
+    (1 - P).PosSemidef := by
+  let Q : CMatrix ι := 1 - P
+  have hPherm : P.IsHermitian := hPpos.isHermitian
+  have hQherm : Q.IsHermitian := by
+    dsimp [Q]
+    exact Matrix.IsHermitian.sub (by simp [Matrix.IsHermitian]) hPherm
+  have hQid : Q * Q = Q := by
+    dsimp [Q]
+    calc
+      (1 - P) * (1 - P) = (1 - P) * 1 - (1 - P) * P := by
+        rw [Matrix.mul_sub]
+      _ = (1 - P) - (1 * P - P * P) := by
+        rw [Matrix.mul_one, Matrix.sub_mul]
+      _ = 1 - P := by
+        rw [Matrix.one_mul, hPid]
+        abel
+  have hPSD : (Matrix.conjTranspose Q * Q).PosSemidef :=
+    Matrix.posSemidef_conjTranspose_mul_self Q
+  convert hPSD using 1
+  rw [hQherm.eq, hQid]
+
+/-- Stinespring stack matrix associated to a Kraus family. -/
+def krausStinespringMatrix (K : κ → Matrix b a ℂ) : Matrix (b × κ) a ℂ :=
+  fun yk x => K yk.2 yk.1 x
+
+omit [Fintype a] [DecidableEq κ] in
+/-- The Stinespring stack is an isometry exactly when the Kraus adjoint is
+unital. -/
+theorem krausStinespringMatrix_isometry_of_krausAdjoint_one
+    (K : κ → Matrix b a ℂ) (hK : krausAdjoint K (1 : CMatrix b) = 1) :
+    Matrix.conjTranspose (krausStinespringMatrix K) *
+        krausStinespringMatrix K = (1 : CMatrix a) := by
+  ext i j
+  have hentry := congrFun (congrFun hK i) j
+  simp only [krausAdjoint, Matrix.sum_apply, Matrix.mul_apply,
+    Matrix.conjTranspose_apply, Matrix.one_apply] at hentry
+  simp only [krausStinespringMatrix, Matrix.mul_apply, Matrix.conjTranspose_apply,
+    Matrix.one_apply]
+  rw [Fintype.sum_prod_type]
+  rw [Finset.sum_comm]
+  simpa [mul_comm] using hentry
+
+/-- The Stinespring projection associated to a unital Kraus adjoint has a PSD
+orthogonal complement. This is the projection-positivity core behind the
+Kadison/variance step in the sandwiched Renyi variational route. -/
+theorem krausStinespringMatrix_projection_complement_posSemidef
+    (K : κ → Matrix b a ℂ) (hK : krausAdjoint K (1 : CMatrix b) = 1) :
+    (1 - krausStinespringMatrix K * Matrix.conjTranspose (krausStinespringMatrix K)
+      ).PosSemidef := by
+  let S : Matrix (b × κ) a ℂ := krausStinespringMatrix K
+  have hS : Matrix.conjTranspose S * S = (1 : CMatrix a) := by
+    simpa [S] using krausStinespringMatrix_isometry_of_krausAdjoint_one K hK
+  have hPpos : (S * Matrix.conjTranspose S).PosSemidef := by
+    simpa using Matrix.posSemidef_conjTranspose_mul_self (Matrix.conjTranspose S)
+  have hPid : (S * Matrix.conjTranspose S) * (S * Matrix.conjTranspose S) =
+      S * Matrix.conjTranspose S := by
+    calc
+      (S * Matrix.conjTranspose S) * (S * Matrix.conjTranspose S) =
+          S * (Matrix.conjTranspose S * (S * Matrix.conjTranspose S)) := by
+            exact Matrix.mul_assoc S (Matrix.conjTranspose S) (S * Matrix.conjTranspose S)
+      _ = S * ((Matrix.conjTranspose S * S) * Matrix.conjTranspose S) := by
+            exact congrArg (fun M => S * M)
+              (Matrix.mul_assoc (Matrix.conjTranspose S) S (Matrix.conjTranspose S)).symm
+      _ = S * ((1 : CMatrix a) * Matrix.conjTranspose S) := by
+            exact congrArg (fun M : CMatrix a => S * (M * Matrix.conjTranspose S)) hS
+      _ = S * Matrix.conjTranspose S := by
+            exact congrArg (fun M => S * M)
+              (Matrix.one_mul (Matrix.conjTranspose S))
+  simpa [S] using
+    posSemidef_one_sub_of_posSemidef_idempotent
+      (S * Matrix.conjTranspose S) hPpos hPid
+
+omit [Fintype a] [DecidableEq a] [DecidableEq b] in
+/-- Kraus Heisenberg adjoints are Stinespring compressions. -/
+theorem krausAdjoint_eq_stinespring
+    (K : κ → Matrix b a ℂ) (E : CMatrix b) :
+    krausAdjoint K E =
+      Matrix.conjTranspose (krausStinespringMatrix K) *
+        Matrix.kronecker E (1 : CMatrix κ) *
+          krausStinespringMatrix K := by
+  ext i j
+  simp [krausAdjoint, krausStinespringMatrix, Matrix.sum_apply, Matrix.mul_apply,
+    Matrix.conjTranspose_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
+    Matrix.one_apply, Fintype.sum_prod_type, Finset.mul_sum, mul_comm]
+  rw [Finset.sum_comm]
+
+omit [DecidableEq b] in
+/-- Squaring a Stinespring block observable squares the observed operator. -/
+theorem krausStinespring_observable_sq
+    (E : CMatrix b) :
+    Matrix.kronecker E (1 : CMatrix κ) *
+        Matrix.kronecker E (1 : CMatrix κ) =
+      Matrix.kronecker (E * E) (1 : CMatrix κ) := by
+  simpa using
+    (Matrix.mul_kronecker_mul E E (1 : CMatrix κ) (1 : CMatrix κ)).symm
+
+omit [Fintype b] [DecidableEq b] [Fintype κ] in
+/-- A Stinespring block observable is Hermitian when the observed operator is
+Hermitian. -/
+theorem krausStinespring_observable_isHermitian
+    {E : CMatrix b} (hE : E.IsHermitian) :
+    (Matrix.kronecker E (1 : CMatrix κ)).IsHermitian := by
+  rw [Matrix.IsHermitian]
+  calc
+    Matrix.conjTranspose (Matrix.kronecker E (1 : CMatrix κ)) =
+        Matrix.kronecker (Matrix.conjTranspose E) (Matrix.conjTranspose (1 : CMatrix κ)) := by
+          simpa [Matrix.kronecker] using
+            Matrix.conjTranspose_kronecker E (1 : CMatrix κ)
+    _ = Matrix.kronecker E (1 : CMatrix κ) := by
+          rw [hE.eq]
+          simp
+
+/-- Positivity of the Stinespring variance term
+`(T S)ᴴ (I - S Sᴴ) (T S)`.
+
+Together with the Stinespring compression identity, this is the positive part of
+Kadison's inequality for unital Kraus adjoints. -/
+theorem krausStinespring_varianceTerm_posSemidef
+    (K : κ → Matrix b a ℂ) (hK : krausAdjoint K (1 : CMatrix b) = 1)
+    (T : CMatrix (b × κ)) :
+    (Matrix.conjTranspose (T * krausStinespringMatrix K) *
+        (1 - krausStinespringMatrix K * Matrix.conjTranspose (krausStinespringMatrix K)) *
+          (T * krausStinespringMatrix K)).PosSemidef := by
+  exact Matrix.PosSemidef.conjTranspose_mul_mul_same
+    (krausStinespringMatrix_projection_complement_posSemidef K hK)
+    (T * krausStinespringMatrix K)
+
+omit [DecidableEq b] in
+/-- Multiplying a Stinespring block observable by its adjoint multiplies the
+observed operators in the same order. -/
+theorem krausStinespring_observable_conjTranspose_mul
+    (E : CMatrix b) :
+    Matrix.conjTranspose (Matrix.kronecker E (1 : CMatrix κ)) *
+        Matrix.kronecker E (1 : CMatrix κ) =
+      Matrix.kronecker (Matrix.conjTranspose E * E) (1 : CMatrix κ) := by
+  have hct :
+      Matrix.conjTranspose (Matrix.kronecker E (1 : CMatrix κ)) =
+        Matrix.kronecker (Matrix.conjTranspose E) (Matrix.conjTranspose (1 : CMatrix κ)) := by
+    simpa [Matrix.kronecker] using Matrix.conjTranspose_kronecker E (1 : CMatrix κ)
+  calc
+    Matrix.conjTranspose (Matrix.kronecker E (1 : CMatrix κ)) *
+        Matrix.kronecker E (1 : CMatrix κ) =
+        Matrix.kronecker (Matrix.conjTranspose E) (Matrix.conjTranspose (1 : CMatrix κ)) *
+          Matrix.kronecker E (1 : CMatrix κ) := by
+            rw [hct]
+    _ = Matrix.kronecker (Matrix.conjTranspose E * E)
+        (Matrix.conjTranspose (1 : CMatrix κ) * (1 : CMatrix κ)) := by
+            exact (Matrix.mul_kronecker_mul (Matrix.conjTranspose E) E
+              (Matrix.conjTranspose (1 : CMatrix κ)) (1 : CMatrix κ)).symm
+    _ = Matrix.kronecker (Matrix.conjTranspose E * E) (1 : CMatrix κ) := by
+            simp
+
+/-- Kadison-Schwarz inequality for a unital Kraus Heisenberg adjoint:
+`Φ†(E)ᴴ Φ†(E) ≤ Φ†(EᴴE)` for arbitrary `E`. -/
+theorem krausAdjoint_conjTranspose_mul_self_le_of_krausAdjoint_one
+    (K : κ → Matrix b a ℂ) (hK : krausAdjoint K (1 : CMatrix b) = 1)
+    (E : CMatrix b) :
+    Matrix.conjTranspose (krausAdjoint K E) * krausAdjoint K E ≤
+      krausAdjoint K (Matrix.conjTranspose E * E) := by
+  let S : Matrix (b × κ) a ℂ := krausStinespringMatrix K
+  let T : CMatrix (b × κ) := Matrix.kronecker E (1 : CMatrix κ)
+  have hTstarT :
+      Matrix.conjTranspose T * T =
+        Matrix.kronecker (Matrix.conjTranspose E * E) (1 : CMatrix κ) := by
+    simpa [T] using krausStinespring_observable_conjTranspose_mul (κ := κ) E
+  have hmain :
+      (Matrix.conjTranspose (T * S) * (1 - S * Matrix.conjTranspose S) * (T * S)
+        ).PosSemidef := by
+    simpa [S] using krausStinespring_varianceTerm_posSemidef K hK T
+  have hdiff :
+      krausAdjoint K (Matrix.conjTranspose E * E) -
+          Matrix.conjTranspose (krausAdjoint K E) * krausAdjoint K E =
+        Matrix.conjTranspose (T * S) * (1 - S * Matrix.conjTranspose S) * (T * S) := by
+    calc
+      krausAdjoint K (Matrix.conjTranspose E * E) -
+          Matrix.conjTranspose (krausAdjoint K E) * krausAdjoint K E =
+          (Matrix.conjTranspose S * (Matrix.conjTranspose T * T) * S) -
+            Matrix.conjTranspose (Matrix.conjTranspose S * T * S) *
+              (Matrix.conjTranspose S * T * S) := by
+            rw [krausAdjoint_eq_stinespring K (Matrix.conjTranspose E * E),
+              krausAdjoint_eq_stinespring K E]
+            change Matrix.conjTranspose S *
+                Matrix.kronecker (Matrix.conjTranspose E * E) (1 : CMatrix κ) * S -
+                Matrix.conjTranspose (Matrix.conjTranspose S * T * S) *
+                  (Matrix.conjTranspose S * T * S) =
+                Matrix.conjTranspose S * (Matrix.conjTranspose T * T) * S -
+                Matrix.conjTranspose (Matrix.conjTranspose S * T * S) *
+                  (Matrix.conjTranspose S * T * S)
+            rw [← hTstarT]
+      _ = Matrix.conjTranspose S * Matrix.conjTranspose T *
+            (1 - S * Matrix.conjTranspose S) * T * S := by
+            simp [Matrix.conjTranspose_mul, Matrix.mul_assoc, Matrix.mul_sub, Matrix.sub_mul]
+      _ = Matrix.conjTranspose (T * S) * (1 - S * Matrix.conjTranspose S) *
+            (T * S) := by
+            rw [Matrix.conjTranspose_mul]
+            simp [Matrix.mul_assoc]
+  rw [Matrix.le_iff, hdiff]
+  exact hmain
+
+/-- Kadison-Schwarz inequality for trace-preserving Kraus maps, stated from
+the Schrödinger-picture trace-preservation hypothesis. -/
+theorem krausAdjoint_conjTranspose_mul_self_le_of_tracePreserving
+    (K : κ → Matrix b a ℂ) (hTP : IsTracePreserving (ofKraus K))
+    (E : CMatrix b) :
+    Matrix.conjTranspose (krausAdjoint K E) * krausAdjoint K E ≤
+      krausAdjoint K (Matrix.conjTranspose E * E) :=
+  krausAdjoint_conjTranspose_mul_self_le_of_krausAdjoint_one K
+    (krausAdjoint_one_of_tracePreserving K hTP) E
+
+/-- Kadison inequality for a unital Kraus Heisenberg adjoint:
+`Φ†(E)^2 ≤ Φ†(E^2)` for Hermitian `E`. -/
+theorem krausAdjoint_mul_self_le_of_krausAdjoint_one
+    (K : κ → Matrix b a ℂ) (hK : krausAdjoint K (1 : CMatrix b) = 1)
+    {E : CMatrix b} (hE : E.IsHermitian) :
+    krausAdjoint K E * krausAdjoint K E ≤ krausAdjoint K (E * E) := by
+  let S : Matrix (b × κ) a ℂ := krausStinespringMatrix K
+  let T : CMatrix (b × κ) := Matrix.kronecker E (1 : CMatrix κ)
+  have hTstar : Matrix.conjTranspose T = T := by
+    exact (krausStinespring_observable_isHermitian (κ := κ) hE).eq
+  have hTsq : T * T = Matrix.kronecker (E * E) (1 : CMatrix κ) := by
+    simpa [T] using krausStinespring_observable_sq (κ := κ) E
+  have hmain :
+      (Matrix.conjTranspose (T * S) * (1 - S * Matrix.conjTranspose S) * (T * S)
+        ).PosSemidef := by
+    simpa [S] using krausStinespring_varianceTerm_posSemidef K hK T
+  have hdiff :
+      krausAdjoint K (E * E) - krausAdjoint K E * krausAdjoint K E =
+        Matrix.conjTranspose (T * S) * (1 - S * Matrix.conjTranspose S) * (T * S) := by
+    calc
+      krausAdjoint K (E * E) - krausAdjoint K E * krausAdjoint K E =
+          (Matrix.conjTranspose S * (T * T) * S) -
+            (Matrix.conjTranspose S * T * S) *
+              (Matrix.conjTranspose S * T * S) := by
+            rw [krausAdjoint_eq_stinespring K (E * E),
+              krausAdjoint_eq_stinespring K E]
+            change Matrix.conjTranspose S *
+                Matrix.kronecker (E * E) (1 : CMatrix κ) * S -
+                (Matrix.conjTranspose S * T * S) *
+                  (Matrix.conjTranspose S * T * S) =
+                Matrix.conjTranspose S * (T * T) * S -
+                Matrix.conjTranspose S * T * S * (Matrix.conjTranspose S * T * S)
+            rw [← hTsq]
+      _ = Matrix.conjTranspose S * T * (1 - S * Matrix.conjTranspose S) * T * S := by
+            simp [Matrix.sub_mul, Matrix.mul_sub, Matrix.mul_assoc]
+      _ = Matrix.conjTranspose (T * S) * (1 - S * Matrix.conjTranspose S) * (T * S) := by
+            rw [Matrix.conjTranspose_mul, hTstar]
+            simp [Matrix.mul_assoc]
+  rw [Matrix.le_iff, hdiff]
+  exact hmain
+
+/-- Kadison inequality for trace-preserving Kraus maps, stated directly from
+the Schrödinger-picture trace-preservation hypothesis. -/
+theorem krausAdjoint_mul_self_le_of_tracePreserving
+    (K : κ → Matrix b a ℂ) (hTP : IsTracePreserving (ofKraus K))
+    {E : CMatrix b} (hE : E.IsHermitian) :
+    krausAdjoint K E * krausAdjoint K E ≤ krausAdjoint K (E * E) :=
+  krausAdjoint_mul_self_le_of_krausAdjoint_one K
+    (krausAdjoint_one_of_tracePreserving K hTP) hE
+
+/-- Kadison inequality specialized to positive semidefinite effects. -/
+theorem krausAdjoint_posSemidef_mul_self_le_of_tracePreserving
+    (K : κ → Matrix b a ℂ) (hTP : IsTracePreserving (ofKraus K))
+    {E : CMatrix b} (hE : E.PosSemidef) :
+    krausAdjoint K E * krausAdjoint K E ≤ krausAdjoint K (E * E) :=
+  krausAdjoint_mul_self_le_of_tracePreserving K hTP hE.isHermitian
+
+end KrausKadison
+
 /-- Choi matrix of a Kraus-form matrix map, as a sum of rank-one projectors. -/
 theorem choi_ofKraus {κ : Type w} [Fintype κ] (K : κ -> Matrix b a Complex) :
     choi (ofKraus K) =
@@ -288,6 +627,14 @@ theorem choi_ofKraus {κ : Type w} [Fintype κ] (K : κ -> Matrix b a Complex) :
         _ = K k x.2 x.1 := by
           simp
     rw [hsum]
+
+/-- Kraus-form maps are completely positive in the Choi-positive formulation. -/
+theorem ofKraus_completelyPositive {κ : Type w} [Fintype κ]
+    (K : κ -> Matrix b a Complex) :
+    IsCompletelyPositive (ofKraus K) := by
+  rw [IsCompletelyPositive, choi_ofKraus]
+  exact Matrix.posSemidef_sum Finset.univ (fun _ _ =>
+    Matrix.posSemidef_vecMulVec_self_star _)
 
 /-- Choi matrices determine finite-dimensional matrix maps. -/
 theorem choi_inj {Phi Psi : MatrixMap a b} (h : choi Phi = choi Psi) :
@@ -339,6 +686,36 @@ theorem isCompletelyPositive_mapsPositive (Phi : MatrixMap a b)
   intro X hX
   rw [hK]
   exact ofKraus_mapsPositive K X hX
+
+variable {c : Type w}
+variable [Fintype c] [DecidableEq c]
+
+/-- Composition of Kraus-form maps is again a Kraus-form map, with pairwise
+products of Kraus operators. -/
+theorem ofKraus_comp_ofKraus {κ : Type x} {ι : Type y} [Fintype κ] [Fintype ι]
+    (L : ι -> Matrix c b Complex) (K : κ -> Matrix b a Complex) :
+    (ofKraus L).comp (ofKraus K) =
+      ofKraus (fun kl : κ × ι => L kl.2 * K kl.1) := by
+  ext X i j
+  simp [ofKraus, LinearMap.comp_apply, Matrix.sum_apply, Matrix.conjTranspose_mul,
+    Matrix.mul_assoc]
+  rw [← Finset.univ_product_univ, Finset.sum_product]
+
+/-- Complete positivity is stable under composition of finite matrix maps. -/
+theorem isCompletelyPositive_comp (Psi : MatrixMap b c) (Phi : MatrixMap a b)
+    (hPsi : IsCompletelyPositive Psi) (hPhi : IsCompletelyPositive Phi) :
+    IsCompletelyPositive (Psi.comp Phi) := by
+  obtain ⟨K, hK⟩ := exists_kraus_of_choi_psd Phi hPhi
+  obtain ⟨L, hL⟩ := exists_kraus_of_choi_psd Psi hPsi
+  rw [hL, hK, ofKraus_comp_ofKraus]
+  exact ofKraus_completelyPositive _
+
+/-- Trace preservation is stable under composition of finite matrix maps. -/
+theorem isTracePreserving_comp (Psi : MatrixMap b c) (Phi : MatrixMap a b)
+    (hPsi : IsTracePreserving Psi) (hPhi : IsTracePreserving Phi) :
+    IsTracePreserving (Psi.comp Phi) := by
+  intro X
+  exact (hPsi (Phi X)).trans (hPhi X)
 
 variable {c : Type w} {d : Type x}
 variable [Fintype c] [DecidableEq c] [Fintype d] [DecidableEq d]

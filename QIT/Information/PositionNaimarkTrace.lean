@@ -6,8 +6,8 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Information.EntanglementAssistedLowerBound
-public import QIT.Information.HypothesisTestingDPI
+public import QIT.Coding.EntanglementAssisted.EntanglementAssistedLowerBound
+public import QIT.HypothesisTesting.DPI
 
 /-!
 # Position-wise Naimark trace infrastructure
