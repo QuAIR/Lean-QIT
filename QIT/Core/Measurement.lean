@@ -41,6 +41,37 @@ structure POVM (x : Type u) (a : Type v) [Fintype x] [Fintype a] [DecidableEq a]
 
 namespace POVM
 
+/-- The standard coordinate POVM in the reference basis. Its `y`th effect is
+the rank-one projector `|y⟩⟨y|`. -/
+def coordinate (a : Type v) [Fintype a] [DecidableEq a] : POVM a a where
+  effects y := Matrix.single y y (1 : ℂ)
+  pos y := posSemidef_single y
+  sum_eq_one := by
+    ext i j
+    rw [Matrix.sum_apply]
+    by_cases hij : i = j
+    · subst j
+      rw [Finset.sum_eq_single i]
+      · rw [Matrix.single_apply]
+        simp
+      · intro y _ hy
+        rw [Matrix.single_apply]
+        simp [hy]
+      · intro hi
+        simp at hi
+    · rw [Matrix.one_apply, if_neg hij]
+      refine Finset.sum_eq_zero fun y _ => ?_
+      rw [Matrix.single_apply]
+      have hnot : ¬ (y = i ∧ y = j) := by
+        intro h
+        exact hij (h.1.symm.trans h.2)
+      simp [hnot]
+
+@[simp]
+theorem coordinate_effects {a : Type v} [Fintype a] [DecidableEq a] (y : a) :
+    (coordinate a).effects y = Matrix.single y y (1 : ℂ) :=
+  rfl
+
 variable (M : POVM x a)
 
 /-- The POVM effects sum to the identity matrix. -/

@@ -688,7 +688,8 @@ theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_ordered_h
       (SequentialDecoding.prefixProjectionSequence A (messageIndex m))
       (P.positionOutputState m) hη_pos hη_lt hmiss hfalse hm_size)
 
-/-- Fixed-order sequential-decoder assembly after Naimark compression.
+/-- Fixed-order sequential-decoder assembly after Naimark compression,
+returned as a source-shaped one-shot achievability witness.
 
 The projective sequential decoder lives on a larger dilation space `out`, while
 the actual operational decoder is the POVM obtained by compressing it along an
@@ -697,7 +698,7 @@ Khatri--Wilde one-shot lower-bound route: the OMW/sequential-decoding estimate
 is proved in the projective Naimark space, and `compressByIsometry_prob_eq`
 transfers the success probability back to the physical code.
 -/
-theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_compressed_ordered_trace_bounds_of_rpow_two_le_card
+def oneShotAchievabilityWitness_of_compressed_ordered_trace_bounds_of_rpow_two_le_card
     {seqLen : ℕ} {out : Type w} [Fintype out] [DecidableEq out]
     (P : PositionBasedCodingProtocol N M e)
     {ε η β lowerBound : ℝ}
@@ -724,9 +725,11 @@ theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_compresse
     (hβ_nonneg : 0 ≤ β)
     (hsize : (seqLen : ℝ) * β ≤ η ^ 2 / (4 * ε))
     (hcard : Real.rpow 2 lowerBound ≤ (Fintype.card M : ℝ)) :
-    (lowerBound : EReal) ≤ N.oneShotEntanglementAssistedClassicalCapacityE ε := by
-  refine P.lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_positionOutput_error
-    ?_ (P.lowerBound_le_rate_of_rpow_two_le_card hcard)
+    EntanglementAssistedOneShotAchievabilityWitness N ε lowerBound M
+      (TensorPower a (Fintype.card M)) (TensorPower e (Fintype.card M)) := by
+  refine P.toOneShotAchievabilityWitness ?_
+    (P.lowerBound_le_rate_of_rpow_two_le_card hcard)
+  refine P.maxErrorAtMost_of_positionOutput_error_le ?_
   intro m
   let lifted : State out := POVM.isometryLiftState (P.positionOutputState m) V hV
   have hseq :
@@ -788,8 +791,46 @@ theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_compresse
       (SequentialDecoding.prefixProjectionSequence A (messageIndex m))
       lifted hη_pos hη_lt hmiss' hfalse' hm_size)
 
+/-- Fixed-order sequential-decoder assembly after Naimark compression,
+returned as an extended-real capacity lower bound.
+
+The witness-valued theorem above is the source-shaped operational statement;
+this wrapper is kept for downstream capacity algebra. -/
+theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_compressed_ordered_trace_bounds_of_rpow_two_le_card
+    {seqLen : ℕ} {out : Type w} [Fintype out] [DecidableEq out]
+    (P : PositionBasedCodingProtocol N M e)
+    {ε η β lowerBound : ℝ}
+    (messageIndex : M ≃ Fin (seqLen + 1))
+    (A : ProjectionSequence out (seqLen + 1))
+    (V : Matrix out (Prod (TensorPower b 1) (TensorPower e (Fintype.card M))) ℂ)
+    (hV : Matrix.conjTranspose V * V = 1)
+    (hdecoder :
+      ∀ m : M,
+        P.decoder.effects m =
+          ((SequentialDecoding.sequentialDecoderPOVM A).compressByIsometry V hV).effects
+            (messageIndex m))
+    (hη_pos : 0 < η) (hη_lt : η < ε)
+    (hmiss :
+      ∀ m : M,
+        SequentialDecoding.effectTrace
+            (POVM.isometryLiftState (P.positionOutputState m) V hV)
+            (A (messageIndex m)).compl.matrix ≤ ε - η)
+    (hfalse :
+      ∀ m : M, ∀ i : Fin (messageIndex m).val,
+        SequentialDecoding.effectTrace
+            (POVM.isometryLiftState (P.positionOutputState m) V hV)
+            (A ⟨i.val, by omega⟩).matrix ≤ β)
+    (hβ_nonneg : 0 ≤ β)
+    (hsize : (seqLen : ℝ) * β ≤ η ^ 2 / (4 * ε))
+    (hcard : Real.rpow 2 lowerBound ≤ (Fintype.card M : ℝ)) :
+    (lowerBound : EReal) ≤ N.oneShotEntanglementAssistedClassicalCapacityE ε :=
+  QIT.EntanglementAssistedOneShotAchievabilityWitness.lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE
+    (P.oneShotAchievabilityWitness_of_compressed_ordered_trace_bounds_of_rpow_two_le_card
+      (messageIndex := messageIndex) (A := A) (V := V) (hV := hV)
+      hdecoder hη_pos hη_lt hmiss hfalse hβ_nonneg hsize hcard)
+
 /-- Concrete canonical position-based instantiation of the one-shot
-hypothesis-testing lower-bound assembly.
+hypothesis-testing lower-bound assembly, returned as an operational witness.
 
 The message set is any finite type explicitly ordered by
 `messageIndex : M ≃ Fin (seqLen + 1)`.  The decoder is the compressed shared
@@ -797,7 +838,7 @@ Naimark dilation of the position-inserted hypothesis-testing effects, relabeled
 along this order, and the trace identities from `PositionNaimarkTrace`
 discharge the missed-detection and false-alarm hypotheses of the
 sequential-decoding assembly. -/
-theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_canonical_ht_effect
+def oneShotAchievabilityWitness_of_canonical_ht_effect
     {seqLen : ℕ} (ψ : PureVector (Prod a a))
     (messageIndex : M ≃ Fin (seqLen + 1))
     (hcard_eq : Fintype.card M = seqLen + 1)
@@ -810,7 +851,8 @@ theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_canonical
     (hβ_nonneg : 0 ≤ β)
     (hsize : (seqLen : ℝ) * β ≤ η ^ 2 / (4 * ε))
     (hcard : Real.rpow 2 lowerBound ≤ (Fintype.card M : ℝ)) :
-    (lowerBound : EReal) ≤ N.oneShotEntanglementAssistedClassicalCapacityE ε := by
+    EntanglementAssistedOneShotAchievabilityWitness N ε lowerBound M
+      (TensorPower a (Fintype.card M)) (TensorPower a (Fintype.card M)) := by
   let basePOVM :=
     positionHypothesisTestingPOVM (a := a) (b := b) Λ (Fintype.card M)
   let out := POVM.FamilyNaimarkSpace basePOVM
@@ -846,7 +888,7 @@ theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_canonical
       (ψ.state.reindex (Equiv.prodComm a a))
       messageIndexCard decoder
   refine
-    P.lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_compressed_ordered_trace_bounds_of_rpow_two_le_card
+    P.oneShotAchievabilityWitness_of_compressed_ordered_trace_bounds_of_rpow_two_le_card
       (messageIndex := messageIndex)
       (A := A) (V := V) (hV := hV) ?_ hη_pos hη_lt ?_ ?_
       hβ_nonneg hsize ?_
@@ -893,6 +935,31 @@ theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_canonical
           (Λ := Λ) (decoder := decoder) m (finCongr hcard_eq.symm j) hi
     exact htrace.le.trans hβ
   · simpa using hcard
+
+/-- Concrete canonical position-based instantiation of the one-shot
+hypothesis-testing lower-bound assembly.
+
+This capacity-valued wrapper is retained for downstream algebra; the
+witness-valued theorem above is the operational form matching the code
+constructed in Khatri--Wilde's proof. -/
+theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_canonical_ht_effect
+    {seqLen : ℕ} (ψ : PureVector (Prod a a))
+    (messageIndex : M ≃ Fin (seqLen + 1))
+    (hcard_eq : Fintype.card M = seqLen + 1)
+    {ε η β lowerBound : ℝ}
+    (Λ : HypothesisTestingEffect (N.hypothesisTestingOutputState ψ) (ε - η))
+    (hη_pos : 0 < η) (hη_lt : η < ε)
+    (hβ : Λ.typeIIError
+        ((N.hypothesisTestingOutputState ψ).marginalA.prod
+          (N.hypothesisTestingOutputState ψ).marginalB) ≤ β)
+    (hβ_nonneg : 0 ≤ β)
+    (hsize : (seqLen : ℝ) * β ≤ η ^ 2 / (4 * ε))
+    (hcard : Real.rpow 2 lowerBound ≤ (Fintype.card M : ℝ)) :
+    (lowerBound : EReal) ≤ N.oneShotEntanglementAssistedClassicalCapacityE ε :=
+  QIT.EntanglementAssistedOneShotAchievabilityWitness.lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE
+    (PositionBasedCodingProtocol.oneShotAchievabilityWitness_of_canonical_ht_effect
+      (N := N) (M := M) (seqLen := seqLen) ψ messageIndex hcard_eq Λ
+      hη_pos hη_lt hβ hβ_nonneg hsize hcard)
 
 end PositionBasedCodingProtocol
 
@@ -977,6 +1044,125 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_strict
     PositionBasedCodingProtocol.lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE_of_canonical_ht_effect
       (N := N) (M := Message) (seqLen := seqLen) ψ messageIndex hcard_eq Λ
       hη_pos hη_lt hΛle (le_of_lt hbeta_real_pos) hsize hcard_code
+
+/-- Source-shaped strict-lower operational form of the Khatri--Wilde
+one-shot hypothesis-testing lower bound.
+
+For every finite real `lower` strictly below the barred channel
+hypothesis-testing mutual information, this theorem produces an actual
+finite-message entanglement-assisted one-shot code whose maximal error is at
+most `ε` and whose rate is at least
+`lower - log₂(4ε/η²)`.  The endpoint capacity inequality is obtained from
+these witnesses by the supremum closure theorem below.
+-/
+theorem exists_oneShotAchievabilityWitness_htLowerBound_strict_E
+    (N : Channel a b) [Nonempty a] {ε η lower : ℝ}
+    (hε_pos : 0 < ε) (hη_pos : 0 < η) (hη_lt : η < ε)
+    (hlower : (lower : EReal) < N.barHypothesisTestingMutualInformationE (ε - η)) :
+    ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
+      ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
+        ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
+          Nonempty (EntanglementAssistedOneShotAchievabilityWitness N ε
+            (lower - log2 (4 * ε / η ^ 2)) M EA EB) := by
+  haveI : Nonempty (PureVector (Prod a a)) :=
+    ⟨PureVector.basisPureVector⟩
+  have htol_nonneg : 0 ≤ ε - η := le_of_lt (sub_pos.mpr hη_lt)
+  obtain ⟨ψ, Λ, hΛlt⟩ :=
+    N.exists_inputBarHypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_E
+      htol_nonneg hlower
+  let beta : ℝ := Real.rpow 2 (-lower)
+  have hbeta_real_pos : 0 < beta := by
+    exact Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) (-lower)
+  have hΛle :
+      Λ.typeIIError
+          ((N.hypothesisTestingOutputState ψ).marginalA.prod
+            (N.hypothesisTestingOutputState ψ).marginalB) ≤ beta := by
+    exact le_of_lt (by simpa [beta] using hΛlt)
+  obtain ⟨k, hk_pos, hsize, hcard_round⟩ :=
+    PositionBasedCodingProtocol.exists_message_card_for_ht_lower_bound_rounding
+      hε_pos hη_pos hbeta_real_pos
+  let Message : Type u := ULift.{u} (Fin k)
+  haveI : Fintype Message := inferInstance
+  haveI : DecidableEq Message := inferInstance
+  haveI : Nonempty Message := ⟨ULift.up ⟨0, hk_pos⟩⟩
+  let seqLen : ℕ := k - 1
+  have hseq_eq : seqLen + 1 = k := by
+    simpa [seqLen] using Nat.succ_pred_eq_of_pos hk_pos
+  let messageIndex : Message ≃ Fin (seqLen + 1) :=
+    (Equiv.ulift : ULift.{u} (Fin k) ≃ Fin k).trans
+      (finCongr hseq_eq.symm)
+  have hcard_eq : Fintype.card Message = seqLen + 1 := by
+    have hcard_ulift : Fintype.card Message = k := by
+      simpa [Message] using
+        Fintype.card_congr (Equiv.ulift : ULift.{u} (Fin k) ≃ Fin k)
+    omega
+  have hcard_code :
+      Real.rpow 2 (lower - log2 (4 * ε / η ^ 2)) ≤
+        (Fintype.card Message : ℝ) := by
+    have hlogbeta : -log2 beta = lower := by
+      have hlog : log2 beta = -lower := by
+        unfold beta log2
+        rw [show Real.log (Real.rpow 2 (-lower)) = (-lower) * Real.log 2 by
+          exact Real.log_rpow (by norm_num : (0 : ℝ) < 2) (-lower)]
+        have hlog2 : Real.log 2 ≠ 0 := (Real.log_pos one_lt_two).ne'
+        field_simp [hlog2]
+      linarith
+    have hround' :
+        Real.rpow 2 (lower - log2 (4 * ε / η ^ 2)) ≤ (k : ℝ) := by
+      simpa [hlogbeta, sub_eq_add_neg] using hcard_round
+    have hkcard : (k : ℝ) = (Fintype.card Message : ℝ) := by
+      exact_mod_cast (by
+        have hcard_ulift : Fintype.card Message = k := by
+          simpa [Message] using
+            Fintype.card_congr (Equiv.ulift : ULift.{u} (Fin k) ≃ Fin k)
+        exact hcard_ulift.symm)
+    simpa [hkcard] using hround'
+  let Share : Type u := QIT.TensorPower a (Fintype.card Message)
+  refine ⟨Message, inferInstance, inferInstance, inferInstance,
+    Share, inferInstance, inferInstance, Share, inferInstance, inferInstance, ?_⟩
+  exact ⟨
+    PositionBasedCodingProtocol.oneShotAchievabilityWitness_of_canonical_ht_effect
+      (N := N) (M := Message) (seqLen := seqLen) ψ messageIndex hcard_eq Λ
+      hη_pos hη_lt hΛle (le_of_lt hbeta_real_pos) hsize hcard_code⟩
+
+/-- Rate-form operational one-shot HT lower bound.
+
+This is the same finite-message construction as
+`exists_oneShotAchievabilityWitness_htLowerBound_strict_E`, with the source
+penalty moved to the hypothesis.  It is convenient for downstream comparisons:
+any real rate strictly below `\bar I_H^{ε-η}(N) - log₂(4ε/η²)` is achieved by
+a concrete one-shot entanglement-assisted code. -/
+theorem exists_oneShotAchievabilityWitness_htLowerBound_rate_strict_E
+    (N : Channel a b) [Nonempty a] {ε η rate : ℝ}
+    (hε_pos : 0 < ε) (hη_pos : 0 < η) (hη_lt : η < ε)
+    (hrate :
+      ((rate + log2 (4 * ε / η ^ 2) : ℝ) : EReal) <
+        N.barHypothesisTestingMutualInformationE (ε - η)) :
+    ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
+      ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
+        ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
+          Nonempty (EntanglementAssistedOneShotAchievabilityWitness N ε rate M EA EB) := by
+  obtain ⟨M, hMft, hMeq, hMne, EA, hEAft, hEAeq, EB, hEBft, hEBeq, hW⟩ :=
+    N.exists_oneShotAchievabilityWitness_htLowerBound_strict_E
+      hε_pos hη_pos hη_lt hrate
+  letI : Fintype M := hMft
+  letI : DecidableEq M := hMeq
+  letI : Nonempty M := hMne
+  letI : Fintype EA := hEAft
+  letI : DecidableEq EA := hEAeq
+  letI : Fintype EB := hEBft
+  letI : DecidableEq EB := hEBeq
+  rcases hW with ⟨W⟩
+  refine ⟨M, hMft, hMeq, hMne, EA, hEAft, hEAeq, EB, hEBft, hEBeq, ?_⟩
+  have hsame :
+      rate + log2 (4 * ε / η ^ 2) - log2 (4 * ε / η ^ 2) = rate := by
+    ring
+  exact ⟨{
+    code := W.code
+    maxError_le := W.maxError_le
+    lowerBound_le_rate := by
+      simpa [hsame] using W.lowerBound_le_rate
+  }⟩
 
 /-- Strict-lower approximation form of the Khatri--Wilde one-shot
 hypothesis-testing lower bound with the source-faithful extended-real barred

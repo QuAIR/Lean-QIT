@@ -764,49 +764,6 @@ theorem sandwichedRenyiMutualInformationCandidateE_lower_of_tendsto_of_monotone
         rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1 :=
   le_of_tendsto_relativeEntropyHighAlphaRightToOne_of_monotone htend hmono hlower
 
-/-- Khatri--Wilde monotonicity lift for the state optimized
-`inf_sigmaB` expression.
-
-The source invokes monotonicity of the sandwiched relative entropy in `alpha`
-before taking the side-information infimum.  This theorem isolates the purely
-order-theoretic lift: once every fixed `sigmaB` candidate is monotone, the
-optimized state sandwiched-Renyi mutual information is monotone as well. -/
-theorem sandwichedRenyiMutualInformationE_mono_of_candidate_mono
-    [Nonempty b]
-    (rhoAB : State (Prod a b))
-    (hmono :
-      ∀ sigmaB : State b, ∀ alpha beta : {alpha : Real // 1 < alpha},
-        alpha.1 ≤ beta.1 →
-          rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1 ≤
-            rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB beta.1) :
-    ∀ alpha beta : {alpha : Real // 1 < alpha},
-      alpha.1 ≤ beta.1 →
-        rhoAB.sandwichedRenyiMutualInformationE alpha.1 ≤
-          rhoAB.sandwichedRenyiMutualInformationE beta.1 := by
-  intro alpha beta hab
-  rw [State.sandwichedRenyiMutualInformationE_eq_sInf,
-    State.sandwichedRenyiMutualInformationE_eq_sInf]
-  refine le_csInf (rhoAB.sandwichedRenyiMutualInformationEValueSet_nonempty beta.1) ?_
-  intro y hy
-  rcases hy with ⟨sigmaB, rfl⟩
-  exact
-    (sInf_le
-      (rhoAB.sandwichedRenyiMutualInformationCandidateE_mem_valueSet sigmaB alpha.1)).trans
-        (hmono sigmaB alpha beta hab)
-
-/-- The optimized state sandwiched-Renyi mutual information is an indexed
-infimum over side-information states.
-
-This is the form needed for semicontinuity and for the Khatri--Wilde
-Mosonyi--Hiai application. -/
-theorem sandwichedRenyiMutualInformationE_eq_iInf
-    (rhoAB : State (Prod a b)) (alpha : ℝ) :
-    rhoAB.sandwichedRenyiMutualInformationE alpha =
-      ⨅ sigmaB : State b,
-        rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha := by
-  rw [State.sandwichedRenyiMutualInformationE_eq_sInf,
-    State.sandwichedRenyiMutualInformationEValueSet, sInf_range]
-
 /-- Upper semicontinuity of every fixed side-information candidate lifts through
 the `inf_sigmaB` state optimization. -/
 theorem sandwichedRenyiMutualInformationE_upperSemicontinuousOn_of_candidate
@@ -825,130 +782,6 @@ theorem sandwichedRenyiMutualInformationE_upperSemicontinuousOn_of_candidate
         (rho x).sandwichedRenyiMutualInformationCandidateE sigmaB alpha)
       husc
   convert h using 1
-
-/-- The source support convention for the high-`alpha` EReal branch reduces
-monotonicity to the finite supported branch. -/
-theorem sandwichedRenyiPSDReferenceHighAlphaE_mono_of_finite_mono
-    (rho : State a) {sigma : CMatrix a} (hsigma : sigma.PosSemidef)
-    {alpha beta : {alpha : Real // 1 < alpha}}
-    (hfinite :
-      ∀ _hSupport : Matrix.Supports rho.matrix sigma,
-        sandwichedRenyiPSDReferenceHighAlphaFinite rho sigma hsigma alpha.1 ≤
-          sandwichedRenyiPSDReferenceHighAlphaFinite rho sigma hsigma beta.1) :
-    sandwichedRenyiPSDReferenceHighAlphaE rho sigma hsigma alpha.1 ≤
-      sandwichedRenyiPSDReferenceHighAlphaE rho sigma hsigma beta.1 := by
-  by_cases hSupport : Matrix.Supports rho.matrix sigma
-  · rw [sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports rho hsigma alpha.1 hSupport,
-      sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports rho hsigma beta.1 hSupport]
-    exact EReal.coe_le_coe_iff.mpr (hfinite hSupport)
-  · rw [sandwichedRenyiPSDReferenceHighAlphaE_eq_top_of_not_supports rho hsigma alpha.1 hSupport,
-      sandwichedRenyiPSDReferenceHighAlphaE_eq_top_of_not_supports rho hsigma beta.1 hSupport]
-
-/-- High-`alpha` PSD-reference sandwiched-Renyi monotonicity in EReal follows
-from the finite supported branch. -/
-theorem sandwichedRenyiPSDReferenceE_mono_of_highAlphaFinite_mono
-    (rho : State a) {sigma : CMatrix a} (hsigma : sigma.PosSemidef)
-    {alpha beta : {alpha : Real // 1 < alpha}} (_hab : alpha.1 ≤ beta.1)
-    (hfinite :
-      ∀ _hSupport : Matrix.Supports rho.matrix sigma,
-        sandwichedRenyiPSDReferenceHighAlphaFinite rho sigma hsigma alpha.1 ≤
-          sandwichedRenyiPSDReferenceHighAlphaFinite rho sigma hsigma beta.1) :
-    sandwichedRenyiPSDReferenceE rho sigma hsigma alpha.1 ≤
-      sandwichedRenyiPSDReferenceE rho sigma hsigma beta.1 := by
-  rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt alpha.2)),
-    sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt beta.2))]
-  exact sandwichedRenyiPSDReferenceHighAlphaE_mono_of_finite_mono
-    rho hsigma hfinite
-
-/-- The finite supported high-`alpha` branch is monotone once the same statement
-is proved after compressing to the positive spectral support of the reference.
-
-This is a genuine support-domain reduction for the source monotonicity step:
-`sandwichedRenyiPSDReferenceHighAlphaFinite_supportCompress_eq` identifies the
-ambient supported branch with the strictly positive reference branch at both
-parameters. -/
-theorem sandwichedRenyiPSDReferenceHighAlphaFinite_mono_of_supportCompress_mono
-    (rho : State a) {sigma : CMatrix a} (hsigma : sigma.PosSemidef)
-    {alpha beta : {alpha : Real // 1 < alpha}}
-    (hSupport : Matrix.Supports rho.matrix sigma)
-    (hcompressed :
-      sandwichedRenyiPSDReferenceHighAlphaFinite
-          (psdSupportCompressedState rho hsigma hSupport)
-          (psdSupportCompress sigma hsigma sigma)
-          (psdSupportCompressedState_reference_posDef hsigma).posSemidef
-          alpha.1 ≤
-        sandwichedRenyiPSDReferenceHighAlphaFinite
-          (psdSupportCompressedState rho hsigma hSupport)
-          (psdSupportCompress sigma hsigma sigma)
-          (psdSupportCompressedState_reference_posDef hsigma).posSemidef
-          beta.1) :
-    sandwichedRenyiPSDReferenceHighAlphaFinite rho sigma hsigma alpha.1 ≤
-      sandwichedRenyiPSDReferenceHighAlphaFinite rho sigma hsigma beta.1 := by
-  rw [sandwichedRenyiPSDReferenceHighAlphaFinite_supportCompress_eq
-      rho hsigma hSupport alpha.1 alpha.2,
-    sandwichedRenyiPSDReferenceHighAlphaFinite_supportCompress_eq
-      rho hsigma hSupport beta.1 beta.2]
-  exact hcompressed
-
-/-- A side-information candidate inherits high-`alpha` monotonicity once the
-finite supported branch of the underlying PSD-reference divergence is monotone.
-
-The remaining source obligation is exactly the Khatri--Wilde
-`prop-sand_rel_ent_properties` monotonicity proof for the finite branch. -/
-theorem sandwichedRenyiMutualInformationCandidateE_mono_of_highAlphaFinite_mono
-    (rhoAB : State (Prod a b)) (sigmaB : State b)
-    {alpha beta : {alpha : Real // 1 < alpha}} (hab : alpha.1 ≤ beta.1)
-    (hfinite :
-      ∀ _hSupport : Matrix.Supports rhoAB.matrix (rhoAB.marginalA.prod sigmaB).matrix,
-        sandwichedRenyiPSDReferenceHighAlphaFinite rhoAB
-            (rhoAB.marginalA.prod sigmaB).matrix
-            (rhoAB.marginalA.prod sigmaB).pos alpha.1 ≤
-          sandwichedRenyiPSDReferenceHighAlphaFinite rhoAB
-            (rhoAB.marginalA.prod sigmaB).matrix
-            (rhoAB.marginalA.prod sigmaB).pos beta.1) :
-    rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1 ≤
-      rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB beta.1 := by
-  simpa [State.sandwichedRenyiMutualInformationCandidateE_eq] using
-    sandwichedRenyiPSDReferenceE_mono_of_highAlphaFinite_mono
-      rhoAB (rhoAB.marginalA.prod sigmaB).pos hab hfinite
-
-/-- A side-information candidate inherits high-`alpha` monotonicity from the
-support-compressed finite branch.
-
-This moves the source monotonicity obligation from an arbitrary singular
-reference to the positive spectral support of `rho_A ⊗ sigma_B`. -/
-theorem sandwichedRenyiMutualInformationCandidateE_mono_of_supportCompress_mono
-    (rhoAB : State (Prod a b)) (sigmaB : State b)
-    {alpha beta : {alpha : Real // 1 < alpha}} (hab : alpha.1 ≤ beta.1)
-    (hcompressed :
-      ∀ hSupport : Matrix.Supports rhoAB.matrix (rhoAB.marginalA.prod sigmaB).matrix,
-        sandwichedRenyiPSDReferenceHighAlphaFinite
-            (psdSupportCompressedState rhoAB (rhoAB.marginalA.prod sigmaB).pos hSupport)
-            (psdSupportCompress
-              (rhoAB.marginalA.prod sigmaB).matrix
-              (rhoAB.marginalA.prod sigmaB).pos
-              (rhoAB.marginalA.prod sigmaB).matrix)
-            (psdSupportCompressedState_reference_posDef
-              (rhoAB.marginalA.prod sigmaB).pos).posSemidef
-            alpha.1 ≤
-          sandwichedRenyiPSDReferenceHighAlphaFinite
-            (psdSupportCompressedState rhoAB (rhoAB.marginalA.prod sigmaB).pos hSupport)
-            (psdSupportCompress
-              (rhoAB.marginalA.prod sigmaB).matrix
-              (rhoAB.marginalA.prod sigmaB).pos
-              (rhoAB.marginalA.prod sigmaB).matrix)
-            (psdSupportCompressedState_reference_posDef
-              (rhoAB.marginalA.prod sigmaB).pos).posSemidef
-            beta.1) :
-    rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1 ≤
-      rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB beta.1 := by
-  refine
-    rhoAB.sandwichedRenyiMutualInformationCandidateE_mono_of_highAlphaFinite_mono
-      sigmaB hab ?_
-  intro hSupport
-  exact
-    sandwichedRenyiPSDReferenceHighAlphaFinite_mono_of_supportCompress_mono
-      rhoAB (rhoAB.marginalA.prod sigmaB).pos hSupport (hcompressed hSupport)
 
 /-- State-level optimized `inf_sigmaB` alpha-to-one theorem from the analytic
 fixed-candidate route.
@@ -1647,6 +1480,244 @@ theorem relativeEntropyPSDReferenceTraceLogFinite_prod_leftReference_lower_mutua
     linarith
   exact EReal.coe_le_coe_iff.mpr hreal
 
+/-- Per-side-state lower bound on the PSD-reference relative entropy endpoint,
+handling both supported and unsupported references uniformly.
+
+This is the pointwise `sigmaB` input to the Khatri--Wilde relative-entropy
+inf-optimizer: for every side state, the endpoint
+`D(rho_AB || rho_A \otimes sigma_B)` dominates the ordinary mutual information,
+trivially so on the unsupported branch where the endpoint is `+infty`. -/
+theorem relativeEntropyPSDReferenceE_prod_leftReference_lower_mutualInformation
+    (rhoAB : State (Prod a b)) (sigmaB : State b) :
+    (mutualInformation rhoAB : EReal) ≤
+      relativeEntropyPSDReferenceE rhoAB
+        (rhoAB.marginalA.prod sigmaB).matrix
+        (rhoAB.marginalA.prod sigmaB).pos := by
+  by_cases hSupport : Matrix.Supports rhoAB.matrix (rhoAB.marginalA.prod sigmaB).matrix
+  · exact
+      rhoAB.sandwichedRenyiMutualInformationCandidateEndpoint_lower_of_traceLogFinite_lower
+        sigmaB hSupport
+        (relativeEntropyPSDReferenceTraceLogFinite_prod_leftReference_lower_mutualInformation
+          rhoAB sigmaB hSupport)
+  · exact
+      rhoAB.sandwichedRenyiMutualInformationCandidateEndpoint_lower_of_not_supports
+        sigmaB hSupport
+
+/-- Khatri--Wilde relative-entropy inf-optimizer across the `B` cut.
+
+This is the source step `inf_{sigma_B} D(rho_{RB} || rho_R \otimes sigma_B) =
+D(rho_{RB} || rho_R \otimes rho_B)` from
+[KhatriWilde2024Principles, Chapters/EA_capacity.tex:1869-1907].  The
+minimizer is `sigma_B = rho_B` itself: the lower bound
+`D(rho || rho_R \otimes sigma_B) \geq D(rho || rho_R \otimes rho_B)` is exactly
+the chain-rule decomposition
+`D(rho || rho_R \otimes sigma_B) = I(R;B)_rho + D(rho_B || sigma_B)`, and the
+upper bound is achieved at `sigma_B = rho_B`.  The chain-rule ingredients are
+the per-side-state endpoint lower bound
+`relativeEntropyPSDReferenceE_prod_leftReference_lower_mutualInformation` and
+the product-marginal endpoint identification
+`sandwichedRenyiMutualInformationProductMarginalEndpoint_eq_mutualInformation`. -/
+theorem relativeEntropyPSDReferenceE_prod_leftReference_iInf_eq_mutualInformation
+    (rhoAB : State (Prod a b)) :
+    (⨅ sigmaB : State b,
+        relativeEntropyPSDReferenceE rhoAB
+          (rhoAB.marginalA.prod sigmaB).matrix
+          (rhoAB.marginalA.prod sigmaB).pos) =
+      (mutualInformation rhoAB : EReal) := by
+  classical
+  haveI : Nonempty b := by
+    rcases rhoAB.nonempty with ⟨x⟩
+    exact ⟨x.2⟩
+  refine le_antisymm ?_ ?_
+  · refine le_trans
+        ((iInf_le fun sigmaB : State b =>
+            relativeEntropyPSDReferenceE rhoAB
+              (rhoAB.marginalA.prod sigmaB).matrix
+              (rhoAB.marginalA.prod sigmaB).pos) rhoAB.marginalB) ?_
+    exact
+      (rhoAB.sandwichedRenyiMutualInformationProductMarginalEndpoint_eq_mutualInformation).le
+  · refine le_iInf fun sigmaB => ?_
+    exact
+      rhoAB.relativeEntropyPSDReferenceE_prod_leftReference_lower_mutualInformation
+        sigmaB
+
+/-- Unconditional per-candidate `alpha`-monotonicity of the sandwiched-Renyi
+mutual-information candidate.
+
+This is the Bridge A input needed by the Bridge C state-level assembly:
+`Bridge A`'s `sandwichedRenyiPSDReferenceHighAlphaFinite_mono_posSemidef_state_posDef_reference`
+(Monotonicity:1731) discharges the support-compress hypothesis of
+`sandwichedRenyiMutualInformationCandidateE_mono_of_supportCompress_mono`
+(Monotonicity:919) on the positive spectral support of every side-information
+reference `rho_A \ot sigma_B`, since on that compressed space the reference is
+positive definite (`psdSupportCompressedState_reference_posDef`) and the state
+is PSD.  Faithful to KW `entropies.tex:2347-2372`. -/
+theorem sandwichedRenyiMutualInformationCandidateE_mono
+    (rhoAB : State (Prod a b)) (sigmaB : State b)
+    (alpha beta : {alpha : Real // 1 < alpha}) (hab : alpha.1 ≤ beta.1) :
+    rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1 ≤
+      rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB beta.1 := by
+  refine
+    rhoAB.sandwichedRenyiMutualInformationCandidateE_mono_of_supportCompress_mono
+      sigmaB hab ?_
+  intro hSupport
+  exact
+    sandwichedRenyiPSDReferenceHighAlphaFinite_mono_posSemidef_state_posDef_reference
+      (psdSupportCompressedState rhoAB (rhoAB.marginalA.prod sigmaB).pos hSupport)
+      (psdSupportCompressedState_reference_posDef (rhoAB.marginalA.prod sigmaB).pos)
+      alpha.2 beta.2 hab
+
+/-- Fixed-`sigma_B` infimum over `alpha > 1` of the sandwiched-Renyi
+mutual-information candidate equals the PSD-reference relative entropy
+endpoint.
+
+This is Bridge C step 2 (the pointwise `alpha -> 1+` limit at fixed reference,
+converted to an `inf_alpha` endpoint via the per-candidate monotonicity above).
+The order-topology handoff
+`tendsto_relativeEntropyHighAlphaRightToOne_iInf_of_monotone` converts the
+source right-neighbourhood limit
+`sandwichedRenyiMutualInformationCandidateE_tendsto_relativeEntropyPSDReferenceE`
+(Limit:569) into the `inf_alpha` equality once the candidate curve is known to
+be monotone in `alpha`. -/
+theorem sandwichedRenyiMutualInformationCandidateE_iInf_eq_relativeEntropyPSDReferenceE
+    (rhoAB : State (Prod a b)) (sigmaB : State b) :
+    (⨅ alpha : {alpha : Real // 1 < alpha},
+        rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1) =
+      relativeEntropyPSDReferenceE rhoAB
+        (rhoAB.marginalA.prod sigmaB).matrix
+        (rhoAB.marginalA.prod sigmaB).pos := by
+  have hmono :
+      ∀ alpha beta : {alpha : Real // 1 < alpha},
+        alpha.1 ≤ beta.1 →
+          rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1 ≤
+            rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB beta.1 :=
+    fun alpha beta hab =>
+      rhoAB.sandwichedRenyiMutualInformationCandidateE_mono sigmaB alpha beta hab
+  have hlimInf :
+      Tendsto
+        (fun alpha : {alpha : Real // 1 < alpha} =>
+          rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1)
+        relativeEntropyHighAlphaRightToOne
+        (nhds
+          (⨅ alpha : {alpha : Real // 1 < alpha},
+            rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1)) :=
+    tendsto_relativeEntropyHighAlphaRightToOne_iInf_of_monotone hmono
+  have hlimMI :
+      Tendsto
+        (fun alpha : {alpha : Real // 1 < alpha} =>
+          rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1)
+        relativeEntropyHighAlphaRightToOne
+        (nhds
+          (relativeEntropyPSDReferenceE rhoAB
+            (rhoAB.marginalA.prod sigmaB).matrix
+            (rhoAB.marginalA.prod sigmaB).pos)) :=
+    rhoAB.sandwichedRenyiMutualInformationCandidateE_tendsto_relativeEntropyPSDReferenceE
+      sigmaB
+  haveI : Filter.NeBot relativeEntropyHighAlphaRightToOne :=
+    relativeEntropyHighAlphaRightToOne_neBot
+  exact tendsto_nhds_unique hlimInf hlimMI
+
+/-- Khatri--Wilde state-level `inf_alpha` endpoint via the Bridge C route.
+
+This is the source-faithful assembly
+[KhatriWilde2024Principles, Chapters/EA_capacity.tex:1869-1907]:
+
+1. `inf_alpha inf_sigmaB = inf_sigmaB inf_alpha` (free `iInf_comm` over the
+   independent index sets);
+2. `inf_alpha D~_alpha(rho || rho_A \ot sigma_B) = D(rho || rho_A \ot sigma_B)`
+   for every fixed `sigma_B` (Bridge C step 2, the per-candidate
+   `inf_alpha`/right-limit handoff via Bridge A monotonicity);
+3. `inf_sigma_B D(rho || rho_A \ot sigma_B) = D(rho || rho_A \ot rho_B)`
+   (Bridge C step 3, the relative-entropy inf-optimizer
+   `relativeEntropyPSDReferenceE_prod_leftReference_iInf_eq_mutualInformation`).
+
+The conclusion is the optimized `inf_alpha inf_sigmaB` value: the ordinary
+mutual information. -/
+theorem sandwichedRenyiMutualInformationE_iInf_eq_mutualInformation
+    (rhoAB : State (Prod a b)) :
+    (⨅ alpha : {alpha : Real // 1 < alpha},
+        rhoAB.sandwichedRenyiMutualInformationE alpha.1) =
+      (mutualInformation rhoAB : EReal) := by
+  classical
+  haveI : Nonempty b := by
+    rcases rhoAB.nonempty with ⟨x⟩
+    exact ⟨x.2⟩
+  -- Bridge C step 1: free `iInf_comm` over the independent index sets.
+  have hswap :
+      (⨅ alpha : {alpha : Real // 1 < alpha},
+          ⨅ sigmaB : State b,
+            rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1) =
+        (⨅ sigmaB : State b,
+          ⨅ alpha : {alpha : Real // 1 < alpha},
+            rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1) :=
+    iInf_comm
+  -- Bridge C step 2: per-candidate inf_alpha endpoint.
+  have hper : ∀ sigmaB : State b,
+      (⨅ alpha : {alpha : Real // 1 < alpha},
+          rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha.1) =
+        relativeEntropyPSDReferenceE rhoAB
+          (rhoAB.marginalA.prod sigmaB).matrix
+          (rhoAB.marginalA.prod sigmaB).pos :=
+    fun sigmaB =>
+      rhoAB.sandwichedRenyiMutualInformationCandidateE_iInf_eq_relativeEntropyPSDReferenceE
+        sigmaB
+  -- Bridge C step 3: rel-entropy inf-optimizer.
+  have hopt :
+      (⨅ sigmaB : State b,
+          relativeEntropyPSDReferenceE rhoAB
+            (rhoAB.marginalA.prod sigmaB).matrix
+            (rhoAB.marginalA.prod sigmaB).pos) =
+        (mutualInformation rhoAB : EReal) :=
+    rhoAB.relativeEntropyPSDReferenceE_prod_leftReference_iInf_eq_mutualInformation
+  -- Assemble via the iInf equality `inf_alpha E = inf_alpha inf_sigmaB candidate`.
+  -- Bridge C step 1: free `iInf_comm` over the independent index sets;
+  -- step 2 (per-candidate `inf_alpha` endpoint via Bridge A monotonicity);
+  -- step 3 (rel-entropy inf-optimizer at `sigma_B = rho_B`).
+  rw [iInf_congr fun alpha : {alpha : Real // 1 < alpha} =>
+        rhoAB.sandwichedRenyiMutualInformationE_eq_iInf alpha.1,
+    hswap, iInf_congr hper]
+  exact hopt
+
+/-- Unconditional state-level `alpha -> 1+` tendsto of the optimized
+sandwiched-Renyi mutual information to ordinary mutual information.
+
+This is the Bridge C deliverable, feeding `hState` of the channel-level
+`sandwichedRenyiMutualInformationE_iInf_eq_information_of_mosonyi_hiai`
+(Limit:2470). The tendsto follows from the Bridge C `inf_alpha` endpoint above
+combined with the optimized `alpha`-monotonicity (Bridge A's
+`State.sandwichedRenyiMutualInformationE_mono`): a monotone high-`alpha` curve
+tends to its `inf_alpha` value along the right-neighbourhood filter, and the
+Bridge C `inf_alpha` value is exactly the ordinary mutual information. -/
+theorem sandwichedRenyiMutualInformationE_tendsto_mutualInformation
+    (rhoAB : State (Prod a b)) :
+    Tendsto
+      (fun alpha : {alpha : Real // 1 < alpha} =>
+        rhoAB.sandwichedRenyiMutualInformationE alpha.1)
+      relativeEntropyHighAlphaRightToOne
+      (nhds (mutualInformation rhoAB : EReal)) := by
+  have hstateMono :
+      ∀ alpha beta : {alpha : Real // 1 < alpha},
+        alpha.1 ≤ beta.1 →
+          rhoAB.sandwichedRenyiMutualInformationE alpha.1 ≤
+            rhoAB.sandwichedRenyiMutualInformationE beta.1 :=
+    fun alpha beta hab => rhoAB.sandwichedRenyiMutualInformationE_mono alpha beta hab
+  have hlimInf :
+      Tendsto
+        (fun alpha : {alpha : Real // 1 < alpha} =>
+          rhoAB.sandwichedRenyiMutualInformationE alpha.1)
+        relativeEntropyHighAlphaRightToOne
+        (nhds
+          (⨅ alpha : {alpha : Real // 1 < alpha},
+            rhoAB.sandwichedRenyiMutualInformationE alpha.1)) :=
+    tendsto_relativeEntropyHighAlphaRightToOne_iInf_of_monotone hstateMono
+  have hiInf :
+      (⨅ alpha : {alpha : Real // 1 < alpha},
+          rhoAB.sandwichedRenyiMutualInformationE alpha.1) =
+        (mutualInformation rhoAB : EReal) :=
+    rhoAB.sandwichedRenyiMutualInformationE_iInf_eq_mutualInformation
+  rw [hiInf] at hlimInf
+  exact hlimInf
+
 /-- State-level optimized `inf_sigmaB` alpha-to-one theorem with the actual
 PSD-reference endpoint for every side-information candidate.
 
@@ -1828,7 +1899,7 @@ finite branch of Khatri--Wilde's sandwiched-Renyi monotonicity.
 This records the monotonicity part of the state optimized `inf_sigmaB` step
 separately from the endpoint-limit theorem, so the channel Mosonyi--Hiai
 assembly can consume the state result directly. -/
-theorem sandwichedRenyiMutualInformationE_mono_of_supportCompress_mono
+private theorem sandwichedRenyiMutualInformationE_mono_of_supportCompress_mono_aux
     (rhoAB : State (Prod a b))
     (hcompressed :
       ∀ sigmaB : State b, ∀ alpha beta : {alpha : Real // 1 < alpha},
@@ -2426,6 +2497,25 @@ theorem inputSandwichedRenyiMutualInformationE_upperSemicontinuousOn_of_posDef_c
     State.sandwichedRenyiMutualInformationE_eq_iInf_posDef_candidates_of_le_candidate
       rho alpha.1 (happrox rho)
 
+/-- Channel pure-input upper semicontinuity using the full-rank side-state
+restriction proved by approximation. -/
+theorem inputSandwichedRenyiMutualInformationE_upperSemicontinuousOn_of_fullRankApprox
+    (alpha : {alpha : Real // 1 < alpha})
+    (hposA :
+      ∀ psi : PureVector (Prod a a),
+        (N.hypothesisTestingOutputState psi).marginalA.matrix.PosDef) :
+    UpperSemicontinuousOn
+      (fun psi : PureVector (Prod a a) =>
+        N.inputSandwichedRenyiMutualInformationE psi alpha.1)
+      Set.univ := by
+  refine
+    N.inputSandwichedRenyiMutualInformationE_upperSemicontinuousOn_of_iInf_posDef_candidates
+      alpha hposA ?_
+  intro rho
+  exact
+    State.sandwichedRenyiMutualInformationE_eq_iInf_posDef_candidates_highAlpha
+      rho alpha.2
+
 /-- Khatri--Wilde Mosonyi--Hiai exchange for the channel sandwiched-Renyi
 mutual information objective.
 
@@ -2927,6 +3017,74 @@ theorem sandwichedRenyiMutualInformationE_tendsto_information_of_state_limit_and
         |>.sandwichedRenyiMutualInformationE_mono_of_posDef_candidate_approx_and_deriv_nonneg
           (hposA psi)
           (fun gamma => happrox gamma (N.hypothesisTestingOutputState psi))
+          (hcont psi) (hdiff psi) (hderiv psi)
+
+/-- Channel alpha-to-one theorem after the full-rank side-state approximation
+has been proved internally.  The remaining analytic inputs are state optimized
+convergence and the derivative-sign package for full-rank side states. -/
+theorem sandwichedRenyiMutualInformationE_tendsto_information_of_state_limit_and_fullRankApprox_deriv_nonneg
+    [Nonempty a]
+    (hposA :
+      ∀ psi : PureVector (Prod a a),
+        (N.hypothesisTestingOutputState psi).marginalA.matrix.PosDef)
+    (hstateTendsto :
+      ∀ psi : PureVector (Prod a a),
+        Tendsto
+          (fun alpha : {alpha : Real // 1 < alpha} =>
+            (N.hypothesisTestingOutputState psi).sandwichedRenyiMutualInformationE alpha.1)
+          State.relativeEntropyHighAlphaRightToOne
+          (nhds (N.entanglementAssistedMutualInformation psi : EReal)))
+    (hcont :
+      ∀ psi : PureVector (Prod a a),
+        ∀ sigmaB : {sigmaB : State b // sigmaB.matrix.PosDef},
+          ContinuousOn
+            (fun alpha : Real =>
+              State.sandwichedRenyiPSDReferenceHighAlphaFinite
+                (N.hypothesisTestingOutputState psi)
+                ((N.hypothesisTestingOutputState psi).marginalA.prod sigmaB.1).matrix
+                ((N.hypothesisTestingOutputState psi).marginalA.prod sigmaB.1).pos alpha)
+            (Set.Ioi (1 : Real)))
+    (hdiff :
+      ∀ psi : PureVector (Prod a a),
+        ∀ sigmaB : {sigmaB : State b // sigmaB.matrix.PosDef},
+          DifferentiableOn Real
+            (fun alpha : Real =>
+              State.sandwichedRenyiPSDReferenceHighAlphaFinite
+                (N.hypothesisTestingOutputState psi)
+                ((N.hypothesisTestingOutputState psi).marginalA.prod sigmaB.1).matrix
+                ((N.hypothesisTestingOutputState psi).marginalA.prod sigmaB.1).pos alpha)
+            (Set.Ioi (1 : Real)))
+    (hderiv :
+      ∀ psi : PureVector (Prod a a),
+        ∀ sigmaB : {sigmaB : State b // sigmaB.matrix.PosDef},
+          ∀ alpha : Real, 1 < alpha →
+            0 ≤ deriv
+              (fun beta : Real =>
+                State.sandwichedRenyiPSDReferenceHighAlphaFinite
+                  (N.hypothesisTestingOutputState psi)
+                  ((N.hypothesisTestingOutputState psi).marginalA.prod sigmaB.1).matrix
+                  ((N.hypothesisTestingOutputState psi).marginalA.prod sigmaB.1).pos beta)
+              alpha) :
+    Tendsto
+      (fun alpha : {alpha : Real // 1 < alpha} =>
+        N.sandwichedRenyiMutualInformationE alpha.1)
+      State.relativeEntropyHighAlphaRightToOne
+      (nhds (N.entanglementAssistedInformation : EReal)) := by
+  refine
+    N.sandwichedRenyiMutualInformationE_tendsto_information_of_state_limit_and_mosonyi_hiai
+      ?_ hstateTendsto ?_
+  · intro alpha
+    exact
+      N.inputSandwichedRenyiMutualInformationE_upperSemicontinuousOn_of_fullRankApprox
+        alpha hposA
+  · intro psi
+    exact
+      (N.hypothesisTestingOutputState psi)
+        |>.sandwichedRenyiMutualInformationE_mono_of_posDef_candidate_approx_and_deriv_nonneg
+          (hposA psi)
+          (fun gamma =>
+            State.posDef_candidate_approx_of_fullRankApprox
+              (N.hypothesisTestingOutputState psi) gamma.2)
           (hcont psi) (hdiff psi) (hderiv psi)
 
 /-- Source-faithful Khatri--Wilde channel theorem with the state monotonicity
@@ -3594,6 +3752,35 @@ theorem sandwichedRenyiMutualInformationE_tendsto_information_of_supported_trace
   exact
     N.sandwichedRenyiMutualInformationE_tendsto_information_of_input_tendsto_of_eventually_upper
       hfixed hupper
+
+/-- The unconditional sandwiched-Rényi channel mutual-information `α → 1+` limit
+(Khatri–Wilde `EA_capacity.tex:1869-1907`): `Ĩ_α(N) → I(N)` as `α → 1+`.
+
+Assembled unconditionally from Bridge A (α-monotonicity, threaded through the
+support-compressed finite branch via
+`sandwichedRenyiPSDReferenceHighAlphaFinite_mono_posSemidef_state_posDef_reference`)
+and Bridge B (optimized state upper semicontinuity at a singular left marginal,
+`State.sandwichedRenyiMutualInformationE_upperSemicontinuousOn`), fed into the
+existing `..._tendsto_information_of_state_husc_and_supportCompress_mono`
+scaffolding (whose internal Mosonyi–Hiai + state-limit chain carries the
+pointwise optimized endpoint). -/
+theorem sandwichedRenyiMutualInformationE_tendsto_information [Nonempty a] :
+    Tendsto (fun alpha : {alpha : Real // 1 < alpha} =>
+      N.sandwichedRenyiMutualInformationE alpha.1)
+      State.relativeEntropyHighAlphaRightToOne
+      (nhds (N.entanglementAssistedInformation : EReal)) := by
+  apply N.sandwichedRenyiMutualInformationE_tendsto_information_of_state_husc_and_supportCompress_mono
+  · -- hstateUSC (Bridge B): the unconditional state optimized USC.
+    intro alpha
+    exact State.sandwichedRenyiMutualInformationE_upperSemicontinuousOn alpha.2
+  · -- hcompressed (Bridge A): the support-compressed finite-branch α-monotonicity.
+    intro psi sigmaB alpha beta hab hSupport
+    exact State.sandwichedRenyiPSDReferenceHighAlphaFinite_mono_posSemidef_state_posDef_reference
+      (State.psdSupportCompressedState (N.hypothesisTestingOutputState psi)
+        ((N.hypothesisTestingOutputState psi).marginalA.prod sigmaB).pos hSupport)
+      (State.psdSupportCompressedState_reference_posDef
+        ((N.hypothesisTestingOutputState psi).marginalA.prod sigmaB).pos)
+      alpha.2 beta.2 hab
 
 end Channel
 

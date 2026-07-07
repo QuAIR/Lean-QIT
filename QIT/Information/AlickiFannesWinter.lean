@@ -83,7 +83,7 @@ private theorem pureVector_marginalA_matrix_eq_conjTranspose_mul_amplitudeMatrix
 
 /-- Complementary marginals of a finite-dimensional pure bipartite state have
 the same von Neumann entropy. -/
-private theorem pureVector_marginalA_vonNeumann_eq_marginalB
+theorem pureVector_marginalA_vonNeumann_eq_marginalB
     {r : Type u} {α : Type v} [Fintype r] [DecidableEq r] [Fintype α] [DecidableEq α]
     (Ψ : PureVector (Prod r α)) :
     Ψ.state.marginalA.vonNeumann = Ψ.state.marginalB.vonNeumann := by
@@ -134,7 +134,8 @@ private def punitProdEquiv (α : Type v) : α ≃ Prod PUnit.{1} α where
   left_inv := by intro x; rfl
   right_inv := by rintro ⟨⟨⟩, x⟩; rfl
 
-private theorem pureVector_vonNeumann_eq_zero
+/-- The von Neumann entropy of a finite-dimensional pure state is zero. -/
+theorem pureVector_vonNeumann_eq_zero
     {α : Type v} [Fintype α] [DecidableEq α] (Ψ : PureVector α) :
     Ψ.state.vonNeumann = 0 := by
   let Φ : PureVector (Prod PUnit.{1} α) := Ψ.reindex (punitProdEquiv α)
@@ -220,7 +221,9 @@ theorem PureVector.conditionalEntropy_marginalAB_eq_neg_marginalAC
   rw [hAB_C, hAC_B, hABmB, hACmB]
   ring
 
-private theorem conditionalEntropy_neg_marginalA_le (τ : State (Prod a b)) :
+/-- Araki--Lieb half-inequality in conditional-entropy form:
+`H(A|B)_τ ≥ -H(A)_τ`, equivalently `H(AB)_τ ≥ H(B)_τ - H(A)_τ`. -/
+theorem conditionalEntropy_neg_marginalA_le (τ : State (Prod a b)) :
     -τ.marginalA.vonNeumann ≤ τ.conditionalEntropy := by
   let Ψ₀ : PureVector (Prod (Prod a b) (Prod a b)) :=
     τ.canonicalPurification.reindex (Equiv.prodComm (Prod a b) (Prod a b))
@@ -262,6 +265,59 @@ theorem mutualInformation_nonneg (ρ : State (Prod a b)) :
           (((terminalMeasureChannel a).prod (terminalMeasureChannel b)).applyState ρ) = 0 :=
     mutualInformation_punit_punit_eq_zero _
   linarith
+
+/-- Quantum mutual information dimension bound: `I(A;B)_τ ≤ 2 log dim A`.
+
+This is the dimension bound for the quantum mutual information used in the
+Schumacher converse [Wilde2011Qst, qit-notes.tex:31610-31690]. It follows from
+the Araki--Lieb half-inequality `H(AB)_τ ≥ H(B)_τ - H(A)_τ` (available here as
+`conditionalEntropy_neg_marginalA_le`) together with `H(A)_τ ≤ log dim A`:
+`I(A;B) = H(A) + H(B) - H(AB) ≤ 2 H(A) ≤ 2 log dim A`. -/
+theorem mutualInformation_le_two_log_card_left (τ : State (Prod a b)) :
+    QIT.mutualInformation τ ≤ 2 * log2 (Fintype.card a) := by
+  have hAraki : -τ.marginalA.vonNeumann ≤ τ.conditionalEntropy :=
+    conditionalEntropy_neg_marginalA_le τ
+  have hA : τ.marginalA.vonNeumann ≤ log2 (Fintype.card a) :=
+    vonNeumann_le_log_card τ.marginalA
+  rw [QIT.mutualInformation]
+  rw [conditionalEntropy_eq] at hAraki
+  linarith
+
+/-- Quantum mutual information dimension bound (right system): `I(A;B)_τ ≤ 2 log dim B`,
+symmetric to `mutualInformation_le_two_log_card_left`.
+
+This is the right/marginalB version of the dimension bound for the quantum
+mutual information.  It follows by applying the left bound
+`mutualInformation_le_two_log_card_left` to the `prodComm`-reindexed state:
+mutual information is invariant under swapping the bipartition, since the
+marginalA and marginalB terms exchange and the von Neumann entropy is
+reindex-invariant. -/
+theorem mutualInformation_le_two_log_card_right (τ : State (Prod a b)) :
+    QIT.mutualInformation τ ≤ 2 * log2 (Fintype.card b) := by
+  have hstA : (τ.reindex (Equiv.prodComm a b)).marginalA = τ.marginalB := by
+    apply State.ext
+    ext (i i' : b)
+    rfl
+  have hstB : (τ.reindex (Equiv.prodComm a b)).marginalB = τ.marginalA := by
+    apply State.ext
+    ext (i i' : a)
+    rfl
+  have hmA :
+      vonNeumann (τ.reindex (Equiv.prodComm a b)).marginalA =
+        vonNeumann τ.marginalB :=
+    congrArg State.vonNeumann hstA
+  have hmB :
+      vonNeumann (τ.reindex (Equiv.prodComm a b)).marginalB =
+        vonNeumann τ.marginalA :=
+    congrArg State.vonNeumann hstB
+  have hmi_swap :
+      QIT.mutualInformation (τ.reindex (Equiv.prodComm a b)) =
+        QIT.mutualInformation τ := by
+    rw [QIT.mutualInformation, QIT.mutualInformation, hmA, hmB,
+      State.vonNeumann_reindex]
+    ring
+  rw [← hmi_swap]
+  exact mutualInformation_le_two_log_card_left (τ.reindex (Equiv.prodComm a b))
 
 /-- Conditional entropy is bounded above by the logarithm of the left
 system dimension. -/

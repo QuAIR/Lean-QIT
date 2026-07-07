@@ -44,7 +44,7 @@ def reindex {b : Type v} [Fintype b] [DecidableEq b]
     calc
       P.matrix.submatrix e e * P.matrix.submatrix e e =
           (P.matrix * P.matrix).submatrix e e := by
-            simpa using Matrix.submatrix_mul_equiv P.matrix P.matrix e e e
+            simp
       _ = P.matrix.submatrix e e := by
             rw [P.idempotent]
 
@@ -456,7 +456,7 @@ private theorem prod_if_two_selected_eq {ι : Type v} [Fintype ι] [DecidableEq 
             · have hi : i = s' := by
                 apply Subtype.ext
                 exact hs
-              simp [hs, hi, s']
+              simp [hi, s']
             · have hi : i ≠ s' := by
                 intro h
                 exact hs (Subtype.ext_iff.mp h)
@@ -519,13 +519,13 @@ private theorem distinctProductAmplitude_sum
       · have hi : i = ⟨r, hrs⟩ := by
           apply Subtype.ext
           exact h
-        simp [h, hi]
+        simp [hi]
       · simp [h]
     right_inv := by
       intro p
       rcases p with ⟨x0, xtail⟩
       apply Prod.ext
-      · simp [hrs]
+      · simp
       · funext i
         simp [D, i.2.1] }
   let ey : ({i : ι // i ≠ r} → a) ≃ Prod a (D → a) := {
@@ -538,13 +538,13 @@ private theorem distinctProductAmplitude_sum
       · have hi : i = ⟨s, Ne.symm hrs⟩ := by
           apply Subtype.ext
           exact h
-        simp [h, hi]
+        simp [hi]
       · simp [h]
     right_inv := by
       intro p
       rcases p with ⟨y0, ytail⟩
       apply Prod.ext
-      · simp [Ne.symm hrs]
+      · simp
       · funext i
         simp [D, i.2.2] }
   let F (x : {i : ι // i ≠ s} → a) (y : {i : ι // i ≠ r} → a) : ℂ :=
@@ -587,10 +587,10 @@ private theorem distinctProductAmplitude_sum
             by_cases hr : i = r
             · subst i
               have hs : r ≠ s := hrs
-              simp [ex, ey, hs]
+              simp [ex, hs]
             · by_cases hs : i = s
               · subst i
-                simp [ex, ey, hr, Ne.symm hrs]
+                simp [ey, hr]
               · simp [ex, ey, hr, hs]
       _ =
           (ψ.amp (xr, xp.1) * star (ψ.amp (yr, xp.1))) *
@@ -676,12 +676,12 @@ private theorem distinctProductAmplitude_sum
                   rw [Finset.sum_comm]
             _ = ∑ x0 : a, ∑ y0 : a,
                   A x0 * B y0 * (∑ xt : D → a, ∑ yt : D → a, T xt yt) := by
-                  simp [Finset.mul_sum, Finset.sum_mul, mul_assoc, mul_comm, mul_left_comm]
+                  simp [Finset.mul_sum, mul_assoc]
             _ = ∑ x0 : a, ∑ y0 : a, A x0 * B y0 := by
                   rw [hT]
                   simp
             _ = (∑ z : a, A z) * (∑ z : a, B z) := by
-                  simp [Finset.mul_sum, Finset.sum_mul, mul_assoc, mul_comm, mul_left_comm]
+                  simp [Finset.mul_sum, mul_comm]
     _ = ψ.state.marginalA.matrix xr yr * ψ.state.marginalB.matrix xa ya := by
           rw [hmA, hmB]
 
@@ -1096,8 +1096,8 @@ theorem one_sub_commonOutputReferenceEffectAt
   · by_cases hf : (e x).1 = (e y).1
     · have hxy : x = y := by
         exact e.injective (Prod.ext hf ht)
-      simp [commonOutputReferenceEffectAt, e, Matrix.kronecker, Matrix.kroneckerMap_apply,
-        Matrix.one_apply, ht, hf, hxy]
+      simp [commonOutputReferenceEffectAt, Matrix.kronecker, Matrix.kroneckerMap_apply,
+        hxy]
     · have hxy : x ≠ y := by
         intro h
         exact hf (by rw [h])

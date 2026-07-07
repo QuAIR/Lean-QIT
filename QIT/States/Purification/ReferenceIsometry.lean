@@ -52,6 +52,37 @@ theorem sum_mul_star (i j : r₁) :
   have h := congrFun (congrFun V.isometry j) i
   simpa [Matrix.mul_apply, Matrix.conjTranspose, Matrix.one_apply, eq_comm, mul_comm] using h
 
+/-- The basis embedding isometry induced by an injective finite map. -/
+def ofInjective
+    {α : Type u} {β : Type v} [Fintype α] [DecidableEq α]
+    [Fintype β] [DecidableEq β] (f : α → β) (hf : Function.Injective f) :
+    ReferenceIsometry α β where
+  matrix := fun y x => if y = f x then 1 else 0
+  isometry := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      rw [Matrix.mul_apply]
+      rw [Finset.sum_eq_single (f i)]
+      · simp [Matrix.conjTranspose]
+      · intro y _ hy
+        simp [Matrix.conjTranspose, hy]
+      · intro hnot
+        exact False.elim (hnot (Finset.mem_univ (f i)))
+    · rw [Matrix.mul_apply]
+      rw [Finset.sum_eq_zero]
+      · simp [hij]
+      · intro y _
+        by_cases hyi : y = f i
+        · have hfi_ne_fj : f i ≠ f j := by
+            intro h
+            exact hij (hf h)
+          have hyj : y ≠ f j := by
+            intro hyj
+            exact hfi_ne_fj (hyi.symm.trans hyj)
+          simp [Matrix.conjTranspose, hyi, hfi_ne_fj]
+        · simp [Matrix.conjTranspose, hyi]
+
 /-- The reference-indexed block of a bipartite matrix at fixed target entries. -/
 def targetBlock (X : CMatrix (Prod r₁ a)) (x y : a) : CMatrix r₁ :=
   fun i j => X (i, x) (j, y)

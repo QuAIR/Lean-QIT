@@ -975,14 +975,232 @@ theorem atypicalSubspaceSpectralWeight_high_probability
   have htyp := ρ.typicalSubspaceSpectralWeight_high_probability hn hδ hε hthresh
   linarith
 
-/-- Schumacher data compression theorem: rate S(rho) is achievable.
+/-! ## AEP typicality estimates for Schumacher direct achievability
 
-Alice can compress n copies of a quantum source rho into n * S(rho) + epsilon
-qubits with arbitrarily small error for large n. -/
-def schumacherTheorem_statement
-    (ρ : State a) : Prop :=
-  ∀ (ε : ℝ), 0 < ε → ∀ (δ : ℝ), 0 < δ →
-    ∃ N : ℕ, ∀ n ≥ N, ρ.schumacherRate ≤ ρ.schumacherRate + δ
+These are the asymptotic typical-subspace estimates consumed by the Schumacher
+direct coding theorem [Wilde2011Qst, qit-notes.tex:31457-31598]:
+
+  * **(A)** Lower eigenvalue bound (lower half of the equipartition envelope).
+  * **(B)** Typical-subspace dimension rate bound `|T_δ^n| ≤ 2^{n(S+δ)}`.
+  * **(C)** Exact tensor-power second-moment identity
+    `typicalLogDeviationSecondMoment ρ n = n · singleCopyLogDeviationSecondMoment ρ`.
+  * **(D)** Atypical spectral weight tends to zero: `atypicalWeight → 0`.
+  * **(E)** Typical spectral weight tends to one: `typicalWeight → 1`. -/
+
+open Filter
+
+/-- pack-4 eigenvalue lower bound (equipartition, lower half): every eigenvalue
+accepted by the typicality predicate satisfies `2^{-n(S(ρ)+δ)} ≤ μ`.
+
+This is the lower half of the usual `2^{-(S+δ)n} ≤ μ ≤ 2^{-(S−δ)n}`
+equipartition envelope; it follows from the right inequality of the
+predicate's centered-log bound, by exponentiating with `2^{x} = exp(x·log 2)`
+[Wilde2011Qst, qit-notes.tex:31457-31598]. -/
+theorem typicalEigenvalue_ge_eigenvalueLowerBound
+    (ρ : State a) (n : ℕ) (δ μ : ℝ) (h : typicalEigenvalue ρ n δ μ) :
+    2 ^ (-((n : ℝ) * ρ.vonNeumann + (n : ℝ) * δ)) ≤ μ := by
+  obtain ⟨hμ_pos, habs⟩ := h
+  -- Right half of the absolute-value bound:
+  --   (-log2 μ) - (n:ℝ)*S(ρ) ≤ (n:ℝ)*δ, i.e.  -log2 μ ≤ (n:ℝ)*S(ρ) + (n:ℝ)*δ.
+  have hright : (-log2 μ) - (n : ℝ) * ρ.vonNeumann ≤ (n : ℝ) * δ :=
+    (abs_le.mp habs).2
+  -- Hence `log2 μ ≥ -((n:ℝ)*S(ρ) + (n:ℝ)*δ)`.
+  have hlog_ge : -((n : ℝ) * ρ.vonNeumann + (n : ℝ) * δ) ≤ log2 μ := by linarith
+  have hl2_pos : (0 : ℝ) < Real.log 2 := Real.log_pos (by norm_num : (1 : ℝ) < 2)
+  -- Convert log2 to Real.log: `log2 μ · Real.log 2 = Real.log μ`.
+  have hid : log2 μ * Real.log 2 = Real.log μ := by
+    unfold log2; field_simp
+  -- Multiply the log2 inequality by `Real.log 2 > 0` to land in `Real.log`:
+  --   `-((n:ℝ)*(S+δ)) · Real.log 2 ≤ Real.log μ`.
+  have hlogμ_ge : -((n : ℝ) * ρ.vonNeumann + (n : ℝ) * δ) * Real.log 2 ≤ Real.log μ := by
+    linarith [mul_le_mul_of_nonneg_right hlog_ge hl2_pos.le]
+  have hbase_pos : (0 : ℝ) < 2 := by norm_num
+  -- `2^{x} = Real.exp (x · Real.log 2)`; `μ = Real.exp (Real.log μ)`.
+  have hexp_eq : 2 ^ (-((n : ℝ) * ρ.vonNeumann + (n : ℝ) * δ)) =
+      Real.exp (-((n : ℝ) * ρ.vonNeumann + (n : ℝ) * δ) * Real.log 2) := by
+    rw [Real.rpow_def_of_pos hbase_pos, mul_comm]
+  rw [hexp_eq, ← Real.exp_log hμ_pos]
+  exact Real.exp_le_exp.mpr hlogμ_ge
+
+/-- The single-copy centered log-eigenvalue second moment
+`Σ_{j} λ_j · (-log2 λ_j − S(ρ))²`, the per-system variance consumed by the
+tensor-power second-moment identity. -/
+noncomputable def singleCopyLogDeviationSecondMoment (ρ : State a) : ℝ :=
+  ∑ i : a, (ρ.pos.isHermitian.eigenvalues i) *
+    ((-log2 (ρ.pos.isHermitian.eigenvalues i)) - ρ.vonNeumann) ^ 2
+
+/-- The single-copy second moment is nonnegative (sum of `λ·(·)²` with `λ ≥ 0`). -/
+theorem singleCopyLogDeviationSecondMoment_nonneg (ρ : State a) :
+    0 ≤ ρ.singleCopyLogDeviationSecondMoment := by
+  unfold singleCopyLogDeviationSecondMoment
+  apply Finset.sum_nonneg
+  intro i _
+  exact mul_nonneg (ρ.pos.eigenvalues_nonneg i) (sq_nonneg _)
+
+/-- The `n = 1` tensor-power multiset is the original spectrum:
+`tensorPowerMultiset s 1 = s`. -/
+private lemma tensorPowerMultiset_one (s : Multiset ℝ) :
+    tensorPowerMultiset s 1 = s := by
+  rw [tensorPowerMultiset_succ, tensorPowerMultiset_zero]
+  induction s using Multiset.induction_on with
+  | empty => simp
+  | cons a s ih =>
+    rw [Multiset.cons_bind, Multiset.map_singleton, ih]
+    simp only [mul_one, Multiset.singleton_add]
+
+/-- Bridge: the `Finset.univ` definition of `singleCopyLogDeviationSecondMoment`
+is the multiset sum over the eigenvalue spectrum, with bare (unscaled) centered
+deviations. -/
+private lemma singleCopyLogDeviationSecondMoment_eq_multiset (ρ : State a) :
+    ρ.singleCopyLogDeviationSecondMoment =
+      (Multiset.map (fun μ => μ * (centeredLogDev ρ.vonNeumann μ) ^ 2)
+        (eigenvalueMultiset ρ.pos.isHermitian)).sum := by
+  unfold singleCopyLogDeviationSecondMoment
+  rw [Finset.sum_eq_multiset_sum]
+  conv_lhs => rw [show (fun (i : a) =>
+        (ρ.pos.isHermitian.eigenvalues i) *
+          ((-log2 (ρ.pos.isHermitian.eigenvalues i)) - ρ.vonNeumann) ^ 2) =
+      (fun μ => μ * (centeredLogDev ρ.vonNeumann μ) ^ 2) ∘
+        ρ.pos.isHermitian.eigenvalues from rfl]
+  rw [← Multiset.map_map]
+  rfl
+
+/-- The centered log-eigenvalue second moment is exactly linear in `n`:
+`typicalLogDeviationSecondMoment ρ n = n · singleCopyLogDeviationSecondMoment ρ`.
+
+The eigenvalues of `ρ^{⊗ n}` are the `n`-fold products of the eigenvalues of
+`ρ` (`eigenvalueMultiset_tensorPower`); under the product distribution the
+per-symbol centered deviations `(-log₂ μⱼ − S(ρ))` are independent with mean
+`0`, so the variance-of-a-sum identity collapses the cross-terms and leaves
+`n` copies of the single-system second moment
+[Wilde2011Qst, qit-notes.tex:33634-33808]. -/
+theorem typicalLogDeviationSecondMoment_eq (ρ : State a) (n : ℕ) :
+    ρ.typicalLogDeviationSecondMoment n =
+      (n : ℝ) * ρ.singleCopyLogDeviationSecondMoment := by
+  -- The multiset-expansion identity is already established as
+  -- `typicalLogDeviationSecondMoment_tensorPower`; here we bridge the `n = 1`
+  -- tensor-power spectrum to the single-copy `Finset` definition.
+  have hTensor := ρ.typicalLogDeviationSecondMoment_tensorPower n
+  rw [hTensor]
+  have h1 : ρ.typicalLogDeviationSecondMoment 1 = ρ.singleCopyLogDeviationSecondMoment := by
+    rw [typicalLogDeviationSecondMoment_eq_multiset ρ 1,
+        singleCopyLogDeviationSecondMoment_eq_multiset ρ,
+        tensorPowerMultiset_one]
+    simp only [Nat.cast_one, one_mul]
+  rw [h1]
+
+/-- The typical-subspace dimension satisfies the rate bound
+`|T_δ^n| ≤ 2^{n(S(ρ)+δ)}`.
+
+For each typical eigenvalue `μ`, the lower-bound equipartition (A) gives
+`1 ≤ μ · 2^{n(S+δ)}`; summing over typical indices produces
+`Σ 1 ≤ 2^{n(S+δ)} · typicalWeight ≤ 2^{n(S+δ)}`
+[Wilde2011Qst, qit-notes.tex:31457-31598]. -/
+theorem typicalSubspaceDimension_le_two_pow (ρ : State a) (n : ℕ) (δ : ℝ) :
+    ρ.typicalSubspaceDimension n δ ≤ 2 ^ ((n : ℝ) * (ρ.vonNeumann + δ)) := by
+  classical
+  have h2pos : (0 : ℝ) < 2 := by norm_num
+  have hfactor_pos : (0 : ℝ) < 2 ^ ((n : ℝ) * (ρ.vonNeumann + δ)) :=
+    Real.rpow_pos_of_pos h2pos _
+  have h0exp : -((n : ℝ) * ρ.vonNeumann + (n : ℝ) * δ) +
+      (n : ℝ) * (ρ.vonNeumann + δ) = 0 := by ring
+  have h1eq : (1 : ℝ) =
+      2 ^ (-((n : ℝ) * ρ.vonNeumann + (n : ℝ) * δ)) *
+        2 ^ ((n : ℝ) * (ρ.vonNeumann + δ)) := by
+    rw [← Real.rpow_add h2pos, h0exp, Real.rpow_zero]
+  unfold typicalSubspaceDimension
+  calc
+    (∑ i : TensorPower a n,
+        if typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
+        then (1 : ℝ) else 0)
+      ≤ ∑ i : TensorPower a n,
+          (if typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
+            then ((ρ.tensorPower n).pos.isHermitian.eigenvalues i) *
+              (2 ^ ((n : ℝ) * (ρ.vonNeumann + δ)))
+            else (0 : ℝ)) := by
+        apply Finset.sum_le_sum
+        intro i _
+        by_cases hi : typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
+        · simp only [hi, if_true]
+          have hlower : 2 ^ (-((n : ℝ) * ρ.vonNeumann + (n : ℝ) * δ))
+              ≤ (ρ.tensorPower n).pos.isHermitian.eigenvalues i :=
+            ρ.typicalEigenvalue_ge_eigenvalueLowerBound n δ _ hi
+          rw [h1eq]
+          exact mul_le_mul_of_nonneg_right hlower hfactor_pos.le
+        · simp only [hi, if_false, le_refl]
+    _ = 2 ^ ((n : ℝ) * (ρ.vonNeumann + δ)) *
+        ∑ i : TensorPower a n,
+          (if typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
+            then (ρ.tensorPower n).pos.isHermitian.eigenvalues i else (0 : ℝ)) := by
+        rw [Finset.mul_sum]
+        apply Finset.sum_congr rfl
+        intro i _
+        by_cases hi : typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
+        · simp only [hi, if_true]; ring
+        · simp only [hi, if_false]; ring
+    _ ≤ 2 ^ ((n : ℝ) * (ρ.vonNeumann + δ)) * 1 := by
+        gcongr
+        exact ρ.typicalSubspaceSpectralWeight_le_one n δ
+    _ = 2 ^ ((n : ℝ) * (ρ.vonNeumann + δ)) := by ring
+
+/-- The atypical spectral weight tends to zero as `n → ∞`.
+
+Combines the Chebyshev bridge `atypical ≤ secondMoment / (nδ)²` with the exact
+second-moment identity `secondMoment = n · singleCopy`, giving
+`atypical ≤ singleCopy / (n · δ²) → 0` [Wilde2011Qst, qit-notes.tex:31457-31598]. -/
+theorem tendsto_atypicalSubspaceSpectralWeight (ρ : State a) {δ : ℝ} (hδ : 0 < δ) :
+    Tendsto (fun n : ℕ => ρ.atypicalSubspaceSpectralWeight n δ) atTop (nhds 0) := by
+  have hδ2pos : 0 < δ ^ 2 := sq_pos_of_pos hδ
+  -- Chebyshev bound holds for `n ≥ 1`:
+  --   `atypical n δ ≤ secondMoment n / (nδ)² = singleCopy / (n · δ²)`.
+  have hBound : ∀ᶠ n in atTop,
+      ρ.atypicalSubspaceSpectralWeight n δ ≤
+        ρ.singleCopyLogDeviationSecondMoment / ((n : ℝ) * δ ^ 2) := by
+    apply eventually_atTop.mpr
+    refine ⟨1, fun n hn => ?_⟩
+    have hn0 : 0 < n := by omega
+    have hLin : ρ.typicalLogDeviationSecondMoment n =
+        (n : ℝ) * ρ.singleCopyLogDeviationSecondMoment :=
+      ρ.typicalLogDeviationSecondMoment_eq n
+    have hCheb :=
+      ρ.atypicalSubspaceSpectralWeight_le_logDeviationSecondMoment_div_sq hn0 hδ
+    rw [hLin] at hCheb
+    rw [show (n : ℝ) * ρ.singleCopyLogDeviationSecondMoment / ((n : ℝ) * δ) ^ 2 =
+          ρ.singleCopyLogDeviationSecondMoment / ((n : ℝ) * δ ^ 2) by field_simp] at hCheb
+    exact hCheb
+  -- The bound itself tends to zero: `singleCopy / ((n:ℝ)·δ²) = (singleCopy/δ²)/n`.
+  have hBoundTendsto :
+      Tendsto (fun n : ℕ => ρ.singleCopyLogDeviationSecondMoment / ((n : ℝ) * δ ^ 2))
+        atTop (nhds 0) := by
+    have hCast : ∀ n : ℕ,
+        (ρ.singleCopyLogDeviationSecondMoment / δ ^ 2) / (n : ℝ) =
+          ρ.singleCopyLogDeviationSecondMoment / ((n : ℝ) * δ ^ 2) := by
+      intro n; field_simp
+    have hConst : Tendsto
+        (fun n : ℕ => (ρ.singleCopyLogDeviationSecondMoment / δ ^ 2) / (n : ℝ))
+        atTop (nhds 0) :=
+      tendsto_const_div_atTop_nhds_zero_nat _
+    exact Tendsto.congr' (Eventually.of_forall hCast) hConst
+  -- Lower bound: `0 ≤ atypical` always.
+  have hLower : ∀ᶠ n in atTop, (0 : ℝ) ≤ ρ.atypicalSubspaceSpectralWeight n δ :=
+    Eventually.of_forall (fun n => ρ.atypicalSubspaceSpectralWeight_nonneg n δ)
+  -- Squeeze: `0 ≤ atypical ≤ bound → 0`.
+  exact tendsto_of_tendsto_of_tendsto_of_le_of_le'
+    (tendsto_const_nhds (x := (0 : ℝ))) hBoundTendsto hLower hBound
+
+/-- The typical spectral weight tends to one as `n → ∞`.
+
+Follows from the partition `typical + atypical = 1` and
+`tendsto_atypicalSubspaceSpectralWeight` [Wilde2011Qst, qit-notes.tex:31457-31598]. -/
+theorem tendsto_typicalSubspaceSpectralWeight (ρ : State a) {δ : ℝ} (hδ : 0 < δ) :
+    Tendsto (fun n : ℕ => ρ.typicalSubspaceSpectralWeight n δ) atTop (nhds 1) := by
+  -- `typical n δ = 1 - atypical n δ` via the partition identity.
+  have hCast : (fun n : ℕ => ρ.typicalSubspaceSpectralWeight n δ) =
+      fun n => 1 - ρ.atypicalSubspaceSpectralWeight n δ := by
+    funext n
+    linarith [ρ.typicalSubspaceSpectralWeight_add_atypical n δ]
+  rw [hCast]
+  simpa using tendsto_const_nhds.sub (ρ.tendsto_atypicalSubspaceSpectralWeight hδ)
 
 end State
 

@@ -3754,14 +3754,6 @@ theorem SmoothConditionalMinEntropyFixedCandidate_bddAbove
   rcases hh with ⟨ρ', _hball, rfl⟩
   exact conditionalMinEntropyFixed_le_log2_card_left (a := a) ρ' σ
 
-private theorem SmoothConditionalMinEntropyCandidate_bddAbove
-    (ρ : State (Prod a b)) (ε : ℝ) :
-    BddAbove {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h} := by
-  refine ⟨log2 (Fintype.card a : ℝ), ?_⟩
-  intro h hh
-  rcases hh with ⟨ρ', _hball, rfl⟩
-  exact conditionalMinEntropy_le_log2_card_left_of_fixedSmooth (a := a) ρ'
-
 /-- Fixed-reference smooth conditional min-entropy is monotone in the smoothing
 radius. -/
 theorem smoothConditionalMinEntropyFixed_mono

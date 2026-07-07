@@ -831,7 +831,7 @@ private theorem unitaryTensorPowerMatrix_mul_star_self (U : Matrix.unitaryGroup 
     (unitaryTensorPowerMatrix U n : CMatrix (TensorPower a n)) *
         star (unitaryTensorPowerMatrix U n : CMatrix (TensorPower a n)) =
       1 := by
-  simpa using Matrix.UnitaryGroup.star_mul_self (unitaryTensorPowerMatrix U n)⁻¹
+  simp
 
 theorem unitaryInvariant_commutes_unitaryTensorPowerMatrix
     {n : ℕ} (B : CMatrix (TensorPower a n))
@@ -1218,7 +1218,7 @@ theorem twoLevelGeneratorEntry_self_left (i j : a) :
   by_cases hij : i = j
   · subst j
     simp [twoLevelGeneratorEntry]
-  · simp [twoLevelGeneratorEntry, hij]
+  · simp [twoLevelGeneratorEntry]
 
 @[simp]
 theorem twoLevelGeneratorEntry_self_right {i j : a} (hij : i ≠ j) :
@@ -1249,10 +1249,10 @@ theorem twoLevelRotationEntry_hasDerivAt_zero {i j : a} (hij : i ≠ j) (x y : a
         · by_cases h5 : x = y
           · have hyi : y ≠ i := by
               intro hyi
-              exact h1 ⟨by simpa [h5, hyi], hyi⟩
+              exact h1 ⟨by simp [h5, hyi], hyi⟩
             have hyj : y ≠ j := by
               intro hyj
-              exact h4 ⟨by simpa [h5, hyj], hyj⟩
+              exact h4 ⟨by simp [h5, hyj], hyj⟩
             simpa [hyi, hyj, h5] using
               hasDerivAt_const (x := (0 : ℝ)) (c := (1 : ℂ))
           · simpa [h1, h2, h3, h4, h5] using
@@ -1498,7 +1498,7 @@ theorem twoLevelTensorGeneratorMatrix_apply_single_j_to_i {i j : a} (hij : i ≠
       · simp [hsr]
       · simp [hsr, hsame s hsr]
     rw [hprod, hx, hy]
-    simp [twoLevelGeneratorEntry, hij]
+    simp [twoLevelGeneratorEntry]
   · intro t _ htr
     have hprod_zero :
         (∏ s : Fin n, if s = t then (1 : ℂ)
@@ -1594,7 +1594,7 @@ private theorem fin_card_filter_update_eq_add_one
         simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hs
         have hfi : f s = i := by
           simpa [Function.update_of_ne hsr] using hs
-        simpa [S, hfi]
+        simp [S, hfi]
     · intro hs
       rcases Finset.mem_insert.mp hs with hsr | hsS
       · subst s
@@ -1605,7 +1605,7 @@ private theorem fin_card_filter_update_eq_add_one
           exact hr_not_mem hsS
         have hfi : f s = i := by
           simpa [S] using hsS
-        simpa [Function.update_of_ne hsr, hfi]
+        simp [Function.update_of_ne hsr, hfi]
   rw [hset, Finset.card_insert_of_notMem hr_not_mem]
 
 private theorem fin_card_filter_update_removed_add_one
@@ -1632,7 +1632,7 @@ private theorem fin_card_filter_update_removed_add_one
     · intro hs
       rcases Finset.mem_insert.mp hs with hsr | hsS
       · subst s
-        simpa [hr]
+        simp [hr]
       · have hsr : s ≠ r := by
           intro h
           subst s
@@ -2021,11 +2021,11 @@ theorem profileMatrixCoeff_eq_inv_sqrt_mul_profileClassMatrixEntrySum {n : ℕ}
           · simp [tensorPowerProfileUnitVector, hx]
     _ = ∑ x ∈ tensorPowerProfileClass (a := a) p,
             cp * ∑ y ∈ tensorPowerProfileClass (a := a) q, M x y * cq := by
-          simp [Finset.sum_filter, mul_assoc]
+          simp
     _ = cp * cq *
           ∑ x ∈ tensorPowerProfileClass (a := a) p,
             ∑ y ∈ tensorPowerProfileClass (a := a) q, M x y := by
-          simp [Finset.mul_sum, Finset.sum_mul, mul_assoc, mul_comm, mul_left_comm]
+          simp [Finset.mul_sum, Finset.sum_mul, mul_comm, mul_left_comm]
 
 theorem profileClassMatrixEntrySum_twoLevelTensorGenerator_ne_zero_of_adjacent {n : ℕ}
     {p q : TensorPowerProfile a n} {i j : a}
@@ -2126,7 +2126,7 @@ theorem rankOneMatrix_mulVec_eq_dotProduct_smul {ι : Type u} [Fintype ι]
     (v w : ι → ℂ) :
     (rankOneMatrix v).mulVec w = dotProduct (star v) w • v := by
   ext i
-  simp [Matrix.mulVec, rankOneMatrix_apply, dotProduct, Finset.mul_sum, mul_assoc,
+  simp [Matrix.mulVec, rankOneMatrix_apply, dotProduct, Finset.mul_sum,
     mul_comm, mul_left_comm]
 
 private theorem matrix_mulVec_tensorPowerBasisDelta_two
@@ -2141,7 +2141,7 @@ theorem matrix_mul_rankOneMatrix_eq_smul_of_mulVec_eq_smul {ι : Type u}
   ext i j
   have hvi : ∑ x : ι, M i x * v x = lam * v i := by
     simpa [Matrix.mulVec, dotProduct, Pi.smul_apply] using congrFun hv i
-  simp [Matrix.mul_apply, rankOneMatrix_apply, Pi.smul_apply]
+  simp [Matrix.mul_apply, rankOneMatrix_apply]
   calc
     ∑ x : ι, M i x * (v x * star (v j)) =
         ∑ x : ι, (M i x * v x) * star (v j) := by
@@ -2355,7 +2355,7 @@ theorem profileMatrixCoeff_mul_of_right_profile_eigen {n : ℕ}
   unfold profileMatrixCoeff
   rw [← Matrix.mulVec_mulVec]
   rw [hBq]
-  simp [Matrix.mulVec, dotProduct, Finset.mul_sum, Finset.sum_mul, mul_assoc, mul_comm,
+  simp [Matrix.mulVec, dotProduct, Finset.mul_sum, mul_assoc, mul_comm,
     mul_left_comm]
 
 theorem profileMatrixCoeff_mul_symmetricProjectionMatrix_right {n : ℕ}
@@ -2685,7 +2685,7 @@ theorem oneWayTensorGeneratorMatrix_apply_single_i_to_j {i j : a} (hij : i ≠ j
       · simp [hsr]
       · simp [hsr, hsame s hsr]
     rw [hprod, hx, hy]
-    simp [oneWayGeneratorEntry, hij]
+    simp [oneWayGeneratorEntry]
   · intro t _ htr
     have hprod_zero :
         (∏ s : Fin n, if s = t then (1 : ℂ)
@@ -2808,8 +2808,7 @@ theorem constantTensorPowerProfile_class_card (z₀ : a) (n : ℕ) :
 theorem tensorPowerProfileUnitVector_constant_apply_self (z₀ : a) (n : ℕ) :
     tensorPowerProfileUnitVector (a := a) (constantTensorPowerProfile (a := a) z₀ n)
         (constantTensorPowerWord (a := a) z₀ n) = 1 := by
-  simp [tensorPowerProfileUnitVector, tensorPowerProfileClass_constant_eq_singleton,
-    constantTensorPowerProfile_class_card]
+  simp [tensorPowerProfileUnitVector, tensorPowerProfileClass_constant_eq_singleton]
 
 theorem tensorPowerProfileUnitVector_constant_apply_of_ne (z₀ : a) (n : ℕ)
     {x : TensorPower a n} (hx : x ≠ constantTensorPowerWord (a := a) z₀ n) :
@@ -3186,7 +3185,7 @@ theorem unitaryInvariant_mulVec_constantProfileUnitVector_eq_diagonal_smul {n : 
     intro x hx
     apply unitaryInvariant_mulVec_supported_on_profileClass (a := a) (p := p) B hinv
     · intro y hy
-      simp [vp, tensorPowerProfileUnitVector, hy]
+      simp [vp, hy]
     · exact hx
   have hcoeff : profileMatrixCoeff (a := a) B p p = B.mulVec vp x₀ := by
     unfold profileMatrixCoeff
@@ -3830,7 +3829,7 @@ theorem mul_antisymmetricProjectionMatrix_two_eq_trace_smul_of_eq_smul [Nontrivi
       (Q * B).trace / Q.trace = (Q.trace * lam) / Q.trace := by rw [htrace']
       _ = lam := by field_simp [hQtrace_ne]
   rw [hBQ]
-  simpa [Q, hscalar]
+  simp [Q, hscalar]
 
 theorem unitaryInvariant_mul_antisymmetricProjectionMatrix_two_eq_trace_smul [Nontrivial a]
     (B : CMatrix (TensorPower a 2))
@@ -4083,7 +4082,7 @@ private theorem symmetricProjectionMatrix_mul_unitaryTwirlIntegrand_trace
         simp [Matrix.mul_assoc]
     _ = (P * A).trace := by
         rw [unitaryTensorPowerMatrix_star_mul_self (a := a) U n]
-        simp [P, Matrix.mul_assoc]
+        simp [P]
 
 theorem unitaryTwirl_symmetricProjectionMatrix_mul_trace [Nonempty a]
     (n : ℕ) (A : CMatrix (TensorPower a n)) :
@@ -4349,8 +4348,8 @@ def haydenRestrictedFlip (P : CMatrix a) : CMatrix (TensorPower a 2) :=
 
 theorem tensorPowerKroneckerTwo_trace (P : CMatrix a) :
     (tensorPowerKroneckerTwo (a := a) P).trace = P.trace * P.trace := by
-  simp [Matrix.trace, sum_tensorPower_two, Finset.mul_sum, Finset.sum_mul,
-    mul_assoc, mul_comm, mul_left_comm]
+  simp [Matrix.trace, sum_tensorPower_two, Finset.mul_sum,
+    mul_comm]
 
 theorem tensorPowerKroneckerTwo_mul_tensorPowerSwapMatrix_two_trace (P : CMatrix a) :
     (tensorPowerKroneckerTwo (a := a) P * tensorPowerSwapMatrix_two (a := a)).trace =
@@ -4375,7 +4374,7 @@ theorem tensorPowerKroneckerTwo_mul_tensorPowerSwapMatrix_two_trace (P : CMatrix
               intro h
               apply hy
               apply (permEquiv (a := a) 2 twoCopySwapPerm).injective
-              simpa [h, permEquiv_twoCopySwapPerm_twoCopyTensorWord]
+              simp [h, permEquiv_twoCopySwapPerm_twoCopyTensorWord]
             simp [tensorPowerSwapMatrix_two, permutationMatrix, Equiv.Perm.permMatrix,
               PEquiv.toMatrix, hneq]
           · intro hnot
@@ -4392,7 +4391,7 @@ theorem tensorPowerSwapMatrix_two_mul_tensorPowerKroneckerTwo_mul_tensorPowerSwa
   rw [← twoCopyTensorWord_coords (a := a) x, ← twoCopyTensorWord_coords (a := a) y]
   simp [Matrix.mul_apply, sum_tensorPower_two, tensorPowerSwapMatrix_two, permutationMatrix,
     Equiv.Perm.permMatrix, PEquiv.toMatrix, permEquiv_twoCopySwapPerm_twoCopyTensorWord,
-    Finset.sum_ite_eq', mul_comm]
+    mul_comm]
   rw [Finset.sum_eq_single (tensorPowerEquiv (a := a) 2 y 1)]
   · rw [Finset.sum_eq_single (tensorPowerEquiv (a := a) 2 y 0)]
     · simp

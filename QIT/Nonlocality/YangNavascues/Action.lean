@@ -67,6 +67,22 @@ theorem ancillaZeroMatrix_mulVec_apply
     simp [ancillaZeroMatrix, Matrix.mulVec, dotProduct]
   · simp [ancillaZeroMatrix, Matrix.mulVec, dotProduct, hk]
 
+/-- Applying Fourier after the zero-ancilla embedding gives the zero column of `F`. -/
+theorem ancillaFourierMatrix_ancillaZeroMatrix_mulVec_apply
+    {H : Type u} [Fintype H] [DecidableEq H]
+    {d : ℕ} [NeZero d] (zero : Fin d) (φ : H → ℂ) (h : H) (k : Fin d) :
+    ((ancillaFourierMatrix (H := H) d *
+      ancillaZeroMatrix (H := H) zero).mulVec φ) (h, k) =
+      fourierMatrix d k zero * φ h := by
+  rw [← Matrix.mulVec_mulVec]
+  rw [ancillaFourierMatrix_mulVec_apply]
+  rw [Finset.sum_eq_single zero]
+  · simp [ancillaZeroMatrix_mulVec_apply]
+  · intro y _ hy
+    simp [ancillaZeroMatrix_mulVec_apply, hy]
+  · intro hz
+    exact (hz (Finset.mem_univ zero)).elim
+
 /-- Applying a block-controlled operator only uses the block matching the ancilla value. -/
 theorem controlledOperator_mulVec_apply
     {H : Type u} [Fintype H] [DecidableEq H]
@@ -293,6 +309,111 @@ theorem inverseFourier_coeff_base
     _ = (1 : CMatrix (Fin d)) k ⟨0, NeZero.pos d⟩ := by
         rw [inverseFourierMatrix_mul_fourierMatrix]
 
+/-- Applying the controlled phase to the Fourier zero-column vector, coordinatewise. -/
+theorem controlledPhase_fourierZero_mulVec_apply
+    {H : Type u} [Fintype H] [DecidableEq H]
+    {d : ℕ} [NeZero d] (P : Fin d → CMatrix H)
+    (hIdem : ∀ k, P k * P k = P k)
+    (hOrth : ∀ i j, i ≠ j → P i * P j = 0)
+    (φ : H → ℂ) (h : H) (x : Fin d) :
+    ((controlledPhase P *
+      (ancillaFourierMatrix (H := H) d *
+        ancillaZeroMatrix (H := H) (⟨0, NeZero.pos d⟩ : Fin d))).mulVec φ) (h, x) =
+      (∑ m : Fin d,
+          (fourierRoot d ^ ((m : ℕ) * (x : ℕ)) *
+            fourierMatrix d x (⟨0, NeZero.pos d⟩ : Fin d)) *
+            (P m).mulVec φ h) +
+        fourierMatrix d x (⟨0, NeZero.pos d⟩ : Fin d) *
+          ((1 - ∑ m : Fin d, P m).mulVec φ h) := by
+  rw [← Matrix.mulVec_mulVec]
+  rw [controlledPhase_mulVec_apply]
+  rw [phaseOperator_pow_eq P hIdem hOrth]
+  simp only [Matrix.add_mulVec, Matrix.sub_mulVec, Matrix.one_mulVec, Matrix.sum_mulVec,
+    Matrix.smul_mulVec, Pi.add_apply, Pi.sub_apply]
+  simp_rw [ancillaFourierMatrix_ancillaZeroMatrix_mulVec_apply]
+  simp [Matrix.mulVec, dotProduct, Finset.mul_sum, mul_assoc, mul_comm, sub_eq_add_neg,
+    add_assoc, add_comm]
+  rw [mul_add, mul_neg, Finset.mul_sum]
+  rw [show
+      (∑ x_1 : Fin d, fourierMatrix d x 0 * ∑ y : H, P x_1 h y * φ y) =
+        ∑ x_1 : Fin d, ∑ y : H, fourierMatrix d x 0 * P x_1 h y * φ y by
+    refine Finset.sum_congr rfl ?_
+    intro x_1 _
+    rw [Finset.mul_sum]
+    refine Finset.sum_congr rfl ?_
+    intro y _
+    ring]
+  simp [mul_left_comm, mul_comm]
+  abel
+
+/-- The CGS Fourier gadget selects the explicit projection branch. -/
+theorem fourierGadgetBranch_mulVec_apply
+    {H : Type u} [Fintype H] [DecidableEq H]
+    {d : ℕ} [NeZero d] (P : Fin d → CMatrix H)
+    (hIdem : ∀ k, P k * P k = P k)
+    (hOrth : ∀ i j, i ≠ j → P i * P j = 0)
+    (φ : H → ℂ) (h : H) (k : Fin d) :
+    ((ancillaInverseFourierMatrix (H := H) d *
+      (controlledPhase P *
+        (ancillaFourierMatrix (H := H) d *
+          ancillaZeroMatrix (H := H) (⟨0, NeZero.pos d⟩ : Fin d)))).mulVec φ) (h, k)
+      =
+    (fourierProjectionBranch P k).mulVec φ h := by
+  rw [← Matrix.mulVec_mulVec]
+  rw [ancillaInverseFourierMatrix_mulVec_apply]
+  simp_rw [controlledPhase_fourierZero_mulVec_apply P hIdem hOrth φ]
+  simp only [mul_add, Finset.sum_add_distrib, Finset.mul_sum]
+  rw [Finset.sum_comm]
+  rw [show
+      (∑ y : Fin d, ∑ x : Fin d,
+          inverseFourierMatrix d k x *
+            (fourierRoot d ^ (↑y * ↑x) *
+              fourierMatrix d x (⟨0, NeZero.pos d⟩ : Fin d) * (P y *ᵥ φ) h)) =
+        ∑ y : Fin d,
+          (∑ x : Fin d,
+            inverseFourierMatrix d k x *
+              (fourierRoot d ^ (↑y * ↑x) *
+                fourierMatrix d x (⟨0, NeZero.pos d⟩ : Fin d))) *
+            (P y *ᵥ φ) h by
+    refine Finset.sum_congr rfl ?_
+    intro y _
+    rw [Finset.sum_mul]
+    refine Finset.sum_congr rfl ?_
+    intro x _
+    ring]
+  rw [show
+      (∑ x : Fin d,
+          inverseFourierMatrix d k x *
+            (fourierMatrix d x (⟨0, NeZero.pos d⟩ : Fin d) *
+              ((1 - ∑ m : Fin d, P m) *ᵥ φ) h)) =
+        (∑ x : Fin d,
+          inverseFourierMatrix d k x *
+            fourierMatrix d x (⟨0, NeZero.pos d⟩ : Fin d)) *
+          ((1 - ∑ m : Fin d, P m) *ᵥ φ) h by
+    rw [Finset.sum_mul]
+    refine Finset.sum_congr rfl ?_
+    intro x _
+    ring]
+  simp_rw [inverseFourier_coeff_projection (d := d)]
+  rw [inverseFourier_coeff_base]
+  by_cases hk : k = (0 : Fin d)
+  · simp [fourierProjectionBranch, hk, Matrix.add_mulVec, Matrix.sub_mulVec, Matrix.one_mulVec,
+      Matrix.sum_mulVec, Matrix.one_apply]
+  · simp [fourierProjectionBranch, hk, Matrix.sub_mulVec, Matrix.one_mulVec,
+      Matrix.sum_mulVec, Matrix.one_apply]
+
+private theorem kronecker_mulVec_apply
+    {a : Type u} {a' : Type v} {b : Type w} {b' : Type*}
+    [Fintype a] [DecidableEq a] [Fintype a'] [DecidableEq a']
+    [Fintype b] [DecidableEq b] [Fintype b'] [DecidableEq b']
+    (A : Matrix a' a ℂ) (B : Matrix b' b ℂ)
+    (φ : a × b → ℂ) (a0 : a') (b0 : b') :
+    ((A ⊗ₖ B).mulVec φ) (a0, b0) =
+      A.mulVec (fun a => B.mulVec (fun b => φ (a, b)) b0) a0 := by
+  simp [Matrix.mulVec, dotProduct]
+  rw [← Finset.univ_product_univ, Finset.sum_product]
+  simp [Finset.mul_sum, mul_assoc]
+
 namespace YNData
 
 variable {ι : Type u} {HA : Type v} {HB : Type w}
@@ -306,6 +427,61 @@ def aliceBranchOperator (B : SchmidtTarget.BaseReindexToFin data.target)
     (k : Fin (Fintype.card ι)) : CMatrix HA :=
   (data.aliceUnitary (B.toEquiv.symm k) : CMatrix HA) *
     data.aliceProjection.effects (B.toEquiv.symm k)
+
+/-- Alice's assembled side matrix acts as the explicit branch operator. -/
+theorem aliceSideMatrix_mulVec_apply
+    (B : SchmidtTarget.BaseReindexToFin data.target)
+    (φ : HA → ℂ) (ha : HA) (k : Fin (Fintype.card ι)) :
+    (data.aliceSideMatrix B).mulVec φ (ha, k) =
+      (data.aliceBranchOperator B k).mulVec φ ha := by
+  haveI : Nonempty ι := ⟨data.target.base⟩
+  haveI : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
+  have hzero :
+      data.target.baseIndex =
+        (⟨0, NeZero.pos (Fintype.card ι)⟩ : Fin (Fintype.card ι)) := by
+    ext
+    simp [SchmidtTarget.baseIndex]
+  unfold aliceSideMatrix aliceBranchOperator aliceControlledUnitary aliceControlledPhase
+  rw [hzero]
+  rw [← Matrix.mulVec_mulVec]
+  rw [controlledUnitary_mulVec_apply]
+  have hbranch :
+      fourierProjectionBranch
+        (fun l : Fin (Fintype.card ι) => data.aliceProjection.effects (B.toEquiv.symm l)) k =
+        data.aliceProjection.effects (B.toEquiv.symm k) := by
+    have hsum :
+        (∑ l : Fin (Fintype.card ι), data.aliceProjection.effects (B.toEquiv.symm l)) =
+          (1 : CMatrix HA) := by
+      rw [← data.aliceProjection.sum_effects]
+      exact (Fintype.sum_equiv B.toEquiv
+        (fun i : ι => data.aliceProjection.effects i)
+        (fun l : Fin (Fintype.card ι) => data.aliceProjection.effects (B.toEquiv.symm l))
+        (by intro i; simp)).symm
+    by_cases hk : k = (0 : Fin (Fintype.card ι))
+    · simp [fourierProjectionBranch, hk, hsum]
+    · simp [fourierProjectionBranch, hk]
+  have hIdem :
+      ∀ l : Fin (Fintype.card ι),
+        data.aliceProjection.effects (B.toEquiv.symm l) *
+            data.aliceProjection.effects (B.toEquiv.symm l) =
+          data.aliceProjection.effects (B.toEquiv.symm l) := by
+    intro l
+    exact data.aliceProjection.idempotent (B.toEquiv.symm l)
+  have hOrth :
+      ∀ i j : Fin (Fintype.card ι), i ≠ j →
+        data.aliceProjection.effects (B.toEquiv.symm i) *
+            data.aliceProjection.effects (B.toEquiv.symm j) =
+          0 := by
+    intro i j hij
+    apply data.aliceProjection.orthogonal
+    intro h
+    apply hij
+    exact B.toEquiv.symm.injective h
+  simp_rw [fourierGadgetBranch_mulVec_apply
+    (fun l : Fin (Fintype.card ι) => data.aliceProjection.effects (B.toEquiv.symm l))
+    hIdem hOrth φ]
+  rw [hbranch]
+  rw [Matrix.mulVec_mulVec]
 
 /-- The output basis type of the assembled CGS local isometry. -/
 abbrev CGSOutput (ι : Type u) (HA : Type v) (HB : Type w) [Fintype ι] :=
@@ -406,6 +582,17 @@ theorem cgsLocalIsometry_applyMatrix_eq_actionBranchSum {rho : State (HA × HB)}
   rw [← data.cgsActionVector_eq_sum_branches B W ψ]
   rfl
 
+/-- The explicit branch-sum density is the rank-one density of the CGS output vector. -/
+theorem cgsActionBranchSumMatrix_eq_rankOneActionVector {rho : State (HA × HB)}
+    (B : SchmidtTarget.BaseReindexToFin data.target)
+    (W : BobLocalOrthogonalization data rho) (ψ : PureVector (HA × HB)) :
+    data.cgsActionBranchSumMatrix B W ψ =
+      rankOneMatrix (data.cgsActionVector B W ψ) := by
+  rw [← data.cgsLocalIsometry_applyMatrix_eq_actionBranchSum B W ψ]
+  rw [PureVector.state_matrix]
+  rw [localIsometry_applyMatrix_rankOne]
+  rfl
+
 end YNData
 
 namespace BobLocalOrthogonalization
@@ -430,6 +617,45 @@ def bobBranchOperator (B : SchmidtTarget.BaseReindexToFin data.target)
   (data.bobUnitary (B.toEquiv.symm k) : CMatrix HB) *
     fourierProjectionBranch
       (fun l : Fin (Fintype.card ι) => (W.bobLocal (B.toEquiv.symm l)).matrix) k
+
+/-- Bob's assembled side matrix acts as the explicit branch operator. -/
+theorem bobSideMatrix_mulVec_apply
+    (B : SchmidtTarget.BaseReindexToFin data.target)
+    (φ : HB → ℂ) (hb : HB) (k : Fin (Fintype.card ι)) :
+    (W.bobSideMatrix B).mulVec φ (hb, k) =
+      (W.bobBranchOperator B k).mulVec φ hb := by
+  haveI : Nonempty ι := ⟨data.target.base⟩
+  haveI : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
+  have hzero :
+      data.target.baseIndex =
+        (⟨0, NeZero.pos (Fintype.card ι)⟩ : Fin (Fintype.card ι)) := by
+    ext
+    simp [SchmidtTarget.baseIndex]
+  unfold bobSideMatrix bobBranchOperator YNData.bobControlledUnitary bobControlledPhase
+  rw [hzero]
+  rw [← Matrix.mulVec_mulVec]
+  rw [controlledUnitary_mulVec_apply]
+  have hIdem :
+      ∀ l : Fin (Fintype.card ι),
+        (W.bobLocal (B.toEquiv.symm l)).matrix *
+            (W.bobLocal (B.toEquiv.symm l)).matrix =
+          (W.bobLocal (B.toEquiv.symm l)).matrix := by
+    intro l
+    exact (W.bobLocal (B.toEquiv.symm l)).idempotent
+  have hOrth :
+      ∀ i j : Fin (Fintype.card ι), i ≠ j →
+        (W.bobLocal (B.toEquiv.symm i)).matrix *
+            (W.bobLocal (B.toEquiv.symm j)).matrix =
+          0 := by
+    intro i j hij
+    apply W.orthogonal
+    intro h
+    apply hij
+    exact B.toEquiv.symm.injective h
+  simp_rw [fourierGadgetBranch_mulVec_apply
+    (fun l : Fin (Fintype.card ι) => (W.bobLocal (B.toEquiv.symm l)).matrix)
+    hIdem hOrth φ]
+  rw [Matrix.mulVec_mulVec]
 
 @[simp]
 theorem bobBranchOperator_base
@@ -475,6 +701,33 @@ theorem bobBranchOperator_ne_base
   simp [bobBranchOperator, fourierProjectionBranch, hkzero']
 
 end BobLocalOrthogonalization
+
+namespace YNData
+
+variable {ι : Type u} {HA : Type v} {HB : Type w}
+variable [Fintype ι] [DecidableEq ι]
+variable [Fintype HA] [DecidableEq HA] [Fintype HB] [DecidableEq HB]
+
+variable (data : YNData ι HA HB)
+
+/-- Coordinate form of the assembled CGS action through the collapsed branch operators. -/
+theorem cgsActionVector_apply_branchOperators {rho : State (HA × HB)}
+    (B : SchmidtTarget.BaseReindexToFin data.target)
+    (W : BobLocalOrthogonalization data rho) (ψ : PureVector (HA × HB))
+    (ha : HA) (hb : HB) (ka kb : Fin (Fintype.card ι)) :
+    data.cgsActionVector B W ψ ((ha, ka), (hb, kb)) =
+      ((data.aliceBranchOperator B ka ⊗ₖ W.bobBranchOperator B kb).mulVec ψ.amp) (ha, hb) := by
+  unfold cgsActionVector
+  change (((data.aliceSideMatrix B) ⊗ₖ (W.bobSideMatrix B)).mulVec ψ.amp) ((ha, ka), (hb, kb)) =
+    ((data.aliceBranchOperator B ka ⊗ₖ W.bobBranchOperator B kb).mulVec ψ.amp) (ha, hb)
+  rw [kronecker_mulVec_apply
+    (A := data.aliceSideMatrix B) (B := W.bobSideMatrix B)]
+  simp_rw [W.bobSideMatrix_mulVec_apply B]
+  rw [data.aliceSideMatrix_mulVec_apply B]
+  rw [kronecker_mulVec_apply
+    (A := data.aliceBranchOperator B ka) (B := W.bobBranchOperator B kb)]
+
+end YNData
 
 namespace YNPhaseAlignedConditions
 

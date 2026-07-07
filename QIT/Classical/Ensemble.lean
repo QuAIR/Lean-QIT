@@ -46,6 +46,20 @@ namespace Ensemble
 
 variable {E : Ensemble ι a}
 
+/-- Ensemble probabilities are nonnegative when read as real numbers. -/
+theorem prob_nonneg (E : Ensemble ι a) (i : ι) : 0 ≤ (E.probs i : ℝ) :=
+  NNReal.coe_nonneg (E.probs i)
+
+/-- Every probability weight in a finite normalized ensemble is at most one. -/
+theorem prob_le_one [DecidableEq ι] (E : Ensemble ι a) (i : ι) :
+    (E.probs i : ℝ) ≤ 1 := by
+  have hleNN : E.probs i ≤ 1 := by
+    calc
+      E.probs i ≤ ∑ j : ι, E.probs j :=
+        Finset.single_le_sum (fun _ _ => by exact bot_le) (Finset.mem_univ i)
+      _ = 1 := E.weights_sum
+  exact_mod_cast hleNN
+
 /-- The average (mean) state of an ensemble, the convex combination weighted by `probs`. -/
 def averageState (E : Ensemble ι a) : State a where
   matrix := ∑ i, (E.probs i) • (E.states i).matrix

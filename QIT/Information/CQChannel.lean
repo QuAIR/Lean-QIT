@@ -47,6 +47,30 @@ theorem applyState_id_prod_cqState_matrix
   rw [map_smul, MatrixMap.kron_apply_kronecker]
   simp [Channel.applyState, Channel.idChannel, MatrixMap.ofKraus]
 
+/-- Applying a left-local classical preparation channel to a cq state prepares
+the output state selected by each classical block and leaves the quantum block
+unchanged. -/
+theorem applyState_prepare_prod_id_cqState_matrix
+    {ι : Type u} {c : Type v} {d : Type w}
+    [Fintype ι] [DecidableEq ι] [Fintype c] [DecidableEq c]
+    [Fintype d] [DecidableEq d]
+    (E : Ensemble ι c) (ρ : ι → State d) :
+    (((Channel.prepare ρ).prod (Channel.idChannel c)).applyState E.cqState).matrix =
+      ∑ i : ι, (E.probs i : ℂ) •
+        Matrix.kronecker (ρ i).matrix (E.states i).matrix := by
+  change MatrixMap.kron (Channel.prepare ρ).map (Channel.idChannel c).map
+      E.cqState.matrix = _
+  rw [Ensemble.cqState_matrix]
+  change MatrixMap.kron (Channel.prepare ρ).map (Channel.idChannel c).map
+      (∑ i : ι, (E.probs i : ℂ) •
+        Matrix.kronecker (Matrix.single i i (1 : ℂ)) (E.states i).matrix) = _
+  rw [map_sum]
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  rw [map_smul, MatrixMap.kron_apply_kronecker]
+  rw [Channel.prepare_map_single_eq]
+  simp [Channel.idChannel, MatrixMap.ofKraus]
+
 end
 
 end QIT

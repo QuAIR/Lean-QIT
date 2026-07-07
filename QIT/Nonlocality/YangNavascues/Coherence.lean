@@ -59,6 +59,14 @@ theorem baseBranchVector_eq (ψ : PureVector (HA × HB)) :
       (data.aliceProjectionOp data.target.base).mulVec ψ.amp :=
   rfl
 
+/-- The pure-state base projection density is the rank-one matrix of the base branch vector. -/
+theorem baseProjectionMatrix_pure_eq_rankOneMatrix_baseBranchVector
+    (ψ : PureVector (HA × HB)) :
+    data.baseProjectionMatrix ψ.state =
+      rankOneMatrix (data.baseBranchVector ψ) := by
+  exact data.postMatrix_pure_eq_rankOneMatrix_mulVec ψ
+    (data.aliceProjectionOp data.target.base)
+
 end YNData
 
 /--
@@ -70,10 +78,13 @@ off-diagonal target coherence terms in the CGS Fourier calculation.
 -/
 def YNPhaseAlignedConditions (data : YNData ι HA HB) (ψ : PureVector (HA × HB)) : Prop :=
   YNConditions data ψ.state ∧
-    ∀ k : ι,
+    (∀ k : ι,
+      (data.aliceProjectionOp k).mulVec ψ.amp =
+        (data.bobProjectionOp k).mulVec ψ.amp) ∧
+    (∀ k : ι,
       (data.transformedBobProjectionOp k).mulVec ψ.amp =
         (((data.target.coeff k / data.target.coeff data.target.base : ℝ) : ℂ)) •
-          data.baseBranchVector ψ
+          data.baseBranchVector ψ)
 
 namespace YNPhaseAlignedConditions
 
@@ -84,12 +95,26 @@ theorem ynConditions (h : YNPhaseAlignedConditions data ψ) :
     YNConditions data ψ.state :=
   h.1
 
+/-- The base branch vector has squared norm `c_0^2`. -/
+theorem baseBranchVector_trace_rankOne
+    (h : YNPhaseAlignedConditions data ψ) :
+    (rankOneMatrix (data.baseBranchVector ψ)).trace =
+      (((data.target.coeff data.target.base) ^ 2 : ℝ) : ℂ) := by
+  rw [← data.baseProjectionMatrix_pure_eq_rankOneMatrix_baseBranchVector ψ]
+  exact h.ynConditions.baseProjectionMatrix_trace_eq_coeff_base_sq
+
 /-- Extract the source vector-level coefficient-ratio condition. -/
 theorem phaseAligned (h : YNPhaseAlignedConditions data ψ) (k : ι) :
     (data.transformedBobProjectionOp k).mulVec ψ.amp =
       (((data.target.coeff k / data.target.coeff data.target.base : ℝ) : ℂ)) •
         data.baseBranchVector ψ :=
-  h.2 k
+  h.2.2 k
+
+/-- Extract the source vector-level projection-agreement condition. -/
+theorem projectionAligned (h : YNPhaseAlignedConditions data ψ) (k : ι) :
+    (data.aliceProjectionOp k).mulVec ψ.amp =
+      (data.bobProjectionOp k).mulVec ψ.amp :=
+  h.2.1 k
 
 private theorem rankOneCoherence_smul_smul {α : Type*} (a b : ℝ) (φ χ : α → ℂ) :
     YNData.rankOneCoherence ((a : ℂ) • φ) ((b : ℂ) • χ) =

@@ -2044,6 +2044,25 @@ theorem psdTracePower_isometry_conj
   rw [hrootsVA, hrootsA] at hroot
   simpa using hroot
 
+/-- Cyclic `AB`/`BA` invariance for PSD power traces.
+
+When both square products are positive semidefinite, `AB` and `BA` have the
+same characteristic polynomial, hence the same positive real-power trace. -/
+theorem psdTracePower_mul_comm
+    {A B : CMatrix a} (hAB : (A * B).PosSemidef) (hBA : (B * A).PosSemidef)
+    {p : ℝ} (_hp : 0 < p) :
+    psdTracePower (A * B) hAB p = psdTracePower (B * A) hBA p := by
+  rw [psdTracePower_eq_sum_eigenvalues_rpow,
+    psdTracePower_eq_sum_eigenvalues_rpow]
+  have hpoly : (A * B).charpoly = (B * A).charpoly :=
+    Matrix.charpoly_mul_comm A B
+  have hroots :=
+    congrArg (fun P : ℂ[X] => (P.roots.map fun z : ℂ => z.re ^ p).sum) hpoly
+  have hrootsAB := hAB.isHermitian.roots_charpoly_eq_eigenvalues
+  have hrootsBA := hBA.isHermitian.roots_charpoly_eq_eigenvalues
+  simp [hrootsAB, hrootsBA] at hroots
+  simpa using hroots
+
 section RpowContinuity
 
 open scoped Matrix.Norms.L2Operator
@@ -3716,6 +3735,109 @@ theorem trace_mul_cMatrix_rpow_pos_of_support
   rw [htrace]
   exact hsum_pos
 
+/-- Support-aware identity regularization for trace pairings with arbitrary
+real powers.
+
+Even for negative `s`, the trace pairing is continuous along `N + ε I` when
+the left factor is supported by `N`: the potentially singular zero-eigenvalue
+directions of `N` are killed by the support hypothesis.  This is the finite
+dimensional regularization-removal step used in the KW reverse-Holder route. -/
+theorem trace_mul_cMatrix_rpow_add_pos_smul_one_tendsto_of_support
+    {M N : CMatrix a} (hN : N.PosSemidef)
+    (hSupport : Matrix.Supports M N) (s : ℝ) :
+    Filter.Tendsto
+      (fun ε : ℝ => ((M * CFC.rpow (N + ε • (1 : CMatrix a)) s).trace).re)
+      (nhdsWithin (0 : ℝ) (Set.Ioi 0))
+      (nhds ((M * CFC.rpow N s).trace.re)) := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hN.isHermitian.eigenvectorUnitary
+  let d : a → ℝ := hN.isHermitian.eigenvalues
+  let M' : CMatrix a := star (U : CMatrix a) * M * (U : CMatrix a)
+  have hd_nonneg : ∀ i, 0 ≤ d i := fun i => hN.eigenvalues_nonneg i
+  have hdiag_trace
+      (e : a → ℝ) :
+      ((M * ((U : CMatrix a) *
+            (Matrix.diagonal fun i => ((e i : ℂ) : ℂ)) *
+          star (U : CMatrix a))).trace).re =
+        ∑ i, (M' i i).re * e i := by
+    let D : CMatrix a := Matrix.diagonal fun i => ((e i : ℂ) : ℂ)
+    have htrace :
+        (M * ((U : CMatrix a) * D * star (U : CMatrix a))).trace =
+          (M' * D).trace := by
+      calc
+        (M * ((U : CMatrix a) * D * star (U : CMatrix a))).trace =
+            ((M * (U : CMatrix a) * D) * star (U : CMatrix a)).trace := by
+              congr 1
+              noncomm_ring
+        _ = (star (U : CMatrix a) * (M * (U : CMatrix a) * D)).trace := by
+              exact Matrix.trace_mul_comm (M * (U : CMatrix a) * D)
+                (star (U : CMatrix a))
+        _ = (M' * D).trace := by
+              congr 1
+              simp [M', Matrix.mul_assoc]
+    rw [htrace]
+    simp [D, Matrix.trace, Matrix.diagonal, Matrix.mul_apply, Complex.mul_re]
+  have htarget :
+      ((M * CFC.rpow N s).trace).re =
+        ∑ i, (M' i i).re * d i ^ s := by
+    have hpow :
+        CFC.rpow N s =
+          (U : CMatrix a) *
+            (Matrix.diagonal fun i => (((d i ^ s : ℝ) : ℂ) : ℂ)) *
+          star (U : CMatrix a) := by
+      simpa [U, d] using cMatrix_rpow_eq_eigenbasis_diagonal hN s
+    rw [hpow]
+    simpa [M', U, d] using hdiag_trace (fun i => d i ^ s)
+  have hpath :
+      (fun ε : ℝ => ((M * CFC.rpow (N + ε • (1 : CMatrix a)) s).trace).re)
+        =ᶠ[nhdsWithin (0 : ℝ) (Set.Ioi 0)]
+      fun ε : ℝ => ∑ i, (M' i i).re * (d i + ε) ^ s := by
+    filter_upwards [self_mem_nhdsWithin] with ε hε
+    have hε_nonneg : 0 ≤ ε := le_of_lt hε
+    have hpow :
+        CFC.rpow (N + ε • (1 : CMatrix a)) s =
+          (U : CMatrix a) *
+            (Matrix.diagonal fun i => ((((d i + ε) ^ s : ℝ) : ℂ) : ℂ)) *
+          star (U : CMatrix a) := by
+      simpa [U, d] using
+        cMatrix_rpow_add_nonneg_smul_one_eigenbasis_diagonal hN hε_nonneg s
+    rw [hpow]
+    simpa [M', U, d] using hdiag_trace (fun i => (d i + ε) ^ s)
+  have hterm :
+      ∀ i,
+        Filter.Tendsto (fun ε : ℝ => (M' i i).re * (d i + ε) ^ s)
+          (nhdsWithin (0 : ℝ) (Set.Ioi 0))
+          (nhds ((M' i i).re * d i ^ s)) := by
+    intro i
+    by_cases hdi : d i = 0
+    · have hMii : (M' i i).re = 0 := by
+        simpa [M', U, d] using
+          supports_conjugate_diagonal_re_eq_zero (M := M) (N := N) hN hSupport
+            (i := i) hdi
+      simp [hMii]
+    · have hdi_pos : 0 < d i := lt_of_le_of_ne (hd_nonneg i) (Ne.symm hdi)
+      have hlin :
+          Filter.Tendsto (fun ε : ℝ => d i + ε)
+            (nhdsWithin (0 : ℝ) (Set.Ioi 0)) (nhds (d i)) := by
+        have hid : Filter.Tendsto (fun ε : ℝ => ε)
+            (nhdsWithin (0 : ℝ) (Set.Ioi 0)) (nhds 0) :=
+          (continuous_id.tendsto (0 : ℝ)).mono_left nhdsWithin_le_nhds
+        simpa using
+          (tendsto_const_nhds.add hid)
+      have hpow :
+          Filter.Tendsto (fun ε : ℝ => (d i + ε) ^ s)
+            (nhdsWithin (0 : ℝ) (Set.Ioi 0)) (nhds (d i ^ s)) :=
+        (Real.continuousAt_rpow_const (d i) s (Or.inl (ne_of_gt hdi_pos))).tendsto.comp
+          hlin
+      exact tendsto_const_nhds.mul hpow
+  have hsum :
+      Filter.Tendsto (fun ε : ℝ => ∑ i, (M' i i).re * (d i + ε) ^ s)
+        (nhdsWithin (0 : ℝ) (Set.Ioi 0))
+        (nhds (∑ i, (M' i i).re * d i ^ s)) :=
+    tendsto_finsetSum Finset.univ fun i _ => hterm i
+  rw [htarget]
+  exact hsum.congr' hpath.symm
+
 /-- The first power trace is the ordinary trace. -/
 @[simp]
 theorem psdTracePower_one (A : CMatrix a) (hA : A.PosSemidef) :
@@ -3747,6 +3869,33 @@ theorem psdSchattenPNorm_eq (A : CMatrix a) (hA : A.PosSemidef) (p : ℝ) :
 theorem psdSchattenPNorm_nonneg (A : CMatrix a) (hA : A.PosSemidef) (p : ℝ) :
     0 ≤ psdSchattenPNorm A hA p :=
   Real.rpow_nonneg (psdTracePower_nonneg A hA p) _
+
+/-- PSD Schatten `p`-norm expressions are continuous along PSD-constrained
+convergent filters for `0 < p`.
+
+This is the norm-level companion to
+`cMatrix_rpow_trace_re_tendsto_of_tendsto_posSemidef`.  It packages the final
+real-power step so callers do not need to repeat the trace-power continuity
+argument when proving continuity of sandwiched-Renyi objective functions. -/
+theorem psdSchattenPNorm_tendsto_of_tendsto_posSemidef
+    {X : Type*} {l : Filter X} {F : X → CMatrix a} {A : CMatrix a}
+    {p : ℝ} (hp : 0 < p)
+    (hF : Filter.Tendsto F l (nhds A))
+    (hFpsd : ∀ x, (F x).PosSemidef)
+    (hA : A.PosSemidef) :
+    Filter.Tendsto (fun x => psdSchattenPNorm (F x) (hFpsd x) p) l
+      (nhds (psdSchattenPNorm A hA p)) := by
+  have htrace :
+      Filter.Tendsto (fun x => psdTracePower (F x) (hFpsd x) p) l
+        (nhds (psdTracePower A hA p)) := by
+    simpa [psdTracePower] using
+      cMatrix_rpow_trace_re_tendsto_of_tendsto_posSemidef hp hF
+        (Filter.Eventually.of_forall hFpsd) hA
+  have hexp_nonneg : 0 ≤ (1 / p : ℝ) := one_div_nonneg.mpr hp.le
+  have hpow :
+      ContinuousAt (fun x : ℝ => x ^ (1 / p : ℝ)) (psdTracePower A hA p) :=
+    Real.continuousAt_rpow_const (psdTracePower A hA p) (1 / p) (Or.inr hexp_nonneg)
+  simpa [psdSchattenPNorm] using hpow.tendsto.comp htrace
 
 /-- PSD Schatten `p`-norm expressions multiply over Kronecker products. -/
 theorem psdSchattenPNorm_kronecker
@@ -4735,6 +4884,108 @@ theorem psdSchattenPNorm_le_of_traceHolderUnitBall_le
   rcases (psdTraceHolderUnitBall_isGreatest hM hpq).1 with ⟨B, hB, hBq, hval⟩
   rw [hval]
   exact hbound B hB hBq
+
+/-- The trace product of two PSD matrices is nonnegative in real part.
+
+This local version avoids importing the later SDP trace-duality layer into the
+Schatten kernel module. -/
+theorem cMatrix_trace_mul_posSemidef_re_nonneg_schatten
+    {A B : CMatrix a} (hA : A.PosSemidef) (hB : B.PosSemidef) :
+    0 ≤ ((A * B).trace).re := by
+  classical
+  let U : Matrix.unitaryGroup a ℂ := hA.isHermitian.eigenvectorUnitary
+  have hB' : (star (U : CMatrix a) * B * (U : CMatrix a)).PosSemidef := by
+    simpa [U] using posSemidef_unitary_conj hB U
+  rw [posSemidef_trace_mul_eq_eigenvalue_conjugate_diag_sum (M := A) (B := B) hA]
+  exact Finset.sum_nonneg fun i _ =>
+    mul_nonneg (hA.eigenvalues_nonneg i) (posSemidef_diagonal_re_nonneg hB' i)
+
+/-- Trace pairing with a fixed positive test matrix is monotone in the Loewner
+order. -/
+theorem cMatrix_trace_mul_le_of_le_posSemidef_right
+    {A B C : CMatrix a} (hC : C.PosSemidef) (hAB : A ≤ B) :
+    ((A * C).trace).re ≤ ((B * C).trace).re := by
+  have hdiff : (B - A).PosSemidef := Matrix.le_iff.mp hAB
+  have hnonneg : 0 ≤ (((B - A) * C).trace).re :=
+    cMatrix_trace_mul_posSemidef_re_nonneg_schatten hdiff hC
+  have htrace :
+      (((B - A) * C).trace).re =
+        ((B * C).trace).re - ((A * C).trace).re := by
+    rw [Matrix.sub_mul, Matrix.trace_sub, Complex.sub_re]
+  linarith
+
+/-- PSD Schatten `p`-norm expressions are monotone for positive Loewner order
+when `p > 1`.
+
+The proof uses the local Holder unit-ball variational formula: every positive
+dual test matrix bounded in the conjugate Schatten gauge pairs with the smaller
+operator no more than with the larger one. -/
+theorem psdSchattenPNorm_mono_of_le
+    {A B : CMatrix a} (hA : A.PosSemidef) (hB : B.PosSemidef)
+    {p : ℝ} (hp : 1 < p) (hAB : A ≤ B) :
+    psdSchattenPNorm A hA p ≤ psdSchattenPNorm B hB p := by
+  let q : ℝ := Real.conjExponent p
+  have hpq : p.HolderConjugate q := by
+    simpa [q] using Real.HolderConjugate.conjExponent hp
+  refine psdSchattenPNorm_le_of_traceHolderUnitBall_le hA hB hpq ?_
+  intro C hC hCq
+  calc
+    ((A * C).trace).re ≤ ((B * C).trace).re :=
+      cMatrix_trace_mul_le_of_le_posSemidef_right hC hAB
+    _ ≤ psdSchattenPNorm B hB p :=
+      posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
+        hB hC hpq (le_of_lt hpq.symm.lt) hCq
+
+/-- Cyclic `AB`/`BA` invariance for PSD Schatten `p`-norm expressions. -/
+theorem psdSchattenPNorm_mul_comm
+    {A B : CMatrix a} (hAB : (A * B).PosSemidef) (hBA : (B * A).PosSemidef)
+    {p : ℝ} (hp : 0 < p) :
+    psdSchattenPNorm (A * B) hAB p = psdSchattenPNorm (B * A) hBA p := by
+  unfold psdSchattenPNorm
+  rw [psdTracePower_mul_comm hAB hBA hp]
+
+/-- PSD Schatten `p`-norm expressions are convex on the positive cone for
+`p > 1`.
+
+This is the Holder-unit-ball proof of the finite-dimensional convexity used in
+the Khatri--Wilde Sion step for sandwiched Rényi channel mutual information. -/
+theorem psdSchattenPNorm_convex_combo_le
+    {A B : CMatrix a} (hA : A.PosSemidef) (hB : B.PosSemidef)
+    {p s t : ℝ} (hp : 1 < p) (hs : 0 ≤ s) (ht : 0 ≤ t) (_hst : s + t = 1) :
+    psdSchattenPNorm (s • A + t • B)
+        (Matrix.PosSemidef.add
+          (Matrix.PosSemidef.smul hA hs)
+          (Matrix.PosSemidef.smul hB ht)) p ≤
+      s * psdSchattenPNorm A hA p + t * psdSchattenPNorm B hB p := by
+  let q : ℝ := Real.conjExponent p
+  have hpq : p.HolderConjugate q := by
+    simpa [q] using Real.HolderConjugate.conjExponent hp
+  let hmix : (s • A + t • B).PosSemidef :=
+    Matrix.PosSemidef.add
+      (Matrix.PosSemidef.smul hA hs)
+      (Matrix.PosSemidef.smul hB ht)
+  rcases (psdTraceHolderUnitBall_isGreatest
+      (M := s • A + t • B) hmix (p := p) (q := q) hpq).1 with
+    ⟨C, hC, hCq, hval⟩
+  rw [hval]
+  have hAtrace :
+      ((A * C).trace).re ≤ psdSchattenPNorm A hA p :=
+    posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
+      hA hC hpq (le_of_lt hpq.symm.lt) hCq
+  have hBtrace :
+      ((B * C).trace).re ≤ psdSchattenPNorm B hB p :=
+    posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
+      hB hC hpq (le_of_lt hpq.symm.lt) hCq
+  have htrace :
+      (((s • A + t • B) * C).trace).re =
+        s * ((A * C).trace).re + t * ((B * C).trace).re := by
+    rw [Matrix.add_mul, Matrix.smul_mul, Matrix.smul_mul, Matrix.trace_add,
+      Matrix.trace_smul, Matrix.trace_smul, Complex.add_re]
+    simp [Complex.mul_re]
+  rw [htrace]
+  exact add_le_add
+    (mul_le_mul_of_nonneg_left hAtrace hs)
+    (mul_le_mul_of_nonneg_left hBtrace ht)
 
 /-- A PSD power-trace inequality implies the matching PSD Schatten expression
 inequality for positive exponents. -/

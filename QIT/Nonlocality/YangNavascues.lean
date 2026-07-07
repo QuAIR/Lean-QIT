@@ -249,6 +249,26 @@ theorem transformedBobProjectionOp_eq (k : ι) :
     data.transformedBobProjectionOp k = data.unitaryOp k * data.bobProjectionOp k :=
   rfl
 
+/-- The lifted local unitary `X_A^(k) tensor X_B^(k)` is an isometry. -/
+theorem unitaryOp_isometry (k : ι) :
+    Matrix.conjTranspose (data.unitaryOp k) * data.unitaryOp k = 1 := by
+  unfold unitaryOp
+  change Matrix.conjTranspose
+      ((data.aliceUnitary k : CMatrix HA) ⊗ₖ (data.bobUnitary k : CMatrix HB)) *
+      ((data.aliceUnitary k : CMatrix HA) ⊗ₖ (data.bobUnitary k : CMatrix HB)) = 1
+  rw [Matrix.conjTranspose_kronecker, ← Matrix.mul_kronecker_mul]
+  have hA :
+      Matrix.conjTranspose (data.aliceUnitary k : CMatrix HA) *
+          (data.aliceUnitary k : CMatrix HA) = 1 := by
+    simpa [Matrix.star_eq_conjTranspose] using
+      Matrix.UnitaryGroup.star_mul_self (data.aliceUnitary k)
+  have hB :
+      Matrix.conjTranspose (data.bobUnitary k : CMatrix HB) *
+          (data.bobUnitary k : CMatrix HB) = 1 := by
+    simpa [Matrix.star_eq_conjTranspose] using
+      Matrix.UnitaryGroup.star_mul_self (data.bobUnitary k)
+  rw [hA, hB, Matrix.one_kronecker_one]
+
 @[simp]
 theorem bobLocalPostMatrix_eq (rho : State (HA × HB)) (Q : CMatrix HB) :
     data.bobLocalPostMatrix rho Q = data.postMatrix rho (data.bobLocalOp Q) :=
@@ -318,6 +338,20 @@ theorem aliceProjectionOp_orthogonal (i j : ι) (hij : i ≠ j) :
   rw [← Matrix.mul_kronecker_mul, data.aliceProjection.orthogonal i j hij,
     Matrix.zero_kronecker]
 
+/-- Alice's lifted projective effects sum to the bipartite identity. -/
+theorem aliceProjectionOp_sum_eq_one :
+    ∑ k : ι, data.aliceProjectionOp k = (1 : CMatrix (HA × HB)) := by
+  ext x y
+  rcases x with ⟨ha, hb⟩
+  rcases y with ⟨ha', hb'⟩
+  by_cases hhb : hb = hb'
+  · subst hb'
+    have hAlice := congrArg (fun M : CMatrix HA => M ha ha')
+      data.aliceProjection.sum_effects
+    simpa [aliceProjectionOp, Matrix.sum_apply, Matrix.kronecker,
+      Matrix.one_apply] using hAlice
+  · simp [aliceProjectionOp, Matrix.sum_apply, Matrix.kronecker, hhb]
+
 /-- Alice's lifted projection fixes its own post-selected density matrix. -/
 theorem projectionAgreementMatrix_fixed_by_aliceProjectionOp
     (rho : State (HA × HB)) (k : ι) :
@@ -334,6 +368,84 @@ theorem projectionAgreementMatrix_fixed_by_aliceProjectionOp
             rw [← Matrix.mul_assoc A A rho.matrix]
     _ = A * rho.matrix * Matrix.conjTranspose A := by
             rw [data.aliceProjectionOp_idempotent k]
+
+/-- The lifted Alice projective post-selections have total trace one. -/
+theorem projectionAgreementMatrix_trace_sum_eq_one (ψ : PureVector (HA × HB)) :
+    ∑ k : ι, (data.projectionAgreementMatrix ψ.state k).trace = 1 := by
+  have hterm :
+      ∀ k : ι,
+        (data.projectionAgreementMatrix ψ.state k).trace =
+          (ψ.state.matrix * data.aliceProjectionOp k).trace := by
+    intro k
+    unfold projectionAgreementMatrix postMatrix
+    let P := data.aliceProjectionOp k
+    have hHerm : Matrix.conjTranspose P = P := data.aliceProjectionOp_isHermitian k
+    have hIdem : P * P = P := data.aliceProjectionOp_idempotent k
+    calc
+      (P * ψ.state.matrix * Matrix.conjTranspose P).trace =
+          (P * ψ.state.matrix * P).trace := by rw [hHerm]
+      _ = ((P * ψ.state.matrix) * P).trace := by rw [Matrix.mul_assoc]
+      _ = (P * (P * ψ.state.matrix)).trace := by rw [Matrix.trace_mul_comm]
+      _ = ((P * P) * ψ.state.matrix).trace := by rw [Matrix.mul_assoc]
+      _ = (P * ψ.state.matrix).trace := by rw [hIdem]
+      _ = (ψ.state.matrix * P).trace := by rw [Matrix.trace_mul_comm]
+  calc
+    ∑ k : ι, (data.projectionAgreementMatrix ψ.state k).trace =
+        ∑ k : ι, (ψ.state.matrix * data.aliceProjectionOp k).trace := by
+          exact Finset.sum_congr rfl (fun k _ => hterm k)
+    _ = (∑ k : ι, ψ.state.matrix * data.aliceProjectionOp k).trace := by
+          rw [Matrix.trace_sum]
+    _ = (ψ.state.matrix * ∑ k : ι, data.aliceProjectionOp k).trace := by
+          congr 1
+          exact (Matrix.mul_sum Finset.univ data.aliceProjectionOp ψ.state.matrix).symm
+    _ = (ψ.state.matrix * 1).trace := by rw [data.aliceProjectionOp_sum_eq_one]
+    _ = 1 := by simpa [PureVector.state_matrix] using ψ.trace_rankOne_eq_one
+
+/-- The local unitary in the YN coefficient condition preserves post-selected trace. -/
+theorem unitaryCoefficientMatrix_trace_eq_bobProjectionAgreementMatrix_trace
+    (rho : State (HA × HB)) (k : ι) :
+    (data.unitaryCoefficientMatrix rho k).trace =
+      (data.bobProjectionAgreementMatrix rho k).trace := by
+  unfold unitaryCoefficientMatrix bobProjectionAgreementMatrix transformedBobProjectionOp postMatrix
+  let U := data.unitaryOp k
+  let P := data.bobProjectionOp k
+  let A := P * rho.matrix * Matrix.conjTranspose P
+  have hU : Matrix.conjTranspose U * U = 1 := data.unitaryOp_isometry k
+  calc
+    (U * P * rho.matrix * Matrix.conjTranspose (U * P)).trace =
+        (U * A * Matrix.conjTranspose U).trace := by
+          rw [Matrix.conjTranspose_mul]
+          congr 1
+          simp [A]
+          noncomm_ring
+    _ = (Matrix.conjTranspose U * U * A).trace := by
+          rw [Matrix.trace_mul_cycle]
+    _ = A.trace := by
+          rw [hU]
+          simp
+
+/-- The squared coefficient ratios sum to the inverse square of the base coefficient. -/
+theorem target_ratio_sq_sum_eq_inv_base_sq :
+    (∑ k : ι,
+      ((((data.target.coeff k / data.target.coeff data.target.base) ^ 2 : ℝ) : ℂ))) =
+      ((((data.target.coeff data.target.base) ^ 2)⁻¹ : ℝ) : ℂ) := by
+  have hbase_ne : data.target.coeff data.target.base ≠ 0 :=
+    ne_of_gt (data.target.coeff_pos data.target.base)
+  have hreal :
+      (∑ k : ι,
+        (data.target.coeff k / data.target.coeff data.target.base) ^ 2) =
+        (((data.target.coeff data.target.base) ^ 2)⁻¹ : ℝ) := by
+    calc
+      (∑ k : ι,
+        (data.target.coeff k / data.target.coeff data.target.base) ^ 2) =
+          (∑ k : ι, data.target.coeff k ^ 2) /
+            (data.target.coeff data.target.base ^ 2) := by
+            simp [div_pow]
+            rw [Finset.sum_div]
+      _ = ((data.target.coeff data.target.base) ^ 2)⁻¹ := by
+            rw [data.target.coeff_sq_sum]
+            field_simp [hbase_ne]
+  exact_mod_cast hreal
 
 end YNData
 
@@ -409,6 +521,58 @@ theorem unitaryCoefficient (h : YNConditions data rho) (k : ι) :
       (((data.target.coeff k / data.target.coeff data.target.base) ^ 2 : ℝ) : ℂ) •
         data.baseProjectionMatrix rho :=
   h.2 k
+
+/-- Trace form of the YN coefficient condition for each branch. -/
+theorem projectionAgreementMatrix_trace_eq_coeff_mul_base
+    (h : YNConditions data rho) (k : ι) :
+    (data.projectionAgreementMatrix rho k).trace =
+      ((((data.target.coeff k / data.target.coeff data.target.base) ^ 2 : ℝ) : ℂ)) *
+        (data.baseProjectionMatrix rho).trace := by
+  calc
+    (data.projectionAgreementMatrix rho k).trace =
+        (data.bobProjectionAgreementMatrix rho k).trace := by
+          rw [h.projectionAgreement k]
+    _ = (data.unitaryCoefficientMatrix rho k).trace := by
+          rw [data.unitaryCoefficientMatrix_trace_eq_bobProjectionAgreementMatrix_trace]
+    _ = ((((data.target.coeff k / data.target.coeff data.target.base) ^ 2 : ℝ) : ℂ) •
+        data.baseProjectionMatrix rho).trace := by
+          rw [h.unitaryCoefficient k]
+    _ = ((((data.target.coeff k / data.target.coeff data.target.base) ^ 2 : ℝ) : ℂ)) *
+        (data.baseProjectionMatrix rho).trace := by
+          simp
+
+/-- For a pure YN witness, the base projection has trace `c_0^2`. -/
+theorem baseProjectionMatrix_trace_eq_coeff_base_sq
+    {ψ : PureVector (HA × HB)} (h : YNConditions data ψ.state) :
+    (data.baseProjectionMatrix ψ.state).trace =
+      (((data.target.coeff data.target.base) ^ 2 : ℝ) : ℂ) := by
+  let T : ℂ := (data.baseProjectionMatrix ψ.state).trace
+  let c : ℂ := (((data.target.coeff data.target.base) ^ 2 : ℝ) : ℂ)
+  let ratio : ι → ℂ := fun k =>
+    ((((data.target.coeff k / data.target.coeff data.target.base) ^ 2 : ℝ) : ℂ))
+  have hsumTrace : (∑ k : ι, ratio k) * T = 1 := by
+    calc
+      (∑ k : ι, ratio k) * T =
+          ∑ k : ι, ratio k * T := by rw [Finset.sum_mul]
+      _ = ∑ k : ι, (data.projectionAgreementMatrix ψ.state k).trace := by
+          refine Finset.sum_congr rfl ?_
+          intro k _
+          symm
+          simpa [ratio, T] using h.projectionAgreementMatrix_trace_eq_coeff_mul_base k
+      _ = 1 := data.projectionAgreementMatrix_trace_sum_eq_one ψ
+  have hratio : (∑ k : ι, ratio k) = c⁻¹ := by
+    simpa [ratio, c] using data.target_ratio_sq_sum_eq_inv_base_sq
+  have hbase_ne : data.target.coeff data.target.base ≠ 0 :=
+    ne_of_gt (data.target.coeff_pos data.target.base)
+  have hc_ne : c ≠ 0 := by
+    dsimp [c]
+    exact_mod_cast (pow_ne_zero 2 hbase_ne)
+  have hinvT : c⁻¹ * T = 1 := by
+    simpa [hratio] using hsumTrace
+  have hmul := congrArg (fun z : ℂ => c * z) hinvT
+  have hT : T = c := by
+    simpa [hc_ne, mul_assoc] using hmul
+  simpa [T, c] using hT
 
 /--
 The YN projection-agreement condition supplies an exact state-supported

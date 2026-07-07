@@ -725,6 +725,88 @@ theorem traceNonincreasingCP_id_kron
     have htrace := partialTraceA_trace (a := a) (b := c) X
     linarith [congrArg Complex.re htrace]
 
+private theorem trace_kron_id_right_eq_trace_apply_partialTraceB
+    {c : Type w} {d : Type x} [Fintype c] [DecidableEq c]
+    [Fintype d] [DecidableEq d]
+    (Φ : MatrixMap c d) (X : CMatrix (Prod c a)) :
+    (MatrixMap.kron Φ (Channel.idChannel a).map X).trace =
+      (Φ (QIT.partialTraceB (a := c) (b := a) X)).trace := by
+  classical
+  rw [trace_map_eq_sum_single (MatrixMap.kron Φ (Channel.idChannel a).map) X]
+  rw [trace_map_eq_sum_single Φ (QIT.partialTraceB (a := c) (b := a) X)]
+  calc
+    (∑ ca : Prod c a, ∑ ca' : Prod c a,
+        X ca ca' *
+          (MatrixMap.kron Φ (Channel.idChannel a).map
+            (Matrix.single ca ca' (1 : Complex))).trace) =
+        ∑ ca : Prod c a, ∑ ca' : Prod c a,
+          X ca ca' *
+            ((Φ (Matrix.single ca.1 ca'.1 (1 : Complex))).trace *
+              (if ca.2 = ca'.2 then (1 : Complex) else 0)) := by
+          refine Finset.sum_congr rfl fun ca _ => ?_
+          refine Finset.sum_congr rfl fun ca' _ => ?_
+          rw [MatrixMap.trace_kron_single]
+          rw [(Channel.idChannel a).tracePreserving]
+          rw [trace_single_one]
+    _ =
+        ∑ i : c, ∑ i' : c,
+          (QIT.partialTraceB (a := c) (b := a) X) i i' *
+            (Φ (Matrix.single i i' (1 : Complex))).trace := by
+          calc
+            (∑ ca : Prod c a, ∑ ca' : Prod c a,
+              X ca ca' *
+                ((Φ (Matrix.single ca.1 ca'.1 (1 : Complex))).trace *
+                  (if ca.2 = ca'.2 then (1 : Complex) else 0))) =
+              ∑ i : c, ∑ j : a, ∑ i' : c,
+                X (i, j) (i', j) *
+                  (Φ (Matrix.single i i' (1 : Complex))).trace := by
+                rw [Fintype.sum_prod_type]
+                refine Finset.sum_congr rfl fun i _ => ?_
+                refine Finset.sum_congr rfl fun j _ => ?_
+                rw [Fintype.sum_prod_type]
+                refine Finset.sum_congr rfl fun i' _ => ?_
+                rw [Finset.sum_eq_single j]
+                · simp
+                · intro j' _ hj'
+                  have hne : j ≠ j' := hj'.symm
+                  simp [hne]
+                · intro hnot
+                  simp at hnot
+            _ = ∑ i : c, ∑ i' : c, ∑ j : a,
+                X (i, j) (i', j) *
+                  (Φ (Matrix.single i i' (1 : Complex))).trace := by
+                refine Finset.sum_congr rfl fun i _ => ?_
+                rw [Finset.sum_comm]
+            _ = ∑ i : c, ∑ i' : c,
+                (∑ j : a, X (i, j) (i', j)) *
+                  (Φ (Matrix.single i i' (1 : Complex))).trace := by
+                refine Finset.sum_congr rfl fun i _ => ?_
+                refine Finset.sum_congr rfl fun i' _ => ?_
+                rw [Finset.sum_mul]
+            _ = ∑ i : c, ∑ i' : c,
+                (QIT.partialTraceB (a := c) (b := a) X) i i' *
+                  (Φ (Matrix.single i i' (1 : Complex))).trace := by
+                simp [QIT.partialTraceB]
+
+/-- Tensoring a trace-nonincreasing CP map on the left with an identity map on
+the right is trace-nonincreasing CP. -/
+theorem traceNonincreasingCP_kron_id
+    {c : Type w} {d : Type x} [Fintype c] [DecidableEq c]
+    [Fintype d] [DecidableEq d]
+    {Φ : MatrixMap c d} (hΦ : TraceNonincreasingCP Φ) :
+    TraceNonincreasingCP (MatrixMap.kron Φ (Channel.idChannel a).map) where
+  completelyPositive :=
+    MatrixMap.isCompletelyPositive_kron Φ (Channel.idChannel a).map
+      hΦ.completelyPositive (Channel.idChannel a).completelyPositive
+  traceNonincreasing := by
+    intro X hX
+    rw [trace_kron_id_right_eq_trace_apply_partialTraceB]
+    have hpt : (QIT.partialTraceB (a := c) (b := a) X).PosSemidef :=
+      partialTraceB_posSemidef hX
+    have hle := hΦ.traceNonincreasing (QIT.partialTraceB (a := c) (b := a) X) hpt
+    have htrace := partialTraceB_trace (a := c) (b := a) X
+    linarith [congrArg Complex.re htrace]
+
 private theorem traceNorm_sub_le_trace_add_of_posSemidef
     (A B : CMatrix a) (hA : A.PosSemidef) (hB : B.PosSemidef) :
     traceNorm (A - B) ≤ A.trace.re + B.trace.re := by
@@ -1266,6 +1348,51 @@ theorem ofReferenceIsometry_apply (V : ReferenceIsometry r₁ r₂)
       V.matrix * X * Matrix.conjTranspose V.matrix := by
   simp [ofReferenceIsometry, MatrixMap.ofKraus]
 
+theorem ofReferenceIsometry_ofInjective_single
+    {α : Type u} {β : Type v} [Fintype α] [DecidableEq α]
+    [Fintype β] [DecidableEq β]
+    (f : α → β) (hf : Function.Injective f) (i j : α) :
+    ofReferenceIsometry (ReferenceIsometry.ofInjective f hf)
+      (Matrix.single i j (1 : ℂ)) =
+      Matrix.single (f i) (f j) (1 : ℂ) := by
+  ext y y'
+  rw [ofReferenceIsometry_apply]
+  have hleft (k : α) :
+      ((ReferenceIsometry.ofInjective f hf).matrix * Matrix.single i j (1 : ℂ)) y k =
+        if k = j then (if y = f i then 1 else 0) else 0 := by
+    rw [Matrix.mul_apply]
+    by_cases hkj : k = j
+    · subst k
+      rw [Finset.sum_eq_single i]
+      · simp [ReferenceIsometry.ofInjective]
+      · intro x _ hx
+        have hix : i ≠ x := fun h => hx h.symm
+        simp [hix]
+      · intro hnot
+        exact False.elim (hnot (Finset.mem_univ i))
+    · rw [Finset.sum_eq_zero]
+      · simp [hkj]
+      · intro x _
+        have hjk : j ≠ k := fun h => hkj h.symm
+        simp [hjk]
+  rw [Matrix.mul_apply]
+  simp_rw [hleft]
+  by_cases hy' : y' = f j
+  · rw [Finset.sum_eq_single j]
+    · simp [hy', Matrix.conjTranspose, ReferenceIsometry.ofInjective,
+        Matrix.single_apply, eq_comm]
+    · intro k _ hk
+      simp [hk]
+    · intro hnot
+      exact False.elim (hnot (Finset.mem_univ j))
+  · rw [Finset.sum_eq_zero]
+    · simp [hy', eq_comm]
+    · intro k _
+      by_cases hkj : k = j
+      · subst k
+        simp [hy', Matrix.conjTranspose, ReferenceIsometry.ofInjective]
+      · simp [hkj]
+
 theorem ofReferenceIsometry_isCompletelyPositive
     (V : ReferenceIsometry r₁ r₂) :
     IsCompletelyPositive (ofReferenceIsometry V) := by
@@ -1287,6 +1414,18 @@ theorem ofReferenceIsometry_traceNonincreasingCP
   traceNonincreasingCP_of_tracePreserving
     (ofReferenceIsometry_isCompletelyPositive V)
     (ofReferenceIsometry_isTracePreserving V)
+
+theorem kron_ofReferenceIsometry_idChannel_apply_eq_applyMatrixLeft
+    (V : ReferenceIsometry r₁ r₂) (X : CMatrix (Prod r₁ a)) :
+    MatrixMap.kron (ofReferenceIsometry V) (Channel.idChannel a).map X =
+      V.applyMatrix X := by
+  ext ra ra'
+  rw [MatrixMap.kron_idChannel_apply_slice]
+  change MatrixMap.ofReferenceIsometry V
+      (ReferenceIsometry.targetBlock X ra.2 ra'.2) ra.1 ra'.1 =
+    (V.matrix * ReferenceIsometry.targetBlock X ra.2 ra'.2 *
+      Matrix.conjTranspose V.matrix) ra.1 ra'.1
+  rw [MatrixMap.ofReferenceIsometry_apply]
 
 theorem kron_id_ofReferenceIsometry_apply_eq_applyMatrixRight
     (V : ReferenceIsometry r₁ r₂) (X : CMatrix (Prod a r₁)) :
@@ -1427,11 +1566,66 @@ theorem traceEffectToUnit_traceNonincreasingCP {E : CMatrix a}
 
 end MatrixMap
 
+namespace ReferenceIsometry
+
+variable {α : Type u} {β : Type v}
+variable [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+
+/-- The basis permutation isometry induced by a finite equivalence. -/
+def ofEquiv (e : α ≃ β) : ReferenceIsometry α β where
+  matrix := fun y x => if y = e x then 1 else 0
+  isometry := by
+    ext i j
+    by_cases h : i = j
+    · subst h
+      simp [Matrix.mul_apply, Matrix.conjTranspose]
+    · have hji : j ≠ i := fun hji => h hji.symm
+      simp [Matrix.mul_apply, Matrix.conjTranspose, h, hji]
+
+end ReferenceIsometry
+
 namespace Channel
 
 variable {a : Type u} {b : Type v} {r : Type w}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 variable [Fintype r] [DecidableEq r]
+
+/-- Relabel a finite channel system along a basis equivalence. -/
+def reindex (e : a ≃ b) : Channel a b where
+  map := MatrixMap.ofReferenceIsometry (ReferenceIsometry.ofEquiv e)
+  completelyPositive :=
+    MatrixMap.ofReferenceIsometry_isCompletelyPositive (ReferenceIsometry.ofEquiv e)
+  tracePreserving :=
+    MatrixMap.ofReferenceIsometry_isTracePreserving (ReferenceIsometry.ofEquiv e)
+  mapsPositive :=
+    MatrixMap.isCompletelyPositive_mapsPositive
+      (MatrixMap.ofReferenceIsometry (ReferenceIsometry.ofEquiv e))
+      (MatrixMap.ofReferenceIsometry_isCompletelyPositive (ReferenceIsometry.ofEquiv e))
+
+@[simp]
+theorem reindex_applyState (e : a ≃ b) (ρ : State a) :
+    (reindex e).applyState ρ = ρ.reindex e := by
+  apply State.ext
+  ext i j
+  simp [Channel.applyState, reindex, MatrixMap.ofReferenceIsometry_apply,
+    ReferenceIsometry.ofEquiv, State.reindex, Matrix.mul_apply]
+  rw [Finset.sum_eq_single (e.symm j)]
+  · rw [Finset.sum_eq_single (e.symm i)]
+    · simp
+    · intro x _ hx
+      have hne : i ≠ e x := by
+        intro hi
+        apply hx
+        simp [hi]
+      simp [hne]
+    · simp
+  · intro x _ hx
+    have hne : j ≠ e x := by
+      intro hj
+      apply hx
+      simp [hj]
+    simp [hne]
+  · simp
 
 /-- Channel form of tracing out the second tensor factor. -/
 def traceOutRight (a : Type u) (b : Type v)
@@ -1470,6 +1664,41 @@ theorem traceOutLeft_applyState (ρ : State (Prod a b)) :
     (traceOutLeft a b).applyState ρ = ρ.marginalB := by
   apply State.ext
   rfl
+
+/-- Channel form of discarding a finite system and retaining only its trace. -/
+def traceToUnit (a : Type u) [Fintype a] [DecidableEq a] :
+    Channel a PUnit.{u + 1} where
+  map := MatrixMap.traceEffectToUnit (1 : CMatrix a)
+  completelyPositive :=
+    (MatrixMap.traceEffectToUnit_traceNonincreasingCP
+      (a := a) Matrix.PosSemidef.one le_rfl).completelyPositive
+  tracePreserving := by
+    intro X
+    rw [MatrixMap.traceEffectToUnit_apply_of_posSemidef Matrix.PosSemidef.one]
+    rw [Matrix.mul_one]
+    change (∑ _ : PUnit.{u + 1}, X.trace) = X.trace
+    simp
+  mapsPositive := by
+    intro X hX
+    exact (MatrixMap.traceEffectToUnit_traceNonincreasingCP
+      (a := a) Matrix.PosSemidef.one le_rfl).mapsPositive X hX
+
+/-- A replacer channel discards the input and prepares a fixed output state. -/
+def replacer (τ : State b) : Channel a b :=
+  (Channel.prepare (fun _ : PUnit.{u + 1} => τ)).comp (traceToUnit a)
+
+@[simp]
+theorem replacer_map (τ : State b) (X : CMatrix a) :
+    (replacer (a := a) τ).map X = X.trace • τ.matrix := by
+  ext i j
+  simp [replacer, comp, traceToUnit, Channel.prepare_map,
+    MatrixMap.traceEffectToUnit_apply_of_posSemidef Matrix.PosSemidef.one]
+
+@[simp]
+theorem replacer_applyState (τ : State b) (ρ : State a) :
+    (replacer (a := a) τ).applyState ρ = τ := by
+  apply State.ext
+  simp [Channel.applyState, ρ.trace_eq_one]
 
 /-- The map underlying a CPTP channel is trace-nonincreasing CP. -/
 theorem traceNonincreasingCP_map (Φ : Channel a b) :

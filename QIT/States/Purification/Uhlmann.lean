@@ -589,6 +589,19 @@ theorem overlapSq_le_squaredFidelity_of_purifies
     overlapSq_le_squaredFidelity_of_purifies_of_card_le hΨ' hΦ' hcard
   rwa [V.overlapSq_applyPureVector Ψ Φ] at hbound
 
+/-- The absolute overlap of two purifications is bounded by the root fidelity
+of their target states. -/
+theorem abs_overlap_le_fidelity
+    {Ψ Φ : PureVector (Prod r a)} {ρ σ : State a}
+    (hΨ : Ψ.Purifies ρ) (hΦ : Φ.Purifies σ) :
+    Complex.abs (Ψ.overlap Φ) ≤ ρ.fidelity σ := by
+  have hsq := overlapSq_le_squaredFidelity_of_purifies hΨ hΦ
+  rw [PureVector.overlapSq_eq_normSq, State.squaredFidelity_eq_fidelity_sq] at hsq
+  have hleft_nonneg : 0 ≤ Complex.abs (Ψ.overlap Φ) := norm_nonneg _
+  have hfid_nonneg : 0 ≤ ρ.fidelity σ := State.fidelity_nonneg ρ σ
+  rw [Complex.normSq_eq_norm_sq] at hsq
+  exact (sq_le_sq₀ hleft_nonneg hfid_nonneg).mp hsq
+
 /-- Build a pure vector from an amplitude matrix whose Gram trace is one.
 
 The matrix is indexed by target rows and reference columns, matching

@@ -14,6 +14,8 @@ public import QIT.Security.ExtractorAnalytic
 public import QIT.Security.ExtractorTraceBridge
 public import QIT.Security.ExtractorQuadraticBridge
 public import QIT.Security.RandomnessExtraction
+public import QIT.Security.RandomnessExtractionOptimized
+public import QIT.Security.RandomnessExtractionConverse
 public import QIT.Security.BB84
 
 /-!

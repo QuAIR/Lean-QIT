@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Classical.Ensemble
+public import QIT.Util.BlockMatrix
 public import QIT.Util.Matrix
 
 /-!
@@ -147,7 +148,251 @@ theorem blockDiagonal_block_ne (blocks : ι → CMatrix a) {x x' : ι} (h : x �
     rw [Matrix.single_apply, if_neg fun hyy => h (hyy.1.symm.trans hyy.2)]
   rw [hz, zero_mul]
 
+/-- Block-diagonal reconstruction commutes with blockwise subtraction. -/
+theorem blockDiagonal_sub (blocks blocks' : ι → CMatrix a) :
+    blockDiagonal (fun x => blocks x - blocks' x) =
+      blockDiagonal blocks - blockDiagonal blocks' := by
+  classical
+  unfold blockDiagonal
+  rw [← Finset.sum_sub_distrib]
+  refine Finset.sum_congr rfl fun x _ => ?_
+  ext xi xj
+  simp [Matrix.kronecker, Matrix.kroneckerMap_apply]
+  ring
+
+/-- Block-diagonal reconstruction commutes with scalar multiplication. -/
+theorem blockDiagonal_smul (c : ℂ) (blocks : ι → CMatrix a) :
+    blockDiagonal (fun x => c • blocks x) =
+      c • blockDiagonal blocks := by
+  classical
+  unfold blockDiagonal
+  rw [Finset.smul_sum]
+  refine Finset.sum_congr rfl fun x _ => ?_
+  ext xi xj
+  simp [Matrix.kronecker, Matrix.kroneckerMap_apply]
+  ring
+
+/-- A side operator tensored with the classical identity is the constant
+block-diagonal matrix with that side operator in each diagonal block. -/
+theorem identityTensor_eq_blockDiagonal (T : CMatrix a) :
+    Matrix.kronecker (1 : CMatrix ι) T =
+      blockDiagonal (fun _ : ι => T) := by
+  classical
+  ext xi xj
+  rcases xi with ⟨x, i⟩
+  rcases xj with ⟨x', j⟩
+  by_cases hxx' : x = x'
+  · subst x'
+    have hblock :=
+      congrFun (congrFun
+        (blockDiagonal_block_self (fun _ : ι => T) x) i) j
+    simpa [block, Matrix.kronecker, Matrix.kroneckerMap_apply] using hblock.symm
+  · have hblock :=
+      congrFun (congrFun
+        (blockDiagonal_block_ne (fun _ : ι => T) hxx') i) j
+    simpa [block, Matrix.kronecker, Matrix.kroneckerMap_apply, hxx'] using hblock.symm
+
 variable [Fintype a] [DecidableEq a]
+
+omit [DecidableEq a] in
+/-- A block-diagonal classical-quantum matrix is positive semidefinite when
+all diagonal blocks are positive semidefinite. -/
+theorem blockDiagonal_posSemidef (blocks : ι → CMatrix a)
+    (hblocks : ∀ x, (blocks x).PosSemidef) :
+    (blockDiagonal blocks).PosSemidef := by
+  classical
+  unfold blockDiagonal
+  exact Matrix.posSemidef_sum Finset.univ fun x _ =>
+    (posSemidef_single x).kronecker (hblocks x)
+
+omit [DecidableEq a] in
+/-- The trace of a block-diagonal classical-quantum matrix is the sum of the
+traces of its diagonal blocks. -/
+@[simp]
+theorem blockDiagonal_trace (blocks : ι → CMatrix a) :
+    (blockDiagonal blocks).trace = ∑ x, (blocks x).trace := by
+  classical
+  unfold blockDiagonal
+  rw [Matrix.trace_sum]
+  refine Finset.sum_congr rfl fun x _ => ?_
+  have hkr :
+      ((Matrix.kronecker (Matrix.single x x (1 : ℂ)) (blocks x)).trace) =
+        (Matrix.single x x (1 : ℂ)).trace * (blocks x).trace :=
+    Matrix.trace_kronecker _ _
+  rw [hkr, trace_single_one, if_pos rfl]
+  simp
+
+omit [Fintype a] [DecidableEq a] in
+/-- Block-diagonal reconstruction commutes with conjugate transpose. -/
+theorem blockDiagonal_conjTranspose (blocks : ι → CMatrix a) :
+    Matrix.conjTranspose (blockDiagonal blocks) =
+      blockDiagonal (fun x => Matrix.conjTranspose (blocks x)) := by
+  classical
+  ext xi xj
+  rcases xi with ⟨x, i⟩
+  rcases xj with ⟨y, j⟩
+  by_cases hxy : y = x
+  · subst y
+    calc
+      Matrix.conjTranspose (blockDiagonal blocks) (x, i) (x, j) =
+          star (blockDiagonal blocks (x, j) (x, i)) := rfl
+      _ = star (blocks x j i) := by
+            have hblock :=
+              congrFun (congrFun (blockDiagonal_block_self blocks x) j) i
+            simp [block] at hblock
+            rw [hblock]
+      _ = Matrix.conjTranspose (blocks x) i j := rfl
+      _ = blockDiagonal (fun x => Matrix.conjTranspose (blocks x)) (x, i) (x, j) := by
+            have hblock :=
+              congrFun (congrFun
+                (blockDiagonal_block_self (fun x => Matrix.conjTranspose (blocks x)) x) i) j
+            simpa [block] using hblock.symm
+  · have hxy' : x ≠ y := fun h => hxy h.symm
+    calc
+      Matrix.conjTranspose (blockDiagonal blocks) (x, i) (y, j) =
+          star (blockDiagonal blocks (y, j) (x, i)) := rfl
+      _ = 0 := by
+            have hblock :=
+              congrFun (congrFun (blockDiagonal_block_ne blocks hxy) j) i
+            simp [block] at hblock
+            simp [hblock]
+      _ = blockDiagonal (fun x => Matrix.conjTranspose (blocks x)) (x, i) (y, j) := by
+            have hblock :=
+              congrFun (congrFun
+                (blockDiagonal_block_ne (fun x => Matrix.conjTranspose (blocks x)) hxy') i) j
+            simpa [block] using hblock.symm
+
+omit [DecidableEq a] in
+/-- Block-diagonal reconstruction commutes with blockwise multiplication. -/
+theorem blockDiagonal_mul (blocks₁ blocks₂ : ι → CMatrix a) :
+    blockDiagonal blocks₁ * blockDiagonal blocks₂ =
+      blockDiagonal (fun x => blocks₁ x * blocks₂ x) := by
+  classical
+  ext xi xj
+  rcases xi with ⟨x, i⟩
+  rcases xj with ⟨y, j⟩
+  by_cases hxy : x = y
+  · subst y
+    calc
+      (blockDiagonal blocks₁ * blockDiagonal blocks₂) (x, i) (x, j) =
+          ∑ z : ι, ∑ k : a,
+            blockDiagonal blocks₁ (x, i) (z, k) *
+              blockDiagonal blocks₂ (z, k) (x, j) := by
+            rw [Matrix.mul_apply, Fintype.sum_prod_type]
+      _ =
+          ∑ k : a,
+            blockDiagonal blocks₁ (x, i) (x, k) *
+              blockDiagonal blocks₂ (x, k) (x, j) := by
+            rw [Finset.sum_eq_single x]
+            · intro z _ hz
+              apply Finset.sum_eq_zero
+              intro k _
+              have hxz : x ≠ z := fun h => hz h.symm
+              have hleft :=
+                congrFun (congrFun (blockDiagonal_block_ne blocks₁ hxz) i) k
+              simp [block] at hleft
+              simp [hleft]
+            · simp
+      _ = ∑ k : a, blocks₁ x i k * blocks₂ x k j := by
+            refine Finset.sum_congr rfl fun k _ => ?_
+            have hleft :=
+              congrFun (congrFun (blockDiagonal_block_self blocks₁ x) i) k
+            have hright :=
+              congrFun (congrFun (blockDiagonal_block_self blocks₂ x) k) j
+            simpa [block] using congrArg₂ (fun u v => u * v) hleft hright
+      _ = (blocks₁ x * blocks₂ x) i j := by
+            rw [Matrix.mul_apply]
+      _ = blockDiagonal (fun x => blocks₁ x * blocks₂ x) (x, i) (x, j) := by
+            have hblock :=
+              congrFun (congrFun
+                (blockDiagonal_block_self (fun x => blocks₁ x * blocks₂ x) x) i) j
+            simpa [block] using hblock.symm
+  · calc
+      (blockDiagonal blocks₁ * blockDiagonal blocks₂) (x, i) (y, j) =
+          ∑ z : ι, ∑ k : a,
+            blockDiagonal blocks₁ (x, i) (z, k) *
+              blockDiagonal blocks₂ (z, k) (y, j) := by
+            rw [Matrix.mul_apply, Fintype.sum_prod_type]
+      _ = 0 := by
+            apply Finset.sum_eq_zero
+            intro z _
+            by_cases hzx : z = x
+            · subst z
+              apply Finset.sum_eq_zero
+              intro k _
+              have hright :=
+                congrFun (congrFun (blockDiagonal_block_ne blocks₂ hxy) k) j
+              simp [block] at hright
+              simp [hright]
+            · apply Finset.sum_eq_zero
+              intro k _
+              have hxz : x ≠ z := fun h => hzx h.symm
+              have hleft :=
+                congrFun (congrFun (blockDiagonal_block_ne blocks₁ hxz) i) k
+              simp [block] at hleft
+              simp [hleft]
+      _ = blockDiagonal (fun x => blocks₁ x * blocks₂ x) (x, i) (y, j) := by
+            have hblock :=
+              congrFun (congrFun
+                (blockDiagonal_block_ne (fun x => blocks₁ x * blocks₂ x) hxy) i) j
+            simpa [block] using hblock.symm
+
+/-- The positive square root of a classical block-diagonal PSD matrix is the
+block diagonal of the positive square roots. -/
+theorem blockDiagonal_psdSqrt (blocks : ι → CMatrix a)
+    (hblocks : ∀ x, (blocks x).PosSemidef) :
+    psdSqrt (blockDiagonal blocks) =
+      blockDiagonal (fun x => psdSqrt (blocks x)) := by
+  classical
+  let S : CMatrix (Prod ι a) := blockDiagonal (fun x => psdSqrt (blocks x))
+  have hSpos : S.PosSemidef := by
+    dsimp [S]
+    exact blockDiagonal_posSemidef (fun x => psdSqrt (blocks x))
+      (fun x => psdSqrt_pos (blocks x))
+  have hSsq : S * S = blockDiagonal blocks := by
+    dsimp [S]
+    rw [blockDiagonal_mul]
+    apply congrArg blockDiagonal
+    funext x
+    exact psdSqrt_mul_self_of_posSemidef (hblocks x)
+  simpa [S, psdSqrt] using
+    (CFC.sqrt_unique (a := blockDiagonal blocks) (b := S) hSsq hSpos.nonneg)
+
+/-- The trace norm of a classical block-diagonal matrix is the sum of the trace
+norms of its diagonal blocks. -/
+theorem traceNorm_blockDiagonal (blocks : ι → CMatrix a) :
+    traceNorm (blockDiagonal blocks) = ∑ x, traceNorm (blocks x) := by
+  classical
+  have hgram :
+      Matrix.conjTranspose (blockDiagonal blocks) * blockDiagonal blocks =
+        blockDiagonal (fun x => Matrix.conjTranspose (blocks x) * blocks x) := by
+    rw [blockDiagonal_conjTranspose, blockDiagonal_mul]
+  rw [traceNorm, hgram,
+    blockDiagonal_psdSqrt (fun x => Matrix.conjTranspose (blocks x) * blocks x)
+      (fun x => Matrix.posSemidef_conjTranspose_mul_self (blocks x)),
+    blockDiagonal_trace]
+  simp [traceNorm]
+
+/-- The trace-norm term in fidelity decomposes over classical block-diagonal
+positive semidefinite matrices. -/
+theorem traceNorm_psdSqrt_blockDiagonal_mul_psdSqrt_blockDiagonal
+    (blocks₁ blocks₂ : ι → CMatrix a)
+    (hblocks₁ : ∀ x, (blocks₁ x).PosSemidef)
+    (hblocks₂ : ∀ x, (blocks₂ x).PosSemidef) :
+    traceNorm (psdSqrt (blockDiagonal blocks₁) * psdSqrt (blockDiagonal blocks₂)) =
+      ∑ x, traceNorm (psdSqrt (blocks₁ x) * psdSqrt (blocks₂ x)) := by
+  rw [blockDiagonal_psdSqrt blocks₁ hblocks₁,
+    blockDiagonal_psdSqrt blocks₂ hblocks₂,
+    blockDiagonal_mul, traceNorm_blockDiagonal]
+
+omit [DecidableEq ι] [DecidableEq a] in
+/-- The trace of a matrix on a classical-quantum product is the sum of the
+traces of its diagonal classical blocks. -/
+theorem sum_block_trace (X : CMatrix (Prod ι a)) :
+    (∑ x, (block X x x).trace) = X.trace := by
+  rw [Matrix.trace]
+  rw [Fintype.sum_prod_type]
+  rfl
 
 /-- The cq-state matrix is reconstructed from the weighted diagonal quantum blocks. -/
 theorem cqState_eq_blockDiagonal (E : Ensemble ι a) :

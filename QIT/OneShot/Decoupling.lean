@@ -173,6 +173,218 @@ private theorem traceNorm_sq_le_card_mul_hilbertSchmidtSq [Fintype a] [Decidable
   exact hmain.trans
     (mul_le_mul_of_nonneg_right hrank (hilbertSchmidtSq_nonneg M))
 
+private theorem traceNorm_sq_le_rankBound_mul_hilbertSchmidtSq [Fintype a] [DecidableEq a]
+    (M : CMatrix a) {r : ℝ}
+    (hrank : (Module.finrank ℂ (LinearMap.range M.toEuclideanLin) : ℝ) ≤ r) :
+    traceNorm M ^ 2 ≤ r * hilbertSchmidtSq M := by
+  have hmain := traceNorm_sq_le_finrank_range_mul_hilbertSchmidt M
+  simpa [hilbertSchmidtSq] using hmain.trans
+    (mul_le_mul_of_nonneg_right hrank (hilbertSchmidtSq_nonneg M))
+
+private theorem finrank_range_toEuclideanLin_le_of_left_fixed [Fintype a] [DecidableEq a]
+    {K M : CMatrix a} (hKM : K * M = M) :
+    Module.finrank ℂ (LinearMap.range M.toEuclideanLin) ≤
+      Module.finrank ℂ (LinearMap.range K.toEuclideanLin) := by
+  have hlin : K.toEuclideanLin.comp M.toEuclideanLin = M.toEuclideanLin := by
+    have h := congrArg Matrix.toEuclideanLin hKM
+    rw [Matrix.toLpLin_mul] at h
+    exact h
+  refine Submodule.finrank_mono ?_
+  intro v hv
+  rcases hv with ⟨x, rfl⟩
+  exact ⟨M.toEuclideanLin x, DFunLike.congr_fun hlin x⟩
+
+private theorem finrank_range_toEuclideanLin_eq_trace_of_idempotent
+    [Fintype a] [DecidableEq a] (P : CMatrix a) (hPid : P * P = P) :
+    (Module.finrank ℂ (LinearMap.range P.toEuclideanLin) : ℂ) = P.trace := by
+  have hlin_idem : IsIdempotentElem P.toEuclideanLin := by
+    rw [IsIdempotentElem]
+    ext x i
+    have h := congrArg Matrix.toEuclideanLin hPid
+    rw [Matrix.toLpLin_mul] at h
+    exact congrArg
+      (fun f : EuclideanSpace ℂ a →ₗ[ℂ] EuclideanSpace ℂ a => f x i) h
+  have hproj : LinearMap.IsProj (LinearMap.range P.toEuclideanLin) P.toEuclideanLin :=
+    LinearMap.IsIdempotentElem.isProj_range P.toEuclideanLin hlin_idem
+  have htrace := hproj.trace
+  have hlintrace : LinearMap.trace ℂ (EuclideanSpace ℂ a) P.toEuclideanLin = P.trace := by
+    rw [LinearMap.trace_eq_matrix_trace ℂ (PiLp.basisFun 2 ℂ a)]
+    change (LinearMap.toMatrix (PiLp.basisFun 2 ℂ a) (PiLp.basisFun 2 ℂ a)
+      (Matrix.toLin (PiLp.basisFun 2 ℂ a) (PiLp.basisFun 2 ℂ a) P)).trace = P.trace
+    rw [LinearMap.toMatrix_toLin]
+  rw [hlintrace] at htrace
+  exact htrace.symm
+
+private theorem kronecker_projection_one_finrank_range_toEuclideanLin_eq
+    [Fintype a] [Fintype e] [DecidableEq a] [DecidableEq e]
+    (P : CMatrix a) (d : ℝ) (hPid : P * P = P) (hPtr : P.trace = (d : ℂ)) :
+    (Module.finrank ℂ
+        (LinearMap.range (Matrix.kronecker P (1 : CMatrix e)).toEuclideanLin) : ℝ) =
+      d * (Fintype.card e : ℝ) := by
+  let K : CMatrix (Prod a e) := Matrix.kronecker P (1 : CMatrix e)
+  have hKidem : K * K = K := by
+    dsimp [K]
+    calc
+      Matrix.kronecker P (1 : CMatrix e) * Matrix.kronecker P (1 : CMatrix e) =
+          Matrix.kronecker (P * P) ((1 : CMatrix e) * 1) := by
+            exact (Matrix.mul_kronecker_mul P P (1 : CMatrix e) (1 : CMatrix e)).symm
+      _ = Matrix.kronecker P (1 : CMatrix e) := by
+          rw [hPid, Matrix.mul_one]
+  have hKrankC := finrank_range_toEuclideanLin_eq_trace_of_idempotent K hKidem
+  have hKtrace : K.trace = ((d * (Fintype.card e : ℝ) : ℝ) : ℂ) := by
+    dsimp [K]
+    rw [Matrix.trace_kronecker, hPtr, Matrix.trace_one]
+    norm_num [Complex.ofReal_mul, Complex.ofReal_natCast]
+  have hC : (Module.finrank ℂ (LinearMap.range K.toEuclideanLin) : ℂ) =
+      ((d * (Fintype.card e : ℝ) : ℝ) : ℂ) := hKrankC.trans hKtrace
+  have hR := congrArg Complex.re hC
+  simpa [K, Complex.ofReal_mul, Complex.ofReal_natCast] using hR
+
+private theorem haydenProjectedAE_diff_left_supported [Fintype a] [Fintype e]
+    [DecidableEq a] [DecidableEq e]
+    (P : CMatrix a) (d : ℝ) (rho : CMatrix (Prod a e))
+    (U : Matrix.unitaryGroup a ℂ) (hPid : P * P = P) :
+    Matrix.kronecker P (1 : CMatrix e) *
+      (haydenProjectedAE (a := a) (e := e) P d rho U -
+        haydenProjectedAE_meanTarget (a := a) (e := e) P d rho) =
+      haydenProjectedAE (a := a) (e := e) P d rho U -
+        haydenProjectedAE_meanTarget (a := a) (e := e) P d rho := by
+  rw [Matrix.mul_sub]
+  congr 1
+  · unfold haydenProjectedAE
+    rw [Matrix.mul_smul]
+    congr 1
+    have hleft : Matrix.kronecker P (1 : CMatrix e) *
+        Matrix.kronecker (P * (U : CMatrix a)) (1 : CMatrix e) =
+        Matrix.kronecker (P * (U : CMatrix a)) (1 : CMatrix e) := by
+      calc
+        Matrix.kronecker P (1 : CMatrix e) *
+            Matrix.kronecker (P * (U : CMatrix a)) (1 : CMatrix e) =
+          Matrix.kronecker (P * (P * (U : CMatrix a))) ((1 : CMatrix e) * 1) := by
+            exact (Matrix.mul_kronecker_mul P (P * (U : CMatrix a))
+              (1 : CMatrix e) (1 : CMatrix e)).symm
+        _ = Matrix.kronecker (P * (U : CMatrix a)) (1 : CMatrix e) := by
+            rw [Matrix.mul_one]
+            congr 1
+            rw [← Matrix.mul_assoc, hPid]
+    calc
+      Matrix.kronecker P (1 : CMatrix e) *
+          (Matrix.kronecker (P * (U : CMatrix a)) (1 : CMatrix e) * rho *
+            Matrix.kronecker (star (U : CMatrix a) * P) (1 : CMatrix e)) =
+        (Matrix.kronecker P (1 : CMatrix e) *
+          Matrix.kronecker (P * (U : CMatrix a)) (1 : CMatrix e)) * rho *
+            Matrix.kronecker (star (U : CMatrix a) * P) (1 : CMatrix e) := by
+          noncomm_ring
+      _ = Matrix.kronecker (P * (U : CMatrix a)) (1 : CMatrix e) * rho *
+            Matrix.kronecker (star (U : CMatrix a) * P) (1 : CMatrix e) := by
+          rw [hleft]
+  · unfold haydenProjectedAE_meanTarget
+    rw [Matrix.mul_smul]
+    congr 1
+    calc
+      Matrix.kronecker P (1 : CMatrix e) *
+          Matrix.kronecker P (partialTraceA (a := a) (b := e) rho) =
+        Matrix.kronecker (P * P) ((1 : CMatrix e) *
+          partialTraceA (a := a) (b := e) rho) := by
+          exact (Matrix.mul_kronecker_mul P P (1 : CMatrix e)
+            (partialTraceA (a := a) (b := e) rho)).symm
+      _ = Matrix.kronecker P (partialTraceA (a := a) (b := e) rho) := by
+          rw [hPid, Matrix.one_mul]
+
+private theorem haydenProjectedAE_diff_finrank_range_le_projected_dim
+    [Fintype a] [Fintype e] [DecidableEq a] [DecidableEq e]
+    (P : CMatrix a) (d : ℝ) (rho : CMatrix (Prod a e))
+    (U : Matrix.unitaryGroup a ℂ)
+    (hPid : P * P = P) (hPtr : P.trace = (d : ℂ)) :
+    (Module.finrank ℂ (LinearMap.range
+      (haydenProjectedAE (a := a) (e := e) P d rho U -
+        haydenProjectedAE_meanTarget (a := a) (e := e) P d rho).toEuclideanLin) : ℝ) ≤
+      d * (Fintype.card e : ℝ) := by
+  let Delta : CMatrix (Prod a e) :=
+    haydenProjectedAE (a := a) (e := e) P d rho U -
+      haydenProjectedAE_meanTarget (a := a) (e := e) P d rho
+  let K : CMatrix (Prod a e) := Matrix.kronecker P (1 : CMatrix e)
+  have hsupport : K * Delta = Delta := by
+    simpa [K, Delta] using
+      haydenProjectedAE_diff_left_supported (a := a) (e := e) P d rho U hPid
+  have hrange :=
+    finrank_range_toEuclideanLin_le_of_left_fixed (a := Prod a e) hsupport
+  have hKrank :=
+    kronecker_projection_one_finrank_range_toEuclideanLin_eq
+      (a := a) (e := e) P d hPid hPtr
+  have hrange_real :
+      (Module.finrank ℂ (LinearMap.range Delta.toEuclideanLin) : ℝ) ≤
+        (Module.finrank ℂ (LinearMap.range K.toEuclideanLin) : ℝ) := by
+    exact_mod_cast hrange
+  simpa [Delta, K] using hrange_real.trans_eq hKrank
+
+private theorem integral_traceNorm_le_sqrt_integral_hilbertSchmidtSq_of_rank_bound
+    {α : Type w} [MeasurableSpace α] {μ : Measure α}
+    {ι : Type u} [Fintype ι] [DecidableEq ι] [IsProbabilityMeasure μ]
+    {f : α → CMatrix ι} {r : ℝ}
+    (hrank : ∀ x,
+      (Module.finrank ℂ (LinearMap.range (f x).toEuclideanLin) : ℝ) ≤ r)
+    (hf_trace : Integrable (fun x => traceNorm (f x)) μ)
+    (hf_hs : Integrable (fun x => hilbertSchmidtSq (f x)) μ) :
+    (∫ x, traceNorm (f x) ∂μ) ≤
+      Real.sqrt (r * ∫ x, hilbertSchmidtSq (f x) ∂μ) := by
+  let g : α → ℝ := fun x => traceNorm (f x)
+  let h : α → ℝ := fun x => hilbertSchmidtSq (f x)
+  have hg_nonneg : 0 ≤ᵐ[μ] g := by
+    filter_upwards with x
+    exact traceNorm_nonneg (f x)
+  have hh_nonneg : 0 ≤ᵐ[μ] h := by
+    filter_upwards with x
+    exact hilbertSchmidtSq_nonneg (f x)
+  have hg_sq_le : ∀ x, g x ^ 2 ≤ r * h x := by
+    intro x
+    exact traceNorm_sq_le_rankBound_mul_hilbertSchmidtSq (f x) (hrank x)
+  have hg_sq_int : Integrable (fun x => g x ^ 2) μ := by
+    refine Integrable.mono' (hf_hs.const_mul r) ?_ ?_
+    · exact (hf_trace.aestronglyMeasurable.aemeasurable.pow_const (2 : ℕ)).aestronglyMeasurable
+    · filter_upwards [hh_nonneg] with x _hhx
+      have hleft : ‖g x ^ 2‖ = g x ^ 2 := by
+        rw [Real.norm_of_nonneg (sq_nonneg (g x))]
+      rw [hleft]
+      simpa [h] using hg_sq_le x
+  have hg_memLp_two : MemLp g (ENNReal.ofReal (2 : ℝ)) μ := by
+    convert (memLp_two_iff_integrable_sq hf_trace.aestronglyMeasurable).2
+      (by simpa [g, pow_two] using hg_sq_int) using 1
+    norm_num
+  have hone_memLp_two : MemLp (fun _ : α => (1 : ℝ)) (ENNReal.ofReal (2 : ℝ)) μ :=
+    memLp_const (1 : ℝ)
+  have hholder := integral_mul_le_Lp_mul_Lq_of_nonneg
+    (μ := μ) (p := (2 : ℝ)) (q := (2 : ℝ)) Real.HolderConjugate.two_two
+    (f := fun _ : α => (1 : ℝ)) (g := g)
+    (by filter_upwards with _; norm_num) hg_nonneg hone_memLp_two hg_memLp_two
+  have hleft :
+      (∫ x, (1 : ℝ) * g x ∂μ) = ∫ x, g x ∂μ := by simp
+  rw [hleft] at hholder
+  have hone_int : (∫ _ : α, (1 : ℝ) ^ (2 : ℝ) ∂μ) ^ (1 / (2 : ℝ)) = 1 := by
+    simp [measureReal_def]
+  rw [hone_int, one_mul] at hholder
+  have hholder_nat :
+      (∫ x, g x ∂μ) ≤ (∫ x, g x ^ 2 ∂μ) ^ (1 / (2 : ℝ)) := by
+    simpa [Real.rpow_natCast] using hholder
+  have hsquare_int_le :
+      (∫ x, g x ^ 2 ∂μ) ≤ r * ∫ x, h x ∂μ := by
+    have hpoint : ∀ᵐ x ∂μ, g x ^ 2 ≤ r * h x := by
+      filter_upwards with x
+      exact hg_sq_le x
+    have hright_int : Integrable (fun x => r * h x) μ := hf_hs.const_mul r
+    calc
+      (∫ x, g x ^ 2 ∂μ) ≤ ∫ x, r * h x ∂μ :=
+        integral_mono_ae hg_sq_int hright_int
+          (show (fun x => g x ^ 2) ≤ᶠ[ae μ] fun x => r * h x from hpoint)
+      _ = r * ∫ x, h x ∂μ := by
+        rw [integral_const_mul]
+  have hsqrt_step :
+      (∫ x, g x ^ 2 ∂μ) ^ (1 / (2 : ℝ)) ≤
+        Real.sqrt (r * ∫ x, h x ∂μ) := by
+    rw [← Real.sqrt_eq_rpow]
+    exact Real.sqrt_le_sqrt hsquare_int_le
+  exact hholder_nat.trans hsqrt_step
+
 private theorem integral_traceNorm_le_sqrt_integral_hilbertSchmidtSq
     {α : Type w} [MeasurableSpace α] {μ : Measure α}
     {ι : Type u} [Fintype ι] [DecidableEq ι] [IsProbabilityMeasure μ]
@@ -389,6 +601,8 @@ private theorem haydenProjectedAE_hilbertSchmidt_variance_integrable [Fintype a]
 private theorem haydenProjectedAE_oneShotDecoupling_traceNorm_expectation_le_of_variance
     [Fintype a] [Fintype e] [DecidableEq a] [DecidableEq e] [Nonempty a]
     (P : CMatrix a) (d : ℝ) (rho : CMatrix (Prod a e))
+    (hPid : P * P = P) (hPtr : P.trace = (d : ℂ))
+    (hd : 1 ≤ d)
     (htrace : Integrable (fun U : Matrix.unitaryGroup a ℂ =>
       traceNorm (haydenProjectedAE (a := a) (e := e) P d rho U -
         haydenProjectedAE_meanTarget (a := a) (e := e) P d rho))
@@ -406,21 +620,29 @@ private theorem haydenProjectedAE_oneShotDecoupling_traceNorm_expectation_le_of_
       traceNorm (haydenProjectedAE (a := a) (e := e) P d rho U -
         haydenProjectedAE_meanTarget (a := a) (e := e) P d rho)
       ∂unitaryHaarMeasure (a := a)) ≤
-      Real.sqrt ((Fintype.card (Prod a e) : ℝ) * hilbertSchmidtSq rho) := by
-  have hbridge := integral_traceNorm_le_sqrt_integral_hilbertSchmidtSq
+      Real.sqrt (d * (Fintype.card e : ℝ) * hilbertSchmidtSq rho) := by
+  have hrank : ∀ U : Matrix.unitaryGroup a ℂ,
+      (Module.finrank ℂ (LinearMap.range
+        (haydenProjectedAE (a := a) (e := e) P d rho U -
+          haydenProjectedAE_meanTarget (a := a) (e := e) P d rho).toEuclideanLin) : ℝ) ≤
+        d * (Fintype.card e : ℝ) := by
+    intro U
+    exact haydenProjectedAE_diff_finrank_range_le_projected_dim
+      (a := a) (e := e) P d rho U hPid hPtr
+  have hbridge := integral_traceNorm_le_sqrt_integral_hilbertSchmidtSq_of_rank_bound
     (μ := unitaryHaarMeasure (a := a))
     (f := fun U : Matrix.unitaryGroup a ℂ =>
       haydenProjectedAE (a := a) (e := e) P d rho U -
         haydenProjectedAE_meanTarget (a := a) (e := e) P d rho)
-    htrace hhs
+    hrank htrace hhs
   have hmono :
-      (Fintype.card (Prod a e) : ℝ) *
+      (d * (Fintype.card e : ℝ)) *
           (∫ U : Matrix.unitaryGroup a ℂ,
             hilbertSchmidtSq (haydenProjectedAE (a := a) (e := e) P d rho U -
               haydenProjectedAE_meanTarget (a := a) (e := e) P d rho)
             ∂unitaryHaarMeasure (a := a)) ≤
-        (Fintype.card (Prod a e) : ℝ) * hilbertSchmidtSq rho :=
-    mul_le_mul_of_nonneg_left hvar (Nat.cast_nonneg _)
+        (d * (Fintype.card e : ℝ)) * hilbertSchmidtSq rho :=
+    mul_le_mul_of_nonneg_left hvar (mul_nonneg (le_trans zero_le_one hd) (Nat.cast_nonneg _))
   exact hbridge.trans (Real.sqrt_le_sqrt hmono)
 
 private theorem tensorPowerKroneckerTwo_smul [Fintype a] [DecidableEq a]
@@ -1032,12 +1254,12 @@ theorem tensorPowerProdEquiv_twoCopySwap_fst [Fintype a] [Fintype e]
     change (tensorPowerEquiv (a := Prod a e) 2
         (permEquiv (a := Prod a e) 2 twoCopySwapPerm x) 0).1 =
       (tensorPowerEquiv (a := Prod a e) 2 x 1).1
-    simpa [twoCopySwapPerm] using congrArg Prod.fst h
+    simp [twoCopySwapPerm]
   · have h := congrFun hperm 1
     change (tensorPowerEquiv (a := Prod a e) 2
         (permEquiv (a := Prod a e) 2 twoCopySwapPerm x) 1).1 =
       (tensorPowerEquiv (a := Prod a e) 2 x 0).1
-    simpa [twoCopySwapPerm] using congrArg Prod.fst h
+    simp [twoCopySwapPerm]
 
 theorem tensorPowerProdEquiv_twoCopySwap_snd [Fintype a] [Fintype e]
     [DecidableEq a] [DecidableEq e] (x : TensorPower (Prod a e) 2) :
@@ -1052,12 +1274,12 @@ theorem tensorPowerProdEquiv_twoCopySwap_snd [Fintype a] [Fintype e]
     change (tensorPowerEquiv (a := Prod a e) 2
         (permEquiv (a := Prod a e) 2 twoCopySwapPerm x) 0).2 =
       (tensorPowerEquiv (a := Prod a e) 2 x 1).2
-    simpa [twoCopySwapPerm] using congrArg Prod.snd h
+    simp [twoCopySwapPerm]
   · have h := congrFun hperm 1
     change (tensorPowerEquiv (a := Prod a e) 2
         (permEquiv (a := Prod a e) 2 twoCopySwapPerm x) 1).2 =
       (tensorPowerEquiv (a := Prod a e) 2 x 0).2
-    simpa [twoCopySwapPerm] using congrArg Prod.snd h
+    simp [twoCopySwapPerm]
 
 theorem tensorPowerSwapMatrix_two_prod_eq_twoCopySideOperator [Fintype a] [Fintype e]
     [DecidableEq a] [DecidableEq e] :
@@ -2227,7 +2449,7 @@ theorem haydenProjectedAE_oneShotDecoupling_traceNorm_expectation_le
       traceNorm (haydenProjectedAE (a := a) (e := e) P d rho U -
         haydenProjectedAE_meanTarget (a := a) (e := e) P d rho)
       ∂unitaryHaarMeasure (a := a)) ≤
-      Real.sqrt ((Fintype.card (Prod a e) : ℝ) * hilbertSchmidtSq rho) := by
+      Real.sqrt (d * (Fintype.card e : ℝ) * hilbertSchmidtSq rho) := by
   have hvar :=
     haydenProjectedAE_hilbertSchmidt_variance_le_purity
       (a := a) (e := e) P d rho hPid hPherm hPtr hrho hd hdD
@@ -2258,7 +2480,7 @@ theorem haydenProjectedAE_oneShotDecoupling_traceNorm_expectation_le
       (fun U => haydenProjectedAE_isHermitian
         (a := a) (e := e) P d rho U hPherm hrho)
   exact haydenProjectedAE_oneShotDecoupling_traceNorm_expectation_le_of_variance
-    (a := a) (e := e) P d rho htrace hhs hvar
+    (a := a) (e := e) P d rho hPid hPtr hd htrace hhs hvar
 
 /-- Source-facing one-shot decoupling theorem for
 [HaydenHorodeckiWinterYard2007Decoupling, simple.tex:312-321].
@@ -2278,7 +2500,7 @@ theorem hayden_oneShotDecoupling_traceNorm_expectation_le
       traceNorm (haydenProjectedAE (a := a) (e := e) P d rhoAE U -
         haydenProjectedAE_meanTarget (a := a) (e := e) P d rhoAE)
       ∂unitaryHaarMeasure (a := a)) ≤
-      Real.sqrt ((Fintype.card (Prod a e) : ℝ) * hilbertSchmidtSq rhoAE) :=
+      Real.sqrt (d * (Fintype.card e : ℝ) * hilbertSchmidtSq rhoAE) :=
   haydenProjectedAE_oneShotDecoupling_traceNorm_expectation_le
     (a := a) (e := e) P d rhoAE
     hP_idem hP_herm hP_trace hrhoAE hd_pos hd_le_dimA

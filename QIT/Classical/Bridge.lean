@@ -64,7 +64,53 @@ theorem diagonalState_apply_ne (p : ι → ℝ≥0) (hsum : ∑ i, p i = 1) {i j
     (diagonalState p hsum).matrix i j = 0 := by
   simp [diagonalState, Matrix.diagonal_apply_ne _ h]
 
+/-- The pure classical basis state supported on one label. -/
+def basisState (x : ι) : State ι where
+  matrix := Matrix.single x x (1 : ℂ)
+  pos := posSemidef_single x
+  trace_eq_one := by
+    rw [trace_single_one, if_pos rfl]
+
+@[simp]
+theorem basisState_matrix (x : ι) :
+    (basisState x).matrix = Matrix.single x x (1 : ℂ) :=
+  rfl
+
+@[simp]
+theorem basisState_prod_matrix_apply
+    {a : Type v} [Fintype a] [DecidableEq a]
+    (x y y' : ι) (σ : State a) (i j : a) :
+    ((basisState x).prod σ).matrix (y, i) (y', j) =
+      Matrix.single x x (1 : ℂ) y y' * σ.matrix i j := by
+  rfl
+
 variable [Fintype a] [DecidableEq a]
+
+omit [DecidableEq ι] [Fintype a] [DecidableEq a] in
+/-- Tracing out the left classical register is the sum of the diagonal
+classical blocks. -/
+theorem partialTraceA_eq_sum_blocks (X : CMatrix (Prod ι a)) :
+    partialTraceA X = ∑ x : ι, block X x x := by
+  ext i j
+  simp [partialTraceA, block, Matrix.sum_apply]
+
+omit [Fintype ι] [DecidableEq ι] [Fintype a] [DecidableEq a] in
+/-- Taking a diagonal classical block preserves Loewner order. -/
+theorem block_le_block_of_le {X Y : CMatrix (Prod ι a)} (h : X ≤ Y) (x : ι) :
+    block X x x ≤ block Y x x := by
+  rw [Matrix.le_iff] at h ⊢
+  have hblock := h.submatrix (fun i : a => (x, i))
+  convert hblock using 1
+
+omit [DecidableEq ι] [DecidableEq a] in
+/-- Partial trace over the left classical register preserves Loewner order. -/
+theorem partialTraceA_mono {X Y : CMatrix (Prod ι a)} (h : X ≤ Y) :
+    partialTraceA X ≤ partialTraceA Y := by
+  rw [Matrix.le_iff] at h ⊢
+  have hdiff := partialTraceA_posSemidef (a := ι) (b := a) h
+  convert hdiff using 1
+  ext i j
+  simp [partialTraceA, Matrix.sub_apply, Finset.sum_sub_distrib]
 
 /-- The classical marginal of a cq-state is the diagonal state of ensemble weights. -/
 theorem partialTraceB_cqState_eq_diagonalState (E : Ensemble ι a) :

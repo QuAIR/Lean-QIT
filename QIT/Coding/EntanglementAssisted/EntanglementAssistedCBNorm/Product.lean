@@ -267,6 +267,43 @@ private theorem alphaToAlphaNorm_nonneg_of_one_lt
     rintro x ⟨Z, rfl⟩
     exact alphaToAlphaPositiveValue_nonneg Phi hPhi Z)
 
+/-- Trace-normalized candidates are bounded by the positive-input induced
+`alpha -> alpha` norm. -/
+theorem alphaToAlphaTraceValue_le_alphaToAlphaNorm_of_one_lt
+    (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
+    {alpha : ℝ} (halpha : 1 < alpha) (Y : AlphaToAlphaTraceDomain a alpha) :
+    alphaToAlphaTraceValue Phi hPhi Y ≤ alphaToAlphaNorm Phi hPhi alpha := by
+  let Z : CMatrix a := CFC.rpow Y.matrix (1 / alpha)
+  let hZ : Z.PosSemidef :=
+    cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos
+  let normZ : ℝ := psdSchattenPNorm Z hZ alpha
+  have hnormZ_nonneg : 0 ≤ normZ := psdSchattenPNorm_nonneg Z hZ alpha
+  by_cases hnormZ_zero : normZ = 0
+  · rw [alphaToAlphaTraceValue_eq_zero_of_rpow_norm_eq_zero Phi hPhi halpha Y
+      (by simpa [Z, hZ, normZ] using hnormZ_zero)]
+    exact alphaToAlphaNorm_nonneg_of_one_lt Phi hPhi halpha
+  · have hnormZ_pos : 0 < normZ :=
+      lt_of_le_of_ne hnormZ_nonneg (Ne.symm hnormZ_zero)
+    let X : AlphaToAlphaPositiveDomain a alpha :=
+      { matrix := Z, pos := hZ, norm_pos := hnormZ_pos }
+    exact (alphaToAlphaTraceValue_le_positiveValue_of_rpow_norm_pos Phi hPhi
+      halpha Y (by simpa [Z, hZ, normZ] using hnormZ_pos)).trans
+        (alphaToAlphaPositiveValue_le_alphaToAlphaNorm_of_one_lt Phi hPhi halpha X)
+
+/-- Original CB `1 -> alpha` candidates are bounded by the CB norm. -/
+theorem cbOneToAlphaOriginalValue_le_cbOneToAlphaNorm_of_one_lt
+    (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
+    {alpha : ℝ} (halpha : 1 < alpha) (Y : CBOneToAlphaOriginalDomain a) :
+    cbOneToAlphaOriginalValue Phi hPhi Y alpha ≤ cbOneToAlphaNorm Phi hPhi alpha := by
+  rw [cbOneToAlphaOriginalValue_eq_cpComplement_alphaToAlphaTraceValue_transpose
+    Phi hPhi (lt_trans zero_lt_one halpha)]
+  rw [cbOneToAlphaNorm_eq_cpComplement_alphaToAlphaNorm Phi hPhi halpha]
+  exact alphaToAlphaTraceValue_le_alphaToAlphaNorm_of_one_lt
+    (MatrixMap.cpComplement Phi hPhi)
+    (MatrixMap.cpComplement_isCompletelyPositive Phi hPhi)
+    halpha
+    (Y.toTransposeTraceDomain (alpha := alpha) (lt_trans zero_lt_one halpha))
+
 private theorem alphaToAlphaPositiveDomain_nonempty [Nonempty a] (alpha : ℝ) :
     Nonempty (AlphaToAlphaPositiveDomain a alpha) :=
   ⟨{ matrix := 1,

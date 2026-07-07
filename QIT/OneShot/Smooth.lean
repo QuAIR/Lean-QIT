@@ -1309,6 +1309,45 @@ theorem SubnormalizedState.purifiedBall_of_one_sub_generalizedFidelity_le_sq
   rw [SubnormalizedState.purifiedBall_eq, SubnormalizedState.purifiedDistance_eq]
   exact (Real.sqrt_le_left hε).mpr hfid
 
+/-- Increasing the generalized fidelity can only shrink purified distance, so
+any purified-distance ball transfers along such a fidelity lower bound. -/
+theorem SubnormalizedState.purifiedBall_of_generalizedFidelity_le
+    {b : Type v} [Fintype b] [DecidableEq b]
+    {ρ σ : SubnormalizedState a} {τ υ : SubnormalizedState b} {ε : ℝ}
+    (hfid : ρ.generalizedFidelity σ ≤ τ.generalizedFidelity υ)
+    (hball : ρ.purifiedBall ε σ) :
+    τ.purifiedBall ε υ := by
+  rw [SubnormalizedState.purifiedBall_eq, SubnormalizedState.purifiedDistance_eq] at hball ⊢
+  exact le_trans (Real.sqrt_le_sqrt (by linarith)) hball
+
+/-- For normalized centers, generalized fidelity comparison is reduced to the
+trace-norm fidelity term.  This is the scalar bridge used after blockwise
+trace-norm decompositions. -/
+theorem SubnormalizedState.generalizedFidelity_le_of_traceNorm_psdSqrt_mul_le_of_trace_one
+    {b : Type v} [Fintype b] [DecidableEq b]
+    {ρ σ : SubnormalizedState a} {τ υ : SubnormalizedState b}
+    (hρtrace : ρ.matrix.trace.re = 1)
+    (hτtrace : τ.matrix.trace.re = 1)
+    (hnorm :
+      traceNorm (psdSqrt ρ.matrix * psdSqrt σ.matrix) ≤
+        traceNorm (psdSqrt τ.matrix * psdSqrt υ.matrix)) :
+    ρ.generalizedFidelity σ ≤ τ.generalizedFidelity υ := by
+  rw [SubnormalizedState.generalizedFidelity_eq, SubnormalizedState.generalizedFidelity_eq]
+  rw [hρtrace, hτtrace]
+  simp only [sub_self, zero_mul, Real.sqrt_zero, add_zero]
+  let x := traceNorm (psdSqrt ρ.matrix * psdSqrt σ.matrix)
+  let y := traceNorm (psdSqrt τ.matrix * psdSqrt υ.matrix)
+  change x ^ 2 ≤ y ^ 2
+  have hx : 0 ≤ x := by
+    simpa [x] using traceNorm_nonneg (psdSqrt ρ.matrix * psdSqrt σ.matrix)
+  have hy : 0 ≤ y := by
+    simpa [y] using traceNorm_nonneg (psdSqrt τ.matrix * psdSqrt υ.matrix)
+  have hxy : x ≤ y := by
+    simpa [x, y] using hnorm
+  have hprod : 0 ≤ (y - x) * (y + x) :=
+    mul_nonneg (sub_nonneg.mpr hxy) (add_nonneg hy hx)
+  nlinarith
+
 /-- A purification-overlap lower bound for the hat extensions gives the same
 lower bound on generalized fidelity of subnormalized states. -/
 theorem SubnormalizedState.le_generalizedFidelity_of_hatExtension_purification_overlap

@@ -36,7 +36,7 @@ noncomputable section
 variable {a : Type u} {ι : Type v} [Fintype a] [DecidableEq a] [Fintype ι] [DecidableEq ι]
 
 /-- The total `S = Σᵢ Sᵢ` over a PSD family. -/
-def pgmTotal (S : ι → CMatrix a) (hS : ∀ i, (S i).PosSemidef) : CMatrix a :=
+def pgmTotal (S : ι → CMatrix a) (_hS : ∀ i, (S i).PosSemidef) : CMatrix a :=
   ∑ i, S i
 
 /-- The total `Σᵢ Sᵢ` is positive semidefinite, hence Hermitian, giving the

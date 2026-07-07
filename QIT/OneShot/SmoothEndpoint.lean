@@ -16,6 +16,7 @@ public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import QIT.Util.SDP.PSDCone
 public import QIT.Util.SDP.StrongDuality
 public import QIT.OneShot.Smooth
+public import QIT.States.Geometry.FuchsVdG
 public import QIT.Information.Renyi.Renyi
 public import QIT.Information.Renyi.ConditionalRenyiTraceBridge
 public import QIT.Util.BlockMatrix
@@ -188,7 +189,7 @@ theorem PureVector.overlapSq_comm_endpoint {a : Type u} [Fintype a] [DecidableEq
     Ψ.overlapSq Φ = Φ.overlapSq Ψ := by
   rw [PureVector.overlapSq_eq_normSq, PureVector.overlapSq_eq_normSq]
   have hconj : Ψ.overlap Φ = star (Φ.overlap Ψ) := by
-    simp [PureVector.overlap, map_sum, map_mul, mul_comm]
+    simp [PureVector.overlap, mul_comm]
   rw [hconj]
   simp [Complex.normSq]
 
@@ -210,7 +211,7 @@ theorem PureVector.normSq_sum_star_mul_le_rankOne_trace
     rw [@norm_sq_eq_re_inner ℂ (EuclideanSpace ℂ a) _ _ _ x]
     dsimp [x]
     rw [EuclideanSpace.inner_toLp_toLp]
-    simp [rankOneMatrix_trace, dotProduct, mul_comm]
+    simp [rankOneMatrix_trace, dotProduct]
   have hynorm : ‖y‖ ^ 2 = 1 := by
     rw [@norm_sq_eq_re_inner ℂ (EuclideanSpace ℂ a) _ _ _ y]
     dsimp [y]
@@ -705,8 +706,7 @@ theorem smoothEndpointKrausStack_conjTranspose_mul
           refine Finset.sum_congr rfl fun x _ => ?_
           simp [Matrix.mul_apply, Matrix.conjTranspose_apply]
     _ = (smoothEndpointKrausAdjoint K (1 : CMatrix b)) i j := by
-          simp [smoothEndpointKrausAdjoint, Matrix.mul_apply,
-            Matrix.conjTranspose_apply]
+          simp [smoothEndpointKrausAdjoint]
 
 theorem smoothEndpointKrausStack_contraction_of_traceNonincreasing
     (K : κ → Matrix b a ℂ)
@@ -3726,6 +3726,53 @@ theorem conditionalMinEntropyFeasible_scale_lower_bound [Nonempty a]
   rw [inv_le_iff_one_le_mul₀ hcard_pos]
   simpa [mul_comm] using htrace
 
+/-- Any feasible normalized conditional-min exponent is bounded by the
+classical-register dimension. -/
+theorem conditionalMinEntropyFeasible_le_log2_card_left
+    {ρ : State (Prod a b)} {σ : State b} {lam : ℝ}
+    (h : ConditionalMinEntropyFeasible (a := a) ρ σ lam) :
+    lam ≤ log2 (Fintype.card a : ℝ) := by
+  classical
+  haveI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
+  have hscale := conditionalMinEntropyFeasible_scale_lower_bound (a := a) h
+  have hcard_pos : 0 < (Fintype.card a : ℝ) := by
+    exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
+  have hlog := Real.log_le_log (inv_pos.mpr hcard_pos) hscale
+  have hlog2_nonneg : 0 ≤ Real.log 2 := le_of_lt (Real.log_pos one_lt_two)
+  have hdiv := div_le_div_of_nonneg_right hlog hlog2_nonneg
+  change log2 ((Fintype.card a : ℝ)⁻¹) ≤
+    log2 (Real.rpow 2 (-lam)) at hdiv
+  have hneg := neg_le_neg hdiv
+  have hcard :
+      -log2 ((Fintype.card a : ℝ)⁻¹) = log2 (Fintype.card a : ℝ) := by
+    unfold log2
+    rw [Real.log_inv]
+    ring
+  rw [neg_log2_rpow_two_neg lam, hcard] at hneg
+  exact hneg
+
+/-- A conditional-min-entropy feasible bound controls every diagonal classical
+block. -/
+theorem block_le_of_conditionalMinEntropyFeasible
+    (ρ : State (Prod a b)) (σ : State b) (x : a) {lam : ℝ}
+    (h : ConditionalMinEntropyFeasible (a := a) ρ σ lam) :
+    Classical.block ρ.matrix x x ≤ (Real.rpow 2 (-lam) : ℂ) • σ.matrix := by
+  let c : ℂ := (Real.rpow 2 (-lam) : ℂ)
+  rw [Matrix.le_iff]
+  have hdiff :
+      (c • State.identityTensorStateMatrix (a := a) σ - ρ.matrix).PosSemidef := by
+    simpa [c, ConditionalMinEntropyFeasible, Matrix.le_iff] using h
+  have hblock := hdiff.submatrix (fun i : b => (x, i))
+  have hblock_eq :
+      Matrix.submatrix
+          (c • State.identityTensorStateMatrix (a := a) σ - ρ.matrix)
+          (fun i : b => (x, i)) (fun i : b => (x, i)) =
+        c • σ.matrix - Classical.block ρ.matrix x x := by
+    ext i j
+    simp [Classical.block, State.identityTensorStateMatrix, Matrix.kronecker,
+      Matrix.kroneckerMap_apply, c]
+  rwa [hblock_eq] at hblock
+
 theorem conditionalMinEntropyScaleFeasible_trace_lower_bound [Nonempty a]
     {ρ : State (Prod a b)} {T : CMatrix b}
     (h : ConditionalMinEntropyScaleFeasible (a := a) ρ T) :
@@ -3750,6 +3797,37 @@ theorem conditionalMinEntropyScaleFeasible_trace_lower_bound [Nonempty a]
 /-- Feasible conditional-min exponents. -/
 def conditionalMinEntropyFeasibleExponentValueSet (ρ : State (Prod a b)) : Set ℝ :=
   {lam : ℝ | ∃ σ : State b, ConditionalMinEntropyFeasible (a := a) ρ σ lam}
+
+/-- The normalized conditional-min feasible exponent set is bounded above. -/
+theorem conditionalMinEntropyFeasibleExponentValueSet_bddAbove
+    (ρ : State (Prod a b)) :
+    BddAbove (ρ.conditionalMinEntropyFeasibleExponentValueSet (a := a)) := by
+  refine ⟨log2 (Fintype.card a : ℝ), ?_⟩
+  intro lam hlam
+  rcases hlam with ⟨σ, hσ⟩
+  exact conditionalMinEntropyFeasible_le_log2_card_left (a := a) hσ
+
+/-- A uniform classical register independent of the side information has
+conditional min-entropy at least the logarithm of its alphabet size. -/
+theorem conditionalMinEntropyFeasible_maximallyMixed_prod
+    [Nonempty a] (σ : State b) :
+    ConditionalMinEntropyFeasible (a := a)
+      ((State.maximallyMixed a).prod σ) σ (log2 (Fintype.card a : ℝ)) := by
+  rw [ConditionalMinEntropyFeasible]
+  rw [State.identityTensorStateMatrix_eq_card_smul_maximallyMixed_prod (a := a) σ]
+  have hrpow :
+      Real.rpow 2 (-(log2 (Fintype.card a : ℝ))) =
+        (Fintype.card a : ℝ)⁻¹ := by
+    calc
+      Real.rpow 2 (-(log2 (Fintype.card a : ℝ))) =
+          (Real.rpow 2 (log2 (Fintype.card a : ℝ)))⁻¹ := by
+            exact Real.rpow_neg (by norm_num : (0 : ℝ) ≤ 2) _
+      _ = (Fintype.card a : ℝ)⁻¹ := by
+            rw [State.rpow_two_log2_card (b := a)]
+  have hcard_ne : (Fintype.card a : ℂ) ≠ 0 := by
+    exact_mod_cast (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)
+  rw [hrpow]
+  simp [smul_smul, hcard_ne]
 
 /-- The normalized scale values `2^{-λ}` coming from normalized
 conditional-min feasible pairs. -/
@@ -3989,6 +4067,37 @@ theorem conditionalMinEntropy_le_log2_card_left
   have hdiv :=
     div_le_div_of_nonneg_right hlog (le_of_lt hlog2_pos)
   simpa [neg_div] using neg_le_neg hdiv
+
+/-- The conditional min-entropy of an ideal uniform classical register
+independent of side information is exactly `log₂ |a|`. -/
+theorem conditionalMinEntropy_maximallyMixed_prod
+    [Nonempty a] (σ : State b) :
+    ((State.maximallyMixed a).prod σ).conditionalMinEntropy =
+      log2 (Fintype.card a : ℝ) := by
+  classical
+  letI : Nonempty b := σ.nonempty
+  have hle :
+      ((State.maximallyMixed a).prod σ).conditionalMinEntropy ≤
+        log2 (Fintype.card a : ℝ) :=
+    ((State.maximallyMixed a).prod σ).conditionalMinEntropy_le_log2_card_left
+      (a := a) (b := b)
+  have hbdd :
+      BddAbove
+        (((State.maximallyMixed a).prod σ).conditionalMinEntropyFeasibleExponentValueSet
+          (a := a)) := by
+    exact conditionalMinEntropyFeasibleExponentValueSet_bddAbove
+      (a := a) ((State.maximallyMixed a).prod σ)
+  have hmem :
+      log2 (Fintype.card a : ℝ) ∈
+        ((State.maximallyMixed a).prod σ).conditionalMinEntropyFeasibleExponentValueSet
+          (a := a) := by
+    exact ⟨σ, conditionalMinEntropyFeasible_maximallyMixed_prod (a := a) σ⟩
+  have hge :
+      log2 (Fintype.card a : ℝ) ≤
+        ((State.maximallyMixed a).prod σ).conditionalMinEntropy := by
+    rw [State.conditionalMinEntropy_eq]
+    exact le_csSup hbdd hmem
+  exact le_antisymm hle hge
 
 /-- One entropy-level consequence of the scale pushforward: applying an
 isometry to the conditioning register cannot decrease the conditional
@@ -4589,6 +4698,103 @@ private theorem referenceIsometry_rangeProjection_le_one
             rw [V.isometry]
             simp)
 
+omit [Fintype b] [DecidableEq b] in
+private theorem referenceIsometry_applyMatrix_kronecker_one_right_eq
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (V : ReferenceIsometry a aPlus) (T : CMatrix b) :
+    V.applyMatrix (Matrix.kronecker (1 : CMatrix a) T) =
+      Matrix.kronecker (V.matrix * Matrix.conjTranspose V.matrix) T := by
+  ext x y
+  simp [ReferenceIsometry.applyMatrix, ReferenceIsometry.targetBlock,
+    Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.mul_apply,
+    Matrix.one_apply, mul_assoc, mul_comm]
+  rw [Finset.mul_sum]
+
+omit [DecidableEq b] in
+private theorem referenceIsometry_applyMatrix_kronecker_one_right_le
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (V : ReferenceIsometry a aPlus) {T : CMatrix b} (hT : T.PosSemidef) :
+    V.applyMatrix (Matrix.kronecker (1 : CMatrix a) T) ≤
+      Matrix.kronecker (1 : CMatrix aPlus) T := by
+  rw [Matrix.le_iff]
+  have hproj :
+      ((1 : CMatrix aPlus) - V.matrix * Matrix.conjTranspose V.matrix).PosSemidef := by
+    simpa [Matrix.le_iff] using
+      (referenceIsometry_rangeProjection_le_one (b := a) V)
+  have hkr : (Matrix.kronecker
+      ((1 : CMatrix aPlus) - V.matrix * Matrix.conjTranspose V.matrix) T).PosSemidef :=
+    hproj.kronecker hT
+  rw [referenceIsometry_applyMatrix_kronecker_one_right_eq]
+  convert hkr using 1
+  ext x y
+  simp [Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.sub_apply, sub_mul]
+
+/-- Apply a finite reference isometry to the source/left register of a
+subnormalized state on `A × B`. -/
+def sourceIsometryApply
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (ρ : SubnormalizedState (Prod a b)) (V : ReferenceIsometry a aPlus) :
+    SubnormalizedState (Prod aPlus b) :=
+  ρ.applyTraceNonincreasingCP
+    (MatrixMap.kron (MatrixMap.ofReferenceIsometry V) (Channel.idChannel b).map)
+    (MatrixMap.traceNonincreasingCP_kron_id
+      (a := b) (hΦ := MatrixMap.ofReferenceIsometry_traceNonincreasingCP V))
+
+@[simp]
+theorem sourceIsometryApply_matrix
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (ρ : SubnormalizedState (Prod a b)) (V : ReferenceIsometry a aPlus) :
+    (ρ.sourceIsometryApply V).matrix = V.applyMatrix ρ.matrix := by
+  simp [sourceIsometryApply,
+    MatrixMap.kron_ofReferenceIsometry_idChannel_apply_eq_applyMatrixLeft]
+
+@[simp]
+theorem sourceIsometryApply_trace_re
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (ρ : SubnormalizedState (Prod a b)) (V : ReferenceIsometry a aPlus) :
+    (ρ.sourceIsometryApply V).matrix.trace.re = ρ.matrix.trace.re := by
+  rw [sourceIsometryApply, applyTraceNonincreasingCP_matrix]
+  have hTP := MatrixMap.isTracePreserving_kron (MatrixMap.ofReferenceIsometry V)
+    (Channel.idChannel b).map
+    (MatrixMap.ofReferenceIsometry_isTracePreserving V)
+    (Channel.idChannel b).tracePreserving
+  exact congrArg Complex.re (hTP ρ.matrix)
+
+/-- Source-register isometries transport raw subnormalized conditional-min
+feasible side operators without changing the side operator. -/
+theorem ConditionalMinEntropyScaleFeasible.apply_sourceIsometry
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    {ρ : SubnormalizedState (Prod a b)} {T : CMatrix b}
+    (hT : ConditionalMinEntropyScaleFeasible (a := a) ρ T)
+    (V : ReferenceIsometry a aPlus) :
+    ConditionalMinEntropyScaleFeasible (a := aPlus) (ρ.sourceIsometryApply V) T := by
+  constructor
+  · exact hT.1
+  · let Φ : MatrixMap (Prod a b) (Prod aPlus b) :=
+      MatrixMap.kron (MatrixMap.ofReferenceIsometry V) (Channel.idChannel b).map
+    have hCP : MatrixMap.IsCompletelyPositive Φ :=
+      MatrixMap.isCompletelyPositive_kron (MatrixMap.ofReferenceIsometry V)
+        (Channel.idChannel b).map
+        (MatrixMap.ofReferenceIsometry_isCompletelyPositive V)
+        (Channel.idChannel b).completelyPositive
+    have hdiff : (Matrix.kronecker (1 : CMatrix a) T - ρ.matrix).PosSemidef := hT.2
+    have hmap := MatrixMap.isCompletelyPositive_mapsPositive Φ hCP
+      (Matrix.kronecker (1 : CMatrix a) T - ρ.matrix) hdiff
+    have himage :
+        (V.applyMatrix (Matrix.kronecker (1 : CMatrix a) T) -
+          (ρ.sourceIsometryApply V).matrix).PosSemidef := by
+      convert hmap using 1
+      simp only [Φ, map_sub]
+      rw [MatrixMap.kron_ofReferenceIsometry_idChannel_apply_eq_applyMatrixLeft]
+      rw [MatrixMap.kron_ofReferenceIsometry_idChannel_apply_eq_applyMatrixLeft]
+      rw [sourceIsometryApply_matrix]
+    have hsource_le :
+        (ρ.sourceIsometryApply V).matrix ≤
+          V.applyMatrix (Matrix.kronecker (1 : CMatrix a) T) := by
+      simpa [Matrix.le_iff] using himage
+    exact hsource_le.trans
+      (referenceIsometry_applyMatrix_kronecker_one_right_le (a := a) V hT.1)
+
 /-- Compressing a PSD side operator along an isometric range cannot increase
 its trace. -/
 theorem trace_re_conjTranspose_referenceIsometry_le
@@ -4681,6 +4887,88 @@ private theorem referenceIsometry_rightCompression_applyMatrixRight
   rw [hblock, hcompress]
   rfl
 
+private theorem referenceIsometry_leftCompression_applyMatrix
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (V : ReferenceIsometry a aPlus) (X : CMatrix (Prod a b)) :
+    MatrixMap.kron
+        (MatrixMap.ofKraus (fun _ : Unit => Matrix.conjTranspose V.matrix))
+        (Channel.idChannel b).map (V.applyMatrix X) =
+      X := by
+  ext x y
+  rw [MatrixMap.kron_idChannel_apply_slice]
+  let B : CMatrix a := ReferenceIsometry.targetBlock X x.2 y.2
+  have hblock :
+      ReferenceIsometry.targetBlock (V.applyMatrix X) x.2 y.2 =
+        V.matrix * B * Matrix.conjTranspose V.matrix := by
+    rfl
+  have hcompress :
+      MatrixMap.ofKraus (fun _ : Unit => Matrix.conjTranspose V.matrix)
+          (V.matrix * B * Matrix.conjTranspose V.matrix) =
+        B := by
+    calc
+      MatrixMap.ofKraus (fun _ : Unit => Matrix.conjTranspose V.matrix)
+          (V.matrix * B * Matrix.conjTranspose V.matrix) =
+        Matrix.conjTranspose V.matrix *
+          (V.matrix * B * Matrix.conjTranspose V.matrix) *
+          V.matrix := by
+          simp [MatrixMap.ofKraus]
+      _ = B := by
+          calc
+            Matrix.conjTranspose V.matrix *
+                (V.matrix * B * Matrix.conjTranspose V.matrix) *
+                V.matrix =
+              Matrix.conjTranspose V.matrix *
+                (V.matrix * B * (Matrix.conjTranspose V.matrix * V.matrix)) := by
+                simp [Matrix.mul_assoc]
+            _ = Matrix.conjTranspose V.matrix * (V.matrix * B * (1 : CMatrix a)) := by
+                rw [V.isometry]
+            _ = Matrix.conjTranspose V.matrix * (V.matrix * B) := by
+                simp
+            _ = (Matrix.conjTranspose V.matrix * V.matrix) * B := by
+                rw [Matrix.mul_assoc]
+            _ = (1 : CMatrix a) * B := by
+                rw [V.isometry]
+            _ = B := by
+                simp
+  change (MatrixMap.ofKraus
+      (fun _ : Unit => Matrix.conjTranspose V.matrix)
+      (ReferenceIsometry.targetBlock (V.applyMatrix X) x.2 y.2)) x.1 y.1 =
+    X x y
+  rw [hblock, hcompress]
+  rfl
+
+/-- Compress a source-register reference isometry back to the original source
+side using the CP map `X ↦ V† X V` on the left tensor factor. -/
+def sourceIsometryCompressed
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (ρPlus : SubnormalizedState (Prod aPlus b)) (V : ReferenceIsometry a aPlus) :
+    SubnormalizedState (Prod a b) :=
+  ρPlus.applyTraceNonincreasingCP
+    (MatrixMap.kron
+      (MatrixMap.ofKraus (fun _ : Unit => Matrix.conjTranspose V.matrix))
+      (Channel.idChannel b).map)
+    (MatrixMap.traceNonincreasingCP_kron_id (a := b)
+      (hΦ := referenceIsometry_conjTranspose_traceNonincreasingCP V))
+
+@[simp]
+theorem sourceIsometryCompressed_matrix
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (ρPlus : SubnormalizedState (Prod aPlus b)) (V : ReferenceIsometry a aPlus) :
+    (ρPlus.sourceIsometryCompressed V).matrix =
+      MatrixMap.kron
+        (MatrixMap.ofKraus (fun _ : Unit => Matrix.conjTranspose V.matrix))
+        (Channel.idChannel b).map ρPlus.matrix :=
+  rfl
+
+@[simp]
+theorem sourceIsometryCompressed_sourceIsometryApply
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (ρ : SubnormalizedState (Prod a b)) (V : ReferenceIsometry a aPlus) :
+    (ρ.sourceIsometryApply V).sourceIsometryCompressed V = ρ := by
+  apply SubnormalizedState.ext
+  rw [sourceIsometryCompressed_matrix, sourceIsometryApply_matrix]
+  exact referenceIsometry_leftCompression_applyMatrix V ρ.matrix
+
 /-- Feasible side operators on an arbitrarily isometrically enlarged
 conditioning register compress back by `T ↦ V† T V`. -/
 theorem ConditionalMinEntropyScaleFeasible.compress_conditioningIsometry
@@ -4716,6 +5004,45 @@ theorem ConditionalMinEntropyScaleFeasible.compress_conditioningIsometry
     simp only [Φ, Γ, map_sub]
     rw [MatrixMap.kron_apply_kronecker]
     rw [referenceIsometry_rightCompression_applyMatrixRight]
+    simp [Channel.idChannel, MatrixMap.ofKraus]
+
+private theorem referenceIsometry_leftCompression_one
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (V : ReferenceIsometry a aPlus) :
+    MatrixMap.ofKraus (fun _ : Unit => Matrix.conjTranspose V.matrix)
+      (1 : CMatrix aPlus) = (1 : CMatrix a) := by
+  simp [MatrixMap.ofKraus, V.isometry]
+
+/-- Feasible side operators on an arbitrarily isometrically enlarged source
+register compress back without changing the conditioning side operator. -/
+theorem ConditionalMinEntropyScaleFeasible.sourceIsometryCompressed
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    {ρPlus : SubnormalizedState (Prod aPlus b)} {T : CMatrix b}
+    (V : ReferenceIsometry a aPlus)
+    (hT : ConditionalMinEntropyScaleFeasible (a := aPlus) ρPlus T) :
+    ConditionalMinEntropyScaleFeasible (a := a) (ρPlus.sourceIsometryCompressed V) T := by
+  constructor
+  · exact hT.1
+  · let Γ : MatrixMap aPlus a :=
+      MatrixMap.ofKraus (fun _ : Unit => Matrix.conjTranspose V.matrix)
+    let Φ : MatrixMap (Prod aPlus b) (Prod a b) :=
+      MatrixMap.kron Γ (Channel.idChannel b).map
+    have hCP : MatrixMap.IsCompletelyPositive Φ :=
+      MatrixMap.isCompletelyPositive_kron Γ (Channel.idChannel b).map
+        (MatrixMap.ofKraus_completelyPositive
+          (fun _ : Unit => Matrix.conjTranspose V.matrix))
+        (Channel.idChannel b).completelyPositive
+    have hdiff :
+        (Matrix.kronecker (1 : CMatrix aPlus) T - ρPlus.matrix).PosSemidef := hT.2
+    have hmap := MatrixMap.isCompletelyPositive_mapsPositive Φ hCP
+      (Matrix.kronecker (1 : CMatrix aPlus) T - ρPlus.matrix) hdiff
+    change (Matrix.kronecker (1 : CMatrix a) T -
+        (ρPlus.sourceIsometryCompressed V).matrix).PosSemidef
+    convert hmap using 1
+    rw [sourceIsometryCompressed_matrix]
+    simp only [Φ, Γ, map_sub]
+    rw [MatrixMap.kron_apply_kronecker]
+    rw [referenceIsometry_leftCompression_one]
     simp [Channel.idChannel, MatrixMap.ofKraus]
 
 /-- For concrete right-summand padding, feasible enlarged side operators
@@ -4860,6 +5187,25 @@ theorem conditionalMinEntropyScale_conditioningIsometryApply_le
       hT.apply_conditioningIsometry V,
       (State.trace_ofReferenceIsometry_apply V T).symm⟩
 
+/-- Enlarging the source register by an isometry cannot increase the raw
+subnormalized conditional-min endpoint scale. -/
+theorem conditionalMinEntropyScale_sourceIsometryApply_le
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (ρ : SubnormalizedState (Prod a b)) (V : ReferenceIsometry a aPlus) :
+    (ρ.sourceIsometryApply V).conditionalMinEntropyScale (a := aPlus) ≤
+      ρ.conditionalMinEntropyScale (a := a) := by
+  rw [conditionalMinEntropyScale_eq_sInf_scaleValueSet,
+    conditionalMinEntropyScale_eq_sInf_scaleValueSet]
+  refine le_csInf (ρ.conditionalMinEntropyScaleValueSet_nonempty (a := a)) ?_
+  intro t ht
+  rcases ht with ⟨T, hT, rfl⟩
+  have hbddNew :
+      BddBelow ((ρ.sourceIsometryApply V).conditionalMinEntropyScaleValueSet
+        (a := aPlus)) :=
+    (ρ.sourceIsometryApply V).conditionalMinEntropyScaleValueSet_bddBelow
+      (a := aPlus)
+  exact csInf_le hbddNew ⟨T, hT.apply_sourceIsometry V, rfl⟩
+
 /-- For concrete right-summand padding, the raw subnormalized conditional-min
 endpoint scale also cannot decrease. -/
 theorem conditionalMinEntropyScale_le_conditioningIsometryApply_sumInr
@@ -4904,6 +5250,26 @@ theorem conditionalMinEntropyScale_le_conditioningIsometryApply
       ⟨Matrix.conjTranspose V.matrix * TPlus * V.matrix,
         hTPlus.compress_conditioningIsometry V, rfl⟩)
     (trace_re_conjTranspose_referenceIsometry_le V hTPlus.1)
+
+/-- The raw subnormalized conditional-min endpoint scale cannot decrease when
+compressing source-register isometries back to the original source. -/
+theorem conditionalMinEntropyScale_le_sourceIsometryApply
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (ρ : SubnormalizedState (Prod a b)) (V : ReferenceIsometry a aPlus) :
+    ρ.conditionalMinEntropyScale (a := a) ≤
+      (ρ.sourceIsometryApply V).conditionalMinEntropyScale (a := aPlus) := by
+  rw [conditionalMinEntropyScale_eq_sInf_scaleValueSet,
+    conditionalMinEntropyScale_eq_sInf_scaleValueSet]
+  refine le_csInf
+    ((ρ.sourceIsometryApply V).conditionalMinEntropyScaleValueSet_nonempty
+      (a := aPlus)) ?_
+  intro t ht
+  rcases ht with ⟨TPlus, hTPlus, rfl⟩
+  have hbddOld : BddBelow (ρ.conditionalMinEntropyScaleValueSet (a := a)) :=
+    ρ.conditionalMinEntropyScaleValueSet_bddBelow (a := a)
+  have hcompressed : ConditionalMinEntropyScaleFeasible (a := a) ρ TPlus := by
+    simpa using hTPlus.sourceIsometryCompressed V
+  exact csInf_le hbddOld ⟨TPlus, hcompressed, rfl⟩
 
 /-- Compressing an arbitrary right-summand conditioning register cannot raise
 the raw subnormalized conditional-min endpoint scale. -/
@@ -5198,6 +5564,1051 @@ theorem conditionalMinEntropy_conditioningIsometryApply
     (a := a) V
   rw [le_antisymm hle₁ hle₂]
 
+/-- Subnormalized conditional min-entropy is invariant under an arbitrary
+source-register reference isometry, for positive-trace states. -/
+theorem conditionalMinEntropy_sourceIsometryApply
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    [Nonempty a] [Nonempty b] [Nonempty aPlus]
+    (ρ : SubnormalizedState (Prod a b)) (hρ : 0 < ρ.matrix.trace.re)
+    (V : ReferenceIsometry a aPlus) :
+    (ρ.sourceIsometryApply V).conditionalMinEntropy =
+      ρ.conditionalMinEntropy := by
+  rw [(ρ.sourceIsometryApply V).conditionalMinEntropy_eq_neg_log2_scale_of_trace_pos
+      (a := aPlus) (by
+        rw [sourceIsometryApply_trace_re]
+        exact hρ),
+    ρ.conditionalMinEntropy_eq_neg_log2_scale_of_trace_pos (a := a) hρ]
+  have hle₁ := ρ.conditionalMinEntropyScale_sourceIsometryApply_le
+    (a := a) V
+  have hle₂ := ρ.conditionalMinEntropyScale_le_sourceIsometryApply
+    (a := a) V
+  rw [le_antisymm hle₁ hle₂]
+
+/-- The subnormalized identity tensor matrix is the constant block-diagonal
+matrix with the side-state matrix in every source block. -/
+theorem identityTensorStateMatrix_eq_blockDiagonal (σ : SubnormalizedState b) :
+    identityTensorStateMatrix (a := a) σ =
+      Classical.blockDiagonal fun _ : a => σ.matrix := by
+  exact Classical.identityTensor_eq_blockDiagonal σ.matrix
+
+/-- A raw scale-feasible side operator bounds every diagonal source block. -/
+theorem block_le_of_conditionalMinEntropyScaleFeasible
+    (ρ : SubnormalizedState (Prod a b)) (T : CMatrix b) (x : a)
+    (hT : ConditionalMinEntropyScaleFeasible (a := a) ρ T) :
+    Classical.block ρ.matrix x x ≤ T := by
+  rw [Matrix.le_iff]
+  have hdiff :
+      (Matrix.kronecker (1 : CMatrix a) T - ρ.matrix).PosSemidef := by
+    simpa [Matrix.le_iff] using hT.2
+  have hblock := hdiff.submatrix (fun i : b => (x, i))
+  have hblock_eq :
+      Matrix.submatrix
+          (Matrix.kronecker (1 : CMatrix a) T - ρ.matrix)
+          (fun i : b => (x, i)) (fun i : b => (x, i)) =
+        T - Classical.block ρ.matrix x x := by
+    ext i j
+    simp [Classical.block, Matrix.kronecker, Matrix.kroneckerMap_apply]
+  rwa [hblock_eq] at hblock
+
+/-- Build a subnormalized classical-quantum state from positive semidefinite
+diagonal blocks whose total trace is at most one. -/
+def ofClassicalBlocks (blocks : a → CMatrix b)
+    (hpos : ∀ x, (blocks x).PosSemidef)
+    (htrace : (∑ x, (blocks x).trace).re ≤ 1) :
+    SubnormalizedState (Prod a b) where
+  matrix := Classical.blockDiagonal blocks
+  pos := Classical.blockDiagonal_posSemidef blocks hpos
+  trace_le_one := by
+    simpa using htrace
+
+@[simp]
+theorem ofClassicalBlocks_matrix (blocks : a → CMatrix b)
+    (hpos : ∀ x, (blocks x).PosSemidef)
+    (htrace : (∑ x, (blocks x).trace).re ≤ 1) :
+    (ofClassicalBlocks blocks hpos htrace).matrix =
+      Classical.blockDiagonal blocks :=
+  rfl
+
+@[simp]
+theorem ofClassicalBlocks_block_self (blocks : a → CMatrix b)
+    (hpos : ∀ x, (blocks x).PosSemidef)
+    (htrace : (∑ x, (blocks x).trace).re ≤ 1) (x : a) :
+    Classical.block (ofClassicalBlocks blocks hpos htrace).matrix x x =
+      blocks x := by
+  simp [ofClassicalBlocks]
+
+private def sourceDeterministicPostprocessKraus
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (g : a → c) (x : a) :
+    Matrix (Prod c b) (Prod a b) ℂ :=
+  fun out inp => if inp.1 = x ∧ out = (g x, inp.2) then 1 else 0
+
+/-- Matrix map for deterministic coarse-graining of the source classical
+register, summing diagonal source blocks along the fibers of `g`. -/
+noncomputable def sourceDeterministicPostprocessMap
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (g : a → c) :
+    MatrixMap (Prod a b) (Prod c b) where
+  toFun X := fun yi yj =>
+    if yi.1 = yj.1 then
+      ∑ x : a, if g x = yi.1 then X (x, yi.2) (x, yj.2) else 0
+    else 0
+  map_add' := by
+    intro X Y
+    ext yi yj
+    rcases yi with ⟨y, i⟩
+    rcases yj with ⟨y', j⟩
+    by_cases hyy : y = y'
+    · subst y'
+      simp only [if_true, Matrix.add_apply]
+      calc
+        (∑ x : a, if g x = y then X (x, i) (x, j) + Y (x, i) (x, j) else 0)
+            =
+            ∑ x : a,
+              ((if g x = y then X (x, i) (x, j) else 0) +
+                (if g x = y then Y (x, i) (x, j) else 0)) := by
+              refine Finset.sum_congr rfl fun x _ => ?_
+              by_cases hx : g x = y <;> simp [hx]
+        _ =
+            (∑ x : a, if g x = y then X (x, i) (x, j) else 0) +
+              ∑ x : a, if g x = y then Y (x, i) (x, j) else 0 := by
+              rw [Finset.sum_add_distrib]
+    · simp [hyy]
+  map_smul' := by
+    intro z X
+    ext yi yj
+    rcases yi with ⟨y, i⟩
+    rcases yj with ⟨y', j⟩
+    by_cases hyy : y = y'
+    · subst y'
+      simp only [if_true, Matrix.smul_apply]
+      calc
+        (∑ x : a, if g x = y then z * X (x, i) (x, j) else 0)
+            =
+            ∑ x : a, z * (if g x = y then X (x, i) (x, j) else 0) := by
+              refine Finset.sum_congr rfl fun x _ => ?_
+              by_cases hx : g x = y <;> simp [hx]
+        _ =
+            z * ∑ x : a, if g x = y then X (x, i) (x, j) else 0 := by
+              rw [Finset.mul_sum]
+    · simp [hyy]
+
+private theorem sourceDeterministicPostprocessMap_eq_ofKraus
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (g : a → c) :
+    MatrixMap.ofKraus
+        (sourceDeterministicPostprocessKraus (a := a) (b := b) g) =
+      sourceDeterministicPostprocessMap (a := a) (b := b) g := by
+  apply LinearMap.ext
+  intro X
+  ext yi yj
+  rcases yi with ⟨y, i⟩
+  rcases yj with ⟨y', j⟩
+  simp only [MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk,
+    Matrix.sum_apply, Matrix.mul_apply, Matrix.conjTranspose_apply,
+    sourceDeterministicPostprocessKraus, sourceDeterministicPostprocessMap]
+  simp only [Prod.mk.injEq, ite_mul, zero_mul, one_mul]
+  by_cases hyy : y = y'
+  · subst y'
+    rw [if_pos rfl]
+    refine Finset.sum_congr rfl fun x _ => ?_
+    by_cases hg : g x = y
+    · rw [Finset.sum_eq_single ((x, j) : Prod a b)]
+      · rw [Finset.sum_eq_single ((x, i) : Prod a b)]
+        · simp [hg]
+        · intro inp _ hinp
+          rcases inp with ⟨x', i'⟩
+          by_cases hleft : x' = x ∧ y = g x ∧ i = i'
+          · exact False.elim (hinp (Prod.ext hleft.1 hleft.2.2.symm))
+          · simp [hleft]
+        · intro hmem
+          simp at hmem
+      · intro out _ hout
+        rcases out with ⟨x', j'⟩
+        by_cases hright : x' = x ∧ y = g x ∧ j = j'
+        · exact False.elim (hout (Prod.ext hright.1 hright.2.2.symm))
+        · simp [hright]
+      · intro hmem
+        simp at hmem
+    · calc
+        (∑ out : Prod a b,
+            (∑ inp : Prod a b,
+                if inp.1 = x ∧ y = g x ∧ i = inp.2 then X inp out else 0) *
+              star (if out.1 = x ∧ y = g x ∧ j = out.2 then 1 else 0)) = 0 := by
+            apply Finset.sum_eq_zero
+            intro out _
+            by_cases hright : out.1 = x ∧ y = g x ∧ j = out.2
+            · exact False.elim (hg hright.2.1.symm)
+            · simp [hright]
+        _ = (if g x = y then X (x, i) (x, j) else 0) := by
+            simp [hg]
+  · rw [if_neg hyy]
+    apply Finset.sum_eq_zero
+    intro x _
+    apply Finset.sum_eq_zero
+    intro out _
+    by_cases hright : out.1 = x ∧ y' = g x ∧ j = out.2
+    · have hleft_none :
+          ∀ inp : Prod a b, ¬ (inp.1 = x ∧ y = g x ∧ i = inp.2) := by
+        intro inp hleft
+        exact hyy (hleft.2.1.trans hright.2.1.symm)
+      have hinner :
+          (∑ inp : Prod a b,
+              if inp.1 = x ∧ y = g x ∧ i = inp.2 then X inp out else 0) = 0 := by
+        apply Finset.sum_eq_zero
+        intro inp _
+        simp [hleft_none inp]
+      simp [hright, hinner]
+    · simp [hright]
+
+theorem sourceDeterministicPostprocessMap_completelyPositive
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (g : a → c) :
+    MatrixMap.IsCompletelyPositive
+      (sourceDeterministicPostprocessMap (a := a) (b := b) g) := by
+  rw [← sourceDeterministicPostprocessMap_eq_ofKraus (a := a) (b := b) g]
+  exact MatrixMap.ofKraus_completelyPositive _
+
+/-- Deterministic source coarse-graining is the block-diagonal matrix of
+fiber sums of the input diagonal source blocks. -/
+theorem sourceDeterministicPostprocessMap_apply_eq_blockDiagonal
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (g : a → c) (X : CMatrix (Prod a b)) :
+    sourceDeterministicPostprocessMap (a := a) (b := b) g X =
+      Classical.blockDiagonal
+        (fun y : c => ∑ x : a, if g x = y then Classical.block X x x else 0) := by
+  ext yi yj
+  rcases yi with ⟨y, i⟩
+  rcases yj with ⟨y', j⟩
+  by_cases hyy : y = y'
+  · subst y'
+    have hblock :=
+      congrFun (congrFun
+        (Classical.blockDiagonal_block_self
+          (fun y : c => ∑ x : a, if g x = y then Classical.block X x x else 0) y) i) j
+    calc
+      (sourceDeterministicPostprocessMap (a := a) (b := b) g X) (y, i) (y, j) =
+          (∑ x : a, if g x = y then Classical.block X x x else 0) i j := by
+          simp only [sourceDeterministicPostprocessMap, LinearMap.coe_mk, AddHom.coe_mk,
+            Matrix.sum_apply]
+          refine Finset.sum_congr rfl fun x _ => ?_
+          by_cases hx : g x = y <;> simp [hx, Classical.block]
+      _ = Classical.blockDiagonal
+            (fun y : c => ∑ x : a, if g x = y then Classical.block X x x else 0)
+            (y, i) (y, j) := hblock.symm
+  · have hblock :=
+      congrFun (congrFun
+        (Classical.blockDiagonal_block_ne
+          (fun y : c => ∑ x : a, if g x = y then Classical.block X x x else 0)
+          hyy) i) j
+    simpa [sourceDeterministicPostprocessMap, Classical.block, hyy] using hblock.symm
+
+theorem sourceDeterministicPostprocessMap_tracePreserving
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (g : a → c) :
+    MatrixMap.IsTracePreserving
+      (sourceDeterministicPostprocessMap (a := a) (b := b) g) := by
+  intro X
+  rw [sourceDeterministicPostprocessMap_apply_eq_blockDiagonal,
+    Classical.blockDiagonal_trace]
+  calc
+    (∑ y : c,
+        (∑ x : a, if g x = y then Classical.block X x x else 0).trace) =
+        ∑ y : c, ∑ x : a,
+          (if g x = y then Classical.block X x x else 0).trace := by
+        refine Finset.sum_congr rfl fun y _ => ?_
+        rw [Matrix.trace_sum]
+    _ = ∑ x : a, ∑ y : c,
+          (if g x = y then Classical.block X x x else 0).trace := by
+        rw [Finset.sum_comm]
+    _ = ∑ x : a, (Classical.block X x x).trace := by
+        refine Finset.sum_congr rfl fun x _ => ?_
+        rw [Finset.sum_eq_single (g x)]
+        · simp
+        · intro y _ hy
+          rw [if_neg (fun h => hy h.symm)]
+          simp
+        · simp
+    _ = X.trace := Classical.sum_block_trace X
+
+theorem sourceDeterministicPostprocessMap_traceNonincreasingCP
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (g : a → c) :
+    MatrixMap.TraceNonincreasingCP
+      (sourceDeterministicPostprocessMap (a := a) (b := b) g) :=
+  MatrixMap.traceNonincreasingCP_of_tracePreserving
+    (sourceDeterministicPostprocessMap_completelyPositive (a := a) (b := b) g)
+    (sourceDeterministicPostprocessMap_tracePreserving (a := a) (b := b) g)
+
+/-- Deterministically coarse-grain the source classical register of a
+subnormalized state by summing its diagonal source blocks along `g`. -/
+def sourceDeterministicPostprocess
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (ρ : SubnormalizedState (Prod a b)) (g : a → c) :
+    SubnormalizedState (Prod c b) :=
+  ofClassicalBlocks
+    (fun y => ∑ x, if g x = y then Classical.block ρ.matrix x x else 0)
+    (by
+      intro y
+      exact Matrix.posSemidef_sum Finset.univ fun x _ => by
+        by_cases hx : g x = y
+        · exact by
+            simpa [hx] using ρ.pos.submatrix (fun i : b => (x, i))
+        · simpa [hx] using (Matrix.PosSemidef.zero : (0 : CMatrix b).PosSemidef))
+    (by
+      have htrace :
+          (∑ y : c,
+              (∑ x : a,
+                if g x = y then Classical.block ρ.matrix x x else 0).trace) =
+            ∑ x : a, (Classical.block ρ.matrix x x).trace := by
+        calc
+          (∑ y : c,
+              (∑ x : a,
+                if g x = y then Classical.block ρ.matrix x x else 0).trace) =
+              ∑ y : c, ∑ x : a,
+                (if g x = y then Classical.block ρ.matrix x x else 0).trace := by
+                refine Finset.sum_congr rfl fun y _ => ?_
+                rw [Matrix.trace_sum]
+          _ = ∑ x : a, ∑ y : c,
+                (if g x = y then Classical.block ρ.matrix x x else 0).trace := by
+                rw [Finset.sum_comm]
+          _ = ∑ x : a, (Classical.block ρ.matrix x x).trace := by
+                refine Finset.sum_congr rfl fun x _ => ?_
+                rw [Finset.sum_eq_single (g x)]
+                · simp
+                · intro y _ hy
+                  rw [if_neg (fun h => hy h.symm)]
+                  simp
+                · simp
+      rw [htrace, Classical.sum_block_trace]
+      exact ρ.trace_le_one)
+
+@[simp]
+theorem sourceDeterministicPostprocess_matrix
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (ρ : SubnormalizedState (Prod a b)) (g : a → c) :
+    (ρ.sourceDeterministicPostprocess g).matrix =
+      Classical.blockDiagonal
+        (fun y => ∑ x, if g x = y then Classical.block ρ.matrix x x else 0) :=
+  rfl
+
+theorem sourceDeterministicPostprocessMap_apply_matrix
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (ρ : SubnormalizedState (Prod a b)) (g : a → c) :
+    sourceDeterministicPostprocessMap (a := a) (b := b) g ρ.matrix =
+      (ρ.sourceDeterministicPostprocess g).matrix := by
+  rw [sourceDeterministicPostprocessMap_apply_eq_blockDiagonal,
+    sourceDeterministicPostprocess_matrix]
+
+/-- The output block of deterministic source coarse-graining is the sum of the
+input blocks in that fiber. -/
+theorem sourceDeterministicPostprocess_block
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (ρ : SubnormalizedState (Prod a b)) (g : a → c) (y : c) :
+    Classical.block (ρ.sourceDeterministicPostprocess g).matrix y y =
+      ∑ x, if g x = y then Classical.block ρ.matrix x x else 0 := by
+  simp [sourceDeterministicPostprocess]
+
+/-- Deterministic source coarse-graining preserves the total trace. -/
+theorem sourceDeterministicPostprocess_trace
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (ρ : SubnormalizedState (Prod a b)) (g : a → c) :
+    (ρ.sourceDeterministicPostprocess g).matrix.trace = ρ.matrix.trace := by
+  rw [sourceDeterministicPostprocess_matrix, Classical.blockDiagonal_trace]
+  calc
+    (∑ y : c,
+        (∑ x : a,
+          if g x = y then Classical.block ρ.matrix x x else 0).trace) =
+        ∑ y : c, ∑ x : a,
+          (if g x = y then Classical.block ρ.matrix x x else 0).trace := by
+        refine Finset.sum_congr rfl fun y _ => ?_
+        rw [Matrix.trace_sum]
+    _ = ∑ x : a, ∑ y : c,
+          (if g x = y then Classical.block ρ.matrix x x else 0).trace := by
+        rw [Finset.sum_comm]
+    _ = ∑ x : a, (Classical.block ρ.matrix x x).trace := by
+        refine Finset.sum_congr rfl fun x _ => ?_
+        rw [Finset.sum_eq_single (g x)]
+        · simp
+        · intro y _ hy
+          rw [if_neg (fun h => hy h.symm)]
+          simp
+        · simp
+    _ = ρ.matrix.trace := Classical.sum_block_trace ρ.matrix
+
+@[simp]
+theorem sourceDeterministicPostprocess_trace_re
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (ρ : SubnormalizedState (Prod a b)) (g : a → c) :
+    (ρ.sourceDeterministicPostprocess g).matrix.trace.re = ρ.matrix.trace.re := by
+  exact congrArg Complex.re (ρ.sourceDeterministicPostprocess_trace g)
+
+/-- Each input source block is dominated by the output block of its image under
+deterministic source coarse-graining. -/
+theorem sourceBlock_le_sourceDeterministicPostprocess_block
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (ρ : SubnormalizedState (Prod a b)) (g : a → c) (x : a) :
+    Classical.block ρ.matrix x x ≤
+      Classical.block (ρ.sourceDeterministicPostprocess g).matrix (g x) (g x) := by
+  classical
+  rw [sourceDeterministicPostprocess_block]
+  have hxmem : x ∈ (Finset.univ : Finset a) := Finset.mem_univ x
+  rw [Finset.sum_eq_add_sum_diff_singleton_of_mem hxmem]
+  simp only [if_true]
+  exact le_add_of_nonneg_right (by
+    have hrest_psd :
+        (∑ x' ∈ (Finset.univ : Finset a).erase x,
+          if g x' = g x then Classical.block ρ.matrix x' x' else 0).PosSemidef := by
+      exact Matrix.posSemidef_sum ((Finset.univ : Finset a).erase x) fun x' _ => by
+        by_cases hx' : g x' = g x
+        · simpa [hx'] using ρ.pos.submatrix (fun i : b => (x', i))
+        · simpa [hx'] using (Matrix.PosSemidef.zero : (0 : CMatrix b).PosSemidef)
+    simpa [Matrix.le_iff] using hrest_psd)
+
+/-- Matrix map that keeps exactly the diagonal source blocks whose source
+label satisfies `p`, and drops all source off-diagonal blocks. -/
+def sourceBlockFilterMap (p : a → Prop) [DecidablePred p] :
+    MatrixMap (Prod a b) (Prod a b) where
+  toFun X := fun xi xj =>
+    if xi.1 = xj.1 ∧ p xi.1 then X (xi.1, xi.2) (xi.1, xj.2) else 0
+  map_add' X Y := by
+    ext xi xj
+    rcases xi with ⟨x, i⟩
+    rcases xj with ⟨y, j⟩
+    by_cases hxy : x = y
+    · subst y
+      by_cases hp : p x <;> simp [hp]
+    · simp [hxy]
+  map_smul' c X := by
+    ext xi xj
+    rcases xi with ⟨x, i⟩
+    rcases xj with ⟨y, j⟩
+    by_cases hxy : x = y
+    · subst y
+      by_cases hp : p x <;> simp [hp]
+    · simp [hxy]
+
+private def sourceBlockFilterKraus (p : a → Prop) [DecidablePred p] (x : a) :
+    Matrix (Prod a b) (Prod a b) ℂ :=
+  fun out inp => if p x ∧ out = inp ∧ out.1 = x then 1 else 0
+
+private theorem sourceBlockFilterMap_eq_ofKraus
+    (p : a → Prop) [DecidablePred p] :
+    MatrixMap.ofKraus (sourceBlockFilterKraus (a := a) (b := b) p) =
+      sourceBlockFilterMap (a := a) (b := b) p := by
+  apply LinearMap.ext
+  intro X
+  ext xi xj
+  rcases xi with ⟨x, i⟩
+  rcases xj with ⟨y, j⟩
+  simp only [MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk,
+    Matrix.sum_apply, Matrix.mul_apply, Matrix.conjTranspose_apply,
+    sourceBlockFilterKraus, sourceBlockFilterMap]
+  simp only [ite_mul, zero_mul, one_mul]
+  by_cases hxy : x = y
+  · subst y
+    by_cases hp : p x
+    · rw [Finset.sum_eq_single x]
+      · simp [hp]
+      · intro z _ hz
+        have hxz : ¬ x = z := fun h => hz h.symm
+        simp [hxz]
+      · intro hx
+        simp at hx
+    · calc
+        (∑ x_1,
+            ∑ x_2,
+              (∑ x_3, if p x_1 ∧ (x, i) = x_3 ∧ x = x_1 then X x_3 x_2 else 0) *
+                star (if p x_1 ∧ (x, j) = x_2 ∧ x = x_1 then 1 else 0)) = 0 := by
+            apply Finset.sum_eq_zero
+            intro z _
+            by_cases hz : z = x
+            · subst z
+              simp [hp]
+            · have hxz : ¬ x = z := fun h => hz h.symm
+              simp [hxz]
+        _ = (if x = x ∧ p x then X (x, i) (x, j) else 0) := by
+            simp [hp]
+  · calc
+      (∑ x_1,
+          ∑ x_2,
+            (∑ x_3, if p x_1 ∧ (x, i) = x_3 ∧ x = x_1 then X x_3 x_2 else 0) *
+              star (if p x_1 ∧ (y, j) = x_2 ∧ y = x_1 then 1 else 0)) = 0 := by
+          apply Finset.sum_eq_zero
+          intro z _
+          by_cases hxz : x = z
+          · subst z
+            have hyx : ¬ y = x := fun h => hxy h.symm
+            simp [hyx]
+          · simp [hxz]
+      _ = (if x = y ∧ p x then X (x, i) (x, j) else 0) := by
+          simp [hxy]
+
+theorem sourceBlockFilterMap_completelyPositive
+    (p : a → Prop) [DecidablePred p] :
+    MatrixMap.IsCompletelyPositive (sourceBlockFilterMap (a := a) (b := b) p) := by
+  rw [← sourceBlockFilterMap_eq_ofKraus (a := a) (b := b) p]
+  exact MatrixMap.ofKraus_completelyPositive _
+
+/-- The source-block filter is the block-diagonal matrix of the selected
+diagonal source blocks. -/
+theorem sourceBlockFilterMap_apply_eq_blockDiagonal
+    (p : a → Prop) [DecidablePred p] (X : CMatrix (Prod a b)) :
+    sourceBlockFilterMap (a := a) (b := b) p X =
+      Classical.blockDiagonal
+        (fun x : a => if p x then Classical.block X x x else 0) := by
+  ext xi xj
+  rcases xi with ⟨x, i⟩
+  rcases xj with ⟨y, j⟩
+  by_cases hxy : x = y
+  · subst y
+    have hblock :=
+      congrFun (congrFun
+        (Classical.blockDiagonal_block_self
+          (fun x : a => if p x then Classical.block X x x else 0) x) i) j
+    by_cases hp : p x
+    · simpa [sourceBlockFilterMap, Classical.block, hp] using hblock.symm
+    · simpa [sourceBlockFilterMap, Classical.block, hp] using hblock.symm
+  · have hblock :=
+      congrFun (congrFun
+        (Classical.blockDiagonal_block_ne
+          (fun x : a => if p x then Classical.block X x x else 0)
+          hxy) i) j
+    simpa [sourceBlockFilterMap, Classical.block, hxy] using hblock.symm
+
+private theorem sourceBlockFilterMap_trace_re_le
+    (p : a → Prop) [DecidablePred p] {X : CMatrix (Prod a b)}
+    (hX : X.PosSemidef) :
+    ((sourceBlockFilterMap (a := a) (b := b) p X).trace).re ≤ X.trace.re := by
+  rw [sourceBlockFilterMap_apply_eq_blockDiagonal, Classical.blockDiagonal_trace]
+  calc
+    (∑ x : a, (if p x then Classical.block X x x else 0).trace).re =
+        ∑ x : a, ((if p x then Classical.block X x x else 0 : CMatrix b).trace).re := by
+        simp
+    _ ≤ ∑ x : a, (Classical.block X x x).trace.re := by
+        refine Finset.sum_le_sum fun x _ => ?_
+        by_cases hp : p x
+        · simp [hp]
+        · have hblock_pos :
+              (Classical.block X x x).PosSemidef :=
+            hX.submatrix (fun i : b => (x, i))
+          have htrace_nonneg :
+              0 ≤ (Classical.block X x x).trace.re :=
+            (Matrix.PosSemidef.trace_nonneg hblock_pos).1
+          simpa [hp] using htrace_nonneg
+    _ = (∑ x : a, (Classical.block X x x).trace).re := by
+        simp
+    _ = X.trace.re := by
+        exact congrArg Complex.re (Classical.sum_block_trace X)
+
+/-- Source-block filtering is trace-nonincreasing completely positive. -/
+theorem sourceBlockFilterMap_traceNonincreasingCP
+    (p : a → Prop) [DecidablePred p] :
+    MatrixMap.TraceNonincreasingCP (sourceBlockFilterMap (a := a) (b := b) p) where
+  completelyPositive := sourceBlockFilterMap_completelyPositive (a := a) (b := b) p
+  traceNonincreasing := by
+    intro X hX
+    exact sourceBlockFilterMap_trace_re_le (a := a) (b := b) p hX
+
+/-- Restrict a subnormalized state to selected diagonal blocks of the source
+classical register.  This pinches the source register and discards all labels
+not satisfying `p`. -/
+def sourceBlockFilter (ρ : SubnormalizedState (Prod a b))
+    (p : a → Prop) [DecidablePred p] :
+    SubnormalizedState (Prod a b) :=
+  ρ.applyTraceNonincreasingCP
+    (sourceBlockFilterMap (a := a) (b := b) p)
+    (sourceBlockFilterMap_traceNonincreasingCP (a := a) (b := b) p)
+
+@[simp]
+theorem sourceBlockFilter_matrix (ρ : SubnormalizedState (Prod a b))
+    (p : a → Prop) [DecidablePred p] :
+    (ρ.sourceBlockFilter p).matrix =
+      sourceBlockFilterMap (a := a) (b := b) p ρ.matrix :=
+  rfl
+
+theorem sourceBlockFilter_matrix_eq_blockDiagonal
+    (ρ : SubnormalizedState (Prod a b)) (p : a → Prop) [DecidablePred p] :
+    (ρ.sourceBlockFilter p).matrix =
+      Classical.blockDiagonal
+        (fun x : a => if p x then Classical.block ρ.matrix x x else 0) := by
+  rw [sourceBlockFilter_matrix, sourceBlockFilterMap_apply_eq_blockDiagonal]
+
+theorem sourceBlockFilter_trace_re_le
+    (ρ : SubnormalizedState (Prod a b)) (p : a → Prop) [DecidablePred p] :
+    (ρ.sourceBlockFilter p).matrix.trace.re ≤ ρ.matrix.trace.re :=
+  sourceBlockFilterMap_trace_re_le (a := a) (b := b) p ρ.pos
+
+/-- If the center is already fixed by a source-block filter, filtering a
+nearby witness stays in the same purified-distance ball. -/
+theorem purifiedBall_sourceBlockFilter_of_fixed
+    (ρ : SubnormalizedState (Prod a b)) (p : a → Prop) [DecidablePred p]
+    {σ : SubnormalizedState (Prod a b)} {ε : ℝ}
+    (hρ : ρ.sourceBlockFilter p = ρ) (hball : ρ.purifiedBall ε σ) :
+    ρ.purifiedBall ε (σ.sourceBlockFilter p) := by
+  have hfiltered :
+      (ρ.sourceBlockFilter p).purifiedBall ε (σ.sourceBlockFilter p) := by
+    simpa [sourceBlockFilter] using
+      (SubnormalizedState.purifiedBall_of_traceNonincreasingCP
+        (ρ := ρ) (σ := σ)
+        (sourceBlockFilterMap (a := a) (b := b) p)
+        (sourceBlockFilterMap_traceNonincreasingCP (a := a) (b := b) p)
+        hball)
+  rwa [hρ] at hfiltered
+
+/-- Filtering source blocks preserves every raw side operator feasible for
+subnormalized conditional min-entropy. -/
+theorem ConditionalMinEntropyScaleFeasible.sourceBlockFilter
+    {ρ : SubnormalizedState (Prod a b)} {T : CMatrix b}
+    (p : a → Prop) [DecidablePred p]
+    (hT : ConditionalMinEntropyScaleFeasible (a := a) ρ T) :
+    ConditionalMinEntropyScaleFeasible (a := a) (ρ.sourceBlockFilter p) T := by
+  constructor
+  · exact hT.1
+  · rw [Matrix.le_iff]
+    have hblocks :
+        ∀ x : a, (if p x then T - Classical.block ρ.matrix x x else T).PosSemidef := by
+      intro x
+      by_cases hp : p x
+      · simpa [hp, Matrix.le_iff] using
+          block_le_of_conditionalMinEntropyScaleFeasible ρ T x hT
+      · simpa [hp] using hT.1
+    have hmatrix :
+        Matrix.kronecker (1 : CMatrix a) T - (ρ.sourceBlockFilter p).matrix =
+          Classical.blockDiagonal
+            (fun x : a => if p x then T - Classical.block ρ.matrix x x else T) := by
+      calc
+        Matrix.kronecker (1 : CMatrix a) T - (ρ.sourceBlockFilter p).matrix =
+            Classical.blockDiagonal (fun _ : a => T) -
+              Classical.blockDiagonal
+                (fun x : a => if p x then Classical.block ρ.matrix x x else 0) := by
+              rw [Classical.identityTensor_eq_blockDiagonal,
+                sourceBlockFilter_matrix_eq_blockDiagonal]
+        _ = Classical.blockDiagonal
+              (fun x : a => T -
+                (if p x then Classical.block ρ.matrix x x else 0)) := by
+              rw [← Classical.blockDiagonal_sub]
+        _ = Classical.blockDiagonal
+              (fun x : a => if p x then T - Classical.block ρ.matrix x x else T) := by
+              congr with x
+              by_cases hp : p x <;> simp [hp]
+    rw [hmatrix]
+    exact Classical.blockDiagonal_posSemidef
+      (fun x : a => if p x then T - Classical.block ρ.matrix x x else T)
+      hblocks
+
+/-- Source-block filtering cannot increase the raw subnormalized
+conditional-min endpoint scale. -/
+theorem conditionalMinEntropyScale_sourceBlockFilter_le
+    (ρ : SubnormalizedState (Prod a b)) (p : a → Prop) [DecidablePred p] :
+    (ρ.sourceBlockFilter p).conditionalMinEntropyScale (a := a) ≤
+      ρ.conditionalMinEntropyScale (a := a) := by
+  rw [conditionalMinEntropyScale_eq_sInf_scaleValueSet,
+    conditionalMinEntropyScale_eq_sInf_scaleValueSet]
+  refine le_csInf (ρ.conditionalMinEntropyScaleValueSet_nonempty (a := a)) ?_
+  intro t ht
+  rcases ht with ⟨T, hT, rfl⟩
+  have hbddFiltered :
+      BddBelow ((ρ.sourceBlockFilter p).conditionalMinEntropyScaleValueSet
+        (a := a)) :=
+    (ρ.sourceBlockFilter p).conditionalMinEntropyScaleValueSet_bddBelow
+      (a := a)
+  exact csInf_le hbddFiltered
+    ⟨T, hT.sourceBlockFilter (a := a) p, rfl⟩
+
+/-- Source-block filtering can only increase subnormalized conditional
+min-entropy when both the original and filtered states have positive trace. -/
+theorem conditionalMinEntropy_le_sourceBlockFilter_of_trace_pos
+    [Nonempty a] [Nonempty b]
+    (ρ : SubnormalizedState (Prod a b)) (p : a → Prop) [DecidablePred p]
+    (hρ : 0 < ρ.matrix.trace.re)
+    (hfilter : 0 < (ρ.sourceBlockFilter p).matrix.trace.re) :
+    ρ.conditionalMinEntropy ≤ (ρ.sourceBlockFilter p).conditionalMinEntropy := by
+  rw [ρ.conditionalMinEntropy_eq_neg_log2_scale_of_trace_pos (a := a) hρ,
+    (ρ.sourceBlockFilter p).conditionalMinEntropy_eq_neg_log2_scale_of_trace_pos
+      (a := a) hfilter]
+  have hscale_le := ρ.conditionalMinEntropyScale_sourceBlockFilter_le (a := a) p
+  have hfiltered_scale_pos :
+      0 < (ρ.sourceBlockFilter p).conditionalMinEntropyScale (a := a) :=
+    (ρ.sourceBlockFilter p).conditionalMinEntropyScale_pos_of_trace_pos
+      (a := a) hfilter
+  have hlog :
+      log2 ((ρ.sourceBlockFilter p).conditionalMinEntropyScale (a := a)) ≤
+        log2 (ρ.conditionalMinEntropyScale (a := a)) := by
+    unfold log2
+    exact div_le_div_of_nonneg_right
+      (Real.log_le_log hfiltered_scale_pos hscale_le)
+      (le_of_lt (Real.log_pos one_lt_two))
+  exact neg_le_neg hlog
+
+/-- Coordinate pinching of the source register, implemented as the standard
+coordinate measurement on the source tensor the identity channel on the
+conditioning register. -/
+def sourceCoordinatePinchChannel : Channel (Prod a b) (Prod a b) :=
+  (Channel.measure (POVM.coordinate a)).prod (Channel.idChannel b)
+
+private theorem coordinateMeasure_map_one :
+    (Channel.measure (POVM.coordinate a)).map (1 : CMatrix a) = 1 := by
+  rw [Channel.measure_map]
+  simpa [POVM.coordinate, trace_single_one] using (POVM.coordinate a).sum_eq_one
+
+private theorem coordinateMeasure_map_single (x : a) :
+    (Channel.measure (POVM.coordinate a)).map (Matrix.single x x (1 : ℂ)) =
+      Matrix.single x x (1 : ℂ) := by
+  rw [Channel.measure_map]
+  rw [Finset.sum_eq_single x]
+  · have hmul :
+        Matrix.single x x (1 : ℂ) * (POVM.coordinate a).effects x =
+          Matrix.single x x (1 : ℂ) := by
+      rw [POVM.coordinate_effects, Matrix.single_mul_single_same]
+      simp
+    rw [hmul, trace_single_one, if_pos rfl]
+    simp
+  · intro y _ hy
+    have hmul :
+        Matrix.single x x (1 : ℂ) * (POVM.coordinate a).effects y = 0 := by
+      have hxy : x ≠ y := fun h => hy h.symm
+      ext i j
+      rw [Matrix.mul_apply]
+      refine Finset.sum_eq_zero fun k _ => ?_
+      by_cases hk : k = x
+      · subst k
+        simp [POVM.coordinate, Matrix.single_apply, hy]
+      · have hxk : x ≠ k := fun h => hk h.symm
+        simp [POVM.coordinate, Matrix.single_apply, hxk]
+    rw [hmul]
+    simp
+  · intro hx
+    simp at hx
+
+private theorem coordinateMeasure_map_apply (X : CMatrix a) (x x' : a) :
+    (Channel.measure (POVM.coordinate a)).map X x x' =
+      if x = x' then X x x else 0 := by
+  classical
+  rw [Channel.measure_map]
+  simp only [Matrix.sum_apply, Matrix.smul_apply, POVM.coordinate_effects]
+  by_cases hxx' : x = x'
+  · subst x'
+    rw [if_pos rfl]
+    rw [Finset.sum_eq_single x]
+    · rw [Matrix.trace_mul_single]
+      simp
+    · intro y _ hy
+      have hyx : y ≠ x := hy
+      simp [hyx]
+    · intro hx
+      simp at hx
+  · rw [if_neg hxx']
+    refine Finset.sum_eq_zero fun y _ => ?_
+    have hnot : ¬ (y = x ∧ y = x') := by
+      intro hy
+      exact hxx' (hy.1.symm.trans hy.2)
+    simp [hnot]
+
+private theorem idChannel_map_eq_self (X : CMatrix b) :
+    (Channel.idChannel b).map X = X := by
+  change MatrixMap.ofKraus (fun _ : Unit => (1 : CMatrix b)) X = X
+  simp [MatrixMap.ofKraus]
+
+/-- Source-coordinate pinching fixes every side-operator tensor `I_A ⊗ T_B`. -/
+theorem sourceCoordinatePinchChannel_map_identityTensor (T : CMatrix b) :
+    (sourceCoordinatePinchChannel (a := a) (b := b)).map
+        (Matrix.kronecker (1 : CMatrix a) T) =
+      Matrix.kronecker (1 : CMatrix a) T := by
+  dsimp [sourceCoordinatePinchChannel]
+  change (((Channel.measure (POVM.coordinate a)).prod (Channel.idChannel b)).map
+      (Matrix.kronecker (1 : CMatrix a) T)) =
+    Matrix.kronecker (1 : CMatrix a) T
+  rw [Channel.prod_map_kronecker]
+  rw [coordinateMeasure_map_one]
+  rw [idChannel_map_eq_self]
+
+/-- Source-coordinate pinching fixes a diagonal source block tensor. -/
+theorem sourceCoordinatePinchChannel_map_singleTensor (x : a) (T : CMatrix b) :
+    (sourceCoordinatePinchChannel (a := a) (b := b)).map
+        (Matrix.kronecker (Matrix.single x x (1 : ℂ)) T) =
+      Matrix.kronecker (Matrix.single x x (1 : ℂ)) T := by
+  dsimp [sourceCoordinatePinchChannel]
+  change (((Channel.measure (POVM.coordinate a)).prod (Channel.idChannel b)).map
+      (Matrix.kronecker (Matrix.single x x (1 : ℂ)) T)) =
+    Matrix.kronecker (Matrix.single x x (1 : ℂ)) T
+  rw [Channel.prod_map_kronecker]
+  rw [coordinateMeasure_map_single]
+  rw [idChannel_map_eq_self]
+
+/-- Pinch a subnormalized bipartite state in the source register's coordinate
+basis. -/
+def sourceCoordinatePinch (ρ : SubnormalizedState (Prod a b)) :
+    SubnormalizedState (Prod a b) :=
+  ρ.applyTraceNonincreasingCP
+    (sourceCoordinatePinchChannel (a := a) (b := b)).map
+    (MatrixMap.traceNonincreasingCP_of_tracePreserving
+      (sourceCoordinatePinchChannel (a := a) (b := b)).completelyPositive
+      (sourceCoordinatePinchChannel (a := a) (b := b)).tracePreserving)
+
+@[simp]
+theorem sourceCoordinatePinch_matrix (ρ : SubnormalizedState (Prod a b)) :
+    ρ.sourceCoordinatePinch.matrix =
+      (sourceCoordinatePinchChannel (a := a) (b := b)).map ρ.matrix :=
+  rfl
+
+/-- Source-coordinate pinching is the block-diagonal matrix of the original
+diagonal source blocks. -/
+theorem sourceCoordinatePinch_matrix_eq_blockDiagonal
+    (ρ : SubnormalizedState (Prod a b)) :
+    ρ.sourceCoordinatePinch.matrix =
+      Classical.blockDiagonal (fun x => Classical.block ρ.matrix x x) := by
+  ext xi xj
+  rcases xi with ⟨x, i⟩
+  rcases xj with ⟨x', j⟩
+  rw [sourceCoordinatePinch_matrix]
+  change MatrixMap.kron (Channel.measure (POVM.coordinate a)).map
+      (Channel.idChannel b).map ρ.matrix (x, i) (x', j) =
+    Classical.blockDiagonal (fun x => Classical.block ρ.matrix x x) (x, i) (x', j)
+  rw [MatrixMap.kron_idChannel_apply_slice]
+  rw [coordinateMeasure_map_apply]
+  by_cases hxx' : x = x'
+  · subst x'
+    have hblock :=
+      congrFun (congrFun
+        (Classical.blockDiagonal_block_self
+          (fun x => Classical.block ρ.matrix x x) x) i) j
+    simpa [Classical.block] using hblock.symm
+  · have hblock :=
+      congrFun (congrFun
+        (Classical.blockDiagonal_block_ne
+          (fun x => Classical.block ρ.matrix x x) hxx') i) j
+    simpa [hxx', Classical.block] using hblock.symm
+
+/-- Source-coordinate pinching is idempotent. -/
+@[simp]
+theorem sourceCoordinatePinch_sourceCoordinatePinch
+    (ρ : SubnormalizedState (Prod a b)) :
+    ρ.sourceCoordinatePinch.sourceCoordinatePinch = ρ.sourceCoordinatePinch := by
+  apply SubnormalizedState.ext
+  rw [sourceCoordinatePinch_matrix_eq_blockDiagonal,
+    sourceCoordinatePinch_matrix_eq_blockDiagonal]
+  congr with x
+  simp
+
+/-- Deterministic source coarse-graining only depends on diagonal source
+blocks, so precomposing it with source-coordinate pinching has no effect. -/
+@[simp]
+theorem sourceDeterministicPostprocess_sourceCoordinatePinch
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (ρ : SubnormalizedState (Prod a b)) (g : a → c) :
+    ρ.sourceCoordinatePinch.sourceDeterministicPostprocess g =
+      ρ.sourceDeterministicPostprocess g := by
+  apply SubnormalizedState.ext
+  rw [sourceDeterministicPostprocess_matrix, sourceDeterministicPostprocess_matrix]
+  have hblocks :
+      (fun y : c =>
+          ∑ x : a,
+            if g x = y then Classical.block ρ.sourceCoordinatePinch.matrix x x else 0) =
+        (fun y : c =>
+          ∑ x : a,
+            if g x = y then Classical.block ρ.matrix x x else 0) := by
+    funext y
+    refine Finset.sum_congr rfl fun x _ => ?_
+    have hblock :
+        Classical.block
+            ((sourceCoordinatePinchChannel (a := a) (b := b)).map ρ.matrix) x x =
+          Classical.block ρ.matrix x x := by
+      change Classical.block ρ.sourceCoordinatePinch.matrix x x =
+        Classical.block ρ.matrix x x
+      rw [sourceCoordinatePinch_matrix_eq_blockDiagonal]
+      exact Classical.blockDiagonal_block_self
+        (fun x => Classical.block ρ.matrix x x) x
+    by_cases hx : g x = y <;> simp [hx, hblock]
+  rw [hblocks]
+
+/-- A side operator that is raw scale-feasible for deterministic source
+coarse-graining is also raw scale-feasible for source-coordinate pinching of
+the original state. -/
+theorem ConditionalMinEntropyScaleFeasible.sourceCoordinatePinch_of_sourceDeterministicPostprocess
+    {c : Type*} [Fintype c] [DecidableEq c]
+    {ρ : SubnormalizedState (Prod a b)} (g : a → c) {T : CMatrix b}
+    (hT : ConditionalMinEntropyScaleFeasible (a := c)
+      (ρ.sourceDeterministicPostprocess g) T) :
+    ConditionalMinEntropyScaleFeasible (a := a) ρ.sourceCoordinatePinch T := by
+  constructor
+  · exact hT.1
+  · rw [Matrix.le_iff]
+    have hblocks : ∀ x, (T - Classical.block ρ.matrix x x).PosSemidef := by
+      intro x
+      rw [← Matrix.le_iff]
+      exact (ρ.sourceBlock_le_sourceDeterministicPostprocess_block g x).trans
+        (block_le_of_conditionalMinEntropyScaleFeasible
+          (ρ.sourceDeterministicPostprocess g) T (g x) hT)
+    have hmatrix :
+        Matrix.kronecker (1 : CMatrix a) T - ρ.sourceCoordinatePinch.matrix =
+          Classical.blockDiagonal (fun x => T - Classical.block ρ.matrix x x) := by
+      calc
+        Matrix.kronecker (1 : CMatrix a) T - ρ.sourceCoordinatePinch.matrix =
+            Classical.blockDiagonal (fun _ : a => T) -
+              Classical.blockDiagonal (fun x => Classical.block ρ.matrix x x) := by
+              rw [Classical.identityTensor_eq_blockDiagonal,
+                sourceCoordinatePinch_matrix_eq_blockDiagonal]
+        _ = Classical.blockDiagonal (fun x => T - Classical.block ρ.matrix x x) := by
+              rw [← Classical.blockDiagonal_sub]
+    rw [hmatrix]
+    exact Classical.blockDiagonal_posSemidef
+      (fun x => T - Classical.block ρ.matrix x x) hblocks
+
+/-- Deterministic coarse-graining of the source register can only raise the
+raw conditional-min endpoint scale relative to the source-coordinate pinched
+state. -/
+theorem conditionalMinEntropyScale_sourceCoordinatePinch_le_sourceDeterministicPostprocess
+    {c : Type*} [Fintype c] [DecidableEq c]
+    (ρ : SubnormalizedState (Prod a b)) (g : a → c) :
+    ρ.sourceCoordinatePinch.conditionalMinEntropyScale (a := a) ≤
+      (ρ.sourceDeterministicPostprocess g).conditionalMinEntropyScale (a := c) := by
+  rw [conditionalMinEntropyScale_eq_sInf_scaleValueSet,
+    conditionalMinEntropyScale_eq_sInf_scaleValueSet]
+  refine le_csInf
+    ((ρ.sourceDeterministicPostprocess g).conditionalMinEntropyScaleValueSet_nonempty
+      (a := c)) ?_
+  intro t ht
+  rcases ht with ⟨T, hT, rfl⟩
+  have hbdd :
+      BddBelow (ρ.sourceCoordinatePinch.conditionalMinEntropyScaleValueSet
+        (a := a)) :=
+    ρ.sourceCoordinatePinch.conditionalMinEntropyScaleValueSet_bddBelow
+      (a := a)
+  exact csInf_le hbdd
+    ⟨T, hT.sourceCoordinatePinch_of_sourceDeterministicPostprocess
+      (ρ := ρ) g, rfl⟩
+
+@[simp]
+theorem sourceCoordinatePinch_trace_re (ρ : SubnormalizedState (Prod a b)) :
+    ρ.sourceCoordinatePinch.matrix.trace.re = ρ.matrix.trace.re := by
+  exact congrArg Complex.re
+    ((sourceCoordinatePinchChannel (a := a) (b := b)).tracePreserving ρ.matrix)
+
+/-- Source-coordinate pinching preserves every raw side operator feasible for
+subnormalized conditional min-entropy. -/
+theorem ConditionalMinEntropyScaleFeasible.sourceCoordinatePinch
+    {ρ : SubnormalizedState (Prod a b)} {T : CMatrix b}
+    (hT : ConditionalMinEntropyScaleFeasible (a := a) ρ T) :
+    ConditionalMinEntropyScaleFeasible (a := a) ρ.sourceCoordinatePinch T := by
+  constructor
+  · exact hT.1
+  · let Φ : MatrixMap (Prod a b) (Prod a b) :=
+      (sourceCoordinatePinchChannel (a := a) (b := b)).map
+    have hdiff : (Matrix.kronecker (1 : CMatrix a) T - ρ.matrix).PosSemidef :=
+      hT.2
+    have hmap := MatrixMap.isCompletelyPositive_mapsPositive Φ
+      (sourceCoordinatePinchChannel (a := a) (b := b)).completelyPositive
+      (Matrix.kronecker (1 : CMatrix a) T - ρ.matrix) hdiff
+    change (Matrix.kronecker (1 : CMatrix a) T - ρ.sourceCoordinatePinch.matrix).PosSemidef
+    rw [sourceCoordinatePinch_matrix]
+    convert hmap using 1
+    simp only [Φ, map_sub]
+    rw [sourceCoordinatePinchChannel_map_identityTensor]
+
+/-- Source-coordinate pinching cannot increase the raw subnormalized
+conditional-min endpoint scale. -/
+theorem conditionalMinEntropyScale_sourceCoordinatePinch_le
+    (ρ : SubnormalizedState (Prod a b)) :
+    ρ.sourceCoordinatePinch.conditionalMinEntropyScale (a := a) ≤
+      ρ.conditionalMinEntropyScale (a := a) := by
+  rw [conditionalMinEntropyScale_eq_sInf_scaleValueSet,
+    conditionalMinEntropyScale_eq_sInf_scaleValueSet]
+  refine le_csInf (ρ.conditionalMinEntropyScaleValueSet_nonempty (a := a)) ?_
+  intro t ht
+  rcases ht with ⟨T, hT, rfl⟩
+  have hbddPinched :
+      BddBelow (ρ.sourceCoordinatePinch.conditionalMinEntropyScaleValueSet
+        (a := a)) :=
+    ρ.sourceCoordinatePinch.conditionalMinEntropyScaleValueSet_bddBelow
+      (a := a)
+  exact csInf_le hbddPinched
+    ⟨T, hT.sourceCoordinatePinch (a := a), rfl⟩
+
+/-- Pinching the source register in the coordinate basis can only increase
+subnormalized conditional min-entropy, for positive-trace states. -/
+theorem conditionalMinEntropy_le_sourceCoordinatePinch_of_trace_pos
+    [Nonempty a] [Nonempty b]
+    (ρ : SubnormalizedState (Prod a b)) (hρ : 0 < ρ.matrix.trace.re) :
+    ρ.conditionalMinEntropy ≤ ρ.sourceCoordinatePinch.conditionalMinEntropy := by
+  rw [ρ.conditionalMinEntropy_eq_neg_log2_scale_of_trace_pos (a := a) hρ,
+    ρ.sourceCoordinatePinch.conditionalMinEntropy_eq_neg_log2_scale_of_trace_pos
+      (a := a) (by
+        rw [sourceCoordinatePinch_trace_re]
+        exact hρ)]
+  have hscale_le := ρ.conditionalMinEntropyScale_sourceCoordinatePinch_le
+    (a := a)
+  have hpinched_scale_pos :
+      0 < ρ.sourceCoordinatePinch.conditionalMinEntropyScale (a := a) :=
+    ρ.sourceCoordinatePinch.conditionalMinEntropyScale_pos_of_trace_pos
+      (a := a) (by
+        rw [sourceCoordinatePinch_trace_re]
+        exact hρ)
+  have hlog :
+      log2 (ρ.sourceCoordinatePinch.conditionalMinEntropyScale (a := a)) ≤
+        log2 (ρ.conditionalMinEntropyScale (a := a)) := by
+    unfold log2
+    exact div_le_div_of_nonneg_right
+      (Real.log_le_log hpinched_scale_pos hscale_le)
+      (le_of_lt (Real.log_pos one_lt_two))
+  exact neg_le_neg hlog
+
+/-- Deterministic source coarse-graining cannot increase ordinary
+subnormalized conditional min-entropy, once the original witness is pinched in
+the source coordinate basis. -/
+theorem conditionalMinEntropy_sourceDeterministicPostprocess_le_sourceCoordinatePinch_of_trace_pos
+    {c : Type*} [Fintype c] [DecidableEq c]
+    [Nonempty a] [Nonempty b]
+    (ρ : SubnormalizedState (Prod a b)) (g : a → c)
+    (hρ : 0 < ρ.matrix.trace.re) :
+    (ρ.sourceDeterministicPostprocess g).conditionalMinEntropy ≤
+      ρ.sourceCoordinatePinch.conditionalMinEntropy := by
+  letI : Nonempty c := ⟨g (Classical.choice (inferInstance : Nonempty a))⟩
+  have hpost : 0 < (ρ.sourceDeterministicPostprocess g).matrix.trace.re := by
+    rw [sourceDeterministicPostprocess_trace_re]
+    exact hρ
+  have hpinch : 0 < ρ.sourceCoordinatePinch.matrix.trace.re := by
+    rw [sourceCoordinatePinch_trace_re]
+    exact hρ
+  rw [(ρ.sourceDeterministicPostprocess g).conditionalMinEntropy_eq_neg_log2_scale_of_trace_pos
+      (a := c) hpost,
+    ρ.sourceCoordinatePinch.conditionalMinEntropy_eq_neg_log2_scale_of_trace_pos
+      (a := a) hpinch]
+  have hscale_le :=
+    ρ.conditionalMinEntropyScale_sourceCoordinatePinch_le_sourceDeterministicPostprocess
+      (a := a) g
+  have hscale_pinch_pos :
+      0 < ρ.sourceCoordinatePinch.conditionalMinEntropyScale (a := a) :=
+    ρ.sourceCoordinatePinch.conditionalMinEntropyScale_pos_of_trace_pos
+      (a := a) hpinch
+  have hlog :
+      log2 (ρ.sourceCoordinatePinch.conditionalMinEntropyScale (a := a)) ≤
+        log2 ((ρ.sourceDeterministicPostprocess g).conditionalMinEntropyScale
+          (a := c)) := by
+    unfold log2
+    exact div_le_div_of_nonneg_right
+      (Real.log_le_log hscale_pinch_pos hscale_le)
+      (le_of_lt (Real.log_pos one_lt_two))
+  exact neg_le_neg hlog
+
+/-- If the center is already fixed by source-coordinate pinching, then pinching
+a nearby witness stays in the same purified-distance ball. -/
+theorem purifiedBall_sourceCoordinatePinch_of_fixed
+    (ρ : SubnormalizedState (Prod a b)) {σ : SubnormalizedState (Prod a b)} {ε : ℝ}
+    (hρ : ρ.sourceCoordinatePinch = ρ) (hball : ρ.purifiedBall ε σ) :
+    ρ.purifiedBall ε σ.sourceCoordinatePinch := by
+  have hpinched :
+      ρ.sourceCoordinatePinch.purifiedBall ε σ.sourceCoordinatePinch := by
+    simpa [sourceCoordinatePinch] using
+      (SubnormalizedState.purifiedBall_of_traceNonincreasingCP
+        (ρ := ρ) (σ := σ)
+        ((sourceCoordinatePinchChannel (a := a) (b := b)).map)
+        (MatrixMap.traceNonincreasingCP_of_tracePreserving
+          (sourceCoordinatePinchChannel (a := a) (b := b)).completelyPositive
+          (sourceCoordinatePinchChannel (a := a) (b := b)).tracePreserving)
+        hball)
+  rwa [hρ] at hpinched
+
 /-- Compress an arbitrary conditioning-register reference isometry back to the
 source side using the CP map `X ↦ V† X V`. -/
 def conditioningIsometryCompressed
@@ -5291,6 +6702,27 @@ theorem conditionalMinEntropyScale_conditioningIsometryCompressed_le
         hTPlus.conditioningIsometryCompressed V, rfl⟩)
     htrace_le
 
+/-- Compressing an arbitrary source-register isometry cannot raise the raw
+subnormalized conditional-min endpoint scale. -/
+theorem conditionalMinEntropyScale_sourceIsometryCompressed_le
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    (ρPlus : SubnormalizedState (Prod aPlus b)) (V : ReferenceIsometry a aPlus) :
+    (ρPlus.sourceIsometryCompressed V).conditionalMinEntropyScale (a := a) ≤
+      ρPlus.conditionalMinEntropyScale (a := aPlus) := by
+  rw [conditionalMinEntropyScale_eq_sInf_scaleValueSet,
+    conditionalMinEntropyScale_eq_sInf_scaleValueSet]
+  refine le_csInf (ρPlus.conditionalMinEntropyScaleValueSet_nonempty (a := aPlus)) ?_
+  intro t ht
+  rcases ht with ⟨TPlus, hTPlus, rfl⟩
+  have hbddCompressed :
+      BddBelow
+        ((ρPlus.sourceIsometryCompressed V).conditionalMinEntropyScaleValueSet
+          (a := a)) :=
+    (ρPlus.sourceIsometryCompressed V).conditionalMinEntropyScaleValueSet_bddBelow
+      (a := a)
+  exact csInf_le hbddCompressed
+    ⟨TPlus, hTPlus.sourceIsometryCompressed V, rfl⟩
+
 /-- Compressing an arbitrary conditioning-register isometry can only increase
 subnormalized conditional min-entropy, when both traces are positive. -/
 theorem conditionalMinEntropy_le_conditioningIsometryCompressed
@@ -5325,6 +6757,40 @@ theorem conditionalMinEntropy_le_conditioningIsometryCompressed
       (le_of_lt (Real.log_pos one_lt_two))
   exact neg_le_neg hlog
 
+/-- Compressing an arbitrary source-register isometry can only increase
+subnormalized conditional min-entropy, when both traces are positive. -/
+theorem conditionalMinEntropy_le_sourceIsometryCompressed
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    [Nonempty a] [Nonempty b] [Nonempty aPlus]
+    (ρPlus : SubnormalizedState (Prod aPlus b)) (V : ReferenceIsometry a aPlus)
+    (hPlus : 0 < ρPlus.matrix.trace.re)
+    (hCompressed : 0 < (ρPlus.sourceIsometryCompressed V).matrix.trace.re) :
+    ρPlus.conditionalMinEntropy ≤
+      (ρPlus.sourceIsometryCompressed V).conditionalMinEntropy := by
+  rw [ρPlus.conditionalMinEntropy_eq_neg_log2_scale_of_trace_pos
+      (a := aPlus) hPlus,
+    (ρPlus.sourceIsometryCompressed V).conditionalMinEntropy_eq_neg_log2_scale_of_trace_pos
+      (a := a) hCompressed]
+  have hscale_le :=
+    ρPlus.conditionalMinEntropyScale_sourceIsometryCompressed_le
+      (a := a) V
+  have hcompressed_pos :
+      0 <
+        (ρPlus.sourceIsometryCompressed V).conditionalMinEntropyScale
+          (a := a) :=
+    (ρPlus.sourceIsometryCompressed V).conditionalMinEntropyScale_pos_of_trace_pos
+      (a := a) hCompressed
+  have hlog :
+      log2
+          ((ρPlus.sourceIsometryCompressed V).conditionalMinEntropyScale
+            (a := a)) ≤
+        log2 (ρPlus.conditionalMinEntropyScale (a := aPlus)) := by
+    unfold log2
+    exact div_le_div_of_nonneg_right
+      (Real.log_le_log hcompressed_pos hscale_le)
+      (le_of_lt (Real.log_pos one_lt_two))
+  exact neg_le_neg hlog
+
 /-- Applying an arbitrary conditioning-register reference isometry transports
 subnormalized purified-distance balls. -/
 theorem purifiedBall_conditioningIsometryApply
@@ -5341,6 +6807,24 @@ theorem purifiedBall_conditioningIsometryApply
         (MatrixMap.ofReferenceIsometry V))
       (MatrixMap.traceNonincreasingCP_id_kron (a := a)
         (hΦ := MatrixMap.ofReferenceIsometry_traceNonincreasingCP V))
+      hball)
+
+/-- Applying an arbitrary source-register reference isometry transports
+subnormalized purified-distance balls. -/
+theorem purifiedBall_sourceIsometryApply
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    {ρ σ : SubnormalizedState (Prod a b)} {ε : ℝ}
+    (V : ReferenceIsometry a aPlus)
+    (hball : ρ.purifiedBall ε σ) :
+    (ρ.sourceIsometryApply V).purifiedBall ε
+      (σ.sourceIsometryApply V) := by
+  simpa [sourceIsometryApply] using
+    (SubnormalizedState.purifiedBall_of_traceNonincreasingCP
+      (ρ := ρ) (σ := σ) (ε := ε)
+      (MatrixMap.kron (MatrixMap.ofReferenceIsometry V)
+        (Channel.idChannel b).map)
+      (MatrixMap.traceNonincreasingCP_kron_id
+        (a := b) (hΦ := MatrixMap.ofReferenceIsometry_traceNonincreasingCP V))
       hball)
 
 /-- Exact concrete right-summand padding transports subnormalized
@@ -5405,6 +6889,29 @@ theorem purifiedBall_conditioningIsometryCompressed_of_conditioningIsometryApply
       hball
   change ((ρ.conditioningIsometryApply V).conditioningIsometryCompressed V).purifiedBall ε
     (ρPlus.conditioningIsometryCompressed V) at hcompressed
+  simpa using hcompressed
+
+/-- Compressing an arbitrary source-register reference isometry transports a
+purified ball back to the source register. -/
+theorem purifiedBall_sourceIsometryCompressed_of_sourceIsometryApply
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    {ρ : SubnormalizedState (Prod a b)}
+    {ρPlus : SubnormalizedState (Prod aPlus b)} {ε : ℝ}
+    (V : ReferenceIsometry a aPlus)
+    (hball : (ρ.sourceIsometryApply V).purifiedBall ε ρPlus) :
+    ρ.purifiedBall ε (ρPlus.sourceIsometryCompressed V) := by
+  have hcompressed :=
+    SubnormalizedState.purifiedBall_of_traceNonincreasingCP
+      (ρ := ρ.sourceIsometryApply V)
+      (σ := ρPlus) (ε := ε)
+      (MatrixMap.kron
+        (MatrixMap.ofKraus (fun _ : Unit => Matrix.conjTranspose V.matrix))
+        (Channel.idChannel b).map)
+      (MatrixMap.traceNonincreasingCP_kron_id (a := b)
+        (hΦ := referenceIsometry_conjTranspose_traceNonincreasingCP V))
+      hball
+  change ((ρ.sourceIsometryApply V).sourceIsometryCompressed V).purifiedBall ε
+    (ρPlus.sourceIsometryCompressed V) at hcompressed
   simpa using hcompressed
 
 /-! ## Subnormalized conditional max-entropy exponent -/
@@ -6025,6 +7532,75 @@ theorem SmoothConditionalMinEntropyCandidate.conditioningIsometryApply
   refine ⟨ρ'.conditioningIsometryApply V,
     purifiedBall_conditioningIsometryApply (a := a) V hball, ?_⟩
   rw [conditionalMinEntropy_conditioningIsometryApply (a := a) ρ' hρ' V]
+
+/-- Any smooth min-entropy witness for an arbitrarily isometrically enlarged
+source register compresses to a source-register witness with at least as large
+endpoint value, under the small-radius positive-trace condition. -/
+theorem SmoothConditionalMinEntropyCandidate.sourceIsometryApply_compress
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    [Nonempty a] [Nonempty b] [Nonempty aPlus]
+    (ρ : SubnormalizedState (Prod a b)) (V : ReferenceIsometry a aPlus) {ε h : ℝ}
+    (hε : ε < Real.sqrt ρ.matrix.trace.re)
+    (hcand :
+      SmoothConditionalMinEntropyCandidate (a := aPlus)
+        (ρ.sourceIsometryApply V) ε h) :
+    ∃ h' : ℝ, SmoothConditionalMinEntropyCandidate (a := a) ρ ε h' ∧ h ≤ h' := by
+  rcases hcand with ⟨ρPlus', hball, rfl⟩
+  have hballCompressed :
+      ρ.purifiedBall ε (ρPlus'.sourceIsometryCompressed V) :=
+    purifiedBall_sourceIsometryCompressed_of_sourceIsometryApply
+      (a := a) V hball
+  have hplus_pos :
+      0 < ρPlus'.matrix.trace.re :=
+    SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace
+      (ρ.sourceIsometryApply V) ρPlus'
+      (by
+        rw [sourceIsometryApply_trace_re]
+        exact hε)
+      hball
+  have hcompressed_pos :
+      0 < (ρPlus'.sourceIsometryCompressed V).matrix.trace.re :=
+    SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace ρ
+      (ρPlus'.sourceIsometryCompressed V) hε hballCompressed
+  refine ⟨(ρPlus'.sourceIsometryCompressed V).conditionalMinEntropy,
+    ⟨ρPlus'.sourceIsometryCompressed V, hballCompressed, rfl⟩, ?_⟩
+  exact conditionalMinEntropy_le_sourceIsometryCompressed
+    (a := a) ρPlus' V hplus_pos hcompressed_pos
+
+/-- Smooth min-entropy candidates transport forward along an arbitrary
+source-register reference isometry with the same endpoint value. -/
+theorem SmoothConditionalMinEntropyCandidate.sourceIsometryApply
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    [Nonempty a] [Nonempty b] [Nonempty aPlus]
+    (ρ : SubnormalizedState (Prod a b)) (V : ReferenceIsometry a aPlus) {ε h : ℝ}
+    (hε : ε < Real.sqrt ρ.matrix.trace.re)
+    (hcand : SmoothConditionalMinEntropyCandidate (a := a) ρ ε h) :
+    SmoothConditionalMinEntropyCandidate (a := aPlus) (ρ.sourceIsometryApply V) ε h := by
+  rcases hcand with ⟨ρ', hball, rfl⟩
+  have hρ' : 0 < ρ'.matrix.trace.re :=
+    SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace ρ ρ' hε hball
+  refine ⟨ρ'.sourceIsometryApply V,
+    purifiedBall_sourceIsometryApply (a := a) V hball, ?_⟩
+  rw [conditionalMinEntropy_sourceIsometryApply (a := a) ρ' hρ' V]
+
+/-- If the center is fixed by source-coordinate pinching, every smooth
+min-entropy candidate can be replaced by a pinched candidate with no smaller
+ordinary endpoint value. This is the candidate-level classical-smoothing
+regularization step. -/
+theorem SmoothConditionalMinEntropyCandidate.sourceCoordinatePinch_of_fixed
+    [Nonempty a] [Nonempty b]
+    {ρ : SubnormalizedState (Prod a b)} {ε h : ℝ}
+    (hρ : ρ.sourceCoordinatePinch = ρ)
+    (hε : ε < Real.sqrt ρ.matrix.trace.re)
+    (hcand : SmoothConditionalMinEntropyCandidate (a := a) ρ ε h) :
+    ∃ h' : ℝ, SmoothConditionalMinEntropyCandidate (a := a) ρ ε h' ∧ h ≤ h' := by
+  rcases hcand with ⟨ρ', hball, rfl⟩
+  have hρ' : 0 < ρ'.matrix.trace.re :=
+    SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace ρ ρ' hε hball
+  refine ⟨ρ'.sourceCoordinatePinch.conditionalMinEntropy,
+    ⟨ρ'.sourceCoordinatePinch,
+      ρ.purifiedBall_sourceCoordinatePinch_of_fixed hρ hball, rfl⟩, ?_⟩
+  exact ρ'.conditionalMinEntropy_le_sourceCoordinatePinch_of_trace_pos hρ'
 
 /-- Under the small-radius condition used by the scaled-pure smooth-duality
 surface, exact `sumInr` padding does not change smooth min-entropy candidates. -/
@@ -6940,7 +8516,7 @@ theorem dualEffectLinkOutputABAStarInput_eq
     dualEffectLinkOutputABAStarInput (a := a) (b := b) (c := c) ψ M =
       dualEffectLinkOutputABA (a := a) (b := b) (c := c) ψ M := by
   have hstar : star ψ.state.matrix = ψ.state.matrix := by
-    simpa [Matrix.star_eq_conjTranspose] using ψ.state_matrix_isHermitian.eq
+    simp [Matrix.star_eq_conjTranspose]
   rw [dualEffectLinkOutputABAStarInput, dualEffectLinkOutputABA, hstar]
 
 @[simp]
@@ -7041,7 +8617,7 @@ private theorem sum_outer_mul_inner_expand {δ : Type*} {β : Type*} {α : Type*
       ∑ m : δ, ∑ j : β, ∑ x : α, ∑ k : γ, ∑ y : α, ∑ l : γ,
         A m j x k * (s * (s * (B m j x k * C m j x k y l))) := by
   classical
-  simp [Finset.mul_sum, Finset.sum_mul, mul_assoc, mul_left_comm, mul_comm]
+  simp [Finset.mul_sum, mul_left_comm]
 
 private theorem sum_success_norm_expand {δ : Type*} {β : Type*} {α : Type*} {γ : Type*}
     [Fintype δ] [Fintype β] [Fintype α] [Fintype γ]
@@ -7054,8 +8630,7 @@ private theorem sum_success_norm_expand {δ : Type*} {β : Type*} {α : Type*} {
         K m x k *
           (s * (s * (A m j x k * (star (K m y l) * star (A m j y l))))) := by
   classical
-  simp [hs, Finset.mul_sum, Finset.sum_mul, map_sum, map_mul,
-    mul_assoc, mul_left_comm, mul_comm]
+  simp [hs, Finset.mul_sum, mul_assoc, mul_left_comm]
 
 private theorem dotProduct_single_one_left {ι : Type*} [Fintype ι] [DecidableEq ι]
     (p : ι) (f : ι → ℂ) :
@@ -7642,7 +9217,7 @@ private theorem dualEffectKrausSuccessVector_dilation_overlap_eq_sqrt_trace
       (∑ x : Prod κ b, star (v x) * v x) = (rankOneMatrix v).trace := by
     simp [rankOneMatrix_trace, dotProduct, mul_comm]
   have hv_dot_re : (v ⬝ᵥ fun i => star (v i)).re = t := by
-    simp [t, rankOneMatrix_trace, dotProduct, mul_comm]
+    simp [t, rankOneMatrix_trace, dotProduct]
   have hpsi_dot_re :
       ((dualEffectKrausSuccessVector (a := a) (b := b) (c := c) ψ K) ⬝ᵥ
           fun i => star (dualEffectKrausSuccessVector (a := a) (b := b) (c := c) ψ K i)).re = t := by
@@ -7665,10 +9240,10 @@ private theorem dualEffectKrausSuccessVector_dilation_overlap_eq_sqrt_trace
           (∑ x : Prod κ b, star (v x) * v x) := by
       rw [dualEffectKrausSuccessVector_dilation_overlap_eq_dot
         (a := a) (b := b) (c := c) ψ K hKstack η]
-      simp [η, State.pureVectorNormalize_amp, v, hpsi_dot_re, Finset.mul_sum]
+      simp [η, State.pureVectorNormalize_amp, v, Finset.mul_sum]
       apply Finset.sum_congr rfl
       intro x hx
-      simpa [hsqrtdot, mul_assoc, mul_left_comm, mul_comm]
+      simp [hsqrtdot, mul_assoc, mul_comm]
     _ = (((Real.sqrt t)⁻¹ : ℝ) : ℂ) * (rankOneMatrix v).trace := by
       rw [hnorm]
     _ = ((Real.sqrt
@@ -8465,6 +10040,59 @@ theorem neg_log2_card_left_le_conditionalMaxEntropy
   rw [← hAB, hdual]
   exact neg_le_neg hmin
 
+/-- Fuchs--van de Graaf converts an `ε` trace-distance bound into the
+smoothing radius `sqrt (2ε - ε^2)`. -/
+theorem purifiedDistance_le_sqrt_two_mul_sub_sq_of_normalizedTraceDistance_le
+    (ρ σ : State a) {ε : ℝ}
+    (hε1 : ε ≤ 1)
+    (hD : ρ.normalizedTraceDistance σ ≤ ε) :
+    ρ.purifiedDistance σ ≤ Real.sqrt (2 * ε - ε ^ 2) := by
+  have hlower := State.fuchs_van_de_graaf_lower ρ σ
+  have hfidelity_ge : 1 - ε ≤ ρ.fidelity σ := by
+    linarith
+  have hleft_nonneg : 0 ≤ 1 - ε := by linarith
+  have hfid_nonneg : 0 ≤ ρ.fidelity σ := State.fidelity_nonneg ρ σ
+  have hsquare_ge :
+      (1 - ε) ^ 2 ≤ (ρ.fidelity σ) ^ 2 :=
+    (sq_le_sq₀ hleft_nonneg hfid_nonneg).mpr hfidelity_ge
+  have hinside :
+      1 - ρ.squaredFidelity σ ≤ 2 * ε - ε ^ 2 := by
+    rw [State.squaredFidelity_eq_fidelity_sq]
+    nlinarith
+  rw [State.purifiedDistance_eq]
+  exact Real.sqrt_le_sqrt hinside
+
+/-- Normalized smooth conditional min-entropy candidates are bounded above by
+the logarithm of the conditioned register dimension. -/
+theorem SmoothConditionalMinEntropyCandidate_bddAbove
+    (ρ : State (Prod a b)) (ε : ℝ) :
+    BddAbove {h : ℝ | State.SmoothConditionalMinEntropyCandidate (a := a) ρ ε h} := by
+  refine ⟨log2 (Fintype.card a : ℝ), ?_⟩
+  intro h hh
+  rcases hh with ⟨ρ', _hball, rfl⟩
+  rw [State.conditionalMinEntropy_eq]
+  by_cases hne :
+      ({lam : ℝ | ∃ τ : State b,
+        ConditionalMinEntropyFeasible (a := a) ρ' τ lam}).Nonempty
+  · exact csSup_le hne fun lam hlam =>
+      let ⟨_, hτ⟩ := hlam
+      conditionalMinEntropyFeasible_le_log2_card_left (a := a) hτ
+  · rw [Set.not_nonempty_iff_eq_empty.mp hne, Real.sSup_empty]
+    haveI : Nonempty a := ⟨(Classical.choice ρ'.nonempty).1⟩
+    have hcard_one : 1 ≤ (Fintype.card a : ℝ) := by
+      exact_mod_cast (Nat.succ_le_of_lt (Fintype.card_pos_iff.mpr inferInstance))
+    exact div_nonneg (Real.log_nonneg hcard_one)
+      (le_of_lt (Real.log_pos one_lt_two))
+
+/-- A smooth min-entropy candidate contributes a lower bound to the smooth
+conditional min-entropy supremum. -/
+theorem le_smoothConditionalMinEntropy_of_candidate
+    {ρ : State (Prod a b)} {ε h : ℝ}
+    (hcand : State.SmoothConditionalMinEntropyCandidate (a := a) ρ ε h) :
+    h ≤ ρ.smoothConditionalMinEntropy ε := by
+  rw [State.smoothConditionalMinEntropy_eq_sSup_candidates]
+  exact le_csSup (State.SmoothConditionalMinEntropyCandidate_bddAbove (a := a) ρ ε) hcand
+
 end State
 
 namespace SubnormalizedState
@@ -8548,6 +10176,20 @@ theorem SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
   exact ρ'.conditionalMinEntropy_le_of_trace_lower_bound
     (a := a) (b := b) hδ hδρ'
 
+/-- A subnormalized smooth min-entropy candidate gives a lower bound on the
+smooth min-entropy supremum when the usual positive-trace radius guard supplies
+boundedness of the candidate set. -/
+theorem le_smoothConditionalMinEntropy_of_candidate_of_lt_sqrt_trace
+    [Nonempty a] [Nonempty b] {ρ : SubnormalizedState (Prod a b)} {ε h : ℝ}
+    (hε : ε < Real.sqrt ρ.matrix.trace.re)
+    (hcand : SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := a) ρ ε h) :
+    h ≤ ρ.smoothConditionalMinEntropy ε := by
+  rw [SubnormalizedState.smoothConditionalMinEntropy_eq_sSup_candidates]
+  exact le_csSup
+    (SubnormalizedState.SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+      (a := a) ρ hε)
+    hcand
+
 /-- Smooth subnormalized max-entropy candidates are bounded below in any ball
 whose radius is below `sqrt (Tr ρ)`. -/
 theorem SmoothConditionalMaxEntropyCandidate_bddBelow_of_lt_sqrt_trace
@@ -8568,6 +10210,187 @@ theorem SmoothConditionalMaxEntropyCandidate_bddBelow_of_lt_sqrt_trace
     exact ρ.purifiedBall_trace_lower_bound ρ' hε hball
   exact ρ'.conditionalMaxEntropy_ge_of_trace_lower_bound
     (a := a) (b := b) hδ hδρ'
+
+/-- A pointwise lift of smooth min-entropy candidates controls the corresponding
+smooth min-entropy suprema. This isolates the order-theoretic endpoint step from
+the concrete witness-lifting construction. -/
+theorem smoothConditionalMinEntropy_le_of_candidate_lift
+    {source : Type w} [Fintype source] [DecidableEq source]
+    (ρpost : SubnormalizedState (Prod a b))
+    (ρsource : SubnormalizedState (Prod source b)) {ε : ℝ}
+    (hpost_nonempty :
+      ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h}).Nonempty)
+    (hsource_bdd :
+      BddAbove {h : ℝ |
+        SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h})
+    (hlift : ∀ h,
+      SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h →
+        ∃ h',
+          SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h' ∧ h ≤ h') :
+    ρpost.smoothConditionalMinEntropy ε ≤ ρsource.smoothConditionalMinEntropy ε := by
+  rw [smoothConditionalMinEntropy_eq_sSup_candidates,
+    smoothConditionalMinEntropy_eq_sSup_candidates]
+  refine csSup_le hpost_nonempty ?_
+  intro h hh
+  rcases hlift h hh with ⟨h', hh', hle⟩
+  exact hle.trans (le_csSup hsource_bdd hh')
+
+/-- A pointwise lift of smooth min-entropy candidates controls smooth
+min-entropy suprema even when the conditioning registers differ. This is the
+same order-theoretic endpoint as
+`smoothConditionalMinEntropy_le_of_candidate_lift`, with the source side type
+kept independent. -/
+theorem smoothConditionalMinEntropy_le_of_candidate_lift_diff_side
+    {source : Type w} {c : Type x} [Fintype source] [DecidableEq source]
+    [Fintype c] [DecidableEq c]
+    (ρpost : SubnormalizedState (Prod a b))
+    (ρsource : SubnormalizedState (Prod source c)) {ε : ℝ}
+    (hpost_nonempty :
+      ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h}).Nonempty)
+    (hsource_bdd :
+      BddAbove {h : ℝ |
+        SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h})
+    (hlift : ∀ h,
+      SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h →
+        ∃ h',
+          SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h' ∧ h ≤ h') :
+    ρpost.smoothConditionalMinEntropy ε ≤ ρsource.smoothConditionalMinEntropy ε := by
+  rw [smoothConditionalMinEntropy_eq_sSup_candidates,
+    smoothConditionalMinEntropy_eq_sSup_candidates]
+  refine csSup_le hpost_nonempty ?_
+  intro h hh
+  rcases hlift h hh with ⟨h', hh', hle⟩
+  exact hle.trans (le_csSup hsource_bdd hh')
+
+/-- A convenient small-radius form of
+`smoothConditionalMinEntropy_le_of_candidate_lift`, discharging the usual
+nonempty and boundedness side conditions from the existing smooth-entropy API. -/
+theorem smoothConditionalMinEntropy_le_of_candidate_lift_of_lt_sqrt_trace
+    {source : Type w} [Fintype source] [DecidableEq source]
+    [Nonempty source] [Nonempty b]
+    (ρpost : SubnormalizedState (Prod a b))
+    (ρsource : SubnormalizedState (Prod source b)) {ε : ℝ}
+    (hε0 : 0 ≤ ε) (hεsource : ε < Real.sqrt ρsource.matrix.trace.re)
+    (hlift : ∀ h,
+      SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h →
+        ∃ h',
+          SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h' ∧ h ≤ h') :
+    ρpost.smoothConditionalMinEntropy ε ≤ ρsource.smoothConditionalMinEntropy ε :=
+  smoothConditionalMinEntropy_le_of_candidate_lift ρpost ρsource
+    (SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg (a := a) ρpost hε0)
+    (SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+      (a := source) ρsource hεsource)
+    hlift
+
+/-- Small-radius form of
+`smoothConditionalMinEntropy_le_of_candidate_lift_diff_side`. -/
+theorem smoothConditionalMinEntropy_le_of_candidate_lift_diff_side_of_lt_sqrt_trace
+    {source : Type w} {c : Type x} [Fintype source] [DecidableEq source]
+    [Fintype c] [DecidableEq c] [Nonempty source] [Nonempty c]
+    (ρpost : SubnormalizedState (Prod a b))
+    (ρsource : SubnormalizedState (Prod source c)) {ε : ℝ}
+    (hε0 : 0 ≤ ε) (hεsource : ε < Real.sqrt ρsource.matrix.trace.re)
+    (hlift : ∀ h,
+      SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h →
+        ∃ h',
+          SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h' ∧ h ≤ h') :
+    ρpost.smoothConditionalMinEntropy ε ≤ ρsource.smoothConditionalMinEntropy ε :=
+  smoothConditionalMinEntropy_le_of_candidate_lift_diff_side ρpost ρsource
+    (SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg (a := a) ρpost hε0)
+    (SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+      (a := source) ρsource hεsource)
+    hlift
+
+/-- A witness-level lift of smooth min-entropy candidates controls the
+corresponding smooth min-entropy suprema. The hypothesis is phrased directly in
+terms of nearby states and ordinary conditional min-entropy values. -/
+theorem smoothConditionalMinEntropy_le_of_witness_lift
+    {source : Type w} [Fintype source] [DecidableEq source]
+    (ρpost : SubnormalizedState (Prod a b))
+    (ρsource : SubnormalizedState (Prod source b)) {ε : ℝ}
+    (hpost_nonempty :
+      ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h}).Nonempty)
+    (hsource_bdd :
+      BddAbove {h : ℝ |
+        SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h})
+    (hlift : ∀ ρpost',
+      ρpost.purifiedBall ε ρpost' →
+        ∃ ρsource',
+          ρsource.purifiedBall ε ρsource' ∧
+          ρpost'.conditionalMinEntropy ≤ ρsource'.conditionalMinEntropy) :
+    ρpost.smoothConditionalMinEntropy ε ≤ ρsource.smoothConditionalMinEntropy ε := by
+  refine smoothConditionalMinEntropy_le_of_candidate_lift ρpost ρsource
+    hpost_nonempty hsource_bdd ?_
+  intro h hcand
+  rcases hcand with ⟨ρpost', hball, rfl⟩
+  rcases hlift ρpost' hball with ⟨ρsource', hsourceball, hle⟩
+  exact ⟨ρsource'.conditionalMinEntropy, ⟨ρsource', hsourceball, rfl⟩, hle⟩
+
+/-- Witness-level lift for smooth min-entropy suprema with different
+conditioning-register types. -/
+theorem smoothConditionalMinEntropy_le_of_witness_lift_diff_side
+    {source : Type w} {c : Type x} [Fintype source] [DecidableEq source]
+    [Fintype c] [DecidableEq c]
+    (ρpost : SubnormalizedState (Prod a b))
+    (ρsource : SubnormalizedState (Prod source c)) {ε : ℝ}
+    (hpost_nonempty :
+      ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h}).Nonempty)
+    (hsource_bdd :
+      BddAbove {h : ℝ |
+        SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h})
+    (hlift : ∀ ρpost',
+      ρpost.purifiedBall ε ρpost' →
+        ∃ ρsource',
+          ρsource.purifiedBall ε ρsource' ∧
+          ρpost'.conditionalMinEntropy ≤ ρsource'.conditionalMinEntropy) :
+    ρpost.smoothConditionalMinEntropy ε ≤ ρsource.smoothConditionalMinEntropy ε := by
+  refine smoothConditionalMinEntropy_le_of_candidate_lift_diff_side ρpost ρsource
+    hpost_nonempty hsource_bdd ?_
+  intro h hcand
+  rcases hcand with ⟨ρpost', hball, rfl⟩
+  rcases hlift ρpost' hball with ⟨ρsource', hsourceball, hle⟩
+  exact ⟨ρsource'.conditionalMinEntropy, ⟨ρsource', hsourceball, rfl⟩, hle⟩
+
+/-- A convenient small-radius form of
+`smoothConditionalMinEntropy_le_of_witness_lift`, discharging the usual
+nonempty and boundedness side conditions from the existing smooth-entropy API. -/
+theorem smoothConditionalMinEntropy_le_of_witness_lift_of_lt_sqrt_trace
+    {source : Type w} [Fintype source] [DecidableEq source]
+    [Nonempty source] [Nonempty b]
+    (ρpost : SubnormalizedState (Prod a b))
+    (ρsource : SubnormalizedState (Prod source b)) {ε : ℝ}
+    (hε0 : 0 ≤ ε) (hεsource : ε < Real.sqrt ρsource.matrix.trace.re)
+    (hlift : ∀ ρpost',
+      ρpost.purifiedBall ε ρpost' →
+        ∃ ρsource',
+          ρsource.purifiedBall ε ρsource' ∧
+          ρpost'.conditionalMinEntropy ≤ ρsource'.conditionalMinEntropy) :
+    ρpost.smoothConditionalMinEntropy ε ≤ ρsource.smoothConditionalMinEntropy ε :=
+  smoothConditionalMinEntropy_le_of_witness_lift ρpost ρsource
+    (SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg (a := a) ρpost hε0)
+    (SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+      (a := source) ρsource hεsource)
+    hlift
+
+/-- Small-radius form of
+`smoothConditionalMinEntropy_le_of_witness_lift_diff_side`. -/
+theorem smoothConditionalMinEntropy_le_of_witness_lift_diff_side_of_lt_sqrt_trace
+    {source : Type w} {c : Type x} [Fintype source] [DecidableEq source]
+    [Fintype c] [DecidableEq c] [Nonempty source] [Nonempty c]
+    (ρpost : SubnormalizedState (Prod a b))
+    (ρsource : SubnormalizedState (Prod source c)) {ε : ℝ}
+    (hε0 : 0 ≤ ε) (hεsource : ε < Real.sqrt ρsource.matrix.trace.re)
+    (hlift : ∀ ρpost',
+      ρpost.purifiedBall ε ρpost' →
+        ∃ ρsource',
+          ρsource.purifiedBall ε ρsource' ∧
+          ρpost'.conditionalMinEntropy ≤ ρsource'.conditionalMinEntropy) :
+    ρpost.smoothConditionalMinEntropy ε ≤ ρsource.smoothConditionalMinEntropy ε :=
+  smoothConditionalMinEntropy_le_of_witness_lift_diff_side ρpost ρsource
+    (SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg (a := a) ρpost hε0)
+    (SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+      (a := source) ρsource hεsource)
+    hlift
 
 /-- Subnormalized smooth conditional min-entropy is invariant under arbitrary
 conditioning-register reference isometries, with the same smoothing radius and
@@ -8615,6 +10438,54 @@ theorem smoothConditionalMinEntropy_conditioningIsometryApply
     intro h hh
     exact le_csSup hbddPlus
       (SmoothConditionalMinEntropyCandidate.conditioningIsometryApply
+        (a := a) ρ V hε hh)
+
+/-- Subnormalized smooth conditional min-entropy is invariant under arbitrary
+source-register reference isometries, with the same smoothing radius and no
+regularization. -/
+theorem smoothConditionalMinEntropy_sourceIsometryApply
+    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
+    [Nonempty a] [Nonempty b] [Nonempty aPlus]
+    (ρ : SubnormalizedState (Prod a b)) (V : ReferenceIsometry a aPlus) {ε : ℝ}
+    (hε0 : 0 ≤ ε) (hε : ε < Real.sqrt ρ.matrix.trace.re) :
+    (ρ.sourceIsometryApply V).smoothConditionalMinEntropy ε =
+      ρ.smoothConditionalMinEntropy ε := by
+  change sSup {h : ℝ |
+      SmoothConditionalMinEntropyCandidate (a := aPlus) (ρ.sourceIsometryApply V) ε h} =
+    sSup {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h}
+  have hεPlus :
+      ε < Real.sqrt (ρ.sourceIsometryApply V).matrix.trace.re := by
+    rwa [sourceIsometryApply_trace_re]
+  have hbddSource :
+      BddAbove {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h} :=
+    SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+      (a := a) ρ hε
+  have hbddPlus :
+      BddAbove {h : ℝ |
+        SmoothConditionalMinEntropyCandidate (a := aPlus)
+          (ρ.sourceIsometryApply V) ε h} :=
+    SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+      (a := aPlus) (ρ.sourceIsometryApply V) hεPlus
+  have hnonSource :
+      ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h}).Nonempty :=
+    SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg
+      (a := a) ρ hε0
+  have hnonPlus :
+      ({h : ℝ |
+        SmoothConditionalMinEntropyCandidate (a := aPlus)
+          (ρ.sourceIsometryApply V) ε h}).Nonempty :=
+    SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg
+      (a := aPlus) (ρ.sourceIsometryApply V) hε0
+  apply le_antisymm
+  · refine csSup_le hnonPlus ?_
+    intro h hh
+    rcases SmoothConditionalMinEntropyCandidate.sourceIsometryApply_compress
+        (a := a) ρ V hε hh with ⟨h', hh', hle⟩
+    exact le_trans hle (le_csSup hbddSource hh')
+  · refine csSup_le hnonSource ?_
+    intro h hh
+    exact le_csSup hbddPlus
+      (SmoothConditionalMinEntropyCandidate.sourceIsometryApply
         (a := a) ρ V hε hh)
 
 /-- Source-faithful subnormalized smooth min/max duality for a scaled pure

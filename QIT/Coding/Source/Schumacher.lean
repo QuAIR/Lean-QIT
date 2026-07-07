@@ -8,16 +8,25 @@ module
 
 public import QIT.Asymptotic.Typicality
 public import QIT.Core.Channel
+public import QIT.States.Purification.Canonical
 public import QIT.States.TraceNorm.Distance
 
 /-!
-# Schumacher direct compression scaffold
+# Schumacher compression code interface
 
-This module records the direct-coding interface for Schumacher compression.
-The theorem is intentionally conditional on a typical-compression witness:
-constructing the spectral typical projector from AEP is a separate upstream
-proof obligation.  The formulation follows the direct-coding part of
-[Wilde2011Qst, qit-notes.tex:31275-31295].
+This module records the finite-dimensional compression-code interface for
+Schumacher quantum data compression.  The operational fidelity criterion is
+the *purification joint trace distance* `jointError`, matching the success
+criterion of the Wilde converse route
+[Wilde2011Qst, qit-notes.tex:31610-31690].  The direct achievability,
+converse, and limit-equality theorems live in sibling modules
+`SchumacherDirect`, `SchumacherConverse`, and `SchumacherLimit`.
+
+The earlier A-only marginal fidelity is intentionally not used as the
+operational notion: a dephasing channel in the `ρ^{⊗ n}` eigenbasis attains
+zero A-marginal error at rate `0 < S(ρ)`, so the A-only criterion does not
+support any converse.  The joint (purification) criterion is the one under
+which the optimal compression rate equals the von Neumann entropy.
 -/
 
 @[expose] public section
@@ -51,53 +60,67 @@ namespace SchumacherCompressionCode
 
 variable {ρ : State a} {n : ℕ} {W : Type u} [Fintype W] [DecidableEq W]
 
-/-- Decoded output state of a Schumacher compression code. -/
+/-- Decoded system-side output state of a Schumacher compression code. -/
 def outputState (C : SchumacherCompressionCode ρ n W) : State (TensorPower a n) :=
   C.decoder.applyState (C.encoder.applyState (ρ.tensorPower n))
 
-/-- Normalized trace-distance error against the original `n`-fold source. -/
-def error (C : SchumacherCompressionCode ρ n W) : ℝ :=
-  (C.outputState).normalizedTraceDistance (ρ.tensorPower n)
+/-- Joint (purification) trace-distance error of a Schumacher code.
+
+This is the operational fidelity criterion for quantum data compression.
+Purify the source `ρ` canonically to `φ_{RA}` (system on `marginalB`,
+reference `R ≅ A` on `marginalA`), take the `n`-fold bipartite tensor power
+`φ_{RA}^{⊗ n}` on `R^{n} A^{n}`, apply the compression map `D ∘ E` to the
+system side and the identity channel to the reference, and measure the
+normalized trace distance of the resulting joint state `ω_{R^{n}Â^{n}}` from
+`φ_{RA}^{⊗ n}`. The tensor-power purification (rather than a single canonical
+purification of `ρ^{⊗ n}`) is used so that the quantum mutual information
+`I(A^{n};R^{n})` decomposes additively, as required by the Wilde converse
+[Wilde2011Qst, qit-notes.tex:31610-31690]. -/
+def jointError (C : SchumacherCompressionCode ρ n W) : ℝ :=
+  let φ : State (Prod (TensorPower a n) (TensorPower a n)) :=
+    (State.canonicalPurification ρ).state.tensorPowerBipartite n
+  let N : Channel (TensorPower a n) (TensorPower a n) :=
+    C.decoder.comp C.encoder
+  let ω : State (Prod (TensorPower a n) (TensorPower a n)) :=
+    ((Channel.idChannel (TensorPower a n)).prod N).applyState φ
+  ω.normalizedTraceDistance φ
 
 /-- Register rate of the compressed system. -/
 def rate (_C : SchumacherCompressionCode ρ n W) : ℝ :=
   schumacherRegisterRate W n
 
-theorem error_nonneg (C : SchumacherCompressionCode ρ n W) : 0 ≤ C.error :=
-  State.normalizedTraceDistance_nonneg _ _
-
 end SchumacherCompressionCode
 
 /-- Source-shaped witness for one block of the direct Schumacher coding proof.
 
-The witness packages the already-constructed typical-subspace compression
-code together with the two estimates used by the direct theorem: rate bounded
-by `S(ρ)+δ` and normalized trace-distance error bounded by `ε`. -/
+The witness packages an explicit compression code together with the two
+estimates used by the direct theorem: register rate bounded by `S(ρ)+δ` and
+joint (purification) trace-distance error bounded by `ε`. -/
 structure TypicalCompressionWitness (ρ : State a) (n : ℕ) (δ ε : ℝ)
     (W : Type u) [Fintype W] [DecidableEq W] where
   code : SchumacherCompressionCode ρ n W
   rate_le : code.rate ≤ ρ.schumacherRate + δ
-  error_le : code.error ≤ ε
+  jointError_le : code.jointError ≤ ε
 
 namespace State
 
-/-- Direct achievability of a Schumacher compression rate.
+/-- Direct achievability of a Schumacher compression rate (joint fidelity).
 
-For every rate slack `δ > 0` and error tolerance `ε > 0`, all sufficiently
-large block lengths have a finite compression register and a code of rate at
-most `R + δ` and error at most `ε`. -/
+For every rate slack `δ > 0` and joint-error tolerance `ε > 0`, all
+sufficiently large block lengths have a finite compression register and a code
+of rate at most `R + δ` and joint error at most `ε`. -/
 def IsAchievableSchumacherRate (ρ : State a) (R : ℝ) : Prop :=
   ∀ δ : ℝ, 0 < δ → ∀ ε : ℝ, 0 < ε →
     ∃ N : ℕ, ∀ n : ℕ, n ≥ N →
       ∃ (W : Type u), ∃ (_ : Fintype W), ∃ (_ : DecidableEq W),
-        ∃ C : SchumacherCompressionCode ρ n W, C.rate ≤ R + δ ∧ C.error ≤ ε
+        ∃ C : SchumacherCompressionCode ρ n W, C.rate ≤ R + δ ∧ C.jointError ≤ ε
 
-/-- A family of typical-compression witnesses proves the direct achievability
-of the Schumacher rate `S(ρ)`.
+/-- A family of joint-fidelity typical-compression witnesses proves the direct
+achievability of the Schumacher rate `S(ρ)`.
 
-This is the direct-coding half of Schumacher compression: AEP/spectral
-typicality supplies the witness family; this theorem records the reusable
-Lean interface from that family to achievability. -/
+This is the reusable Lean interface from a witness family to achievability; it
+is an internal bridge, not the public direct-achievability node (which
+discharges the witness existence unconditionally in `SchumacherDirect`). -/
 theorem schumacher_direct_achievable_of_typicalCompressionWitness
     (ρ : State a)
     (h :
@@ -113,22 +136,8 @@ theorem schumacher_direct_achievable_of_typicalCompressionWitness
   obtain ⟨W, hWfin, hWdec, ⟨witness⟩⟩ := hN n hn
   letI : Fintype W := hWfin
   letI : DecidableEq W := hWdec
-  exact ⟨W, inferInstance, inferInstance, witness.code, witness.rate_le, witness.error_le⟩
-
-/-- Compatibility bridge to the earlier lightweight statement scaffold.
-
-The existing statement only records the rate-side asymptotic shape, so this
-lemma should not be used as evidence for the operational theorem.  The public
-evidence theorem is `schumacher_direct_achievable_of_typicalCompressionWitness`.
--/
-theorem schumacherTheorem_statement_of_direct_achievable
-    (ρ : State a) (h : ρ.IsAchievableSchumacherRate ρ.schumacherRate) :
-    ρ.schumacherTheorem_statement := by
-  intro ε hε δ hδ
-  obtain ⟨N, _hN⟩ := h δ hδ ε hε
-  refine ⟨N, ?_⟩
-  intro n _hn
-  exact le_add_of_nonneg_right (le_of_lt hδ)
+  exact ⟨W, inferInstance, inferInstance, witness.code, witness.rate_le,
+    witness.jointError_le⟩
 
 end State
 

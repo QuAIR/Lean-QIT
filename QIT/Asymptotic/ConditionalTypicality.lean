@@ -129,7 +129,7 @@ theorem eigenvalueMultiset_productState :
         exact Complex.ofReal_injective hSum'
       show eigenvalueMultiset hUnit = ({1} : Multiset ℝ)
       rw [eigenvalueMultiset]
-      simp [TensorPower, hEig]
+      simp [hEig]
   | n + 1, states => by
       rw [productState_succ, productSpectrumMultiset_succ]
       have hKron : eigenvalueMultiset
@@ -213,7 +213,7 @@ theorem stateLogDeviationSecondMoment_nonneg (ρ : State a) :
 one. -/
 theorem productSpectrumMultiset_sum :
     {n : ℕ} → (states : Fin n → State a) → (productSpectrumMultiset states).sum = 1
-  | 0, states => by simp [productSpectrumMultiset_zero states]
+  | 0, states => by simp
   | n + 1, states => by
       rw [productSpectrumMultiset_succ, multiset_sum_bind]
       have ih : (productSpectrumMultiset (fun i : Fin n => states i.succ)).sum = 1 :=
@@ -745,7 +745,7 @@ sum to one. No entropy-additivity interface is required (the per-symbol
 entropy sum `Σ_i S(ρ_i)` is already the center of the predicate).
 Source: [Wilde2011Qst, qit-notes.tex:28715-28734]. -/
 theorem conditionallyTypicalSubspaceProjector_dim_le {n : ℕ}
-    (states : Fin n → State a) (δ : ℝ) (hδ : 0 < δ) :
+    (states : Fin n → State a) (δ : ℝ) (_hδ : 0 < δ) :
     conditionallyTypicalSubspaceDimension states δ
       ≤ Real.rpow 2 (∑ i, (states i).vonNeumann + (n : ℝ) * δ) := by
   classical
@@ -1729,7 +1729,7 @@ theorem sourceTypicalSubspaceProjector_le_one
     Unitary.coe_mul_star_self U
   have hU1 : (U : CMatrix (TensorPower a n)) * 1 *
         star (U : CMatrix (TensorPower a n)) = 1 := by
-    simpa [Matrix.mul_assoc] using hUU
+    simp
   rw [Matrix.le_iff]
   have hsub :
       (1 : CMatrix (TensorPower a n)) -
@@ -1969,7 +1969,7 @@ theorem unitaryTensorPowerMatrix_conj_tensorPower_eq_marginalProductDiagonalStat
         · subst ys
           rw [marginalProductDiagonalState_matrix (stateEigenvalueDistribution ρ) n,
             marginalProductDiagonalState_matrix (stateEigenvalueDistribution ρ) (n + 1)]
-          simp [Matrix.diagonal_apply, marginalProductMass, Fin.prod_univ_succ]
+          simp [marginalProductMass, Fin.prod_univ_succ]
         · have hpair : (x0, xs) ≠ (x0, ys) := by
             intro h
             exact hs (Prod.mk.inj h).2

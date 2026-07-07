@@ -1243,6 +1243,60 @@ theorem barHypothesisTestingE_dominates_barPetzPSD
   exact hz_le_input.trans (hinput.trans
     (N.inputBarHypothesisTestingMutualInformationE_le_channel epsilon ψ))
 
+/-- Source-shaped strict-rate operational form of the Khatri--Wilde
+one-shot Petz--Renyi lower bound in the PSD barred domain.
+
+Any real rate strictly below the Petz--Renyi right-hand side in
+`thm-eacc_one_shot_lower_bound` is achieved by an explicit one-shot
+entanglement-assisted achievability witness.  The proof follows the source
+route: compare the barred Petz quantity to barred hypothesis-testing mutual
+information, then invoke the position-based HT construction. -/
+theorem exists_oneShotAchievabilityWitness_petzPSDLowerBound_rate_strict
+    (N : Channel a b) [Nonempty a] {ε η α rate : ℝ}
+    (hε_pos : 0 < ε) (hη_pos : 0 < η) (hη_lt : η < ε)
+    (hα_pos : 0 < α) (hα_lt_one : α < 1)
+    (hrate :
+      (rate : EReal) <
+        ((N.barPetzRenyiMutualInformationPSD α hα_pos (ne_of_lt hα_lt_one) -
+          α / (1 - α) * log2 (1 / (ε - η)) -
+          log2 (4 * ε / η ^ 2) : ℝ) : EReal)) :
+    ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
+      ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
+        ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
+          Nonempty (EntanglementAssistedOneShotAchievabilityWitness N ε rate M EA EB) := by
+  haveI : Nonempty (PureVector (Prod a a)) :=
+    ⟨PureVector.basisPureVector⟩
+  have hεη : 0 < ε - η := sub_pos.mpr hη_lt
+  have hcmp :=
+    N.barHypothesisTestingE_dominates_barPetzPSD
+      hεη hα_pos hα_lt_one
+  have hα_ne_one : α ≠ 1 := ne_of_lt hα_lt_one
+  have hden :
+      α / (α - 1) * log2 (1 / (ε - η)) =
+        - (α / (1 - α) * log2 (1 / (ε - η))) := by
+    have hsub : α - 1 = -(1 - α) := by ring
+    rw [hsub]
+    field_simp [sub_ne_zero.mpr hα_ne_one.symm]
+  have hreal_rate :
+      rate + log2 (4 * ε / η ^ 2) <
+        N.barPetzRenyiMutualInformationPSD α hα_pos (ne_of_lt hα_lt_one) +
+          α / (α - 1) * log2 (1 / (ε - η)) := by
+    have hrate_real := EReal.coe_lt_coe_iff.mp hrate
+    rw [hden]
+    linarith
+  have hrate_HT :
+      ((rate + log2 (4 * ε / η ^ 2) : ℝ) : EReal) <
+        N.barHypothesisTestingMutualInformationE (ε - η) := by
+    have hrate_E :
+        ((rate + log2 (4 * ε / η ^ 2) : ℝ) : EReal) <
+          (N.barPetzRenyiMutualInformationPSD α hα_pos (ne_of_lt hα_lt_one) : EReal) +
+            ((α / (α - 1) * log2 (1 / (ε - η)) : ℝ) : EReal) := by
+      simpa [EReal.coe_add] using EReal.coe_lt_coe_iff.mpr hreal_rate
+    exact lt_of_lt_of_le hrate_E hcmp
+  exact
+    N.exists_oneShotAchievabilityWitness_htLowerBound_rate_strict_E
+      hε_pos hη_pos hη_lt hrate_HT
+
 /-- Source-shaped PSD-domain Khatri--Wilde one-shot Petz--Renyi lower bound
 with no positive-definite input assumption. -/
 theorem oneShotEntanglementAssistedClassicalCapacityE_petzPSDLowerBound
@@ -1286,6 +1340,63 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_lowerBounds
       hε_pos hη_pos hη_lt,
     N.oneShotEntanglementAssistedClassicalCapacityE_petzPSDLowerBound
       hε_pos hη_pos hη_lt hα_pos hα_lt_one⟩
+
+/-- Operational and endpoint forms of the Khatri--Wilde one-shot lower
+bounds for entanglement-assisted classical communication.
+
+The first and third components are the finite-message source-shaped
+operational statements: every rate strictly below the HT or Petz right-hand
+side is realized by an explicit one-shot achievability witness.  The second
+and fourth components are the endpoint extended-real capacity lower bounds
+obtained by supremum closure. -/
+theorem oneShotEntanglementAssistedClassicalCapacityE_lowerBounds_operational
+    (N : Channel a b) [Nonempty a] {ε η α : ℝ}
+    (hε_pos : 0 < ε) (hη_pos : 0 < η) (hη_lt : η < ε)
+    (hα_pos : 0 < α) (hα_lt_one : α < 1) :
+    (∀ rate : ℝ,
+      (rate : EReal) <
+        N.barHypothesisTestingMutualInformationE (ε - η) -
+          (log2 (4 * ε / η ^ 2) : EReal) →
+        ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
+          ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
+            ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
+              Nonempty (EntanglementAssistedOneShotAchievabilityWitness N ε rate M EA EB)) ∧
+    (N.barHypothesisTestingMutualInformationE (ε - η) -
+        (log2 (4 * ε / η ^ 2) : EReal) ≤
+      N.oneShotEntanglementAssistedClassicalCapacityE ε) ∧
+    (∀ rate : ℝ,
+      (rate : EReal) <
+        ((N.barPetzRenyiMutualInformationPSD α hα_pos (ne_of_lt hα_lt_one) -
+          α / (1 - α) * log2 (1 / (ε - η)) -
+          log2 (4 * ε / η ^ 2) : ℝ) : EReal) →
+        ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
+          ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
+            ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
+              Nonempty (EntanglementAssistedOneShotAchievabilityWitness N ε rate M EA EB)) ∧
+    (((N.barPetzRenyiMutualInformationPSD α hα_pos (ne_of_lt hα_lt_one) -
+        α / (1 - α) * log2 (1 / (ε - η)) -
+        log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
+      N.oneShotEntanglementAssistedClassicalCapacityE ε) := by
+  have hbounds :=
+    N.oneShotEntanglementAssistedClassicalCapacityE_lowerBounds
+      hε_pos hη_pos hη_lt hα_pos hα_lt_one
+  refine ⟨?_, hbounds.1, ?_, hbounds.2⟩
+  · intro rate hrate
+    have hrate_HT :
+        ((rate + log2 (4 * ε / η ^ 2) : ℝ) : EReal) <
+          N.barHypothesisTestingMutualInformationE (ε - η) := by
+      have hlt :
+          (rate : EReal) + (log2 (4 * ε / η ^ 2) : EReal) <
+            N.barHypothesisTestingMutualInformationE (ε - η) :=
+        EReal.add_lt_of_lt_sub hrate
+      simpa [EReal.coe_add] using hlt
+    exact
+      N.exists_oneShotAchievabilityWitness_htLowerBound_rate_strict_E
+        hε_pos hη_pos hη_lt hrate_HT
+  · intro rate hrate
+    exact
+      N.exists_oneShotAchievabilityWitness_petzPSDLowerBound_rate_strict
+        hε_pos hη_pos hη_lt hα_pos hα_lt_one hrate
 
 end Channel
 

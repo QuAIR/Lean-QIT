@@ -70,6 +70,33 @@ theorem collisionProbability_le_of_twoUniversal (hH : H.TwoUniversal)
     H.collisionProbability z z' ≤ (Fintype.card S : ℝ≥0)⁻¹ :=
   hH z z' hzz
 
+omit [DecidableEq F] [Fintype Z] [DecidableEq Z] in
+/--
+Collision probability as Tomamichel's seed average of the equality indicator
+`δ_{f(z),f(z')}`.
+
+[Tomamichel2015FiniteResources, apps.tex:312-315]
+-/
+theorem collisionProbability_eq_sum_hash_eq (z z' : Z) :
+    H.collisionProbability z z' =
+      ∑ f : F, (if H.hash f z = H.hash f z' then H.prob f else 0 : ℝ≥0) := by
+  classical
+  unfold collisionProbability collisionWeight
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr rfl fun f _ => ?_
+  by_cases h : H.hash f z = H.hash f z'
+  · rw [Finset.sum_eq_single_of_mem (H.hash f z) (Finset.mem_univ _)]
+    · simp [h]
+    · intro s _ hs
+      have hne : H.hash f z ≠ s := fun hz => hs hz.symm
+      simp [hne]
+  · rw [Finset.sum_eq_single_of_mem (H.hash f z) (Finset.mem_univ _)]
+    · have hsym : H.hash f z' ≠ H.hash f z := fun h' => h h'.symm
+      simp [h, hsym]
+    · intro s _ hs
+      have hne : H.hash f z ≠ s := fun hz => hs hz.symm
+      simp [hne]
+
 /--
 Source-shaped collision uniformity for weighted hash families.
 
@@ -112,6 +139,132 @@ theorem twoUniversal_pairCollisionAverage_le (hH : H.TwoUniversal)
     exact mul_le_mul_right (collisionProbability_le_of_twoUniversal H hH hzz) (K z z')
 
 end HashFamily
+
+section FullFunctionHashFamily
+
+variable {Z : Type uZ} {S : Type uS}
+variable [Fintype Z] [DecidableEq Z]
+variable [Fintype S] [DecidableEq S] [Nonempty S]
+
+private def fullFunctionCollisionEquiv (z z' : Z) (hzz : z ≠ z') :
+    {f : Z -> S // f z = f z'} ≃ ({x : Z // x ≠ z'} -> S) where
+  toFun f := fun x => f.1 x.1
+  invFun g :=
+    ⟨fun x => if hx : x = z' then g ⟨z, hzz⟩ else g ⟨x, hx⟩, by
+      simp [hzz]⟩
+  left_inv f := by
+    ext x
+    by_cases hx : x = z'
+    · subst x
+      simp [f.2]
+    · simp [hx]
+  right_inv g := by
+    ext x
+    simp [x.2]
+
+omit [Nonempty S] in
+private theorem fullFunctionCollisionSubtype_card (z z' : Z) (hzz : z ≠ z') :
+    Fintype.card {f : Z -> S // f z = f z'} =
+      Fintype.card S ^ (Fintype.card Z - 1) := by
+  classical
+  calc
+    Fintype.card {f : Z -> S // f z = f z'} =
+        Fintype.card ({x : Z // x ≠ z'} -> S) := by
+          exact Fintype.card_congr (fullFunctionCollisionEquiv (S := S) z z' hzz)
+    _ = Fintype.card S ^ Fintype.card {x : Z // x ≠ z'} := by
+          rw [Fintype.card_fun]
+    _ = Fintype.card S ^ (Fintype.card Z - 1) := by
+          congr 1
+          simp
+
+omit [DecidableEq S] in
+private theorem fullFunctionCollisionRatio (z : Z) :
+    ((Fintype.card S ^ (Fintype.card Z - 1) : Nat) : ℝ≥0) *
+        ((Fintype.card (Z -> S) : Nat) : ℝ≥0)⁻¹ =
+      (Fintype.card S : ℝ≥0)⁻¹ := by
+  classical
+  have hcard_fun : Fintype.card (Z -> S) = Fintype.card S ^ Fintype.card Z := by
+    rw [Fintype.card_fun]
+  have ha : (Fintype.card S : ℝ≥0) ≠ 0 := by
+    exact_mod_cast (Fintype.card_ne_zero : Fintype.card S ≠ 0)
+  have hn : 0 < Fintype.card Z := by
+    exact Fintype.card_pos_iff.mpr ⟨z⟩
+  have hpow :
+      (Fintype.card S : ℝ≥0) ^ Fintype.card Z =
+        (Fintype.card S : ℝ≥0) ^ (Fintype.card Z - 1) *
+          (Fintype.card S : ℝ≥0) := by
+    rw [← pow_succ, Nat.sub_add_cancel (Nat.succ_le_of_lt hn)]
+  rw [hcard_fun]
+  norm_num [Nat.cast_pow]
+  calc
+    (Fintype.card S : ℝ≥0) ^ (Fintype.card Z - 1) *
+        ((Fintype.card S : ℝ≥0) ^ Fintype.card Z)⁻¹ =
+        (Fintype.card S : ℝ≥0) ^ (Fintype.card Z - 1) *
+          (((Fintype.card S : ℝ≥0) ^ (Fintype.card Z - 1) *
+            (Fintype.card S : ℝ≥0))⁻¹) := by rw [hpow]
+    _ = (Fintype.card S : ℝ≥0) ^ (Fintype.card Z - 1) *
+          ((Fintype.card S : ℝ≥0)⁻¹ *
+            ((Fintype.card S : ℝ≥0) ^ (Fintype.card Z - 1))⁻¹) := by
+          rw [mul_inv_rev]
+    _ = ((Fintype.card S : ℝ≥0) ^ (Fintype.card Z - 1) *
+          ((Fintype.card S : ℝ≥0) ^ (Fintype.card Z - 1))⁻¹) *
+          (Fintype.card S : ℝ≥0)⁻¹ := by
+          ac_rfl
+    _ = (Fintype.card S : ℝ≥0)⁻¹ := by
+          rw [mul_inv_cancel₀ (pow_ne_zero _ ha), one_mul]
+
+omit [Nonempty S] in
+private theorem fullFunctionCollisionIndicator_sum (z z' : Z) :
+    (∑ f : Z -> S,
+      (if f z = f z' then (Fintype.card (Z -> S) : ℝ≥0)⁻¹ else 0 : ℝ≥0)) =
+      (Fintype.card {f : Z -> S // f z = f z'} : ℝ≥0) *
+        (Fintype.card (Z -> S) : ℝ≥0)⁻¹ := by
+  classical
+  rw [← Finset.sum_filter]
+  simp [Finset.sum_const, nsmul_eq_mul, Fintype.card_subtype]
+
+/--
+The uniformly seeded full function family has exact off-diagonal collision
+probability `1 / |S|`.
+
+[Tomamichel2015FiniteResources, apps.tex:312-315]
+-/
+theorem fullFunctionHashFamily_collisionProbability (z z' : Z) (hzz : z ≠ z') :
+    (FullFunctionHashFamily (Z := Z) (S := S)).collisionProbability z z' =
+      (Fintype.card S : ℝ≥0)⁻¹ := by
+  rw [HashFamily.collisionProbability_eq_sum_hash_eq]
+  simp only [fullFunctionHashFamily_hash, fullFunctionHashFamily_prob]
+  rw [fullFunctionCollisionIndicator_sum (S := S) z z']
+  rw [fullFunctionCollisionSubtype_card (S := S) z z' hzz]
+  exact fullFunctionCollisionRatio (S := S) z
+
+/-- The uniformly seeded full function family is collision-uniform. -/
+theorem fullFunctionHashFamily_collisionUniform :
+    (FullFunctionHashFamily (Z := Z) (S := S)).CollisionUniform := by
+  intro z z' hzz
+  exact fullFunctionHashFamily_collisionProbability (S := S) z z' hzz
+
+/-- The uniformly seeded full function family is two-universal. -/
+theorem fullFunctionHashFamily_twoUniversal :
+    (FullFunctionHashFamily (Z := Z) (S := S)).TwoUniversal :=
+  fullFunctionHashFamily_collisionUniform (Z := Z) (S := S) |>.toTwoUniversal
+
+omit [Fintype S] [DecidableEq S] [Nonempty S] in
+/-- `Fin ell` specialization of full-function collision uniformity. -/
+theorem finFullFunctionHashFamily_collisionUniform
+    {Z : Type uZ} [Fintype Z] [DecidableEq Z] {ell : Nat} (hell : 0 < ell) :
+    (FinFullFunctionHashFamily (Z := Z) ell hell).CollisionUniform := by
+  letI : Nonempty (Fin ell) := ⟨⟨0, hell⟩⟩
+  exact fullFunctionHashFamily_collisionUniform (Z := Z) (S := Fin ell)
+
+omit [Fintype S] [DecidableEq S] [Nonempty S] in
+/-- `Fin ell` specialization of full-function two-universality. -/
+theorem finFullFunctionHashFamily_twoUniversal
+    {Z : Type uZ} [Fintype Z] [DecidableEq Z] {ell : Nat} (hell : 0 < ell) :
+    (FinFullFunctionHashFamily (Z := Z) ell hell).TwoUniversal :=
+  (finFullFunctionHashFamily_collisionUniform (Z := Z) hell).toTwoUniversal
+
+end FullFunctionHashFamily
 
 variable [Nonempty F]
 variable (H : HashFamily F Z S)

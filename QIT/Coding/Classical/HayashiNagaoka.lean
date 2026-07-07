@@ -252,7 +252,7 @@ private lemma support_proj_fixes_of_le {M X : CMatrix a}
   have hUstarU : star U * U = 1 := by
     simp [U, Unitary.coe_star_mul_self hM.isHermitian.eigenvectorUnitary]
   have hUUstar : U * star U = 1 := by
-    simp [U, Unitary.coe_mul_star_self hM.isHermitian.eigenvectorUnitary]
+    simp [U]
   set Λ : CMatrix a := Matrix.diagonal (fun i => (hM.isHermitian.eigenvalues i : ℂ)) with hΛ_def
   set P : CMatrix a := Matrix.diagonal (fun i =>
     if 0 < hM.isHermitian.eigenvalues i then (1:ℂ) else 0) with hP_def
@@ -278,7 +278,7 @@ private lemma support_proj_fixes_of_le {M X : CMatrix a}
       rw [Matrix.le_iff] at hXM; exact hXM
     rw [← hconj]; exact hpsd
   have hΛii : ∀ i, Λ i i = (hM.isHermitian.eigenvalues i : ℂ) :=
-    fun i => by simp [Λ, hΛ_def]
+    fun i => by simp [Λ]
   -- `X'` vanishes on row `i` whenever `λ_i = 0`.
   have hX'row_zero : ∀ i, hM.isHermitian.eigenvalues i = 0 → ∀ j, X' i j = 0 := by
     intro i hi j

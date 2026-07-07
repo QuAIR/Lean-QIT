@@ -19,6 +19,7 @@ public import QIT.Nonlocality.YangNavascues.Fourier
 public import QIT.Nonlocality.YangNavascues.LocalIsometry
 public import QIT.Nonlocality.YangNavascues.Coherence
 public import QIT.Nonlocality.YangNavascues.Action
+public import QIT.Nonlocality.YangNavascues.Extraction
 
 /-!
 # Nonlocality interfaces
@@ -29,10 +30,60 @@ self-testing work.
 
 @[expose] public section
 
-universe uX uY uA uB u v w z
+universe uX uY uA uB u v w z uGA uGB
 
 namespace QIT
 namespace Nonlocality
+
+namespace SelfTestingDefinition
+
+variable {X : Type uX} {Y : Type uY} {A : Type uA} {B : Type uB}
+variable [Fintype X] [Fintype Y] [Fintype A] [Fintype B]
+variable [DecidableEq A] [DecidableEq B]
+variable {TA : Type w} {TB : Type z}
+variable [Fintype TA] [DecidableEq TA] [Fintype TB] [DecidableEq TB]
+
+/-- Public nonlocality entrypoint for a full state self-testing theorem. -/
+public theorem main {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
+    (hRealizes : Bell.RealizesTargetState p target)
+    (hAll :
+      ∀ R : Bell.QuantumRealization X Y A B,
+        R.RealizesBehavior p →
+          letI : Fintype R.HA := R.fintypeHA
+          letI : DecidableEq R.HA := R.decidableEqHA
+          letI : Fintype R.HB := R.fintypeHB
+          letI : DecidableEq R.HB := R.decidableEqHB
+          Bell.ExtractsBipartiteState R.rho target) :
+    Bell.SelfTestsState p target :=
+  SelfTesting.Definition.main hRealizes hAll
+
+/--
+Public nonlocality entrypoint for a full state self-testing theorem with
+explicit auxiliary garbage in the local-isometry output.
+-/
+public theorem main_with_aux {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
+    (hRealizes :
+      Bell.RealizesTargetStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target)
+    (hAll :
+      ∀ R : Bell.QuantumRealization X Y A B,
+        R.RealizesBehavior p →
+          ∃ (GA : Type uGA) (GB : Type uGB),
+            ∃ (instGA : Fintype GA) (decGA : DecidableEq GA)
+              (instGB : Fintype GB) (decGB : DecidableEq GB),
+              letI : Fintype GA := instGA
+              letI : DecidableEq GA := decGA
+              letI : Fintype GB := instGB
+              letI : DecidableEq GB := decGB
+              ∃ garbage : State (GA × GB),
+                letI : Fintype R.HA := R.fintypeHA
+                letI : DecidableEq R.HA := R.decidableEqHA
+                letI : Fintype R.HB := R.fintypeHB
+                letI : DecidableEq R.HB := R.decidableEqHB
+                Bell.ExtractsBipartiteStateWithAux R.rho garbage target) :
+    Bell.SelfTestsStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target :=
+  SelfTesting.Definition.main_with_aux hRealizes hAll
+
+end SelfTestingDefinition
 
 namespace SelfTestingManifest
 
@@ -55,6 +106,43 @@ public theorem main (R : Bell.QuantumRealization X Y A B)
       Bell.ExtractsBipartiteState R.rho target) :
     Bell.RealizesTargetState p target :=
   SelfTesting.Manifest.main R hR hExtract
+
+/-- Project the manifest realization witness from a full self-testing theorem. -/
+public theorem of_selfTestsState {p : Bell.Behavior X Y A B}
+    {target : State (TA × TB)}
+    (h : Bell.SelfTestsState p target) :
+    Bell.RealizesTargetState p target :=
+  SelfTesting.Manifest.of_selfTestsState h
+
+/--
+Public nonlocality entrypoint for the manifest self-testing witness with
+explicit auxiliary garbage in the local-isometry output.
+-/
+public theorem main_with_aux (R : Bell.QuantumRealization X Y A B)
+    {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
+    {GA : Type uGA} {GB : Type uGB}
+    [Fintype GA] [DecidableEq GA] [Fintype GB] [DecidableEq GB]
+    (garbage : State (GA × GB))
+    (hR : R.RealizesBehavior p)
+    (hExtract :
+      letI : Fintype R.HA := R.fintypeHA
+      letI : DecidableEq R.HA := R.decidableEqHA
+      letI : Fintype R.HB := R.fintypeHB
+      letI : DecidableEq R.HB := R.decidableEqHB
+      Bell.ExtractsBipartiteStateWithAux R.rho garbage target) :
+    Bell.RealizesTargetStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target :=
+  SelfTesting.Manifest.main_with_aux.{w, z, uX, uY, uA, uB, uGA, uGB}
+    R garbage hR hExtract
+
+/--
+Project the auxiliary-garbage manifest realization witness from a full
+source-strength self-testing theorem.
+-/
+public theorem of_selfTestsStateWithAux {p : Bell.Behavior X Y A B}
+    {target : State (TA × TB)}
+    (h : Bell.SelfTestsStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target) :
+    Bell.RealizesTargetStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target :=
+  SelfTesting.Manifest.of_selfTestsStateWithAux h
 
 end SelfTestingManifest
 

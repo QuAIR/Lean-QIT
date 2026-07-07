@@ -107,6 +107,45 @@ theorem uniformHashFamily_prob (hash : F -> Z -> S) (f : F) :
     (UniformHashFamily hash).prob f = (Fintype.card F : ℝ≥0)⁻¹ :=
   rfl
 
+/--
+The uniformly seeded full family of all functions from `Z` to `S`.
+
+[Tomamichel2015FiniteResources, apps.tex:312-315]
+-/
+def FullFunctionHashFamily (Z : Type uZ) (S : Type uS)
+    [Fintype Z] [DecidableEq Z] [Fintype S] [DecidableEq S] [Nonempty S] :
+    HashFamily (Z -> S) Z S :=
+  UniformHashFamily (F := Z -> S) (Z := Z) (S := S) fun f z => f z
+
+@[simp]
+theorem fullFunctionHashFamily_hash
+    {Z : Type uZ} {S : Type uS}
+    [Fintype Z] [DecidableEq Z] [Fintype S] [DecidableEq S] [Nonempty S]
+    (f : Z -> S) (z : Z) :
+    (FullFunctionHashFamily (Z := Z) (S := S)).hash f z = f z :=
+  rfl
+
+@[simp]
+theorem fullFunctionHashFamily_prob
+    {Z : Type uZ} {S : Type uS}
+    [Fintype Z] [DecidableEq Z] [Fintype S] [DecidableEq S] [Nonempty S]
+    (f : Z -> S) :
+    (FullFunctionHashFamily (Z := Z) (S := S)).prob f =
+      (Fintype.card (Z -> S) : ℝ≥0)⁻¹ :=
+  rfl
+
+/--
+The full-function hash family with output alphabet `Fin ell`.
+
+The positive-length hypothesis supplies the nonempty output alphabet required
+for the uniform full-function construction.
+-/
+def FinFullFunctionHashFamily (Z : Type uZ) (ell : Nat)
+    [Fintype Z] [DecidableEq Z] (hell : 0 < ell) :
+    HashFamily (Z -> Fin ell) Z (Fin ell) := by
+  letI : Nonempty (Fin ell) := ⟨⟨0, hell⟩⟩
+  exact FullFunctionHashFamily (Z := Z) (S := Fin ell)
+
 variable (H : HashFamily F Z S)
 
 /-- Seed-input ensemble before merging classical labels through the hash output. -/

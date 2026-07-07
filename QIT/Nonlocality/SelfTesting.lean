@@ -211,6 +211,54 @@ theorem of_realization (R : QuantumRealization X Y A B)
 end RealizesTargetState
 
 /--
+Source-strength witness layer for self-testing with auxiliary garbage: one
+quantum realization reproduces the behavior and its state extracts
+`garbage ⊗ target` by a local isometry.
+
+This matches the Mayers-Yao/Yang-Navascues output shape with explicit finite
+auxiliary systems; it is still existential in the chosen realization.
+-/
+def RealizesTargetStateWithAux (p : Behavior X Y A B) (target : State (TA × TB)) : Prop :=
+  ∃ R : QuantumRealization X Y A B,
+    R.RealizesBehavior p ∧
+      ∃ (GA : Type uGA) (GB : Type uGB),
+        ∃ (instGA : Fintype GA) (decGA : DecidableEq GA)
+          (instGB : Fintype GB) (decGB : DecidableEq GB),
+          letI : Fintype GA := instGA
+          letI : DecidableEq GA := decGA
+          letI : Fintype GB := instGB
+          letI : DecidableEq GB := decGB
+          ∃ garbage : State (GA × GB),
+            letI : Fintype R.HA := R.fintypeHA
+            letI : DecidableEq R.HA := R.decidableEqHA
+            letI : Fintype R.HB := R.fintypeHB
+            letI : DecidableEq R.HB := R.decidableEqHB
+            ExtractsBipartiteStateWithAux R.rho garbage target
+
+namespace RealizesTargetStateWithAux
+
+/--
+A realization plus an auxiliary-garbage extraction witness gives the
+source-strength manifest target-state witness.
+-/
+theorem of_realization (R : QuantumRealization X Y A B)
+    {p : Behavior X Y A B} {target : State (TA × TB)}
+    {GA : Type uGA} {GB : Type uGB}
+    [Fintype GA] [DecidableEq GA] [Fintype GB] [DecidableEq GB]
+    (garbage : State (GA × GB))
+    (hR : R.RealizesBehavior p)
+    (hExtract :
+      letI : Fintype R.HA := R.fintypeHA
+      letI : DecidableEq R.HA := R.decidableEqHA
+      letI : Fintype R.HB := R.fintypeHB
+      letI : DecidableEq R.HB := R.decidableEqHB
+      ExtractsBipartiteStateWithAux R.rho garbage target) :
+    RealizesTargetStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target :=
+  ⟨R, hR, GA, GB, inferInstance, inferInstance, inferInstance, inferInstance, garbage, hExtract⟩
+
+end RealizesTargetStateWithAux
+
+/--
 Full state self-testing predicate: the behavior has a target realization, and
 every quantum realization of the behavior extracts the same target state.
 -/
@@ -224,9 +272,188 @@ def SelfTestsState (p : Behavior X Y A B) (target : State (TA × TB)) : Prop :=
         letI : DecidableEq R.HB := R.decidableEqHB
         ExtractsBipartiteState R.rho target
 
+namespace SelfTestsState
+
+/-- Package the manifest realization and all-realizations extraction clauses into a self-test. -/
+theorem of_realizesTargetState {p : Behavior X Y A B} {target : State (TA × TB)}
+    (hRealizes : RealizesTargetState p target)
+    (hAll :
+      ∀ R : QuantumRealization X Y A B,
+        R.RealizesBehavior p →
+          letI : Fintype R.HA := R.fintypeHA
+          letI : DecidableEq R.HA := R.decidableEqHA
+          letI : Fintype R.HB := R.fintypeHB
+          letI : DecidableEq R.HB := R.decidableEqHB
+          ExtractsBipartiteState R.rho target) :
+    SelfTestsState p target :=
+  ⟨hRealizes, hAll⟩
+
+/-- A full self-test includes its manifest target-state realization witness. -/
+theorem realizesTargetState {p : Behavior X Y A B} {target : State (TA × TB)}
+    (h : SelfTestsState p target) :
+    RealizesTargetState p target :=
+  h.1
+
+/-- A full self-test extracts the target from every realization of the behavior. -/
+theorem extracts_every_realization {p : Behavior X Y A B} {target : State (TA × TB)}
+    (h : SelfTestsState p target) (R : QuantumRealization X Y A B)
+    (hR : R.RealizesBehavior p) :
+    letI : Fintype R.HA := R.fintypeHA
+    letI : DecidableEq R.HA := R.decidableEqHA
+    letI : Fintype R.HB := R.fintypeHB
+    letI : DecidableEq R.HB := R.decidableEqHB
+    ExtractsBipartiteState R.rho target :=
+  h.2 R hR
+
+end SelfTestsState
+
+/--
+Source-strength full state self-testing predicate: the behavior has an
+auxiliary-garbage target realization, and every realization extracts
+`garbage ⊗ target` for some finite auxiliary systems and garbage state.
+-/
+def SelfTestsStateWithAux (p : Behavior X Y A B) (target : State (TA × TB)) : Prop :=
+  RealizesTargetStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target ∧
+    ∀ R : QuantumRealization X Y A B,
+      R.RealizesBehavior p →
+        ∃ (GA : Type uGA) (GB : Type uGB),
+          ∃ (instGA : Fintype GA) (decGA : DecidableEq GA)
+            (instGB : Fintype GB) (decGB : DecidableEq GB),
+            letI : Fintype GA := instGA
+            letI : DecidableEq GA := decGA
+            letI : Fintype GB := instGB
+            letI : DecidableEq GB := decGB
+            ∃ garbage : State (GA × GB),
+              letI : Fintype R.HA := R.fintypeHA
+              letI : DecidableEq R.HA := R.decidableEqHA
+              letI : Fintype R.HB := R.fintypeHB
+              letI : DecidableEq R.HB := R.decidableEqHB
+              ExtractsBipartiteStateWithAux R.rho garbage target
+
+namespace SelfTestsStateWithAux
+
+/--
+Package the auxiliary-garbage manifest realization and all-realizations
+extraction clauses into a source-strength self-test.
+-/
+theorem of_realizesTargetStateWithAux {p : Behavior X Y A B} {target : State (TA × TB)}
+    (hRealizes : RealizesTargetStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target)
+    (hAll :
+      ∀ R : QuantumRealization X Y A B,
+        R.RealizesBehavior p →
+          ∃ (GA : Type uGA) (GB : Type uGB),
+            ∃ (instGA : Fintype GA) (decGA : DecidableEq GA)
+              (instGB : Fintype GB) (decGB : DecidableEq GB),
+              letI : Fintype GA := instGA
+              letI : DecidableEq GA := decGA
+              letI : Fintype GB := instGB
+              letI : DecidableEq GB := decGB
+              ∃ garbage : State (GA × GB),
+                letI : Fintype R.HA := R.fintypeHA
+                letI : DecidableEq R.HA := R.decidableEqHA
+                letI : Fintype R.HB := R.fintypeHB
+                letI : DecidableEq R.HB := R.decidableEqHB
+                ExtractsBipartiteStateWithAux R.rho garbage target) :
+    SelfTestsStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target :=
+  ⟨hRealizes, hAll⟩
+
+/--
+A source-strength full self-test includes its auxiliary-garbage manifest
+target-state realization witness.
+-/
+theorem realizesTargetStateWithAux {p : Behavior X Y A B} {target : State (TA × TB)}
+    (h : SelfTestsStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target) :
+    RealizesTargetStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target :=
+  h.1
+
+/--
+A source-strength full self-test extracts `garbage ⊗ target` from every
+realization of the behavior.
+-/
+theorem extracts_every_realization {p : Behavior X Y A B} {target : State (TA × TB)}
+    (h : SelfTestsStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target)
+    (R : QuantumRealization X Y A B)
+    (hR : R.RealizesBehavior p) :
+    ∃ (GA : Type uGA) (GB : Type uGB),
+      ∃ (instGA : Fintype GA) (decGA : DecidableEq GA)
+        (instGB : Fintype GB) (decGB : DecidableEq GB),
+        letI : Fintype GA := instGA
+        letI : DecidableEq GA := decGA
+        letI : Fintype GB := instGB
+        letI : DecidableEq GB := decGB
+        ∃ garbage : State (GA × GB),
+          letI : Fintype R.HA := R.fintypeHA
+          letI : DecidableEq R.HA := R.decidableEqHA
+          letI : Fintype R.HB := R.fintypeHB
+          letI : DecidableEq R.HB := R.decidableEqHB
+          ExtractsBipartiteStateWithAux R.rho garbage target :=
+  h.2 R hR
+
+end SelfTestsStateWithAux
+
 end Bell
 
 namespace SelfTesting
+
+namespace Definition
+
+variable {X : Type uX} {Y : Type uY} {A : Type uA} {B : Type uB}
+variable [Fintype X] [Fintype Y] [Fintype A] [Fintype B]
+variable [DecidableEq A] [DecidableEq B]
+variable {TA : Type w} {TB : Type z}
+variable [Fintype TA] [DecidableEq TA] [Fintype TB] [DecidableEq TB]
+
+/--
+Public catalog-support entrypoint for a full state self-testing theorem.
+
+This packages the two source-strength clauses: a manifest target realization,
+and extraction of the same target from every realization of the behavior.
+-/
+public theorem main {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
+    (hRealizes : Bell.RealizesTargetState p target)
+    (hAll :
+      ∀ R : Bell.QuantumRealization X Y A B,
+        R.RealizesBehavior p →
+          letI : Fintype R.HA := R.fintypeHA
+          letI : DecidableEq R.HA := R.decidableEqHA
+          letI : Fintype R.HB := R.fintypeHB
+          letI : DecidableEq R.HB := R.decidableEqHB
+          Bell.ExtractsBipartiteState R.rho target) :
+    Bell.SelfTestsState p target :=
+  Bell.SelfTestsState.of_realizesTargetState hRealizes hAll
+
+/--
+Public catalog-support entrypoint for a full state self-testing theorem with
+explicit auxiliary garbage in each local-isometry output.
+
+This packages the manifest auxiliary target realization and the
+all-realizations auxiliary extraction clause; it does not discard the auxiliary
+systems.
+-/
+public theorem main_with_aux {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
+    (hRealizes :
+      Bell.RealizesTargetStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target)
+    (hAll :
+      ∀ R : Bell.QuantumRealization X Y A B,
+        R.RealizesBehavior p →
+          ∃ (GA : Type uGA) (GB : Type uGB),
+            ∃ (instGA : Fintype GA) (decGA : DecidableEq GA)
+              (instGB : Fintype GB) (decGB : DecidableEq GB),
+              letI : Fintype GA := instGA
+              letI : DecidableEq GA := decGA
+              letI : Fintype GB := instGB
+              letI : DecidableEq GB := decGB
+              ∃ garbage : State (GA × GB),
+                letI : Fintype R.HA := R.fintypeHA
+                letI : DecidableEq R.HA := R.decidableEqHA
+                letI : Fintype R.HB := R.fintypeHB
+                letI : DecidableEq R.HB := R.decidableEqHB
+                Bell.ExtractsBipartiteStateWithAux R.rho garbage target) :
+    Bell.SelfTestsStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target :=
+  Bell.SelfTestsStateWithAux.of_realizesTargetStateWithAux hRealizes hAll
+
+end Definition
+
 namespace Manifest
 
 variable {X : Type uX} {Y : Type uY} {A : Type uA} {B : Type uB}
@@ -248,6 +475,43 @@ public theorem main (R : Bell.QuantumRealization X Y A B)
       Bell.ExtractsBipartiteState R.rho target) :
     Bell.RealizesTargetState p target :=
   Bell.RealizesTargetState.of_realization R hR hExtract
+
+/-- Project the manifest realization witness from a full self-testing theorem. -/
+public theorem of_selfTestsState {p : Bell.Behavior X Y A B}
+    {target : State (TA × TB)}
+    (h : Bell.SelfTestsState p target) :
+    Bell.RealizesTargetState p target :=
+  Bell.SelfTestsState.realizesTargetState h
+
+/--
+Public catalog-support entrypoint for a manifest self-testing witness with
+explicit auxiliary garbage in the local-isometry output.
+-/
+public theorem main_with_aux (R : Bell.QuantumRealization X Y A B)
+    {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
+    {GA : Type uGA} {GB : Type uGB}
+    [Fintype GA] [DecidableEq GA] [Fintype GB] [DecidableEq GB]
+    (garbage : State (GA × GB))
+    (hR : R.RealizesBehavior p)
+    (hExtract :
+      letI : Fintype R.HA := R.fintypeHA
+      letI : DecidableEq R.HA := R.decidableEqHA
+      letI : Fintype R.HB := R.fintypeHB
+      letI : DecidableEq R.HB := R.decidableEqHB
+      Bell.ExtractsBipartiteStateWithAux R.rho garbage target) :
+    Bell.RealizesTargetStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target :=
+  Bell.RealizesTargetStateWithAux.of_realization.{w, z, uX, uY, uA, uB, uGA, uGB}
+    R garbage hR hExtract
+
+/--
+Project the auxiliary-garbage manifest realization witness from a full
+source-strength self-testing theorem.
+-/
+public theorem of_selfTestsStateWithAux {p : Bell.Behavior X Y A B}
+    {target : State (TA × TB)}
+    (h : Bell.SelfTestsStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target) :
+    Bell.RealizesTargetStateWithAux.{w, z, uX, uY, uA, uB, uGA, uGB} p target :=
+  Bell.SelfTestsStateWithAux.realizesTargetStateWithAux h
 
 end Manifest
 end SelfTesting

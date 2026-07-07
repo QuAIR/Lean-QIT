@@ -2270,8 +2270,7 @@ theorem relativeEntropySummandReal_roundedProfile_tendsto
       funext n
       simp [relativeEntropySummandReal, hzero n]
     rw [heq]
-    simpa [relativeEntropySummandReal, hr0] using
-      (tendsto_const_nhds : Tendsto (fun _n : Nat => (0 : ℝ)) atTop (𝓝 0))
+    simp [relativeEntropySummandReal, hr0]
   · let f : Nat → ℝ := fun n =>
       (((r.roundedProfile (n + 1)).empiricalDistribution
         (Nat.succ_pos n)).prob x : ℝ)
@@ -2913,7 +2912,7 @@ theorem commonSupportTilted_relativeEntropy_p_sum_algebra
     Real.log (M.q x.1 : ℝ) - Real.log (M.p x.1 : ℝ)
   have halg := sum_div_mul_sub_const_eq
     (W := W) (A := A) (Z := M.chernoffPartition s) (c := 1 - s)
-    hZpos.ne' (by simpa [W, chernoffPartition])
+    hZpos.ne' (by simp [W, chernoffPartition])
   have hderiv :
       (∑ x : M.commonSupport, W x * A x) = -M.chernoffPartitionDeriv s := by
     unfold W A chernoffPartitionDeriv
@@ -2952,7 +2951,7 @@ theorem commonSupportTilted_relativeEntropy_q_sum_algebra
     Real.log (M.p x.1 : ℝ) - Real.log (M.q x.1 : ℝ)
   have halg := sum_div_mul_sub_const_eq
     (W := W) (A := A) (Z := M.chernoffPartition s) (c := s)
-    hZpos.ne' (by simpa [W, chernoffPartition])
+    hZpos.ne' (by simp [W, chernoffPartition])
   have hderiv :
       (∑ x : M.commonSupport, W x * A x) = M.chernoffPartitionDeriv s := by
     unfold W A chernoffPartitionDeriv
@@ -4441,7 +4440,7 @@ theorem commonSupportTilted_distributionKLMax_le_neg_log_partition_at_min
         have hzero :
             (1 - sStar) * 0 / M.chernoffPartition sStar = 0 := by ring
         rw [hzero]
-        simpa using le_refl (-Real.log (M.chernoffPartition sStar))
+        simp
       · have hD :
             M.chernoffPartitionDeriv sStar ≤ 0 :=
           chernoffPartitionDeriv_nonpos_at_right_min (M := M) hs1eq hmin
@@ -4475,7 +4474,7 @@ theorem commonSupportTilted_distributionKLMax_le_neg_log_partition_at_min
         have hzero :
             sStar * 0 / M.chernoffPartition sStar = 0 := by ring
         rw [hzero]
-        simpa using le_refl (-Real.log (M.chernoffPartition sStar))
+        simp
       · have hD :
             M.chernoffPartitionDeriv sStar ≤ 0 :=
           chernoffPartitionDeriv_nonpos_at_right_min (M := M) hs1eq hmin
@@ -4491,7 +4490,7 @@ theorem commonSupportTilted_distributionKLMax_le_neg_log_partition_at_min
           (0 : ℝ) * M.chernoffPartitionDeriv 0 /
             M.chernoffPartition 0 = 0 := by ring
       rw [hzero]
-      simpa using le_refl (-Real.log (M.chernoffPartition 0))
+      simp
 
 /-- Direct tilted-distribution variational witness for the classical Chernoff
 bound.  In the finite-distance case the common support is nonempty, so the

@@ -7,6 +7,9 @@ Authors: QuAIR Team
 module
 
 public import QIT.Coding.Source.Schumacher
+public import QIT.Coding.Source.SchumacherDirect
+public import QIT.Coding.Source.SchumacherConverse
+public import QIT.Coding.Source.SchumacherLimit
 
 /-!
 # Source coding

@@ -492,6 +492,29 @@ structure EntanglementAssistedConverseWitnessFamily (N : Channel a b) where
                 C.maxErrorAtMost ε →
                   C.rate ≤ N.entanglementAssistedInformation + η
 
+/-- Source-consistent converse estimates for entanglement-assisted classical
+communication.
+
+The Khatri--Wilde one-shot upper bounds are stated for error thresholds
+`ε ∈ [0, 1)`.  This witness family records exactly the asymptotic consequence
+needed for the capacity upper-bound and strong-converse assembly: for every
+slack `η > 0` and every `ε < 1`, all sufficiently long `ε`-reliable codes have
+rate strictly below `N.entanglementAssistedInformation + η`.
+
+The older `EntanglementAssistedConverseWitnessFamily` is kept for compatibility;
+this source-shaped interface is the one used by the sandwiched-Renyi
+asymptotic upper-bound route. -/
+structure EntanglementAssistedSourceConverseWitnessFamily (N : Channel a b) where
+  rate_lt :
+    ∀ η : ℝ, 0 < η → ∀ ε : ℝ, 0 ≤ ε → ε < 1 →
+      ∃ N0 : ℕ, ∀ n : ℕ, n ≥ N0 →
+        ∀ (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M],
+          ∀ (EA : Type u) [Fintype EA] [DecidableEq EA],
+            ∀ (EB : Type u) [Fintype EB] [DecidableEq EB],
+              ∀ C : EntanglementAssistedClassicalCode N n M EA EB,
+                C.maxErrorAtMost ε →
+                  C.rate < N.entanglementAssistedInformation + η
+
 namespace Channel
 
 variable (N : Channel a b)
@@ -571,6 +594,43 @@ theorem entanglementAssisted_information_isUpperBound_of_converseWitness
     hNconv n hnConv M EA EB C herror
   linarith
 
+/-- Source-consistent converse estimates imply the ordinary capacity upper
+bound.
+
+Only the reliable range is needed here: achievability supplies codes for the
+fixed threshold `ε = 1/2`, and the source-shaped witness bounds those codes. -/
+theorem entanglementAssisted_information_isUpperBound_of_sourceConverseWitness
+    (hconv : EntanglementAssistedSourceConverseWitnessFamily N) :
+    N.IsEntanglementAssistedClassicalRateUpperBound
+      N.entanglementAssistedInformation := by
+  intro R hR
+  refine le_of_forall_pos_le_add ?_
+  intro η hη
+  have hhalf : 0 < η / 2 := half_pos hη
+  have heps_pos : 0 < (1 / 2 : ℝ) := by norm_num
+  have heps_nonneg : 0 ≤ (1 / 2 : ℝ) := by norm_num
+  have heps_lt_one : (1 / 2 : ℝ) < 1 := by norm_num
+  obtain ⟨Nach, hNach⟩ := hR (η / 2) hhalf (1 / 2) heps_pos
+  obtain ⟨Nconv, hNconv⟩ :=
+    hconv.rate_lt (η / 2) hhalf (1 / 2) heps_nonneg heps_lt_one
+  let n : ℕ := max Nach Nconv
+  have hnAch : n ≥ Nach := Nat.le_max_left Nach Nconv
+  have hnConv : n ≥ Nconv := Nat.le_max_right Nach Nconv
+  obtain ⟨M, hMfin, hMdec, hMnonempty,
+    EA, hEAfin, hEAdec, EB, hEBfin, hEBdec, C, hrate_ge, herror⟩ :=
+    hNach n hnAch
+  letI : Fintype M := hMfin
+  letI : DecidableEq M := hMdec
+  letI : Nonempty M := hMnonempty
+  letI : Fintype EA := hEAfin
+  letI : DecidableEq EA := hEAdec
+  letI : Fintype EB := hEBfin
+  letI : DecidableEq EB := hEBdec
+  have hrate_lt :
+      C.rate < N.entanglementAssistedInformation + η / 2 :=
+    hNconv n hnConv M EA EB C herror
+  linarith
+
 /-- Every strong-converse rate is an upper bound on every achievable rate.
 
 This is the order-theoretic content behind the source inequality
@@ -639,6 +699,15 @@ theorem entanglementAssisted_information_isStrongConverseRate_of_converseWitness
     linarith
   exact lt_of_le_of_lt hrate_le hstrict
 
+/-- Source-consistent converse estimates directly give the strong-converse
+rate property. -/
+theorem entanglementAssisted_information_isStrongConverseRate_of_sourceConverseWitness
+    (hconv : EntanglementAssistedSourceConverseWitnessFamily N) :
+    N.IsStrongConverseEntanglementAssistedClassicalRate
+      N.entanglementAssistedInformation := by
+  intro δ hδ ε hε_nonneg hε_lt_one
+  exact hconv.rate_lt δ hδ ε hε_nonneg hε_lt_one
+
 /-- Capacity upper bound from a converse witness. -/
 theorem entanglementAssistedClassicalCapacity_le_information_of_converseWitness
     (hach :
@@ -650,6 +719,18 @@ theorem entanglementAssistedClassicalCapacity_le_information_of_converseWitness
   unfold entanglementAssistedClassicalCapacity
   exact csSup_le ⟨N.entanglementAssistedInformation, hach⟩
     (N.entanglementAssisted_information_isUpperBound_of_converseWitness hconv)
+
+/-- Capacity upper bound from a source-consistent converse witness. -/
+theorem entanglementAssistedClassicalCapacity_le_information_of_sourceConverseWitness
+    (hach :
+      N.IsAchievableEntanglementAssistedClassicalRate
+        N.entanglementAssistedInformation)
+    (hconv : EntanglementAssistedSourceConverseWitnessFamily N) :
+    N.entanglementAssistedClassicalCapacity ≤
+      N.entanglementAssistedInformation := by
+  unfold entanglementAssistedClassicalCapacity
+  exact csSup_le ⟨N.entanglementAssistedInformation, hach⟩
+    (N.entanglementAssisted_information_isUpperBound_of_sourceConverseWitness hconv)
 
 /-- Capacity lower bound from achievability of the channel mutual information. -/
 theorem entanglementAssistedInformation_le_classicalCapacity_of_achievable
@@ -678,6 +759,23 @@ theorem entanglementAssistedClassicalCapacity_eq_information_of_achievable_of_co
   exact le_antisymm
     (N.entanglementAssistedClassicalCapacity_le_information_of_converseWitness hach hconv)
     (N.entanglementAssistedInformation_le_classicalCapacity_of_achievable hach hconv)
+
+/-- Abstract capacity squeeze from a source-consistent converse witness. -/
+theorem entanglementAssistedClassicalCapacity_eq_information_of_achievable_of_sourceConverseWitness
+    (hach :
+      N.IsAchievableEntanglementAssistedClassicalRate
+        N.entanglementAssistedInformation)
+    (hconv : EntanglementAssistedSourceConverseWitnessFamily N) :
+    N.entanglementAssistedClassicalCapacity =
+      N.entanglementAssistedInformation := by
+  exact le_antisymm
+    (N.entanglementAssistedClassicalCapacity_le_information_of_sourceConverseWitness hach hconv)
+    (by
+      unfold entanglementAssistedClassicalCapacity
+      exact le_csSup
+        ⟨N.entanglementAssistedInformation,
+          N.entanglementAssisted_information_isUpperBound_of_sourceConverseWitness hconv⟩
+        hach)
 
 /-- The operational capacity is bounded by every strong-converse rate. -/
 theorem entanglementAssistedClassicalCapacity_le_of_strongConverseRate
@@ -742,6 +840,26 @@ theorem strongConverseEntanglementAssistedClassicalCapacity_eq_information_of_ac
           hach hconv])
       (N.entanglementAssistedClassicalCapacity_le_strongConverseCapacity hach hsc))
 
+/-- Abstract strong-converse capacity squeeze from a source-consistent
+converse witness. -/
+theorem strongConverseEntanglementAssistedClassicalCapacity_eq_information_of_achievable_of_sourceConverseWitness
+    (hach :
+      N.IsAchievableEntanglementAssistedClassicalRate
+        N.entanglementAssistedInformation)
+    (hconv : EntanglementAssistedSourceConverseWitnessFamily N) :
+    N.strongConverseEntanglementAssistedClassicalCapacity =
+      N.entanglementAssistedInformation := by
+  have hsc :=
+    N.entanglementAssisted_information_isStrongConverseRate_of_sourceConverseWitness hconv
+  exact le_antisymm
+    (N.strongConverseEntanglementAssistedClassicalCapacity_le_information hach hsc)
+    (le_trans
+      (by
+        rw [←
+          N.entanglementAssistedClassicalCapacity_eq_information_of_achievable_of_sourceConverseWitness
+            hach hconv])
+      (N.entanglementAssistedClassicalCapacity_le_strongConverseCapacity hach hsc))
+
 /-- Final abstract Khatri--Wilde capacity squeeze:
 `C_EA(N) = Ctilde_EA(N) = I(N)` once the asymptotic achievability and converse
 witnesses have been supplied. -/
@@ -756,6 +874,21 @@ theorem entanglementAssisted_capacity_and_strongConverseCapacity_eq_information
   ⟨N.entanglementAssistedClassicalCapacity_eq_information_of_achievable_of_converseWitness
       hach hconv,
     N.strongConverseEntanglementAssistedClassicalCapacity_eq_information_of_achievable_of_converseWitness
+      hach hconv⟩
+
+/-- Final abstract Khatri--Wilde capacity squeeze from the source-consistent
+converse witness. -/
+theorem entanglementAssisted_capacity_and_strongConverseCapacity_eq_information_of_sourceConverseWitness
+    (hach :
+      N.IsAchievableEntanglementAssistedClassicalRate
+        N.entanglementAssistedInformation)
+    (hconv : EntanglementAssistedSourceConverseWitnessFamily N) :
+    N.entanglementAssistedClassicalCapacity = N.entanglementAssistedInformation ∧
+      N.strongConverseEntanglementAssistedClassicalCapacity =
+        N.entanglementAssistedInformation :=
+  ⟨N.entanglementAssistedClassicalCapacity_eq_information_of_achievable_of_sourceConverseWitness
+      hach hconv,
+    N.strongConverseEntanglementAssistedClassicalCapacity_eq_information_of_achievable_of_sourceConverseWitness
       hach hconv⟩
 
 

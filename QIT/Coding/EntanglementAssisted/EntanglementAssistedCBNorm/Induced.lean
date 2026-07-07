@@ -286,7 +286,7 @@ theorem alphaToAlphaPositiveValue_nonneg
       alpha)
     (le_of_lt Y.norm_pos)
 
-private theorem alphaToAlphaTraceValue_le_positiveValue_of_rpow_norm_pos
+theorem alphaToAlphaTraceValue_le_positiveValue_of_rpow_norm_pos
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
     {alpha : Real} (halpha : 1 < alpha) (Y : AlphaToAlphaTraceDomain a alpha)
     (hnorm_pos :
@@ -323,7 +323,7 @@ private theorem alphaToAlphaTraceValue_le_positiveValue_of_rpow_norm_pos
     _ <= alphaToAlphaPositiveValue Phi hPhi X :=
         mul_le_of_le_one_left hratio_nonneg hnorm_le_one
 
-private theorem alphaToAlphaTraceValue_eq_zero_of_rpow_norm_eq_zero
+theorem alphaToAlphaTraceValue_eq_zero_of_rpow_norm_eq_zero
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
     {alpha : Real} (halpha : 1 < alpha) (Y : AlphaToAlphaTraceDomain a alpha)
     (hnorm_zero :

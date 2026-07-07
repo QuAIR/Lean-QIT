@@ -492,7 +492,7 @@ theorem PackingLemma.crossTerm_expectation_bound
     {a : Type u} {𝒳 M : Type*}
     [Fintype a] [DecidableEq a] [Fintype 𝒳] [DecidableEq 𝒳]
     [Fintype M] [DecidableEq M]
-    (E : Ensemble 𝒳 a) (P : CMatrix a) (hP : P.PosSemidef) (hPid : P * P = P)
+    (E : Ensemble 𝒳 a) (P : CMatrix a) (_hP : P.PosSemidef) (_hPid : P * P = P)
     (hP_le_one : P ≤ 1)
     (Px : 𝒳 → CMatrix a) (hPx : ∀ x, (Px x).PosSemidef)
     (d D : ℝ) (hD : 0 < D)

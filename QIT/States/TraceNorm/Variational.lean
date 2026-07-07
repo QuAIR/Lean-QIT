@@ -671,6 +671,34 @@ theorem traceNorm_add_le (A B : CMatrix a) :
       (traceNorm_variational_unitary_abs_trace_le A U)
       (traceNorm_variational_unitary_abs_trace_le B U)
 
+/-- Triangle inequality for matrix normalized trace distance. -/
+theorem normalizedTraceDistance_triangle (A B C : CMatrix a) :
+    normalizedTraceDistance A C ≤
+      normalizedTraceDistance A B + normalizedTraceDistance B C := by
+  have hdiff : A - C = (A - B) + (B - C) := by
+    ext i j
+    simp [Matrix.sub_apply, Matrix.add_apply]
+  have htri : traceNorm (A - C) ≤ traceNorm (A - B) + traceNorm (B - C) := by
+    rw [hdiff]
+    exact traceNorm_add_le (A - B) (B - C)
+  calc
+    normalizedTraceDistance A C =
+        (1 / 2 : ℝ) * traceNorm (A - C) := rfl
+    _ ≤ (1 / 2 : ℝ) * (traceNorm (A - B) + traceNorm (B - C)) :=
+        mul_le_mul_of_nonneg_left htri (by norm_num)
+    _ = normalizedTraceDistance A B + normalizedTraceDistance B C := by
+        simp [normalizedTraceDistance, traceDistance, mul_add]
+
+namespace State
+
+/-- Triangle inequality for state normalized trace distance. -/
+theorem normalizedTraceDistance_triangle (ρ σ τ : State a) :
+    ρ.normalizedTraceDistance τ ≤
+      ρ.normalizedTraceDistance σ + σ.normalizedTraceDistance τ :=
+  QIT.normalizedTraceDistance_triangle ρ.matrix σ.matrix τ.matrix
+
+end State
+
 /-- Trace norm is positively homogeneous for nonnegative real scalars, in the
 one-sided form needed for finite averaging arguments. -/
 theorem traceNorm_real_smul_le {c : ℝ} (hc : 0 ≤ c) (M : CMatrix a) :

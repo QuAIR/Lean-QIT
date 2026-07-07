@@ -2978,7 +2978,7 @@ theorem rennerMIIDProjector_idempotent {m r : ℕ} (ν : PureVector a)
   let Un : CMatrix (TensorPower a (m + r)) := unitaryTensorPowerMatrix U (m + r)
   let P : CMatrix (TensorPower a (m + r)) := rennerMIIDProjectorId (a := a) m r ν
   have hstar : star Un * Un = 1 := by
-    simpa [Un] using unitaryTensorPowerMatrix_star_mul_self (a := a) U (m + r)
+    simp [Un]
   have hP : P * P = P := by
     simpa [P, rennerMIIDProjectorId] using
       rennerMIIDProjectorFor_idempotent (a := a) (m := m) (r := r) ν
@@ -3351,7 +3351,7 @@ theorem rennerMIIDProjector_trace_eq_id {m r : ℕ} (ν : PureVector a)
   let Un : CMatrix (TensorPower a (m + r)) := unitaryTensorPowerMatrix U (m + r)
   let P : CMatrix (TensorPower a (m + r)) := rennerMIIDProjectorId (a := a) m r ν
   have hstar : star Un * Un = 1 := by
-    simpa [Un] using unitaryTensorPowerMatrix_star_mul_self (a := a) U (m + r)
+    simp [Un]
   dsimp [rennerMIIDProjector]
   change (Un * P * star Un).trace = P.trace
   calc
@@ -3513,8 +3513,7 @@ private theorem rennerGammaIntegrand_takeDrop_submatrix [Nonempty a]
         (1 : CMatrix (TensorPower a (n + r))) -
           rennerMIIDProjector (a := a) n r ν U := by
     have hunit : UL * star UL = 1 := by
-      simpa [UL] using Matrix.UnitaryGroup.mul_star_self
-        (unitaryTensorPowerMatrix U (n + r))
+      simp [UL]
     dsimp [rennerMIIDProjector, UL, Pid] at hunit ⊢
     calc
       unitaryTensorPowerMatrix U (n + r) *
@@ -3571,7 +3570,7 @@ private theorem rennerGammaIntegrand_takeDrop_submatrix [Nonempty a]
           ((1 : CMatrix (TensorPower a (n + r))) -
             rennerMIIDProjector (a := a) n r ν U)
           (rennerMIIDProjectorZero (a := a) k ν U) := by
-          simpa [Matrix.mul_assoc, hleft, hright]
+          simp [hleft, hright]
 
 theorem rennerMIIDProjectorIdZero_isHermitian
     (m : ℕ) (ν : PureVector a) :
@@ -3901,7 +3900,7 @@ private noncomputable def submatrixEquivSymmMulConstCLM {ι κ : Type v}
         intro c M
         ext i j
         simp only [Matrix.mul_apply, Matrix.submatrix_apply, Matrix.smul_apply,
-          RingHom.id_apply, smul_eq_mul]
+          RingHom.id_apply]
         change ∑ x, ((c : ℂ) * M (e.symm i) (e.symm x)) * X x j =
           (c : ℂ) * ∑ x, M (e.symm i) (e.symm x) * X x j
         rw [Finset.mul_sum]
@@ -4197,7 +4196,7 @@ private theorem matrix_mul_rankOneMatrix_mul_conjTranspose
     (M : Matrix κ ι ℂ) (ψ : ι → ℂ) :
     M * rankOneMatrix ψ * Matrix.conjTranspose M = rankOneMatrix (M.mulVec ψ) := by
   ext i j
-  simp [Matrix.mul_apply, Matrix.mulVec, rankOneMatrix_apply, dotProduct, map_sum,
+  simp [Matrix.mul_apply, Matrix.mulVec, rankOneMatrix_apply, dotProduct,
     Finset.mul_sum, Finset.sum_mul]
   apply Finset.sum_congr rfl
   intro x _hx
@@ -4670,7 +4669,7 @@ theorem rennerTraceOutLastK_eq_haarAverage_rhoU [Nonempty a] {n k : ℕ}
       _ = Matrix.kronecker (1 : CMatrix (TensorPower a n)) (c⁻¹ • P) * X := by
             rw [hPavgP]
       _ = c⁻¹ • (Q * X) := by
-            simp [Q, P, Matrix.kronecker_smul, Matrix.smul_mul]
+            simp [Q, P, Matrix.kronecker_smul]
       _ = c⁻¹ • X := by rw [hQX]
   have hc_ne : c ≠ 0 := by
     dsimp [c]
@@ -4696,7 +4695,7 @@ theorem rennerTraceOutLastK_eq_haarAverage_rhoU [Nonempty a] {n k : ℕ}
     c • partialTraceB (a := TensorPower a n) (b := TensorPower a k) (c⁻¹ • X)
   rw [partialTraceB_smul]
   ext i j
-  simp [hc_ne, mul_assoc]
+  simp [hc_ne]
 
 /-- Renner's gentle-measurement bridge for the projected Haar family, in the
 rank-one source form used in the proof of the de Finetti theorem.  The
@@ -5266,7 +5265,7 @@ private theorem inv_sqrt_profile_count_mul_inv_sqrt_profile_count
           (Real.sqrt ((Fintype.card (ckrPurifyingRegister a n) : ℝ)) : ℂ) =
         (Fintype.card (ckrPurifyingRegister a n) : ℂ) := by
     norm_cast
-    simpa [pow_two] using Real.sq_sqrt (le_of_lt hpos)
+    simp
   rw [← mul_inv_rev, hsqrt_sq]
 
 /-- CKR purified reference vector for `τ_{H^n K^n N}`.
@@ -5385,7 +5384,7 @@ theorem ckrProfileIsometryMatrix_conjTranspose_mul [Nonempty a] (n : ℕ) :
           by_cases hpq : p = q
           · subst q
             simp
-          · simp [hpq, Matrix.one_apply]
+          · simp [hpq]
 
 theorem ckrPurifiedReference_marginal_eq_deFinettiReferenceState
     [Nonempty a] (n : ℕ) :
@@ -5433,7 +5432,7 @@ theorem ckrPurifiedReference_marginal_eq_deFinettiReferenceState
             ← symmetricProjectionMatrix_eq_sum_rankOne_profileUnitVector (a := Prod a a)]
           rfl
     _ = (deFinettiReferenceState (a := Prod a a) n).matrix x y := by
-          simp [deFinettiReferenceState_matrix, Matrix.smul_apply, smul_eq_mul]
+          simp [Matrix.smul_apply]
 
 /-- CKR purified post-selection reference state, reindexed as
 `(H^n × H^n) × N`.  Its first marginal is the source-shaped
@@ -6456,8 +6455,7 @@ private theorem inputReferenceCanonicalExtension_marginalA
     exact PureVector.partialTraceA_state_matrix_eq_of_purifies
       ω.canonicalPurification_purifies
   simp only [State.inputReferenceCanonicalExtension, State.marginalA, partialTraceB,
-    PureVector.reindex_state, State.reindex, PureVector.state_matrix,
-    rankOneMatrix_apply]
+    PureVector.reindex_state, State.reindex, PureVector.state_matrix]
   rw [Fintype.sum_prod_type]
   refine Finset.sum_congr rfl fun xr _ => ?_
   have hpij := congrFun (congrFun hp (i, xr)) (j, xr)

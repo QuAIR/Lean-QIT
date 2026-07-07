@@ -7,7 +7,10 @@ Authors: QuAIR Team
 module
 
 public import QIT.Security.ExtractorAnalytic
+public import QIT.Information.CQChannel
+public import QIT.States.Geometry.FuchsVdG
 public import QIT.States.TraceNorm.PositivePart
+public import QIT.States.TraceNorm.Variational
 public import QIT.OneShot.CQGuessing
 
 /-!
@@ -75,7 +78,203 @@ theorem extractorSecrecyDistance_eq_normalizedTraceDistance
       ρ.normalizedTraceDistance (idealExtractorOutputState ρ) :=
   rfl
 
+/-- The CPTP map that replaces the extractor output register by uniform noise
+and keeps the public seed plus side information. -/
+def idealExtractorOutputChannel : Channel (S × (F × e)) (S × (F × e)) :=
+  (Channel.replacer (uniformExtractorOutputState (S := S))).prod
+    (Channel.idChannel (F × e))
+
+@[simp]
+theorem idealExtractorOutputChannel_applyState (ρ : State (S × (F × e))) :
+    (idealExtractorOutputChannel (S := S) (F := F) (e := e)).applyState ρ =
+      idealExtractorOutputState ρ := by
+  apply State.ext
+  ext x y
+  rcases x with ⟨s, b⟩
+  rcases y with ⟨s', b'⟩
+  change
+    (MatrixMap.kron (Channel.replacer (uniformExtractorOutputState (S := S))).map
+      (Channel.idChannel (F × e)).map ρ.matrix) (s, b) (s', b') =
+      (Matrix.kronecker (uniformExtractorOutputState (S := S)).matrix
+        ρ.marginalB.matrix) (s, b) (s', b')
+  rw [MatrixMap.kron_idChannel_apply_slice]
+  simp [State.marginalB, partialTraceA, Matrix.trace, Matrix.kronecker,
+    Matrix.kroneckerMap_apply, mul_comm]
+
+/-- Idealizing the extractor output register is a CPTP contraction. -/
+theorem idealExtractorOutputState_normalizedTraceDistance_le
+    (ρ σ : State (S × (F × e))) :
+    (idealExtractorOutputState ρ).normalizedTraceDistance
+        (idealExtractorOutputState σ) ≤
+      ρ.normalizedTraceDistance σ := by
+  simpa [idealExtractorOutputChannel_applyState] using
+    Channel.normalizedTraceDistance_applyState_le
+      (idealExtractorOutputChannel (S := S) (F := F) (e := e)) ρ σ
+
+/--
+Extractor secrecy distance is stable under perturbing an already-idealized
+output state.  This is the triangle-inequality core of the smooth extractor
+route; separate channel/cq lemmas should discharge the two closeness premises.
+-/
+theorem extractorSecrecyDistance_le_two_mul_delta_add_of_ideal_closeness
+    (ρ σ : State (S × (F × e))) {δ ε : ℝ}
+    (hstate : ρ.normalizedTraceDistance σ ≤ δ)
+    (hideal :
+      (idealExtractorOutputState σ).normalizedTraceDistance
+        (idealExtractorOutputState ρ) ≤ δ)
+    (hsecret : extractorSecrecyDistance σ ≤ ε) :
+    extractorSecrecyDistance ρ ≤ 2 * δ + ε := by
+  have htri₁ :
+      ρ.normalizedTraceDistance (idealExtractorOutputState ρ) ≤
+        ρ.normalizedTraceDistance σ +
+          σ.normalizedTraceDistance (idealExtractorOutputState ρ) :=
+    State.normalizedTraceDistance_triangle ρ σ (idealExtractorOutputState ρ)
+  have htri₂ :
+      σ.normalizedTraceDistance (idealExtractorOutputState ρ) ≤
+        σ.normalizedTraceDistance (idealExtractorOutputState σ) +
+          (idealExtractorOutputState σ).normalizedTraceDistance
+            (idealExtractorOutputState ρ) :=
+    State.normalizedTraceDistance_triangle σ (idealExtractorOutputState σ)
+      (idealExtractorOutputState ρ)
+  have hsecret' :
+      σ.normalizedTraceDistance (idealExtractorOutputState σ) ≤ ε := hsecret
+  have hbound :
+      extractorSecrecyDistance ρ ≤ δ + (ε + δ) := by
+    calc
+      extractorSecrecyDistance ρ =
+          ρ.normalizedTraceDistance (idealExtractorOutputState ρ) := rfl
+      _ ≤ ρ.normalizedTraceDistance σ +
+            σ.normalizedTraceDistance (idealExtractorOutputState ρ) := htri₁
+      _ ≤ δ +
+            (σ.normalizedTraceDistance (idealExtractorOutputState σ) +
+              (idealExtractorOutputState σ).normalizedTraceDistance
+                (idealExtractorOutputState ρ)) :=
+          add_le_add hstate htri₂
+      _ ≤ δ + (ε + δ) := by
+          linarith
+  linarith
+
+/--
+Extractor secrecy distance is `2`-Lipschitz around another output state, with
+the ideal-state perturbation discharged by the idealization channel
+contraction.
+-/
+theorem extractorSecrecyDistance_le_two_mul_normalizedTraceDistance_add
+    (ρ σ : State (S × (F × e))) {δ ε : ℝ}
+    (hstate : ρ.normalizedTraceDistance σ ≤ δ)
+    (hsecret : extractorSecrecyDistance σ ≤ ε) :
+    extractorSecrecyDistance ρ ≤ 2 * δ + ε := by
+  have hideal :
+      (idealExtractorOutputState σ).normalizedTraceDistance
+        (idealExtractorOutputState ρ) ≤ δ := by
+    have hcontract := idealExtractorOutputState_normalizedTraceDistance_le σ ρ
+    have hsymm :
+        σ.normalizedTraceDistance ρ ≤ δ := by
+      rw [State.normalizedTraceDistance_comm]
+      exact hstate
+    exact hcontract.trans hsymm
+  exact extractorSecrecyDistance_le_two_mul_delta_add_of_ideal_closeness
+    ρ σ hstate hideal hsecret
+
 variable [Nonempty F]
+
+namespace HashFamily
+
+/-- For a fixed input label, the classical hash seed/output state on `S × F`. -/
+def hashSeedOutputState (H : HashFamily F Z S) (z : Z) : State (S × F) where
+  matrix :=
+    ∑ f, H.prob f •
+      Matrix.kronecker
+        (Matrix.single (H.hash f z) (H.hash f z) (1 : ℂ))
+        (Matrix.single f f (1 : ℂ))
+  pos := by
+    exact Matrix.posSemidef_sum Finset.univ fun f _ =>
+      ((posSemidef_single (H.hash f z)).kronecker (posSemidef_single f)).smul
+        (NNReal.coe_nonneg (H.prob f))
+  trace_eq_one := by
+    simp only [Matrix.trace_sum, Matrix.trace_smul]
+    calc
+      (∑ f : F,
+          (H.prob f : ℂ) *
+            (Matrix.kronecker
+              (Matrix.single (H.hash f z) (H.hash f z) (1 : ℂ))
+              (Matrix.single f f (1 : ℂ))).trace) =
+          ∑ f : F, (H.prob f : ℂ) := by
+            refine Finset.sum_congr rfl fun f _ => ?_
+            have htrace :=
+              Matrix.trace_kronecker
+                (Matrix.single (H.hash f z) (H.hash f z) (1 : ℂ))
+                (Matrix.single f f (1 : ℂ))
+            have htrace' :
+                ((Matrix.single (H.hash f z) (H.hash f z) (1 : ℂ)).kronecker
+                  (Matrix.single f f (1 : ℂ))).trace =
+                    (Matrix.single (H.hash f z) (H.hash f z) (1 : ℂ)).trace *
+                      (Matrix.single f f (1 : ℂ)).trace := by
+              simpa [Matrix.kronecker] using htrace
+            rw [htrace', trace_single_one, if_pos rfl,
+              trace_single_one, if_pos rfl]
+            norm_num
+      _ = ↑(∑ f : F, H.prob f) := by simp
+      _ = 1 := by
+        rw [H.prob_sum]
+        norm_num
+
+@[simp]
+theorem hashSeedOutputState_matrix (H : HashFamily F Z S) (z : Z) :
+    (hashSeedOutputState H z).matrix =
+      ∑ f, H.prob f •
+        Matrix.kronecker
+          (Matrix.single (H.hash f z) (H.hash f z) (1 : ℂ))
+          (Matrix.single f f (1 : ℂ)) :=
+  rfl
+
+/-- The classical channel that reads `z`, samples a public seed, and outputs
+the pair `(H f z, f)`. -/
+def hashSeedOutputChannel (H : HashFamily F Z S) : Channel Z (S × F) :=
+  Channel.prepare fun z => hashSeedOutputState H z
+
+/-- The CPTP extractor-output channel from the input cq register to
+`S × (F × e)`.  It reads the classical source label, samples the public seed,
+and leaves the side information unchanged. -/
+def extractorOutputChannel (H : HashFamily F Z S) :
+    Channel (Z × e) (S × (F × e)) :=
+  (Channel.reindex (Equiv.prodAssoc S F e)).comp
+    ((hashSeedOutputChannel H).prod (Channel.idChannel e))
+
+@[simp]
+theorem extractorOutputChannel_applyState_cqState
+    (H : HashFamily F Z S) (E : Ensemble Z e) :
+    (extractorOutputChannel (e := e) H).applyState E.cqState =
+      extractorOutputState H E := by
+  apply State.ext
+  ext x y
+  rcases x with ⟨s, fi⟩
+  rcases fi with ⟨f, i⟩
+  rcases y with ⟨s', fj⟩
+  rcases fj with ⟨f', j⟩
+  simp only [extractorOutputChannel, hashSeedOutputChannel, Channel.applyState_comp,
+    Channel.reindex_applyState, applyState_prepare_prod_id_cqState_matrix,
+    State.reindex_matrix, extractorOutputState_matrix, extractorOutputMatrix,
+    hashSeedOutputState_matrix, Matrix.sum_apply, Matrix.smul_apply,
+    Matrix.submatrix_apply, Matrix.kronecker, Matrix.kroneckerMap_apply]
+  simp [Equiv.prodAssoc, Finset.sum_mul, Finset.mul_sum]
+  refine Finset.sum_congr rfl fun z _ => ?_
+  refine Finset.sum_congr rfl fun f0 _ => ?_
+  simp [NNReal.smul_def, mul_assoc, mul_comm, mul_left_comm]
+
+/-- The public-seed extractor output is contractive in normalized trace
+distance as a CPTP image of the input cq state. -/
+theorem extractorOutputState_normalizedTraceDistance_le_cqState
+    (H : HashFamily F Z S) (E E' : Ensemble Z e) :
+    (extractorOutputState H E).normalizedTraceDistance
+        (extractorOutputState H E') ≤
+      E.cqState.normalizedTraceDistance E'.cqState := by
+  simpa [extractorOutputChannel_applyState_cqState] using
+    Channel.normalizedTraceDistance_applyState_le
+      (extractorOutputChannel (e := e) H) E.cqState E'.cqState
+
+end HashFamily
+
 variable (H : HashFamily F Z S)
 
 /-- The side-information marginal of one fixed-seed extractor output. -/
@@ -351,7 +550,7 @@ private theorem seedBlock_idealExtractorOutputMatrix (H : HashFamily F Z S)
   let A : ℂ := (uniformExtractorOutputState (S := S)).matrix s s'
   let B : ℂ := extractorSeedSideInfoMatrix H E f i j
   change A * (H.prob f • B) = H.prob f • (A * B)
-  simp [smul_eq_mul, mul_assoc, mul_comm, mul_left_comm]
+  simp [mul_comm]
 
 private theorem seedBlock_fullDiff_eq_seedDiff (H : HashFamily F Z S)
     (E : Ensemble Z e) (f : F) :

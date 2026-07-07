@@ -78,9 +78,9 @@ private theorem cMatrix_fromBlocks_self_le_posSemidef {A C : CMatrix e}
     simpa [Matrix.mul_assoc] using hD.mul_mul_conjTranspose_same T.conjTranspose
   have hfactor :
       T.conjTranspose * D * T = (Matrix.fromBlocks A A A C : CMatrix (Sum e e)) := by
-    ext i j <;> cases i <;> cases j <;>
+    (ext i j; cases i <;> cases j <;>
       simp [D, T, Matrix.fromBlocks_multiply, Matrix.fromBlocks_conjTranspose,
-        sub_eq_add_neg]
+        sub_eq_add_neg])
   simpa [hfactor] using hconj
 
 private theorem cMatrix_trace_re_le_of_le {X Y : CMatrix e} (hXY : X ≤ Y) :
@@ -130,7 +130,7 @@ private theorem cMatrix_effect_mul_self_le_self {P : CMatrix e}
     simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
       using hPpos.1.spectral_theorem
   have hUstarU : star (U : CMatrix e) * (U : CMatrix e) = 1 := by
-    simp [U, Unitary.coe_star_mul_self]
+    simp [U]
   have hDle1 : ∀ i, hPpos.1.eigenvalues i ≤ 1 := by
     intro i
     have hsub : (1 - P).PosSemidef := by
@@ -156,7 +156,7 @@ private theorem cMatrix_effect_mul_self_le_self {P : CMatrix e}
         rw [← hconj_eq]
         exact (Matrix.PosSemidef.diag_nonneg hconj (i := i)))
     have hdiag : ((1 - D) i i) = (1 : ℂ) - hPpos.1.eigenvalues i := by
-      simp [D, Matrix.one_apply]
+      simp [D]
     have hreal : 0 ≤ (1 : ℝ) - hPpos.1.eigenvalues i := by
       have hcomplex : ((hPpos.1.eigenvalues i : ℂ) ≤ 1) := by
         simpa [hdiag, sub_nonneg] using hdiag_nonneg
@@ -477,6 +477,77 @@ theorem extractorSeedOutputBucket_eq_sum (H : HashFamily F Z S)
       ∑ z : Z, if H.hash f z = s then E.cqBlock z else 0 :=
   rfl
 
+/-- The source-style output bucket is positive semidefinite. -/
+theorem extractorSeedOutputBucket_posSemidef (H : HashFamily F Z S)
+    (E : Ensemble Z e) (f : F) (s : S) :
+    (H.extractorSeedOutputBucket E f s).PosSemidef := by
+  classical
+  unfold extractorSeedOutputBucket
+  refine Matrix.posSemidef_sum Finset.univ fun z _ => ?_
+  by_cases hz : H.hash f z = s
+  · simpa [hz] using Ensemble.cqBlock_posSemidef E z
+  · simp [hz, Matrix.PosSemidef.zero]
+
+/-- Trace of one source-style output bucket. -/
+theorem extractorSeedOutputBucket_trace_re (H : HashFamily F Z S)
+    (E : Ensemble Z e) (f : F) (s : S) :
+    (H.extractorSeedOutputBucket E f s).trace.re =
+      ∑ z : Z, if H.hash f z = s then (E.probs z : ℝ) else 0 := by
+  classical
+  unfold extractorSeedOutputBucket
+  rw [Matrix.trace_sum]
+  simp only [Complex.re_sum]
+  refine Finset.sum_congr rfl fun z _ => ?_
+  by_cases hz : H.hash f z = s
+  · have htrace_re : (E.states z).matrix.trace.re = 1 := by
+      rw [(E.states z).trace_eq_one]
+      simp
+    simp [hz, Ensemble.cqBlock_eq, Matrix.trace_smul, htrace_re]
+  · simp [hz]
+
+/-- One source-style output bucket has trace at most one. -/
+theorem extractorSeedOutputBucket_trace_re_le_one (H : HashFamily F Z S)
+    (E : Ensemble Z e) (f : F) (s : S) :
+    (H.extractorSeedOutputBucket E f s).trace.re ≤ 1 := by
+  classical
+  rw [H.extractorSeedOutputBucket_trace_re E f s]
+  have hsum_le :
+      (∑ z : Z, if H.hash f z = s then (E.probs z : ℝ) else 0) ≤
+        ∑ z : Z, (E.probs z : ℝ) := by
+    refine Finset.sum_le_sum fun z _ => ?_
+    by_cases hz : H.hash f z = s
+    · simp [hz]
+    · exact by simp [hz, E.prob_nonneg z]
+  have hsum : (∑ z : Z, (E.probs z : ℝ)) = 1 := by
+    exact_mod_cast E.weights_sum
+  exact hsum_le.trans_eq hsum
+
+/--
+The subnormalized side-information state in output bucket `s` when seed `f` is
+applied.
+
+[Tomamichel2015FiniteResources, apps.tex:256-292]
+-/
+def extractorSeedOutputBucketState (H : HashFamily F Z S) (E : Ensemble Z e)
+    (f : F) (s : S) : SubnormalizedState e where
+  matrix := H.extractorSeedOutputBucket E f s
+  pos := H.extractorSeedOutputBucket_posSemidef E f s
+  trace_le_one := H.extractorSeedOutputBucket_trace_re_le_one E f s
+
+@[simp]
+theorem extractorSeedOutputBucketState_matrix (H : HashFamily F Z S)
+    (E : Ensemble Z e) (f : F) (s : S) :
+    (H.extractorSeedOutputBucketState E f s).matrix =
+      H.extractorSeedOutputBucket E f s :=
+  rfl
+
+@[simp]
+theorem extractorSeedOutputBucketState_trace_re (H : HashFamily F Z S)
+    (E : Ensemble Z e) (f : F) (s : S) :
+    (H.extractorSeedOutputBucketState E f s).matrix.trace.re =
+      ∑ z : Z, if H.hash f z = s then (E.probs z : ℝ) else 0 := by
+  simpa using H.extractorSeedOutputBucket_trace_re E f s
+
 /-- The total side-information block before hashing. -/
 def extractorCqTotalBlock (_H : HashFamily F Z S) (E : Ensemble Z e) : CMatrix e :=
   ∑ z : Z, E.cqBlock z
@@ -665,12 +736,12 @@ private theorem quad_sum_smul_sum_smul_real (σ : State e)
     quad σ (∑ z : Z, (c z : ℂ) • A z) (∑ z' : Z, (d z' : ℂ) • A z') =
       ∑ z : Z, ∑ z' : Z, c z * d z' * quad σ (A z) (A z') := by
   unfold quad
-  simp only [Matrix.sum_mul, Matrix.mul_sum, Matrix.trace_sum, Matrix.trace_smul,
+  simp only [Matrix.trace_sum,
     Finset.sum_mul, Finset.mul_sum, Complex.re_sum]
   rw [Finset.sum_comm]
   refine Finset.sum_congr rfl fun z _ => ?_
   refine Finset.sum_congr rfl fun z' _ => ?_
-  simp [Matrix.smul_mul, Matrix.mul_smul, Matrix.trace_smul, mul_assoc, mul_comm,
+  simp [Matrix.trace_smul, mul_assoc, mul_comm,
     mul_left_comm]
 
 private theorem sum_reorder_four
@@ -851,7 +922,7 @@ private theorem outputBlock_seedDiff_eq_centeredResidual
     rw [Ensemble.cqBlock_eq]
     by_cases hz : H.hash f z = s
     · simp [hz, NNReal.smul_def]
-    · simp [hz, NNReal.smul_def]
+    · simp [hz]
   have hideal :
       extractorSeedIdealMatrix H E f (s, i) (s, j) =
         (((Fintype.card S : ℂ)⁻¹) • H.extractorCqTotalBlock E) i j := by
@@ -1049,7 +1120,7 @@ theorem extractorSeedTraceDistance_le_sqrt_card_mul_centeredQuadraticTerm_posDef
           Real.sqrt ((Fintype.card S : ℝ) * ∑ s : S, q s) := by
         rw [Finset.sum_const, Finset.card_univ]
         rw [nsmul_eq_mul]
-        simp only [mul_one, Real.sqrt_one, one_mul]
+        simp only [mul_one]
         rw [Real.sqrt_mul (by positivity : 0 ≤ (Fintype.card S : ℝ))]
     simpa [hleft, hright] using hcauchy
   calc

@@ -157,6 +157,24 @@ theorem index_nonempty (E : Ensemble ι b) : Nonempty ι := by
     simpa [hsum] using E.weights_sum
   exact zero_ne_one hzero
 
+/--
+A cq-restricted smooth conditional min-entropy candidate for an ensemble.
+
+The witness is another ensemble on the same classical and side-information
+systems, so the nearby smooth state is manifestly cq.
+-/
+def CqSmoothConditionalMinEntropyCandidate (E : Ensemble ι b) (ε h : ℝ) : Prop :=
+  ∃ E' : Ensemble ι b, E.cqState.purifiedBall ε E'.cqState ∧
+    h ≤ E'.cqState.conditionalMinEntropy
+
+@[simp]
+theorem CqSmoothConditionalMinEntropyCandidate_eq
+    (E : Ensemble ι b) (ε h : ℝ) :
+    E.CqSmoothConditionalMinEntropyCandidate ε h ↔
+      ∃ E' : Ensemble ι b, E.cqState.purifiedBall ε E'.cqState ∧
+        h ≤ E'.cqState.conditionalMinEntropy :=
+  Iff.rfl
+
 /-! ## cq SDP embedding -/
 
 /-- Raw families of cq guessing effects, before imposing positivity and the
@@ -564,7 +582,7 @@ theorem cqPrimalProgram_primalValueSet_eq (E : Ensemble ι b) :
     · constructor
       · intro x
         exact povm.pos x
-      · simpa [cqPrimalProgram, cqEffectFamilySumCLM, M] using povm.sum_eq_one
+      · simp [cqPrimalProgram, cqEffectFamilySumCLM, M]
     · rw [cqPrimalValue_eq_traceValue]
       simp [QIT.SDP.ContinuousConeProgram.primalValue, cqPrimalProgram,
         cqPrimalObjectiveCLM, cqPrimalTraceValue, M]
@@ -577,6 +595,55 @@ theorem cqBlock_posSemidef (E : Ensemble ι b) (x : ι) :
     rw [Complex.zero_le_real]
     exact NNReal.coe_nonneg (E.probs x)
   exact (E.states x).pos.smul hx
+
+/-- The weighted cq block has trace equal to the corresponding probability. -/
+theorem cqBlock_trace (E : Ensemble ι b) (x : ι) :
+    (E.cqBlock x).trace = (E.probs x : ℂ) := by
+  rw [cqBlock_eq, Matrix.trace_smul, (E.states x).trace_eq_one]
+  simp
+
+/-- Real trace of the weighted cq block. -/
+theorem cqBlock_trace_re (E : Ensemble ι b) (x : ι) :
+    (E.cqBlock x).trace.re = (E.probs x : ℝ) := by
+  rw [cqBlock_trace]
+  simp
+
+/-- A weighted cq block has trace at most one. -/
+theorem cqBlock_trace_re_le_one (E : Ensemble ι b) (x : ι) :
+    (E.cqBlock x).trace.re ≤ 1 := by
+  rw [cqBlock_trace_re]
+  exact E.prob_le_one x
+
+/--
+The source-style subnormalized side-information block `ρ_B(x)` associated with
+an ensemble label.
+
+[Tomamichel2015FiniteResources, apps.tex:256-292]
+-/
+def cqSubnormalizedBlock (E : Ensemble ι b) (x : ι) : SubnormalizedState b where
+  matrix := E.cqBlock x
+  pos := E.cqBlock_posSemidef x
+  trace_le_one := E.cqBlock_trace_re_le_one x
+
+@[simp]
+theorem cqSubnormalizedBlock_matrix (E : Ensemble ι b) (x : ι) :
+    (E.cqSubnormalizedBlock x).matrix = E.cqBlock x :=
+  rfl
+
+@[simp]
+theorem cqSubnormalizedBlock_trace_re (E : Ensemble ι b) (x : ι) :
+    (E.cqSubnormalizedBlock x).matrix.trace.re = (E.probs x : ℝ) := by
+  simpa using E.cqBlock_trace_re x
+
+/-- The subnormalized cq block is the normalized member state scaled by its probability. -/
+theorem cqSubnormalizedBlock_eq_ofStateScale (E : Ensemble ι b) (x : ι) :
+    E.cqSubnormalizedBlock x =
+      SubnormalizedState.ofStateScale (E.states x) (E.probs x : ℝ)
+        (E.prob_nonneg x) (E.prob_le_one x) := by
+  apply SubnormalizedState.ext
+  rw [cqSubnormalizedBlock_matrix, SubnormalizedState.ofStateScale_matrix, cqBlock_eq]
+  ext i j
+  simp [Complex.real_smul]
 
 /-- The probability weights of an ensemble define a valid trivial POVM. -/
 noncomputable def probabilityPOVM (E : Ensemble ι b) : POVM ι b where
@@ -853,8 +920,7 @@ theorem cqPrimalProgram_primalValueSet_nonempty (E : Ensemble ι b) :
   constructor
   · intro x
     exact (probabilityPOVM E).pos x
-  · simpa [cqPrimalProgram, cqEffectFamilySumCLM, M] using
-      (probabilityPOVM E).sum_eq_one
+  · simp [cqPrimalProgram, cqEffectFamilySumCLM, M]
 
 /-- The sum of all weighted cq blocks is dual feasible. -/
 theorem cqDualFeasible_sum_cqBlock (E : Ensemble ι b) :

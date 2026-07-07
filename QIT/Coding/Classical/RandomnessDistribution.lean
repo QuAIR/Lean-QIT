@@ -83,7 +83,7 @@ noncomputable def maximallyCorrelated (M : Type u) [Fintype M] [DecidableEq M]
   trace_eq_one := by
     have hk : (0 : ℝ) < Fintype.card M := by exact_mod_cast Fintype.card_pos
     rw [Matrix.trace_diagonal, Fintype.sum_prod_type]
-    simp only [Prod.fst, Prod.snd, sum_if_eq_left, Finset.sum_const, nsmul_eq_mul]
+    simp only [sum_if_eq_left, Finset.sum_const, nsmul_eq_mul]
     have key : ((Fintype.card M : ℝ)) * ((Fintype.card M : ℝ)⁻¹) = (1 : ℝ) :=
       mul_inv_cancel₀ (ne_of_gt hk)
     exact_mod_cast key
@@ -175,7 +175,7 @@ private lemma xlog2_mul_log2_self {x : ℝ} (hx : 0 ≤ x) :
     field_simp
 
 /-- Product rule for `xlog2` on nonnegative real inputs. -/
-private lemma xlog2_mul_of_nonneg {x y : ℝ} (hx : 0 ≤ x) (hy : 0 ≤ y) :
+private lemma xlog2_mul_of_nonneg {x y : ℝ} (_hx : 0 ≤ x) (_hy : 0 ≤ y) :
     xlog2 (x * y) = y * xlog2 x + x * xlog2 y := by
   by_cases hx0 : x = 0
   · simp [hx0, xlog2]
@@ -564,10 +564,10 @@ private lemma card_mul_xlog2_inv (M : Type u) [Fintype M] [Nonempty M] :
 
 /-- Sum of `xlog2 (|M|⁻¹)` over `M` equals `-log₂ |M|`. -/
 private lemma sum_xlog2_inv_card (M : Type u) [Fintype M] [Nonempty M] :
-    ∑ m : M, xlog2 ((Fintype.card M : ℝ)⁻¹) = -log2 (Fintype.card M) := by
+    ∑ _m : M, xlog2 ((Fintype.card M : ℝ)⁻¹) = -log2 (Fintype.card M) := by
   have hsum : ∑ m : M, xlog2 ((Fintype.card M : ℝ)⁻¹) =
       ((Fintype.card M : ℝ)) * xlog2 ((Fintype.card M : ℝ)⁻¹) := by
-    rw [Finset.sum_const, nsmul_eq_mul]; push_cast; rfl
+    rw [Finset.sum_const, nsmul_eq_mul]; rfl
   rw [hsum, card_mul_xlog2_inv M]
 
 /-- `xlog2 (if c then a else 0) = if c then xlog2 a else 0` (the zero case uses
@@ -632,7 +632,7 @@ theorem mutualInformation_maximallyCorrelated_statement
   ring
 
 /-- Uniform probability distribution on `M`: `uniformProbs M m = 1/|M|`. -/
-def uniformProbs (M : Type u) [Fintype M] [Nonempty M] (m : M) : ℝ≥0 :=
+def uniformProbs (M : Type u) [Fintype M] [Nonempty M] (_m : M) : ℝ≥0 :=
   (Fintype.card M : ℝ≥0)⁻¹
 
 /-- The uniform probabilities over `M` sum to one. -/
@@ -641,7 +641,7 @@ theorem uniformProbs_sum_eq_one (M : Type u) [Fintype M] [Nonempty M] :
   have hcard_ne_zero : (Fintype.card M : ℝ) ≠ 0 := by
     exact_mod_cast (Fintype.card_pos (α := M)).ne'
   apply NNReal.eq
-  simp [uniformProbs, Finset.sum_const, nsmul_eq_mul, hcard_ne_zero]
+  simp [uniformProbs, Finset.sum_const, nsmul_eq_mul]
 
 /-- Uniform ensemble over `M` with states `ρ m`. Each message is equally likely. -/
 noncomputable def uniformEnsemble
@@ -1031,8 +1031,8 @@ theorem diagonalDecodedPair_marginalA_matrix
     (Matrix.diagonal fun m : M => (decodedPairMarginalAProb M p m : ℂ)) m m'
   by_cases h : m = m'
   · subst m'
-    simp [partialTraceB, decodedPairMarginalAProb, Classical.diagonalState_matrix]
-  · simp [partialTraceB, decodedPairMarginalAProb, Classical.diagonalState_matrix, h]
+    simp [partialTraceB, decodedPairMarginalAProb]
+  · simp [partialTraceB, decodedPairMarginalAProb, h]
 
 /-- The second marginal of a diagonal decoded-pair state is the diagonal state
 of the second classical marginal. -/
@@ -1047,8 +1047,8 @@ theorem diagonalDecodedPair_marginalB_matrix
     (Matrix.diagonal fun mhat : M => (decodedPairMarginalBProb M p mhat : ℂ)) mhat mhat'
   by_cases h : mhat = mhat'
   · subst mhat'
-    simp [partialTraceA, decodedPairMarginalBProb, Classical.diagonalState_matrix]
-  · simp [partialTraceA, decodedPairMarginalBProb, Classical.diagonalState_matrix, h]
+    simp [partialTraceA, decodedPairMarginalBProb]
+  · simp [partialTraceA, decodedPairMarginalBProb, h]
 
 /-- Mutual information of a finite diagonal decoded-pair law is the classical
 expression `H(A) + H(B) - H(AB)`. -/
@@ -1371,7 +1371,7 @@ theorem decodedPairFiberConditionalEntropy_le
       mul_binaryEntropyBits_div_eq herr_nonneg herr_le_marg hmarg_pos
     rw [hcorr_eq] at hbase
     rw [hbinary]
-    convert hbase using 1 <;> ring
+    (convert hbase using 1; ring)
 
 /-- A single decoded fiber contributes at most its total mass times `log₂ |M|`
 to the conditional entropy. -/

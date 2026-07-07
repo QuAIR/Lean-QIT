@@ -2586,7 +2586,7 @@ private theorem cMatrix_fromBlocks_self_le_posSemidef
   have hfactor :
       T.conjTranspose * D * T =
         (Matrix.fromBlocks A A A C : CMatrix (Sum n n)) := by
-    ext i j <;> cases i <;> cases j <;>
+    (ext i j; cases i) <;> cases j <;>
       simp [D, T, Matrix.fromBlocks_multiply, Matrix.fromBlocks_conjTranspose,
         sub_eq_add_neg]
   simpa [hfactor] using hconj
@@ -2839,7 +2839,7 @@ theorem conditionalMinEntropyFeasible_supportTraceLog_residual_nonneg
           (c : ℝ) •
             (star (Uρ : CMatrix (Prod a b)) * τ *
               (Uρ : CMatrix (Prod a b))) := by
-      simp [Matrix.mul_apply, Finset.mul_sum, Finset.sum_mul, mul_assoc]
+      simp [mul_assoc]
     rw [hmat]
     simp
   have hrow_sum (j : Prod a b) :
@@ -2959,7 +2959,7 @@ theorem conditionalMinEntropyFeasible_supportTraceLog_residual_nonneg
           ((Dρ * Bq * Dρ) j.1 j.1).re = r ^ 2 * q := by
         rw [hentry]
         simp only [Complex.mul_re, Complex.ofReal_re, Complex.ofReal_im,
-          zero_mul, mul_zero, sub_zero, add_zero, q]
+          zero_mul, mul_zero, sub_zero, q]
         dsimp [Bq]
         ring_nf
       simpa [Dρ, Bq] using hre

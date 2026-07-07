@@ -56,10 +56,10 @@ def tensorPowerEquiv : (n : ℕ) → TensorPower a n ≃ (Fin n → a)
         invFun := fun f => (f 0, Fin.tail f),
         left_inv := by
           rintro ⟨head, tail⟩
-          ext i <;> simp [Fin.cons_zero, Fin.cons_succ, Fin.tail_cons]
+          ext i <;> simp [Fin.cons_zero, Fin.tail_cons]
         right_inv := by
           intro f
-          ext i <;> simp [Fin.cons_zero, Fin.cons_succ, Fin.tail_cons] }
+          (ext i; simp) }
 
 /-- Precompose a `Fin n → a` function by permutation inverse (left action via `⁻¹`). -/
 def precompPerm (n : ℕ) (σ : Equiv.Perm (Fin n)) : Equiv (Fin n → a) (Fin n → a) where
@@ -1491,7 +1491,7 @@ private theorem inv_sqrt_profileClass_card_mul_inv_sqrt_profileClass_card
           (Real.sqrt ((tensorPowerProfileClass (a := a) p).card : ℝ) : ℂ) =
         ((tensorPowerProfileClass (a := a) p).card : ℂ) := by
     norm_cast
-    simpa [pow_two] using Real.sq_sqrt (le_of_lt hpos)
+    simp
   rw [← mul_inv_rev, hsqrt_sq]
 
 private theorem tensorPowerProfileUnitVector_mul_conj {n : ℕ}
