@@ -103,33 +103,6 @@ private theorem state_matrix_le_one_for_htmi (rho : State a) :
     exact sub_nonneg.mpr (heig_le_one i)
   exact_mod_cast hnonneg
 
-private theorem cMatrix_trace_mul_le_of_le_for_htmi {D X Y : CMatrix a}
-    (hD : D.PosSemidef) (hXY : X ≤ Y) :
-    ((D * X).trace).re ≤ ((D * Y).trace).re := by
-  rw [Matrix.le_iff] at hXY
-  have hnonneg : 0 ≤ ((D * (Y - X)).trace).re := by
-    let S := psdSqrt D
-    have hpsd : (S * (Y - X) * S).PosSemidef := by
-      have h := hXY.mul_mul_conjTranspose_same S
-      rw [psdSqrt_isHermitian D] at h
-      exact h
-    have htrace_re : 0 ≤ ((S * (Y - X) * S).trace).re :=
-      (Matrix.PosSemidef.trace_nonneg hpsd).1
-    have hEq : (D * (Y - X)).trace = (S * (Y - X) * S).trace := by
-      have hSsq : S * S = D := by
-        simpa [S] using psdSqrt_mul_self_of_posSemidef hD
-      rw [← hSsq]
-      calc
-        ((S * S) * (Y - X)).trace = (S * (S * (Y - X))).trace := by
-          rw [Matrix.mul_assoc]
-        _ = ((S * (Y - X)) * S).trace := by rw [Matrix.trace_mul_comm]
-        _ = (S * (Y - X) * S).trace := by rw [Matrix.mul_assoc]
-    rwa [hEq]
-  have hcalc : ((D * (Y - X)).trace).re =
-      ((D * Y).trace).re - ((D * X).trace).re := by
-    simp [Matrix.mul_sub, Matrix.trace_sub]
-  linarith
-
 /-- Accept probability of an effect against a state, written as a real trace. -/
 def effectAcceptProbability (rho : State a) (Lambda : CMatrix a) : ℝ :=
   ((rho.matrix * Lambda).trace).re
@@ -427,7 +400,7 @@ private theorem effectAcceptProbability_le_effect_trace_for_htmi
     (Lambda : HypothesisTestingEffect rho epsilon) :
     effectAcceptProbability rho Lambda.effect ≤ Lambda.effect.trace.re := by
   have hle : rho.matrix ≤ (1 : CMatrix a) := state_matrix_le_one_for_htmi rho
-  have htrace := cMatrix_trace_mul_le_of_le_for_htmi Lambda.pos hle
+  have htrace := cMatrix_trace_mul_le_of_le_posSemidef_left Lambda.pos hle
   unfold effectAcceptProbability
   calc
     ((rho.matrix * Lambda.effect).trace).re =
@@ -447,7 +420,7 @@ private theorem scalar_trace_le_typeIIError_of_matrix_lower_bound_for_htmi
     {c : ℝ} (Lambda : HypothesisTestingEffect rho epsilon)
     (hlower : c • (1 : CMatrix a) ≤ sigma.matrix) :
     c * Lambda.effect.trace.re ≤ Lambda.typeIIError sigma := by
-  have htrace := cMatrix_trace_mul_le_of_le_for_htmi Lambda.pos hlower
+  have htrace := cMatrix_trace_mul_le_of_le_posSemidef_left Lambda.pos hlower
   unfold HypothesisTestingEffect.typeIIError effectTypeIIError effectAcceptProbability
   calc
     c * Lambda.effect.trace.re =

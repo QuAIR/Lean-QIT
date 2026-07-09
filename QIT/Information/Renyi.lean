@@ -11,6 +11,8 @@ public import QIT.Information.Renyi.RenyiDPI
 public import QIT.Information.Renyi.RenyiLimit
 public import QIT.Information.Renyi.ConditionalRenyi
 public import QIT.Information.Renyi.ConditionalPetzRenyi
+public import QIT.Information.Renyi.ConditionalRenyiSource
+public import QIT.Information.Renyi.ConditionalPetzRenyiAlternative
 public import QIT.Information.Renyi.ConditionalRenyiTraceBridge
 public import QIT.Information.Renyi.ConditionalRenyiMinimax
 public import QIT.Information.Renyi.FrankLieb

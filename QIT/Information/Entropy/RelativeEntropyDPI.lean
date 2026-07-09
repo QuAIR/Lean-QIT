@@ -1906,6 +1906,89 @@ theorem relativeEntropyPSDReferenceTraceLogE_dataProcessing_channel_ge
 
 end State
 
+variable {a : Type u} [Fintype a] [DecidableEq a]
+
+omit [DecidableEq a] in
+theorem supports_real_smul_left
+    {M N : CMatrix a} (c : ℝ) (hM : Matrix.Supports M N) :
+    Matrix.Supports (c • M) N := by
+  intro v hv
+  simp [Matrix.smul_mulVec, hM v hv]
+
+/-- Finite branch of Tomamichel's source-domain quantum divergence.
+
+For a nonzero PSD operator `rho` supported by the PSD reference `sigma`, this is
+the source trace-normalized value.  It is implemented through the normalized
+state `rho / Tr rho` plus the trace-scaling correction, avoiding a separate
+singular matrix-log API while keeping the same mathematical value. -/
+def relativeEntropyPSDTraceLogFinite
+    (rho sigma : CMatrix a) (hRho : rho.PosSemidef) (hRho_ne : rho ≠ 0)
+    (hSigma : sigma.PosSemidef) (hSupport : Matrix.Supports rho sigma) : ℝ := by
+  classical
+  let hRhoTr : 0 < rho.trace.re :=
+    State.posSemidef_trace_pos_of_ne_zero hRho hRho_ne
+  let rhoNorm : State a := State.normalizePSD rho hRho hRhoTr.ne'
+  have hSupportNorm : Matrix.Supports rhoNorm.matrix sigma := by
+    simpa [rhoNorm, State.normalizePSD] using
+      supports_real_smul_left ((rho.trace.re)⁻¹ : ℝ) hSupport
+  exact
+    log2 rho.trace.re +
+      State.relativeEntropyPSDReferenceTraceLogFinite
+        rhoNorm sigma hSigma hSupportNorm
+
+/-- Source-exact extended-real quantum divergence for nonzero PSD operators.
+
+This matches Tomamichel's Definition `df:rel`: the finite trace-log branch is
+used when `rho` is supported by `sigma`, and the value is `+infty` otherwise. -/
+def relativeEntropyPSDTraceLogE
+    (rho sigma : CMatrix a) (hRho : rho.PosSemidef) (hRho_ne : rho ≠ 0)
+    (hSigma : sigma.PosSemidef) : EReal := by
+  classical
+  exact
+    if hSupport : Matrix.Supports rho sigma then
+      (relativeEntropyPSDTraceLogFinite rho sigma hRho hRho_ne hSigma hSupport : EReal)
+    else
+      (⊤ : EReal)
+
+@[simp]
+theorem relativeEntropyPSDTraceLogE_eq_top_of_not_supports
+    (rho sigma : CMatrix a) (hRho : rho.PosSemidef) (hRho_ne : rho ≠ 0)
+    (hSigma : sigma.PosSemidef) (hSupport : ¬ Matrix.Supports rho sigma) :
+    relativeEntropyPSDTraceLogE rho sigma hRho hRho_ne hSigma = (⊤ : EReal) := by
+  simp [relativeEntropyPSDTraceLogE, hSupport]
+
+@[simp]
+theorem relativeEntropyPSDTraceLogE_eq_coe_of_supports
+    (rho sigma : CMatrix a) (hRho : rho.PosSemidef) (hRho_ne : rho ≠ 0)
+    (hSigma : sigma.PosSemidef) (hSupport : Matrix.Supports rho sigma) :
+    relativeEntropyPSDTraceLogE rho sigma hRho hRho_ne hSigma =
+      (relativeEntropyPSDTraceLogFinite rho sigma hRho hRho_ne hSigma hSupport : EReal) := by
+  simp [relativeEntropyPSDTraceLogE, hSupport]
+
+theorem relativeEntropyPSDTraceLogFinite_state_eq
+    (rho : State a) {sigma : CMatrix a} (hSigma : sigma.PosSemidef)
+    (hSupport : Matrix.Supports rho.matrix sigma) :
+    relativeEntropyPSDTraceLogFinite
+        rho.matrix sigma rho.pos rho.density_matrix_ne_zero hSigma hSupport =
+      State.relativeEntropyPSDReferenceTraceLogFinite rho sigma hSigma hSupport := by
+  simp [relativeEntropyPSDTraceLogFinite, State.normalizePSD_self, rho.trace_re_eq_one, log2]
+
+/-- The source-exact PSD-operator definition specializes to the existing
+normalized-state PSD-reference API used by the DPI theorems. -/
+theorem relativeEntropyPSDTraceLogE_state_eq
+    (rho : State a) {sigma : CMatrix a} (hSigma : sigma.PosSemidef) :
+    relativeEntropyPSDTraceLogE rho.matrix sigma rho.pos rho.density_matrix_ne_zero hSigma =
+      State.relativeEntropyPSDReferenceTraceLogE rho sigma hSigma := by
+  classical
+  by_cases hSupport : Matrix.Supports rho.matrix sigma
+  · rw [relativeEntropyPSDTraceLogE_eq_coe_of_supports
+        rho.matrix sigma rho.pos rho.density_matrix_ne_zero hSigma hSupport,
+      State.relativeEntropyPSDReferenceTraceLogE_eq_coe_of_supports rho hSigma hSupport,
+      relativeEntropyPSDTraceLogFinite_state_eq rho hSigma hSupport]
+  · rw [relativeEntropyPSDTraceLogE_eq_top_of_not_supports
+        rho.matrix sigma rho.pos rho.density_matrix_ne_zero hSigma hSupport,
+      State.relativeEntropyPSDReferenceTraceLogE_eq_top_of_not_supports rho hSigma hSupport]
+
 end
 
 end QIT

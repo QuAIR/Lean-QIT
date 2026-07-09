@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedLowerBound
+public import QIT.Coding.EntanglementAssisted.OneShot.Lower.Naimark
 public import QIT.HypothesisTesting.DPI
 
 /-!

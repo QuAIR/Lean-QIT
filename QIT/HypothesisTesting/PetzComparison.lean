@@ -6,8 +6,8 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedPetzLowerBound
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedHTLowerBound
+public import QIT.Coding.EntanglementAssisted.OneShot.Lower.Petz
+public import QIT.Coding.EntanglementAssisted.OneShot.Lower.HypothesisTesting
 public import QIT.HypothesisTesting.ComparatorTest
 public import QIT.HypothesisTesting.Audenaert
 public import QIT.States.Schatten

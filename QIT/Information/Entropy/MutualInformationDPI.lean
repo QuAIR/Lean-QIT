@@ -10,7 +10,7 @@ public import QIT.Information.Entropy.RelativeEntropyDPI
 public import QIT.Coding.Classical.Holevo
 public import QIT.Information.Entropy.EntropyTensorPower
 public import QIT.HypothesisTesting.DPI
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedPetzLimit
+public import QIT.Coding.EntanglementAssisted.Renyi.Petz.Limit
 
 /-!
 # Mutual information data processing

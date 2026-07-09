@@ -1468,19 +1468,6 @@ public theorem liebAndo_tensorConcavity_posSemidef
     cMatrix_le_of_tendsto hleft hright hineq_eventual
   simpa [q, Bbar] using hlimit
 
-/-- Positive trace functionals preserve Loewner inequalities. -/
-public theorem cMatrix_trace_mul_le_of_le_posSemidef_left
-    {A B W : CMatrix a} (hW : W.PosSemidef) (hAB : A ≤ B) :
-    ((W * A).trace).re ≤ ((W * B).trace).re := by
-  have hdiff : (B - A).PosSemidef := Matrix.le_iff.mp hAB
-  have hnonneg : 0 ≤ ((W * (B - A)).trace).re :=
-    cMatrix_trace_mul_posSemidef_re_nonneg hW hdiff
-  have htrace :
-      ((W * (B - A)).trace).re =
-        ((W * B).trace).re - ((W * A).trace).re := by
-    rw [mul_sub, Matrix.trace_sub, Complex.sub_re]
-  linarith
-
 /-- Lieb--Ando tensor concavity after applying an arbitrary positive trace
 functional.
 
@@ -1519,7 +1506,7 @@ public theorem liebAndo_tensorWeightedTraceConcavity_posSemidef
         (A₁ := A₁) (A₂ := A₂) (B₁ := B₁) (B₂ := B₂)
         hA₁ hA₂ hB₁ hB₂ ht0 ht1
   have htrace :=
-    cMatrix_trace_mul_le_of_le_posSemidef_left (a := a × b) hW hmat
+    cMatrix_trace_mul_le_of_le_posSemidef_left hW hmat
   have hleft :
       ((W * (t • M₁ + (1 - t) • M₂)).trace).re =
         t * ((W * M₁).trace).re + (1 - t) * ((W * M₂).trace).re := by
@@ -10414,14 +10401,8 @@ trace one by support. -/
 noncomputable def psdSupportCompressedState
     (ρ : State a) {σ : CMatrix a} (hσ : σ.PosSemidef)
     (hSupport : Matrix.Supports ρ.matrix σ) :
-    State (psdSupportIndex σ hσ) where
-  matrix := psdSupportCompress σ hσ ρ.matrix
-  pos := psdSupportCompress_posSemidef σ hσ ρ.pos
-  trace_eq_one := by
-    have htrace :=
-      psdSupportCompress_trace_of_supports
-        (M := ρ.matrix) (N := σ) ρ.pos hσ hSupport
-    simpa [htrace] using ρ.trace_eq_one
+    State (psdSupportIndex σ hσ) :=
+  _root_.QIT.psdSupportCompressedState ρ hσ hSupport
 
 @[simp]
 theorem psdSupportCompressedState_matrix
@@ -10433,14 +10414,13 @@ theorem psdSupportCompressedState_matrix
 theorem psdSupportCompressedState_reference_posDef
     {σ : CMatrix a} (hσ : σ.PosSemidef) :
     (psdSupportCompress σ hσ σ).PosDef :=
-  psdSupportCompress_self_posDef σ hσ
+  _root_.QIT.psdSupportCompressedState_reference_posDef hσ
 
 theorem psdSupportCompressedState_support_nonempty
     (ρ : State a) {σ : CMatrix a} (hσ : σ.PosSemidef)
     (hSupport : Matrix.Supports ρ.matrix σ) :
     Nonempty (psdSupportIndex σ hσ) :=
-  _root_.QIT.psdSupportIndex_nonempty_of_trace_one_supports
-    ρ.pos hσ ρ.trace_eq_one hSupport
+  _root_.QIT.psdSupportCompressedState_support_nonempty ρ hσ hSupport
 
 /-- Embedding map from the positive spectral support of a PSD reference back
 to the ambient system. -/

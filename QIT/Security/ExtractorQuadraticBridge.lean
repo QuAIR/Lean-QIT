@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Security.ExtractorTraceBridge
+public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 public import Mathlib.LinearAlgebra.Matrix.PosDef
 public import Mathlib.Analysis.Matrix.Order
@@ -90,33 +91,6 @@ private theorem cMatrix_trace_re_le_of_le {X Y : CMatrix e} (hXY : X ≤ Y) :
     (Matrix.PosSemidef.trace_nonneg hXY).1
   have hcalc : (Y - X).trace.re = Y.trace.re - X.trace.re := by
     simp [Matrix.trace_sub]
-  linarith
-
-private theorem cMatrix_trace_mul_le_of_le {D X Y : CMatrix e}
-    (hD : D.PosSemidef) (hXY : X ≤ Y) :
-    ((D * X).trace).re ≤ ((D * Y).trace).re := by
-  rw [Matrix.le_iff] at hXY
-  have hnonneg : 0 ≤ ((D * (Y - X)).trace).re := by
-    let S := psdSqrt D
-    have hpsd : (S * (Y - X) * S).PosSemidef := by
-      have h := hXY.mul_mul_conjTranspose_same S
-      rw [psdSqrt_isHermitian D] at h
-      exact h
-    have htrace_re : 0 ≤ ((S * (Y - X) * S).trace).re :=
-      (Matrix.PosSemidef.trace_nonneg hpsd).1
-    have hEq : (D * (Y - X)).trace = (S * (Y - X) * S).trace := by
-      have hSsq : S * S = D := by
-        simpa [S] using psdSqrt_mul_self_of_posSemidef hD
-      rw [← hSsq]
-      calc
-        ((S * S) * (Y - X)).trace = (S * (S * (Y - X))).trace := by
-          rw [Matrix.mul_assoc]
-        _ = ((S * (Y - X)) * S).trace := by rw [Matrix.trace_mul_comm]
-        _ = (S * (Y - X) * S).trace := by rw [Matrix.mul_assoc]
-    rwa [hEq]
-  have hcalc : ((D * (Y - X)).trace).re =
-      ((D * Y).trace).re - ((D * X).trace).re := by
-    simp [Matrix.mul_sub, Matrix.trace_sub]
   linarith
 
 private theorem cMatrix_effect_mul_self_le_self {P : CMatrix e}
@@ -205,10 +179,10 @@ private theorem cMatrix_effect_trace_weight_le_one {P σ : CMatrix e}
   have hP2le : P * P ≤ P := cMatrix_effect_mul_self_le_self hPpos hPle
   have htrace_le :
       ((σ * (P * P)).trace).re ≤ ((σ * P).trace).re :=
-    cMatrix_trace_mul_le_of_le hσ hP2le
+    QIT.cMatrix_trace_mul_le_of_le_posSemidef_left hσ hP2le
   have htrace_le_one :
       ((σ * P).trace).re ≤ σ.trace.re :=
-    (cMatrix_trace_mul_le_of_le hσ hPle).trans_eq (by simp)
+    (QIT.cMatrix_trace_mul_le_of_le_posSemidef_left hσ hPle).trans_eq (by simp)
   have hcyc : (P * σ * P).trace = (σ * (P * P)).trace := by
     calc
       (P * σ * P).trace = ((P * σ) * P).trace := by rw [Matrix.mul_assoc]

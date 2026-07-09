@@ -9,12 +9,14 @@ module
 public import QIT.Classical.CQState
 public import QIT.Information.Entropy.Entropy
 public import QIT.States.Geometry.Fidelity
+public import QIT.States.Geometry.FuchsVdG
 public import QIT.Core.POVMProbability
 public import QIT.Channels.Diamond
 public import QIT.States.Schatten
 public import QIT.States.Purification.PureGeometry
 public import QIT.States.Purification.Uhlmann
 public import QIT.States.Subnormalized
+public import QIT.States.TraceNorm.PositivePart
 public import Mathlib.Data.Real.Archimedean
 
 /-!
@@ -826,6 +828,20 @@ theorem SubnormalizedState.purifiedBall_iff_hatExtension_purifiedBall
   rw [SubnormalizedState.purifiedBall_eq, State.purifiedBall_eq,
     SubnormalizedState.purifiedDistance_eq_purifiedDistance_hatExtension]
 
+/-- Hat extension is injective on subnormalized states. -/
+theorem SubnormalizedState.eq_of_hatExtension_eq {ρ σ : SubnormalizedState a}
+    (h : ρ.hatExtension = σ.hatExtension) :
+    ρ = σ := by
+  apply SubnormalizedState.ext
+  ext i j
+  have hmatrix := congrArg State.matrix h
+  have hentry :
+      ρ.hatExtension.matrix (Sum.inr i) (Sum.inr j) =
+        σ.hatExtension.matrix (Sum.inr i) (Sum.inr j) := by
+    rw [hmatrix]
+  simpa [SubnormalizedState.hatExtension_matrix,
+    SubnormalizedState.hatExtensionMatrix_state_state] using hentry
+
 /-- Subnormalized purified distance is symmetric via the normalized
 hat-extension bridge. -/
 theorem SubnormalizedState.purifiedDistance_comm
@@ -1269,6 +1285,32 @@ theorem State.purifiedBall_self_of_nonneg
   rw [State.purifiedBall_eq, State.purifiedDistance_self]
   exact hε
 
+/-- The zero-radius purified-distance ball of a normalized state is the
+singleton containing the center.
+
+This is the normalized-state specialization of
+[Tomamichel2015FiniteResources, calculus.tex:398-411]. -/
+theorem State.purifiedBall_zero_iff_eq (ρ σ : State a) :
+    ρ.purifiedBall 0 σ ↔ ρ = σ := by
+  constructor
+  · intro hball
+    have hdist_nonneg : 0 ≤ ρ.purifiedDistance σ := by
+      rw [State.purifiedDistance_eq]
+      exact Real.sqrt_nonneg _
+    have hdist : ρ.purifiedDistance σ = 0 := le_antisymm hball hdist_nonneg
+    have htrace_le_zero : ρ.normalizedTraceDistance σ ≤ 0 := by
+      calc
+        ρ.normalizedTraceDistance σ ≤ ρ.purifiedDistance σ :=
+          State.fuchs_van_de_graaf_upper ρ σ
+        _ = 0 := hdist
+    have htrace_nonneg : 0 ≤ ρ.normalizedTraceDistance σ :=
+      State.normalizedTraceDistance_nonneg ρ σ
+    have htrace : ρ.normalizedTraceDistance σ = 0 :=
+      le_antisymm htrace_le_zero htrace_nonneg
+    exact State.eq_of_normalizedTraceDistance_eq_zero htrace
+  · intro h
+    simpa [h] using State.purifiedBall_self_of_nonneg σ (le_refl (0 : ℝ))
+
 @[simp]
 theorem SubnormalizedState.generalizedFidelity_self
     (ρ : SubnormalizedState a) :
@@ -1299,6 +1341,25 @@ theorem SubnormalizedState.purifiedBall_self_of_nonneg
     ρ.purifiedBall ε ρ := by
   rw [SubnormalizedState.purifiedBall_eq, SubnormalizedState.purifiedDistance_self]
   exact hε
+
+/-- The zero-radius purified-distance ball of a subnormalized state is the
+singleton containing the center.
+
+This is Tomamichel's `B^0(ρ) = {ρ}` property for the subnormalized
+epsilon ball [Tomamichel2015FiniteResources, calculus.tex:398-411]. -/
+theorem SubnormalizedState.purifiedBall_zero_iff_eq (ρ σ : SubnormalizedState a) :
+    ρ.purifiedBall 0 σ ↔ ρ = σ := by
+  constructor
+  · intro hball
+    let ρhat : State (Sum PUnit.{u + 1} a) := ρ.hatExtension
+    let σhat : State (Sum PUnit.{u + 1} a) := σ.hatExtension
+    have hhat : ρhat.purifiedBall 0 σhat := by
+      simpa [ρhat, σhat] using
+        (SubnormalizedState.purifiedBall_iff_hatExtension_purifiedBall ρ σ 0).mp hball
+    have hhatEq : ρhat = σhat := (State.purifiedBall_zero_iff_eq ρhat σhat).mp hhat
+    exact SubnormalizedState.eq_of_hatExtension_eq (by simpa [ρhat, σhat] using hhatEq)
+  · intro h
+    simpa [h] using SubnormalizedState.purifiedBall_self_of_nonneg σ (le_refl (0 : ℝ))
 
 /-- A lower bound on generalized fidelity gives a subnormalized
 purified-distance ball witness. -/
@@ -1609,6 +1670,50 @@ theorem smoothConditionalMaxEntropy_eq (ρ : State (Prod a b)) (ε : ℝ) :
           h = ρ'.conditionalMaxEntropy} :=
   rfl
 
+/-- Zero-radius smooth conditional min-entropy is the unsmoothed conditional
+min-entropy [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
+theorem smoothConditionalMinEntropy_zero (ρ : State (Prod a b)) :
+    ρ.smoothConditionalMinEntropy 0 = ρ.conditionalMinEntropy := by
+  rw [State.smoothConditionalMinEntropy_eq]
+  have hset :
+      {h : ℝ | ∃ ρ' : State (Prod a b),
+        ρ.purifiedBall 0 ρ' ∧ h = ρ'.conditionalMinEntropy} =
+        {ρ.conditionalMinEntropy} := by
+    ext h
+    constructor
+    · rintro ⟨ρ', hball, hh⟩
+      rw [Set.mem_singleton_iff]
+      have hρ' : ρ = ρ' := (State.purifiedBall_zero_iff_eq ρ ρ').mp hball
+      subst ρ'
+      simpa using hh
+    · intro hh
+      rw [Set.mem_singleton_iff] at hh
+      exact ⟨ρ, State.purifiedBall_self_of_nonneg ρ (le_refl (0 : ℝ)), hh⟩
+  rw [hset]
+  exact csSup_singleton ρ.conditionalMinEntropy
+
+/-- Zero-radius smooth conditional max-entropy is the unsmoothed conditional
+max-entropy [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
+theorem smoothConditionalMaxEntropy_zero (ρ : State (Prod a b)) :
+    ρ.smoothConditionalMaxEntropy 0 = ρ.conditionalMaxEntropy := by
+  rw [State.smoothConditionalMaxEntropy_eq]
+  have hset :
+      {h : ℝ | ∃ ρ' : State (Prod a b),
+        ρ.purifiedBall 0 ρ' ∧ h = ρ'.conditionalMaxEntropy} =
+        {ρ.conditionalMaxEntropy} := by
+    ext h
+    constructor
+    · rintro ⟨ρ', hball, hh⟩
+      rw [Set.mem_singleton_iff]
+      have hρ' : ρ = ρ' := (State.purifiedBall_zero_iff_eq ρ ρ').mp hball
+      subst ρ'
+      simpa using hh
+    · intro hh
+      rw [Set.mem_singleton_iff] at hh
+      exact ⟨ρ, State.purifiedBall_self_of_nonneg ρ (le_refl (0 : ℝ)), hh⟩
+  rw [hset]
+  exact csInf_singleton ρ.conditionalMaxEntropy
+
 end State
 
 namespace SubnormalizedState
@@ -1918,6 +2023,52 @@ theorem smoothConditionalMaxEntropy_eq
         ∃ ρ' : SubnormalizedState (Prod a b),
           ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropy} :=
   rfl
+
+/-- Zero-radius subnormalized smooth conditional min-entropy is the unsmoothed
+conditional min-entropy [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
+theorem smoothConditionalMinEntropy_zero (ρ : SubnormalizedState (Prod a b)) :
+    ρ.smoothConditionalMinEntropy 0 = ρ.conditionalMinEntropy := by
+  rw [SubnormalizedState.smoothConditionalMinEntropy_eq]
+  have hset :
+      {h : ℝ | ∃ ρ' : SubnormalizedState (Prod a b),
+        ρ.purifiedBall 0 ρ' ∧ h = ρ'.conditionalMinEntropy} =
+        {ρ.conditionalMinEntropy} := by
+    ext h
+    constructor
+    · rintro ⟨ρ', hball, hh⟩
+      rw [Set.mem_singleton_iff]
+      have hρ' : ρ = ρ' :=
+        (SubnormalizedState.purifiedBall_zero_iff_eq ρ ρ').mp hball
+      subst ρ'
+      simpa using hh
+    · intro hh
+      rw [Set.mem_singleton_iff] at hh
+      exact ⟨ρ, SubnormalizedState.purifiedBall_self_of_nonneg ρ (le_refl (0 : ℝ)), hh⟩
+  rw [hset]
+  exact csSup_singleton ρ.conditionalMinEntropy
+
+/-- Zero-radius subnormalized smooth conditional max-entropy is the unsmoothed
+conditional max-entropy [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
+theorem smoothConditionalMaxEntropy_zero (ρ : SubnormalizedState (Prod a b)) :
+    ρ.smoothConditionalMaxEntropy 0 = ρ.conditionalMaxEntropy := by
+  rw [SubnormalizedState.smoothConditionalMaxEntropy_eq]
+  have hset :
+      {h : ℝ | ∃ ρ' : SubnormalizedState (Prod a b),
+        ρ.purifiedBall 0 ρ' ∧ h = ρ'.conditionalMaxEntropy} =
+        {ρ.conditionalMaxEntropy} := by
+    ext h
+    constructor
+    · rintro ⟨ρ', hball, hh⟩
+      rw [Set.mem_singleton_iff]
+      have hρ' : ρ = ρ' :=
+        (SubnormalizedState.purifiedBall_zero_iff_eq ρ ρ').mp hball
+      subst ρ'
+      simpa using hh
+    · intro hh
+      rw [Set.mem_singleton_iff] at hh
+      exact ⟨ρ, SubnormalizedState.purifiedBall_self_of_nonneg ρ (le_refl (0 : ℝ)), hh⟩
+  rw [hset]
+  exact csInf_singleton ρ.conditionalMaxEntropy
 
 /-! ## Subnormalized pure-marginal pairing and smooth-duality bridges -/
 

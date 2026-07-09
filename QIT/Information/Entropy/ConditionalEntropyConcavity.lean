@@ -273,6 +273,26 @@ theorem vonNeumann_average_le_shannon_add_sum (E : Ensemble ι a) :
   rw [hcond, cqState_vonNeumann E] at hcond_nonneg
   linarith
 
+/-- Holevo information is bounded by the input alphabet size: χ(E)=I(X;B) ≤ H(X) ≤ log2|ι|. -/
+theorem holevo_le_log_card_input (E : Ensemble ι a) :
+    E.holevoInformation ≤ log2 (Fintype.card ι) := by
+  calc E.holevoInformation
+      = State.vonNeumann E.averageState
+          - ∑ i, (E.probs i).toReal * State.vonNeumann (E.states i) := rfl
+    _ ≤ -(∑ x, xlog2 ((E.probs x : ℝ))) := by
+        linarith [vonNeumann_average_le_shannon_add_sum E]
+    _ = State.vonNeumann E.cqState.marginalA := (cqState_marginalA_vonNeumann E).symm
+    _ ≤ log2 (Fintype.card ι) := State.vonNeumann_le_log_card E.cqState.marginalA
+
+/-- Full dimension bound: χ(E) ≤ log2(min{|ι|, |a|}) (Wilde, qit-notes.tex exercise ~19482). -/
+theorem holevo_le_log_min_card (E : Ensemble ι a) :
+    E.holevoInformation ≤ log2 (min (Fintype.card ι) (Fintype.card a)) := by
+  have h1 := holevo_le_log_card_input E
+  have h2 := holevo_le_log_card E
+  rcases le_total (Fintype.card ι) (Fintype.card a) with hca | hca
+  · rw [min_eq_left (by exact_mod_cast hca)]; exact h1
+  · rw [min_eq_right (by exact_mod_cast hca)]; exact h2
+
 end Ensemble
 
 end

@@ -16,6 +16,7 @@ public import QIT.States.Purification.Equivalence
 public import QIT.States.Schatten
 public import QIT.States.Subnormalized
 public import QIT.States.TraceNorm.PositivePart
+public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import Mathlib.Analysis.InnerProductSpace.Adjoint
 public import Mathlib.Analysis.InnerProductSpace.PiL2
 public import Mathlib.Analysis.InnerProductSpace.Projection.Submodule
@@ -920,33 +921,6 @@ private theorem matrix_le_one (ρ : State a) :
     exact sub_nonneg.mpr (heig_le_one i)
   exact_mod_cast hnonneg
 
-private theorem cMatrix_trace_mul_le_of_le {D X Y : CMatrix a}
-    (hD : D.PosSemidef) (hXY : X ≤ Y) :
-    ((D * X).trace).re ≤ ((D * Y).trace).re := by
-  rw [Matrix.le_iff] at hXY
-  have hnonneg : 0 ≤ ((D * (Y - X)).trace).re := by
-    let S := psdSqrt D
-    have hpsd : (S * (Y - X) * S).PosSemidef := by
-      have h := hXY.mul_mul_conjTranspose_same S
-      rw [psdSqrt_isHermitian D] at h
-      exact h
-    have htrace_re : 0 ≤ ((S * (Y - X) * S).trace).re :=
-      (Matrix.PosSemidef.trace_nonneg hpsd).1
-    have hEq : (D * (Y - X)).trace = (S * (Y - X) * S).trace := by
-      have hSsq : S * S = D := by
-        simpa [S] using psdSqrt_mul_self_of_posSemidef hD
-      rw [← hSsq]
-      calc
-        ((S * S) * (Y - X)).trace = (S * (S * (Y - X))).trace := by
-          rw [Matrix.mul_assoc]
-        _ = ((S * (Y - X)) * S).trace := by rw [Matrix.trace_mul_comm]
-        _ = (S * (Y - X) * S).trace := by rw [Matrix.mul_assoc]
-    rwa [hEq]
-  have hcalc : ((D * (Y - X)).trace).re =
-      ((D * Y).trace).re - ((D * X).trace).re := by
-    simp [Matrix.mul_sub, Matrix.trace_sub]
-  linarith
-
 /-- The normalized Reynolds/symmetric-subspace reference state.
 
 This is the finite-dimensional post-selection reference supported on the
@@ -1220,9 +1194,9 @@ theorem normalizedTraceDistance_le_factor_sub_one_of_matrixDominatedBy
     exact positiveSpectralProjector_score_eq_posPart_trace H hH
   have htrace_le :
       ((P * H).trace).re ≤ ((P * (((c - 1 : ℝ) : ℂ) • σ.matrix)).trace).re :=
-    cMatrix_trace_mul_le_of_le hPpos hdiff_le
+    cMatrix_trace_mul_le_of_le_posSemidef_left hPpos hdiff_le
   have hσP_le_one : ((P * σ.matrix).trace).re ≤ 1 := by
-    have h := cMatrix_trace_mul_le_of_le σ.pos hPle
+    have h := cMatrix_trace_mul_le_of_le_posSemidef_left σ.pos hPle
     have hcomm : ((P * σ.matrix).trace).re = ((σ.matrix * P).trace).re := by
       rw [Matrix.trace_mul_comm P σ.matrix]
     have hone : ((σ.matrix * (1 : CMatrix a)).trace).re = 1 := by
@@ -6871,7 +6845,8 @@ theorem symmetricProjectionSandwichMatrix_trace_re_le_one
   let P : CMatrix (TensorPower a n) := symmetricProjectionMatrix (a := a) n
   have htrace_le' :
       ((ρ.matrix * P).trace).re ≤ ((ρ.matrix * 1).trace).re :=
-    cMatrix_trace_mul_le_of_le ρ.pos (symmetricProjectionMatrix_le_one (a := a) n)
+    cMatrix_trace_mul_le_of_le_posSemidef_left ρ.pos
+      (symmetricProjectionMatrix_le_one (a := a) n)
   have htrace_le : ((ρ.matrix * P).trace).re ≤ ρ.matrix.trace.re := by
     simpa [P, Matrix.mul_one] using htrace_le'
   have hcyc :

@@ -39,141 +39,6 @@ noncomputable section
 
 variable {a b : Type u} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 
-private theorem renyi_spectrum_real_diagonal_ofReal {n : Type u} [Fintype n] [DecidableEq n]
-    (d : n -> ℝ) :
-    spectrum ℝ (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) = Set.range d := by
-  ext r
-  rw [← spectrum.algebraMap_mem_iff ℂ]
-  change (r : ℂ) ∈ spectrum ℂ (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) ↔
-    r ∈ Set.range d
-  rw [spectrum_diagonal]
-  constructor
-  · rintro ⟨i, hi⟩
-    exact ⟨i, Complex.ofReal_injective hi⟩
-  · rintro ⟨i, rfl⟩
-    exact ⟨i, rfl⟩
-
-private theorem renyi_aeval_diagonal_ofReal {n : Type u} [Fintype n] [DecidableEq n]
-    (d : n -> ℝ) (p : ℝ[X]) :
-    aeval (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) p =
-      Matrix.diagonal (fun i => ((p.eval (d i) : ℝ) : ℂ)) := by
-  let dC : n -> ℂ := fun i => (d i : ℂ)
-  change aeval (Matrix.diagonal dC) p =
-    Matrix.diagonal (fun i => ((p.eval (d i) : ℝ) : ℂ))
-  rw [show Matrix.diagonal dC = Matrix.diagonalAlgHom (R := ℝ) dC by rfl]
-  rw [Polynomial.aeval_algHom (Matrix.diagonalAlgHom (R := ℝ)) dC]
-  rw [Polynomial.aeval_pi]
-  ext i j
-  by_cases h : i = j
-  · subst j
-    simpa [Matrix.diagonal, dC, Polynomial.aeval_def] using
-      (Polynomial.eval₂_at_apply (p := p) (algebraMap ℝ ℂ) (d i))
-  · simp [Matrix.diagonal, h]
-
-private theorem renyi_cfc_diagonal_ofReal {n : Type u} [Fintype n] [DecidableEq n]
-    (d : n -> ℝ) (f : ℝ -> ℝ) :
-    cfc f (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) =
-      Matrix.diagonal (fun i => ((f (d i) : ℝ) : ℂ)) := by
-  classical
-  obtain ⟨p, hp⟩ :=
-    (Polynomial.exists_eval_eq_iff d (fun i => f (d i))).mpr (by
-      intro i j hij
-      simp [hij])
-  calc
-    cfc f (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) =
-        cfc p.eval (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) := by
-      apply cfc_congr
-      intro x hx
-      rw [renyi_spectrum_real_diagonal_ofReal d] at hx
-      rcases hx with ⟨i, rfl⟩
-      exact (hp i).symm
-    _ = aeval (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) p := by
-      exact cfc_polynomial (q := p)
-        (a := (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n))
-        (ha := by
-          rw [isSelfAdjoint_iff, star_eq_conjTranspose, Matrix.diagonal_conjTranspose]
-          ext i j
-          by_cases h : i = j
-          · subst j
-            simp
-          · simp [Matrix.diagonal, h])
-    _ = Matrix.diagonal (fun i => ((f (d i) : ℝ) : ℂ)) := by
-      rw [renyi_aeval_diagonal_ofReal d p]
-      ext i j
-      by_cases h : i = j
-      · subst j
-        simp [hp i]
-      · simp [Matrix.diagonal, h]
-
-private theorem rpow_diagonal_ofReal {n : Type u} [Fintype n] [DecidableEq n]
-    (d : n -> ℝ) (hd : ∀ i, 0 ≤ d i) (s : ℝ) :
-    CFC.rpow (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) s =
-      Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ)) := by
-  change ((Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) ^ s) =
-    Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ))
-  have hnonneg : 0 ≤ (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) :=
-    Matrix.nonneg_iff_posSemidef.mpr
-      (Matrix.PosSemidef.diagonal (d := fun i => (d i : ℂ)) (by
-        intro i
-        change (0 : ℂ) ≤ (d i : ℂ)
-        exact_mod_cast hd i))
-  rw [CFC.rpow_eq_cfc_real (a := (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n))
-    (y := s) hnonneg]
-  exact renyi_cfc_diagonal_ofReal d (fun x => x ^ s)
-
-private theorem rpow_conjStarAlgAut_nonneg
-    {n : Type u} [Fintype n] [DecidableEq n]
-    (u : Matrix.unitaryGroup n ℂ) {A : CMatrix n} (hA : A.PosSemidef)
-    {s : ℝ} (hs0 : 0 ≤ s) :
-    CFC.rpow (Unitary.conjStarAlgAut ℂ _ u A) s =
-      Unitary.conjStarAlgAut ℂ _ u (CFC.rpow A s) := by
-  change (Unitary.conjStarAlgAut ℂ _ u A) ^ s =
-    Unitary.conjStarAlgAut ℂ _ u (A ^ s)
-  have hmap_nonneg : 0 ≤ Unitary.conjStarAlgAut ℂ (CMatrix n) u A := by
-    rw [Unitary.conjStarAlgAut_apply]
-    exact Matrix.nonneg_iff_posSemidef.mpr
-      (hA.mul_mul_conjTranspose_same (u : CMatrix n))
-  have hA_nonneg : 0 ≤ A := Matrix.nonneg_iff_posSemidef.mpr hA
-  rw [CFC.rpow_eq_cfc_real (a := Unitary.conjStarAlgAut ℂ (CMatrix n) u A) (y := s)
-    hmap_nonneg]
-  rw [CFC.rpow_eq_cfc_real (a := A) (y := s) hA_nonneg]
-  simpa using
-    (StarAlgHomClass.map_cfc
-      (Unitary.conjStarAlgAut ℂ (CMatrix n) u)
-      (fun x : ℝ => x ^ s) A
-      (hf := (Real.continuous_rpow_const hs0).continuousOn)
-      (hφ := by
-        change Continuous fun A : CMatrix n => (u : CMatrix n) * A * star (u : CMatrix n)
-        fun_prop)).symm
-
-private theorem rpow_conjStarAlgAut_posDef
-    {n : Type u} [Fintype n] [DecidableEq n]
-    (u : Matrix.unitaryGroup n ℂ) {A : CMatrix n} (hA : A.PosDef)
-    (s : ℝ) :
-    CFC.rpow (Unitary.conjStarAlgAut ℂ _ u A) s =
-      Unitary.conjStarAlgAut ℂ _ u (CFC.rpow A s) := by
-  change (Unitary.conjStarAlgAut ℂ _ u A) ^ s =
-    Unitary.conjStarAlgAut ℂ _ u (A ^ s)
-  have hmap_nonneg : 0 ≤ Unitary.conjStarAlgAut ℂ (CMatrix n) u A := by
-    rw [Unitary.conjStarAlgAut_apply]
-    exact Matrix.nonneg_iff_posSemidef.mpr
-      (hA.posSemidef.mul_mul_conjTranspose_same (u : CMatrix n))
-  have hA_nonneg : 0 ≤ A := Matrix.nonneg_iff_posSemidef.mpr hA.posSemidef
-  rw [CFC.rpow_eq_cfc_real (a := Unitary.conjStarAlgAut ℂ (CMatrix n) u A) (y := s)
-    hmap_nonneg]
-  rw [CFC.rpow_eq_cfc_real (a := A) (y := s) hA_nonneg]
-  simpa using
-    (StarAlgHomClass.map_cfc
-      (Unitary.conjStarAlgAut ℂ (CMatrix n) u)
-      (fun x : ℝ => x ^ s) A
-      (hf := by
-        intro x hx
-        exact (Real.continuousAt_rpow_const x s
-          (.inl (ne_of_gt ((Matrix.PosDef.isStrictlyPositive hA).spectrum_pos hx)))).continuousWithinAt)
-      (hφ := by
-        change Continuous fun A : CMatrix n => (u : CMatrix n) * A * star (u : CMatrix n)
-        fun_prop)).symm
-
 private def cMatrixReindexStarAlgEquiv
     {ι κ : Type*} [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
     (e : ι ≃ κ) : CMatrix κ ≃⋆ₐ[ℂ] CMatrix ι where
@@ -260,30 +125,30 @@ private theorem cMatrix_rpow_kronecker_nonneg_core
         Unitary.conjStarAlgAut ℂ _ UA
           (Matrix.diagonal (fun i => ((da i ^ s : ℝ) : ℂ))) := by
     rw [hA_spec]
-    rw [rpow_conjStarAlgAut_nonneg UA
+    rw [cMatrix_rpow_conjStarAlgAut_nonneg UA
       (Matrix.PosSemidef.diagonal (d := fun i => (da i : ℂ)) (by
         intro i
         change (0 : ℂ) ≤ (da i : ℂ)
         exact_mod_cast hda i)) hs0]
-    rw [rpow_diagonal_ofReal da hda s]
+    rw [cMatrix_rpow_diagonal_ofReal da hda s]
   have hB_rpow :
       CFC.rpow B s =
         Unitary.conjStarAlgAut ℂ _ UB
           (Matrix.diagonal (fun i => ((db i ^ s : ℝ) : ℂ))) := by
     rw [hB_spec]
-    rw [rpow_conjStarAlgAut_nonneg UB
+    rw [cMatrix_rpow_conjStarAlgAut_nonneg UB
       (Matrix.PosSemidef.diagonal (d := fun i => (db i : ℂ)) (by
         intro i
         change (0 : ℂ) ≤ (db i : ℂ)
         exact_mod_cast hdb i)) hs0]
-    rw [rpow_diagonal_ofReal db hdb s]
+    rw [cMatrix_rpow_diagonal_ofReal db hdb s]
   have hleft :
       CFC.rpow (Matrix.kronecker A B) s =
         Unitary.conjStarAlgAut ℂ _ U
           (Matrix.diagonal (fun i => ((dprod i ^ s : ℝ) : ℂ))) := by
     rw [hAB_spec]
-    rw [rpow_conjStarAlgAut_nonneg U hDprod_psd hs0]
-    rw [rpow_diagonal_ofReal dprod hdprod s]
+    rw [cMatrix_rpow_conjStarAlgAut_nonneg U hDprod_psd hs0]
+    rw [cMatrix_rpow_diagonal_ofReal dprod hdprod s]
   have hdiag :
       Matrix.diagonal (fun i : Prod a b => ((dprod i ^ s : ℝ) : ℂ)) =
         Matrix.diagonal (fun i : Prod a b => (((da i.1 ^ s) * (db i.2 ^ s) : ℝ) : ℂ)) := by
@@ -368,32 +233,32 @@ theorem cMatrix_rpow_kronecker_posDef
         Unitary.conjStarAlgAut ℂ _ UA
           (Matrix.diagonal (fun i => ((da i ^ s : ℝ) : ℂ))) := by
     rw [hA_spec]
-    rw [rpow_conjStarAlgAut_posDef UA
+    rw [cMatrix_rpow_conjStarAlgAut_posDef UA
       (by
         rw [Matrix.posDef_diagonal_iff]
         intro i
         change 0 < ((da i : ℝ) : ℂ)
         exact_mod_cast hA.eigenvalues_pos i) s]
-    rw [rpow_diagonal_ofReal da hda s]
+    rw [cMatrix_rpow_diagonal_ofReal da hda s]
   have hB_rpow :
       CFC.rpow B s =
         Unitary.conjStarAlgAut ℂ _ UB
           (Matrix.diagonal (fun i => ((db i ^ s : ℝ) : ℂ))) := by
     rw [hB_spec]
-    rw [rpow_conjStarAlgAut_posDef UB
+    rw [cMatrix_rpow_conjStarAlgAut_posDef UB
       (by
         rw [Matrix.posDef_diagonal_iff]
         intro i
         change 0 < ((db i : ℝ) : ℂ)
         exact_mod_cast hB.eigenvalues_pos i) s]
-    rw [rpow_diagonal_ofReal db hdb s]
+    rw [cMatrix_rpow_diagonal_ofReal db hdb s]
   have hleft :
       CFC.rpow (Matrix.kronecker A B) s =
         Unitary.conjStarAlgAut ℂ _ U
           (Matrix.diagonal (fun i => ((dprod i ^ s : ℝ) : ℂ))) := by
     rw [hAB_spec]
-    rw [rpow_conjStarAlgAut_posDef U hDprod_pd s]
-    rw [rpow_diagonal_ofReal dprod hdprod s]
+    rw [cMatrix_rpow_conjStarAlgAut_posDef U hDprod_pd s]
+    rw [cMatrix_rpow_diagonal_ofReal dprod hdprod s]
   have hdiag :
       Matrix.diagonal (fun i : Prod a b => ((dprod i ^ s : ℝ) : ℂ)) =
         Matrix.diagonal (fun i : Prod a b => (((da i.1 ^ s) * (db i.2 ^ s) : ℝ) : ℂ)) := by
@@ -683,12 +548,12 @@ theorem petzRenyi_unitaryConj
       CFC.rpow (ρ.unitaryConj U).matrix α =
         (U : CMatrix a) * A * star (U : CMatrix a) := by
     simpa [A, unitaryConj, Unitary.conjStarAlgAut_apply] using
-      rpow_conjStarAlgAut_posDef U hρ α
+      cMatrix_rpow_conjStarAlgAut_posDef U hρ α
   have hσpow :
       CFC.rpow (σ.unitaryConj U).matrix (1 - α) =
         (U : CMatrix a) * B * star (U : CMatrix a) := by
     simpa [B, unitaryConj, Unitary.conjStarAlgAut_apply] using
-      rpow_conjStarAlgAut_posDef U hσ (1 - α)
+      cMatrix_rpow_conjStarAlgAut_posDef U hσ (1 - α)
   have htrace :
       ((CFC.rpow (ρ.unitaryConj U).matrix α *
           CFC.rpow (σ.unitaryConj U).matrix (1 - α)).trace).re =
@@ -738,7 +603,7 @@ theorem sandwichedRenyi_unitaryConj
       CFC.rpow (σ.unitaryConj U).matrix s =
         (U : CMatrix a) * C * star (U : CMatrix a) := by
     simpa [C, unitaryConj, Unitary.conjStarAlgAut_apply] using
-      rpow_conjStarAlgAut_posDef U hσ s
+      cMatrix_rpow_conjStarAlgAut_posDef U hσ s
   have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 :=
     Unitary.coe_star_mul_self U
   have hinner :
@@ -776,7 +641,7 @@ theorem sandwichedRenyi_unitaryConj
         (U : CMatrix a) * CFC.rpow inner α * star (U : CMatrix a) := by
     rw [hinner]
     simpa [Unitary.conjStarAlgAut_apply] using
-      rpow_conjStarAlgAut_posDef U hinner_pos α
+      cMatrix_rpow_conjStarAlgAut_posDef U hinner_pos α
   have htrace :
       (CFC.rpow
           (CFC.rpow (σ.unitaryConj U).matrix s *
@@ -814,12 +679,12 @@ theorem petzRenyi_diagonalState_eq_classicalPowerSum
       CFC.rpow (Classical.diagonalState p hp_sum).matrix α =
         Matrix.diagonal (fun i => (((p i : ℝ) ^ α : ℝ) : ℂ)) := by
     rw [Classical.diagonalState_matrix]
-    exact rpow_diagonal_ofReal (fun i => (p i : ℝ)) hp_nonneg α
+    exact cMatrix_rpow_diagonal_ofReal (fun i => (p i : ℝ)) hp_nonneg α
   have hσpow :
       CFC.rpow (Classical.diagonalState q hq_sum).matrix (1 - α) =
         Matrix.diagonal (fun i => (((q i : ℝ) ^ (1 - α) : ℝ) : ℂ)) := by
     rw [Classical.diagonalState_matrix]
-    exact rpow_diagonal_ofReal (fun i => (q i : ℝ)) hq_nonneg (1 - α)
+    exact cMatrix_rpow_diagonal_ofReal (fun i => (q i : ℝ)) hq_nonneg (1 - α)
   have htrace :
       ((CFC.rpow (Classical.diagonalState p hp_sum).matrix α *
         CFC.rpow (Classical.diagonalState q hq_sum).matrix (1 - α)).trace).re =
@@ -885,7 +750,7 @@ theorem sandwichedRenyi_diagonalState_eq_classicalPowerSum
       CFC.rpow (Classical.diagonalState q hq_sum).matrix s =
         Matrix.diagonal (fun i => (((q i : ℝ) ^ s : ℝ) : ℂ)) := by
     rw [Classical.diagonalState_matrix]
-    exact rpow_diagonal_ofReal (fun i => (q i : ℝ)) hq_nonneg s
+    exact cMatrix_rpow_diagonal_ofReal (fun i => (q i : ℝ)) hq_nonneg s
   have hinner :
       CFC.rpow (Classical.diagonalState q hq_sum).matrix s *
           (Classical.diagonalState p hp_sum).matrix *
@@ -913,7 +778,7 @@ theorem sandwichedRenyi_diagonalState_eq_classicalPowerSum
           (fun i =>
             ((((q i : ℝ) ^ s * (p i : ℝ) * (q i : ℝ) ^ s) ^ α : ℝ) : ℂ)) := by
     rw [hinner]
-    exact rpow_diagonal_ofReal
+    exact cMatrix_rpow_diagonal_ofReal
       (fun i => (q i : ℝ) ^ s * (p i : ℝ) * (q i : ℝ) ^ s)
       hinner_nonneg α
   have htrace :
@@ -1075,7 +940,7 @@ theorem sandwichedRenyiQ_unitary_conj
       CFC.rpow ((U : CMatrix a) * σ * star (U : CMatrix a)) s =
         (U : CMatrix a) * C * star (U : CMatrix a) := by
     simpa [C, Unitary.conjStarAlgAut_apply] using
-      rpow_conjStarAlgAut_nonneg U hσ hs_nonneg
+      cMatrix_rpow_conjStarAlgAut_nonneg U hσ hs_nonneg
   have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 :=
     Unitary.coe_star_mul_self U
   have hinner :
@@ -1109,7 +974,7 @@ theorem sandwichedRenyiQ_unitary_conj
         (U : CMatrix a) * CFC.rpow inner α * star (U : CMatrix a) := by
     rw [hinner]
     simpa [Unitary.conjStarAlgAut_apply] using
-      rpow_conjStarAlgAut_nonneg U hinner_psd hα_nonneg
+      cMatrix_rpow_conjStarAlgAut_nonneg U hinner_psd hα_nonneg
   have htrace :
       (CFC.rpow
           (CFC.rpow ((U : CMatrix a) * σ * star (U : CMatrix a)) s *

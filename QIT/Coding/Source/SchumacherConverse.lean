@@ -10,7 +10,7 @@ public import QIT.Coding.Source.Schumacher
 public import QIT.Information.AlickiFannesWinter
 public import QIT.Information.Entropy.MutualInformationDPI
 public import QIT.Information.Entropy.EntropyTensorPower
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedAsymptotic
+public import QIT.Coding.EntanglementAssisted.Asymptotic.Lower
 public import QIT.States.Purification.Canonical
 public import QIT.Asymptotic.Typicality
 public import QIT.Asymptotic.AEP

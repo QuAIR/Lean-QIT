@@ -3682,6 +3682,57 @@ private theorem log2_mono_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
   exact div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
     (le_of_lt (Real.log_pos one_lt_two))
 
+/-- Finite-alphabet lower endpoint associated to a real bit lower bound. -/
+def roundedOutputLengthLower (l : Real) : Nat :=
+  max 1 (Nat.floor (Real.rpow 2 l))
+
+private theorem log2_rpow_two (l : Real) : log2 (Real.rpow 2 l) = l := by
+  unfold log2
+  have hlog : Real.log (Real.rpow 2 l) = l * Real.log 2 := by
+    simpa using (Real.log_rpow (x := (2 : Real)) (by norm_num : (0 : Real) < 2) l)
+  rw [hlog]
+  have hlogtwo : Ne (Real.log 2) 0 := (Real.log_pos one_lt_two).ne'
+  field_simp [hlogtwo]
+
+private theorem roundedOutputLengthLower_pos (l : Real) :
+    0 < roundedOutputLengthLower l := by
+  unfold roundedOutputLengthLower
+  exact Nat.lt_of_lt_of_le (by norm_num : 0 < (1 : Nat))
+    (le_max_left 1 (Nat.floor (Real.rpow 2 l)))
+
+private theorem roundedOutputLengthLower_eq_one_of_neg {l : Real} (hl : l < 0) :
+    roundedOutputLengthLower l = 1 := by
+  unfold roundedOutputLengthLower
+  have hpow_nonneg : 0 ≤ Real.rpow 2 l :=
+    Real.rpow_nonneg (by norm_num : (0 : Real) ≤ 2) l
+  have hpow_lt_one : Real.rpow 2 l < 1 := by
+    have hpow_lt : Real.rpow 2 l < Real.rpow 2 (0 : Real) :=
+      Real.rpow_lt_rpow_of_exponent_lt one_lt_two hl
+    simpa [Real.rpow_zero] using hpow_lt
+  have hfloor_lt : Nat.floor (Real.rpow 2 l) < 1 :=
+    (Nat.floor_lt hpow_nonneg).mpr (by simpa using hpow_lt_one)
+  have hfloor_eq0 : Nat.floor (Real.rpow 2 l) = 0 := Nat.lt_one_iff.mp hfloor_lt
+  rw [hfloor_eq0]
+  norm_num
+
+private theorem roundedOutputLengthLower_log2_le_self_of_nonneg {l : Real} (hl : 0 ≤ l) :
+    log2 (roundedOutputLengthLower l : Real) ≤ l := by
+  unfold roundedOutputLengthLower
+  have hpow_nonneg : 0 ≤ Real.rpow 2 l :=
+    Real.rpow_nonneg (by norm_num : (0 : Real) ≤ 2) l
+  have hpow_one_le : 1 ≤ Real.rpow 2 l :=
+    Real.one_le_rpow (by norm_num : (1 : Real) ≤ 2) hl
+  have hfloor_pos : 0 < Nat.floor (Real.rpow 2 l) :=
+    (Nat.floor_pos).mpr hpow_one_le
+  have hmax : max 1 (Nat.floor (Real.rpow 2 l)) = Nat.floor (Real.rpow 2 l) := by
+    exact max_eq_right hfloor_pos
+  rw [hmax]
+  have hfloor_le : (Nat.floor (Real.rpow 2 l) : Real) ≤ Real.rpow 2 l :=
+    Nat.floor_le hpow_nonneg
+  have hfloor_pos_real : 0 < (Nat.floor (Real.rpow 2 l) : Real) := by
+    exact_mod_cast hfloor_pos
+  exact (log2_mono_of_pos hfloor_pos_real hfloor_le).trans_eq (log2_rpow_two l)
+
 /-- Every achievable output length is bounded by the source-converse ceiling
 bound when `0 ≤ ε < 1`. -/
 private theorem extractorOutputLengthAchievable_le_extractableRandomnessLengthBound
@@ -3834,6 +3885,66 @@ theorem finFullFunctionHashFamily_log2_le_extractableRandomnessLog_of_cqSmoothCo
   exact
     extractableRandomnessLogValueSet_member_le_extractableRandomnessLog
       (E := E) hεdir0 hεdir1 hmem
+
+omit [Fintype F] [DecidableEq F] [Fintype S] [DecidableEq S] [Nonempty S] in
+/--
+Rounded finite-alphabet version of Tomamichel's randomness-extraction theorem.
+
+The source statement writes the lower bound in continuous-bit convention.  This
+entrypoint exposes the strict finite-alphabet theorem obtained by replacing the
+real lower endpoint `L` by `log₂ max(1, floor(2^L))`.
+
+[Tomamichel2015FiniteResources, apps.tex:404-449]
+-/
+theorem extractableRandomnessLog_tomamichel_rounded_source_theorem
+    (E : Ensemble Z e) {ε δ h : Real}
+    (hδ0 : 0 < δ) (hδε : δ < ε) (hε1 : ε < 1)
+    (hcq : E.CqSmoothConditionalMinEntropyCandidate ((ε - δ) / 2) h) :
+    let l := h - 2 * log2 (1 / δ)
+    And
+      (log2 (roundedOutputLengthLower l : Real) ≤
+        extractableRandomnessLog.{uZ, uZ, 0, ue} E ε)
+      (extractableRandomnessLog.{uZ, uZ, 0, ue} E ε ≤
+        E.cqState.toSubnormalized.smoothConditionalMinEntropy
+          (Real.sqrt (2 * ε - ε ^ 2))) := by
+  dsimp only
+  let l : Real := h - 2 * log2 (1 / δ)
+  have hε0 : 0 ≤ ε := le_of_lt (hδ0.trans hδε)
+  have hsplit : 2 * ((ε - δ) / 2) + δ = ε := by ring
+  have hdir0 : 0 ≤ 2 * ((ε - δ) / 2) + δ := by
+    rw [hsplit]
+    exact hε0
+  have hdir1 : 2 * ((ε - δ) / 2) + δ < 1 := by
+    rw [hsplit]
+    exact hε1
+  apply And.intro
+  · change
+      log2 (roundedOutputLengthLower l : Real) ≤
+        extractableRandomnessLog.{uZ, uZ, 0, ue} E ε
+    by_cases hlneg : l < 0
+    · have hrounded : roundedOutputLengthLower l = 1 :=
+        roundedOutputLengthLower_eq_one_of_neg hlneg
+      have hmem :
+          log2 (1 : Real) ∈
+            ExtractableRandomnessLogValueSet.{uZ, uZ, 0, ue} E ε :=
+        ⟨1, extractorOutputLengthAchievable_one_of_nonneg E hε0, by norm_num⟩
+      have hzero_le :=
+        extractableRandomnessLogValueSet_member_le_extractableRandomnessLog
+          (E := E) hε0 hε1 hmem
+      simpa [hrounded, log2] using hzero_le
+    · have hlnonneg : 0 ≤ l := le_of_not_gt hlneg
+      have hrounded_log : log2 (roundedOutputLengthLower l : Real) ≤ l :=
+        roundedOutputLengthLower_log2_le_self_of_nonneg hlnonneg
+      have hrounded_pos : 0 < roundedOutputLengthLower l :=
+        roundedOutputLengthLower_pos l
+      have hlower :=
+        finFullFunctionHashFamily_log2_le_extractableRandomnessLog_of_cqSmoothConditionalMinEntropyCandidate_log_le
+          (Z := Z) hrounded_pos E hδ0 hdir0 hdir1 hcq
+          (by simpa [l] using hrounded_log)
+      simpa [hsplit] using hlower
+  · exact
+      extractableRandomnessLog_le_source_toSubnormalized_smoothConditionalMinEntropy
+        (E := E) hε0 hε1
 
 /--
 Registered source-strength randomness-extraction endpoint.

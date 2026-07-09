@@ -53,6 +53,17 @@ theorem traceNorm_nonneg (M : CMatrix a) : 0 ≤ traceNorm M := by
   have hre := (Complex.nonneg_iff.mp h).1
   simpa using hre
 
+/-- For a positive semidefinite matrix, the trace norm is the real trace. -/
+theorem traceNorm_posSemidef_eq_trace_re
+    (A : CMatrix a) (hA : A.PosSemidef) :
+    traceNorm A = A.trace.re := by
+  rw [traceNorm]
+  have hherm : Matrix.conjTranspose A = A := hA.isHermitian.eq
+  have hsqrt : psdSqrt (Matrix.conjTranspose A * A) = A := by
+    rw [hherm]
+    simpa [psdSqrt, sq] using (CFC.sqrt_sq A hA.nonneg)
+  rw [hsqrt]
+
 /-- The zero matrix has trace norm zero. -/
 @[simp]
 theorem traceNorm_zero : traceNorm (0 : CMatrix a) = 0 := by

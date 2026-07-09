@@ -6,23 +6,18 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Coding.EntanglementAssisted.EntanglementAssisted
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedConverse
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedWeakConverse
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedOneShotUpper
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedLowerBound
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedHTLowerBound
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedPetzLowerBound
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedPetzAdditivity
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedPetzLimit
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedSandwiched
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedSandwichedConverse
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedSandwichedAdditivity
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedSandwichedLimit
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedCBNorm
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedAsymptotic
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedAsymptoticUpper
-public import QIT.Coding.EntanglementAssisted.EntanglementAssistedCommunication
+public import QIT.Coding.EntanglementAssisted.Basic
+public import QIT.Coding.EntanglementAssisted.OneShot
+public import QIT.Coding.EntanglementAssisted.Renyi.Petz.Additivity
+public import QIT.Coding.EntanglementAssisted.Renyi.Petz.Limit
+public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.Basic
+public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.Additivity.ChannelProduct
+public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.Limit
+public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.CBNorm
+public import QIT.Coding.EntanglementAssisted.Asymptotic
+public import QIT.Coding.EntanglementAssisted.Asymptotic.Upper
+public import QIT.Coding.EntanglementAssisted.Asymptotic.Lower
+public import QIT.Coding.EntanglementAssisted.Asymptotic.Final
 
 /-!
 # Entanglement-assisted classical communication

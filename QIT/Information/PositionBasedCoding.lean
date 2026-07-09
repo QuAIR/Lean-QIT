@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Coding.EntanglementAssisted.EntanglementAssisted
+public import QIT.Coding.EntanglementAssisted.Basic
 public import QIT.Symmetry.SymmetricSubspace
 
 /-!

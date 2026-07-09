@@ -88,6 +88,20 @@ theorem cMatrix_trace_mul_posSemidef_re_nonneg {A B : CMatrix n}
   rw [hEq]
   exact htrace.1
 
+/-- Positive trace functionals preserve Loewner inequalities. -/
+public theorem cMatrix_trace_mul_le_of_le_posSemidef_left
+    {A B W : CMatrix n} (hW : W.PosSemidef) (hAB : A ≤ B) :
+    ((W * A).trace).re ≤ ((W * B).trace).re := by
+  have hdiff : (B - A).PosSemidef := Matrix.le_iff.mp hAB
+  have hnonneg : 0 ≤ ((W * (B - A)).trace).re :=
+    cMatrix_trace_mul_posSemidef_re_nonneg hW hdiff
+  have htrace :
+      ((W * (B - A)).trace).re =
+        ((W * B).trace).re - ((W * A).trace).re := by
+    simp [Matrix.mul_sub, Matrix.trace_sub]
+  rw [htrace] at hnonneg
+  linarith
+
 private theorem posSemidef_of_trace_mul_rankOneMatrix_re_nonneg {T : CMatrix n}
     (hT : T.IsHermitian)
     (h : ∀ x : n →₀ ℂ, 0 ≤ ((T * rankOneMatrix (fun i => x i)).trace).re) :

@@ -8,6 +8,7 @@ module
 
 public import QIT.Core.Channel
 public import QIT.States.Schatten
+public import QIT.States.TraceNorm.Distance
 
 /-!
 # Finite projective measurements
@@ -666,6 +667,55 @@ theorem ofHermitianEigenbasis_pinchingMap_psdTracePower_ge
     _ = psdTracePower ((ofHermitianEigenbasis M hM).pinchingMap X)
         ((ofHermitianEigenbasis M hM).pinchingMap_mapsPositive X hX) p := by
           simp [P, Xp]
+
+/-- Spectral rank-one pinching contracts the PSD Schatten `p`-norm expression
+for `p ≥ 1`.
+
+This is the PSD downstream specialization of Tomamichel's pinching norm
+inequality `metric.tex`, Eq. `eq:pinch-norm`.  The proof packages the existing
+trace-power contraction for spectral pinching with the monotonicity of the
+positive real `1 / p` power in the local PSD Schatten expression. -/
+theorem ofHermitianEigenbasis_pinchingMap_psdSchattenPNorm_le
+    (M : CMatrix a) (hM : M.IsHermitian) {X : CMatrix a} (hX : X.PosSemidef)
+    {p : ℝ} (hp : 1 ≤ p) :
+    psdSchattenPNorm ((ofHermitianEigenbasis M hM).pinchingMap X)
+        ((ofHermitianEigenbasis M hM).pinchingMap_mapsPositive X hX) p ≤
+      psdSchattenPNorm X hX p := by
+  have hp_pos : 0 < p := lt_of_lt_of_le zero_lt_one hp
+  exact psdSchattenPNorm_le_of_psdTracePower_le
+    ((ofHermitianEigenbasis M hM).pinchingMap_mapsPositive X hX) hX hp_pos
+    (ofHermitianEigenbasis_pinchingMap_psdTracePower_le M hM hX hp)
+
+/-- Projective pinching preserves the trace norm of positive semidefinite
+inputs.
+
+For positive inputs the trace norm is the trace, and projective pinching is
+trace-preserving.  This is the trace-norm support bridge needed by downstream
+finite-resource pinching arguments. -/
+theorem pinchingMap_traceNorm_eq_of_posSemidef
+    (X : CMatrix a) (hX : X.PosSemidef) :
+    traceNorm (P.pinchingMap X) = traceNorm X := by
+  rw [traceNorm_posSemidef_eq_trace_re (P.pinchingMap X)
+      (P.pinchingMap_mapsPositive X hX),
+    traceNorm_posSemidef_eq_trace_re X hX]
+  exact congrArg Complex.re (P.pinchingMap_isTracePreserving X)
+
+/-- Projective pinching contracts the trace norm on positive semidefinite
+inputs. -/
+theorem pinchingMap_traceNorm_le_of_posSemidef
+    (X : CMatrix a) (hX : X.PosSemidef) :
+    traceNorm (P.pinchingMap X) ≤ traceNorm X :=
+  le_of_eq (P.pinchingMap_traceNorm_eq_of_posSemidef X hX)
+
+/-- Spectral pinching contracts the trace norm on positive semidefinite inputs.
+
+This is the trace-norm specialization of Tomamichel's pinching norm inequality
+`metric.tex`, Eq. `eq:pinch-norm`, in the finite-dimensional PSD form used by
+the local one-shot/Renyi infrastructure. -/
+theorem ofHermitianEigenbasis_pinchingMap_traceNorm_le_of_posSemidef
+    (M : CMatrix a) (hM : M.IsHermitian) {X : CMatrix a} (hX : X.PosSemidef) :
+    traceNorm ((ofHermitianEigenbasis M hM).pinchingMap X) ≤ traceNorm X :=
+  (ofHermitianEigenbasis M hM).pinchingMap_traceNorm_le_of_posSemidef X hX
 
 /-- Pinching in the spectral projective measurement of a Hermitian matrix
 fixes that matrix. -/

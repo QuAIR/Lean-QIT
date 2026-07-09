@@ -1504,18 +1504,6 @@ theorem sandwichedRenyi_krausAdjoint_holderDualEffect_square_le
   exact MatrixMap.krausAdjoint_posSemidef_mul_self_le_of_tracePreserving K hTP
     (sandwichedRenyiHolderDualEffect_posSemidef (Φ.applyState σ) hB α)
 
-private theorem cMatrix_trace_mul_le_of_le {D X Y : CMatrix a}
-    (hD : D.PosSemidef) (hXY : X ≤ Y) :
-    ((D * X).trace).re ≤ ((D * Y).trace).re := by
-  rw [Matrix.le_iff] at hXY
-  have hnonneg := cMatrix_trace_mul_posSemidef_re_nonneg hD hXY
-  have htrace :
-      ((D * (Y - X)).trace).re =
-        ((D * Y).trace).re - ((D * X).trace).re := by
-    simp [Matrix.mul_sub, Matrix.trace_sub]
-  rw [htrace] at hnonneg
-  linarith
-
 private theorem state_matrix_le_one_local (τ : State a) :
     τ.matrix ≤ 1 := by
   classical
@@ -1577,7 +1565,8 @@ private theorem state_trace_mul_le_trace_of_posSemidef
     (τ : State a) {X : CMatrix a} (hX : X.PosSemidef) :
     ((τ.matrix * X).trace).re ≤ X.trace.re := by
   have htrace :=
-    cMatrix_trace_mul_le_of_le (D := X) (X := τ.matrix) (Y := 1) hX
+    cMatrix_trace_mul_le_of_le_posSemidef_left
+      (W := X) (A := τ.matrix) (B := 1) hX
       (state_matrix_le_one_local τ)
   rw [Matrix.trace_mul_comm X τ.matrix, Matrix.mul_one] at htrace
   exact htrace
@@ -1772,9 +1761,9 @@ theorem sandwichedRenyi_krausAdjoint_weighted_square_trace_le
         MatrixMap.krausAdjoint K (E * E) :=
     MatrixMap.krausAdjoint_mul_self_le_of_tracePreserving K hTP hE
   have htrace :=
-    cMatrix_trace_mul_le_of_le (D := D)
-      (X := MatrixMap.krausAdjoint K E * MatrixMap.krausAdjoint K E)
-      (Y := MatrixMap.krausAdjoint K (E * E)) hD hkadison
+    cMatrix_trace_mul_le_of_le_posSemidef_left (W := D)
+      (A := MatrixMap.krausAdjoint K E * MatrixMap.krausAdjoint K E)
+      (B := MatrixMap.krausAdjoint K (E * E)) hD hkadison
   have hdual := MatrixMap.ofKraus_trace_duality K D (E * E)
   rw [← hdual] at htrace
   exact htrace
@@ -4255,9 +4244,9 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_regularizedInput
           ((B * MatrixMap.ofKraus L Aε).trace).re := by
       rw [Matrix.trace_mul_comm]
     rw [hcomm_left, hcomm_right]
-    exact cMatrix_trace_mul_le_of_le (D := B)
-      (X := MatrixMap.ofKraus L A)
-      (Y := MatrixMap.ofKraus L Aε) hB.posSemidef hTA_le
+    exact cMatrix_trace_mul_le_of_le_posSemidef_left (W := B)
+      (A := MatrixMap.ofKraus L A)
+      (B := MatrixMap.ofKraus L Aε) hB.posSemidef hTA_le
   have hbeigi :
       (((MatrixMap.ofKraus
           (sandwichedRenyiRotatedKraus σ (Φ.applyState σ) K α) Aε) *
@@ -4452,7 +4441,7 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_psdTracePower_le_one
       simpa [TA] using MatrixMap.ofKraus_mapsPositive L A hA
     have htrace_le :
         ((TA * B).trace).re ≤ ((TA * Bn).trace).re :=
-      cMatrix_trace_mul_le_of_le (D := TA) (X := B) (Y := Bn) hTA hB_le_Bn
+      cMatrix_trace_mul_le_of_le_posSemidef_left (W := TA) (A := B) (B := Bn) hTA hB_le_Bn
     exact htrace_le.trans hbound_Bn
 
 /-- The sandwiched inner operator of a state with itself is the reference
@@ -4947,10 +4936,10 @@ theorem sandwichedRenyiRotatedKraus_tracePairing_le_one_of_input_le_referencePow
           ((B * CFC.rpow (Φ.applyState σ).matrix (1 / α)).trace).re := by
       rw [Matrix.trace_mul_comm]
     rw [hcomm_left, hcomm_right]
-    exact cMatrix_trace_mul_le_of_le (D := B)
-      (X := MatrixMap.ofKraus
+    exact cMatrix_trace_mul_le_of_le_posSemidef_left (W := B)
+      (A := MatrixMap.ofKraus
         (sandwichedRenyiRotatedKraus σ (Φ.applyState σ) K α) A)
-      (Y := CFC.rpow (Φ.applyState σ).matrix (1 / α)) hB hTA_le
+      (B := CFC.rpow (Φ.applyState σ).matrix (1 / α)) hB hTA_le
   have hRpos :
       (CFC.rpow (Φ.applyState σ).matrix (1 / α)).PosSemidef :=
     (Φ.applyState σ).rpowMatrix_posSemidef (1 / α)
@@ -5171,7 +5160,7 @@ theorem sandwichedRenyiRotatedKrausAdjoint_qBall_of_le_referenceDualPower
         have htrace_le :
             ((A * W).trace).re ≤
               ((A * CFC.rpow σ.matrix (1 - 1 / α)).trace).re :=
-          cMatrix_trace_mul_le_of_le hA hW_le
+          cMatrix_trace_mul_le_of_le_posSemidef_left hA hW_le
         have hholder :
             ((A * CFC.rpow σ.matrix (1 - 1 / α)).trace).re ≤
               psdSchattenPNorm A hA α :=
@@ -5493,7 +5482,7 @@ theorem sandwichedRenyi_traceHolder_le_of_outputWitness_le_referenceDualPower
       ((sandwichedRenyiInner ρ σ α * W).trace).re ≤
         ((sandwichedRenyiInner ρ σ α *
           CFC.rpow σ.matrix (1 - 1 / α)).trace).re :=
-    cMatrix_trace_mul_le_of_le
+    cMatrix_trace_mul_le_of_le_posSemidef_left
       (sandwichedRenyiInner_posSemidef ρ σ α) hW_le
   have hσ_trace : σ.matrix.trace.re = 1 := by
     rw [σ.trace_eq_one]

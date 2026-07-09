@@ -57,6 +57,67 @@ theorem nonempty (rho : State a) : Nonempty a := by
   have htrace := rho.trace_eq_one
   simp [Matrix.trace] at htrace
 
+theorem trace_re_eq_one (rho : State a) : rho.matrix.trace.re = 1 := by
+  rw [rho.trace_eq_one]
+  norm_num
+
+theorem trace_re_pos (rho : State a) : 0 < rho.matrix.trace.re := by
+  rw [rho.trace_re_eq_one]
+  norm_num
+
+theorem trace_re_ne_zero (rho : State a) : rho.matrix.trace.re ≠ 0 :=
+  rho.trace_re_pos.ne'
+
+theorem density_matrix_ne_zero (rho : State a) : rho.matrix ≠ 0 := by
+  intro hzero
+  have htrace : rho.matrix.trace = 0 := by simp [hzero]
+  rw [rho.trace_eq_one] at htrace
+  norm_num at htrace
+
+omit [DecidableEq a] in
+theorem posSemidef_trace_ne_zero_of_ne_zero
+    {M : CMatrix a} (hM : M.PosSemidef) (hM_ne : M ≠ 0) :
+    M.trace.re ≠ 0 := by
+  intro htrace_re
+  have htrace : M.trace = 0 := by
+    apply Complex.ext
+    · exact htrace_re
+    · exact (Matrix.PosSemidef.trace_nonneg hM).2.symm
+  exact hM_ne ((Matrix.PosSemidef.trace_eq_zero_iff hM).mp htrace)
+
+omit [DecidableEq a] in
+theorem posSemidef_trace_pos_of_ne_zero
+    {M : CMatrix a} (hM : M.PosSemidef) (hM_ne : M ≠ 0) :
+    0 < M.trace.re :=
+  lt_of_le_of_ne (Matrix.PosSemidef.trace_nonneg hM).1
+    (posSemidef_trace_ne_zero_of_ne_zero hM hM_ne).symm
+
+/-- Normalize a positive semidefinite matrix with nonzero trace. -/
+def normalizePSD (M : CMatrix a) (hM : M.PosSemidef) (htr_ne : M.trace.re ≠ 0) :
+    State a where
+  matrix := (M.trace.re)⁻¹ • M
+  pos := Matrix.PosSemidef.smul hM (by
+    have htr_pos : 0 < M.trace.re :=
+      lt_of_le_of_ne (Matrix.PosSemidef.trace_nonneg hM).1 htr_ne.symm
+    exact_mod_cast inv_nonneg.mpr htr_pos.le)
+  trace_eq_one := by
+    rw [Matrix.trace_smul]
+    have htrace_im : M.trace.im = 0 := (Matrix.PosSemidef.trace_nonneg hM).2.symm
+    apply Complex.ext
+    · simp [Complex.real_smul, htr_ne]
+    · simp [Complex.real_smul, htrace_im]
+
+@[simp]
+theorem normalizePSD_matrix (M : CMatrix a) (hM : M.PosSemidef)
+    (htr_ne : M.trace.re ≠ 0) :
+    (normalizePSD M hM htr_ne).matrix = (M.trace.re)⁻¹ • M :=
+  rfl
+
+theorem normalizePSD_self (rho : State a) :
+    normalizePSD rho.matrix rho.pos rho.trace_re_ne_zero = rho := by
+  ext i j
+  simp [normalizePSD, rho.trace_re_eq_one]
+
 /-- The unique density state on the unit system. -/
 def unit : State PUnit where
   matrix := 1

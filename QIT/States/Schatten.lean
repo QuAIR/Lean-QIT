@@ -313,6 +313,13 @@ theorem Supports.refl (M : CMatrix a) : Supports M M :=
   fun _ h => h
 
 omit [DecidableEq a] in
+/-- The zero matrix is supported by every right-hand matrix. -/
+theorem Supports.zero_left (N : CMatrix a) :
+    Supports (0 : CMatrix a) N := by
+  intro v _hv
+  simp
+
+omit [DecidableEq a] in
 /-- Support domination is transitive. -/
 theorem Supports.trans {M N P : CMatrix a}
     (hMN : Supports M N) (hNP : Supports N P) :
@@ -1051,6 +1058,46 @@ theorem trace_mul_unitary_conj_diagonal_ofReal_re
               simp [Complex.ofReal_mul]
             rw [hDE]
             simpa using trace_unitary_conj_diagonal_ofReal_re U (fun i => d i * e i)
+
+/-- Trace pairing of two real diagonal matrices conjugated by possibly
+different unitaries. -/
+theorem trace_mul_two_unitary_conj_diagonal_ofReal_re
+    (U V : Matrix.unitaryGroup a ℂ) (d e : a → ℝ) :
+    ((((U : CMatrix a) * (Matrix.diagonal fun i => (d i : ℂ)) *
+        star (U : CMatrix a)) *
+      ((V : CMatrix a) * (Matrix.diagonal fun i => (e i : ℂ)) *
+        star (V : CMatrix a))).trace).re =
+      ∑ i : a, ∑ j : a,
+        d i * e j * Complex.normSq ((star (U : CMatrix a) * (V : CMatrix a)) i j) := by
+  let D : CMatrix a := Matrix.diagonal fun i => (d i : ℂ)
+  let E : CMatrix a := Matrix.diagonal fun i => (e i : ℂ)
+  let W : CMatrix a := star (U : CMatrix a) * (V : CMatrix a)
+  have htrace :
+      (((U : CMatrix a) * D * star (U : CMatrix a)) *
+        ((V : CMatrix a) * E * star (V : CMatrix a))).trace =
+        (D * W * E * star W).trace := by
+    calc
+      (((U : CMatrix a) * D * star (U : CMatrix a)) *
+        ((V : CMatrix a) * E * star (V : CMatrix a))).trace =
+          ((U : CMatrix a) *
+            (D * star (U : CMatrix a) * ((V : CMatrix a) * E * star (V : CMatrix a)))).trace := by
+            congr 1
+            noncomm_ring
+      _ = ((D * star (U : CMatrix a) * ((V : CMatrix a) * E * star (V : CMatrix a))) *
+            (U : CMatrix a)).trace := by
+            rw [Matrix.trace_mul_comm]
+      _ = (D * (star (U : CMatrix a) * (V : CMatrix a)) *
+            E * (star (V : CMatrix a) * (U : CMatrix a))).trace := by
+            congr 1
+            noncomm_ring
+      _ = (D * W * E * star W).trace := by
+            simp [W, Matrix.star_eq_conjTranspose, Matrix.mul_assoc]
+  rw [htrace]
+  change ((D * W * E * star W).trace).re =
+    ∑ i : a, ∑ j : a, d i * e j * Complex.normSq (W i j)
+  simp [D, E, Matrix.trace, Matrix.mul_apply, Matrix.diagonal,
+    Matrix.star_apply, Complex.normSq_apply, Finset.mul_sum,
+    mul_assoc, mul_left_comm, mul_comm]
 
 /-- Real powers of a PSD matrix are diagonalized by the same eigenbasis, with
 entrywise real powers of the eigenvalues. -/
@@ -1994,6 +2041,61 @@ theorem cMatrix_rpow_unitary_conj {A : CMatrix a} (hA : A.PosSemidef)
       (hf := (Real.continuous_rpow_const hs0).continuousOn)
       (hφ := by
         change Continuous fun A : CMatrix a => star (U : CMatrix a) * A * (U : CMatrix a)
+        fun_prop)).symm
+
+/-- Real powers commute with forward unitary conjugation on PSD matrices for
+nonnegative exponents. -/
+theorem cMatrix_rpow_conjStarAlgAut_nonneg
+    (U : Matrix.unitaryGroup a ℂ) {A : CMatrix a} (hA : A.PosSemidef)
+    {s : ℝ} (hs0 : 0 ≤ s) :
+    CFC.rpow (Unitary.conjStarAlgAut ℂ _ U A) s =
+      Unitary.conjStarAlgAut ℂ _ U (CFC.rpow A s) := by
+  change (Unitary.conjStarAlgAut ℂ _ U A) ^ s =
+    Unitary.conjStarAlgAut ℂ _ U (A ^ s)
+  have hmap_nonneg : 0 ≤ Unitary.conjStarAlgAut ℂ (CMatrix a) U A := by
+    rw [Unitary.conjStarAlgAut_apply]
+    exact Matrix.nonneg_iff_posSemidef.mpr
+      (hA.mul_mul_conjTranspose_same (U : CMatrix a))
+  have hA_nonneg : 0 ≤ A := Matrix.nonneg_iff_posSemidef.mpr hA
+  rw [CFC.rpow_eq_cfc_real (a := Unitary.conjStarAlgAut ℂ (CMatrix a) U A)
+    (y := s) hmap_nonneg]
+  rw [CFC.rpow_eq_cfc_real (a := A) (y := s) hA_nonneg]
+  simpa using
+    (StarAlgHomClass.map_cfc
+      (Unitary.conjStarAlgAut ℂ (CMatrix a) U)
+      (fun x : ℝ => x ^ s) A
+      (hf := (Real.continuous_rpow_const hs0).continuousOn)
+      (hφ := by
+        change Continuous fun A : CMatrix a => (U : CMatrix a) * A * star (U : CMatrix a)
+        fun_prop)).symm
+
+/-- Real powers commute with forward unitary conjugation on positive-definite
+matrices for arbitrary real exponents. -/
+theorem cMatrix_rpow_conjStarAlgAut_posDef
+    (U : Matrix.unitaryGroup a ℂ) {A : CMatrix a} (hA : A.PosDef)
+    (s : ℝ) :
+    CFC.rpow (Unitary.conjStarAlgAut ℂ _ U A) s =
+      Unitary.conjStarAlgAut ℂ _ U (CFC.rpow A s) := by
+  change (Unitary.conjStarAlgAut ℂ _ U A) ^ s =
+    Unitary.conjStarAlgAut ℂ _ U (A ^ s)
+  have hmap_nonneg : 0 ≤ Unitary.conjStarAlgAut ℂ (CMatrix a) U A := by
+    rw [Unitary.conjStarAlgAut_apply]
+    exact Matrix.nonneg_iff_posSemidef.mpr
+      (hA.posSemidef.mul_mul_conjTranspose_same (U : CMatrix a))
+  have hA_nonneg : 0 ≤ A := Matrix.nonneg_iff_posSemidef.mpr hA.posSemidef
+  rw [CFC.rpow_eq_cfc_real (a := Unitary.conjStarAlgAut ℂ (CMatrix a) U A)
+    (y := s) hmap_nonneg]
+  rw [CFC.rpow_eq_cfc_real (a := A) (y := s) hA_nonneg]
+  simpa using
+    (StarAlgHomClass.map_cfc
+      (Unitary.conjStarAlgAut ℂ (CMatrix a) U)
+      (fun x : ℝ => x ^ s) A
+      (hf := by
+        intro x hx
+        exact (Real.continuousAt_rpow_const x s
+          (.inl (ne_of_gt ((Matrix.PosDef.isStrictlyPositive hA).spectrum_pos hx)))).continuousWithinAt)
+      (hφ := by
+        change Continuous fun A : CMatrix a => (U : CMatrix a) * A * star (U : CMatrix a)
         fun_prop)).symm
 
 /-- The `p`-power trace of a positive semidefinite matrix, `Tr A^p`, as a real
@@ -4215,6 +4317,73 @@ theorem posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
           mul_le_mul_of_nonneg_left hBnorm_le (psdSchattenPNorm_nonneg M hM p)
     _ = psdSchattenPNorm M hM p := by rw [mul_one]
 
+/-- Source-shaped finite-dimensional PSD Holder trace bound.
+
+This is the positive-matrix specialization of Tomamichel
+`metric.tex`, Lemma `lm:hoelder`, equation `eq:hoelder1`, in the form used by
+the finite-resource conditional-Renyi route.  The source's general operator
+bound is intentionally specialized here to PSD trace pairings, which is the
+downstream shape needed in `cond.tex`.
+-/
+theorem psdTraceMul_le_psdSchattenPNorm_mul
+    {M N : CMatrix a} (hM : M.PosSemidef) (hN : N.PosSemidef)
+    {p q : ℝ} (_hp1 : 1 < p) (hpq : p.HolderConjugate q) :
+    ((M * N).trace).re ≤
+      psdSchattenPNorm M hM p * psdSchattenPNorm N hN q := by
+  by_cases hNzero : N = 0
+  · have htrace : ((M * N).trace).re = 0 := by
+      simp [hNzero]
+    rw [htrace]
+    exact mul_nonneg (psdSchattenPNorm_nonneg M hM p)
+      (psdSchattenPNorm_nonneg N hN q)
+  · let S : ℝ := psdTracePower N hN q
+    have hq_pos : 0 < q := hpq.symm.pos
+    have hSpos : 0 < S := by
+      simpa [S] using psdTracePower_pos_of_ne_zero N hN hNzero
+    have hSnonneg : 0 ≤ S := le_of_lt hSpos
+    let scale : ℝ := S ^ (-(1 / q))
+    have hscale_nonneg : 0 ≤ scale := Real.rpow_nonneg hSnonneg (-(1 / q))
+    let B : CMatrix a := scale • N
+    have hB : B.PosSemidef := by
+      simpa [B, scale] using Matrix.PosSemidef.smul hN hscale_nonneg
+    have hBq_eq : psdTracePower B hB q = 1 := by
+      simpa [B, S, scale, hB] using
+        psdTracePower_normalized_real_smul_eq_one_of_ne_zero hN hNzero hq_pos
+    have hholder :
+        ((M * B).trace).re ≤ psdSchattenPNorm M hM p :=
+      posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
+        (M := M) (B := B) hM hB hpq (le_of_lt hpq.symm.lt) (le_of_eq hBq_eq)
+    have htrace_smul :
+        ((M * B).trace).re = scale * ((M * N).trace).re := by
+      simp [B, Matrix.trace_smul, Complex.mul_re, scale]
+    have hscale_mul_norm :
+        scale * psdSchattenPNorm N hN q = 1 := by
+      change S ^ (-(1 / q)) * S ^ (1 / q) = 1
+      calc
+        S ^ (-(1 / q)) * S ^ (1 / q) = S ^ (-(1 / q) + 1 / q) := by
+          rw [← Real.rpow_add hSpos]
+        _ = S ^ (0 : ℝ) := by
+          congr 1
+          ring
+        _ = 1 := Real.rpow_zero S
+    have hnorm_scale :
+        psdSchattenPNorm N hN q * scale = 1 := by
+      rw [mul_comm, hscale_mul_norm]
+    have hholder_scaled :
+        scale * ((M * N).trace).re ≤ psdSchattenPNorm M hM p := by
+      simpa [htrace_smul] using hholder
+    calc
+      ((M * N).trace).re =
+          (psdSchattenPNorm N hN q * scale) * ((M * N).trace).re := by
+            rw [hnorm_scale, one_mul]
+      _ = psdSchattenPNorm N hN q * (scale * ((M * N).trace).re) := by
+            ring
+      _ ≤ psdSchattenPNorm N hN q * psdSchattenPNorm M hM p :=
+            mul_le_mul_of_nonneg_left hholder_scaled
+              (psdSchattenPNorm_nonneg N hN q)
+      _ = psdSchattenPNorm M hM p * psdSchattenPNorm N hN q := by
+            ring
+
 /-- Dual `q`-unit-ball criterion for PSD Schatten expressions.
 
 If a positive matrix pairs against every PSD test matrix no larger than that
@@ -4428,6 +4597,67 @@ theorem psd_trace_rpow_reverse_holder_variational
     _ ≤ ∑ i, x i * w i ^ r := hscalar_r
     _ = ((M * CFC.rpow N r).trace).re := htrace.symm
 
+/-- Source-shaped reverse-Holder side-state specialization.
+
+This packages Tomamichel `metric.tex`, Lemma `lm:hoelder`, equation
+`eq:hoelder2`, in the normalized side-state form used to derive the
+finite-resource Schatten variational formula.  The source's raw
+`Tr(MN)` reverse Holder inequality is applied downstream with
+`N = σ^(1 - 1 / p)` and `Tr σ = 1`; this wrapper exposes exactly that
+finite-dimensional PSD specialization.
+-/
+theorem psdTraceRpow_reverseHolder_source
+    {M sigma : CMatrix a} (hM : M.PosSemidef) (hsigma : sigma.PosSemidef)
+    (hsigma_tr : sigma.trace.re = 1)
+    (hSupport : Matrix.Supports M sigma)
+    {p : ℝ} (hp0 : 0 < p) (hp1 : p < 1) :
+    psdSchattenPNorm M hM p ≤
+      ((M * CFC.rpow sigma (1 - 1 / p)).trace).re :=
+  psd_trace_rpow_reverse_holder_variational
+    hM hsigma hsigma_tr hSupport hp0 hp1 rfl
+
+/-- A fixed computational-basis density state, used only to witness
+nonemptiness of normalized side-state optimizations in the zero-operator
+boundary case. -/
+private def basisDensityState [Nonempty a] : State a where
+  matrix :=
+    Matrix.diagonal fun i =>
+      if i = Classical.choice (inferInstance : Nonempty a) then (1 : ℂ) else 0
+  pos := by
+    exact Matrix.PosSemidef.diagonal (by
+      intro i
+      by_cases h : i = Classical.choice (inferInstance : Nonempty a)
+      · simp [h]
+      · simp [h])
+  trace_eq_one := by
+    rw [Matrix.trace]
+    simp
+
+/-- Positive-Holder normalized side-state objective values from
+Tomamichel2015FiniteResources, `metric.tex:131-137`, Lemma `lm:hoelder-var`:
+`N ∈ cSnorm(A)` is represented by `State a`. -/
+def psdTraceHolderStateValueSet (M : CMatrix a) (p : ℝ) : Set ℝ :=
+  {x | ∃ σ : State a,
+    x = ((M * CFC.rpow σ.matrix (1 - 1 / p)).trace).re}
+
+/-- Reverse-Holder normalized side-state objective values with the source
+support condition `M << N`. -/
+def psdTraceReverseHolderNormalizedStateValueSet (M : CMatrix a) (p : ℝ) :
+    Set ℝ :=
+  {x | ∃ σ : State a, Matrix.Supports M σ.matrix ∧
+    x = ((M * CFC.rpow σ.matrix (1 - 1 / p)).trace).re}
+
+private theorem state_trace_re_eq_one (σ : State a) :
+    σ.matrix.trace.re = 1 := by
+  simpa using congrArg Complex.re σ.trace_eq_one
+
+private theorem trace_mul_state_rpow_zero_eq_trace
+    (M : CMatrix a) (σ : State a) :
+    ((M * CFC.rpow σ.matrix (0 : ℝ)).trace).re = M.trace.re := by
+  have hpow : CFC.rpow σ.matrix (0 : ℝ) = 1 :=
+    CFC.rpow_zero σ.matrix (ha := Matrix.nonneg_iff_posSemidef.mpr σ.pos)
+  rw [hpow, Matrix.mul_one]
+
 /-- Reverse-Holder witness handoff for `0 < p < 1`.
 
 To upper-bound a PSD Schatten expression in the subunit range, it is enough to
@@ -4598,6 +4828,147 @@ theorem psdTraceReverseHolderOptimizer_props
   · simpa [psdTraceReverseHolderOptimizer, U, d, S, n, N] using hNtr
   · simpa [psdTraceReverseHolderOptimizer, U, d, S, n, N] using hSupport
   · simpa [psdTraceReverseHolderOptimizer, U, d, S, n, N] using hattain
+
+private theorem psdTraceHolderStateValueSet_norm_mem [Nonempty a]
+    {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp0 : 0 < p) :
+    psdSchattenPNorm M hM p ∈ psdTraceHolderStateValueSet M p := by
+  by_cases hMzero : M = 0
+  · subst M
+    refine ⟨basisDensityState (a := a), ?_⟩
+    rw [psdSchattenPNorm_zero p (ne_of_gt hp0)]
+    simp
+  · have hSpos : 0 < psdTracePower M hM p :=
+      psdTracePower_pos_of_ne_zero M hM hMzero
+    rcases psdTraceReverseHolderOptimizer_props hM hp0 hSpos with
+      ⟨hN, hNtr, _hSupport, hattain⟩
+    let σ : State a :=
+      { matrix := psdTraceReverseHolderOptimizer M hM p
+        pos := hN
+        trace_eq_one := by
+          apply Complex.ext
+          · simpa using hNtr
+          · exact (Matrix.PosSemidef.trace_nonneg hN).2.symm }
+    refine ⟨σ, ?_⟩
+    simpa [σ] using hattain
+
+private theorem psdTraceReverseHolderNormalizedStateValueSet_norm_mem [Nonempty a]
+    {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp0 : 0 < p) :
+    psdSchattenPNorm M hM p ∈
+      psdTraceReverseHolderNormalizedStateValueSet M p := by
+  by_cases hMzero : M = 0
+  · subst M
+    refine ⟨basisDensityState (a := a), Matrix.Supports.zero_left _, ?_⟩
+    rw [psdSchattenPNorm_zero p (ne_of_gt hp0)]
+    simp
+  · have hSpos : 0 < psdTracePower M hM p :=
+      psdTracePower_pos_of_ne_zero M hM hMzero
+    rcases psdTraceReverseHolderOptimizer_props hM hp0 hSpos with
+      ⟨hN, hNtr, hSupport, hattain⟩
+    let σ : State a :=
+      { matrix := psdTraceReverseHolderOptimizer M hM p
+        pos := hN
+        trace_eq_one := by
+          apply Complex.ext
+          · simpa using hNtr
+          · exact (Matrix.PosSemidef.trace_nonneg hN).2.symm }
+    refine ⟨σ, ?_, ?_⟩
+    · simpa [σ] using hSupport
+    · simpa [σ] using hattain
+
+/-- Source-shaped maximum branch of Tomamichel's positive-operator Schatten
+variational formula, over normalized states, for `p > 1`. -/
+theorem psdTraceHolderStateValueSet_isGreatest_of_one_lt [Nonempty a]
+    {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp : 1 < p) :
+    IsGreatest (psdTraceHolderStateValueSet M p) (psdSchattenPNorm M hM p) := by
+  constructor
+  · exact psdTraceHolderStateValueSet_norm_mem hM (lt_trans zero_lt_one hp)
+  · intro x hx
+    rcases hx with ⟨σ, rfl⟩
+    let q : ℝ := Real.conjExponent p
+    have hpq : p.HolderConjugate q := by
+      simpa [q] using Real.HolderConjugate.conjExponent hp
+    have hr : 1 - 1 / p = 1 / q := by
+      simpa [q, one_div] using hpq.one_sub_inv
+    exact psd_trace_rpow_holder_variational_upper
+      hM σ.pos (state_trace_re_eq_one σ) hpq hr
+
+/-- Boundary `p = 1` case of Tomamichel's maximum branch. -/
+theorem psdTraceHolderStateValueSet_isGreatest_one [Nonempty a]
+    {M : CMatrix a} (hM : M.PosSemidef) :
+    IsGreatest (psdTraceHolderStateValueSet M (1 : ℝ))
+      (psdSchattenPNorm M hM (1 : ℝ)) := by
+  constructor
+  · refine ⟨basisDensityState (a := a), ?_⟩
+    rw [show 1 - 1 / (1 : ℝ) = 0 by norm_num]
+    rw [trace_mul_state_rpow_zero_eq_trace M (basisDensityState (a := a))]
+    exact psdSchattenPNorm_one M hM
+  · intro x hx
+    rcases hx with ⟨σ, rfl⟩
+    rw [show 1 - 1 / (1 : ℝ) = 0 by norm_num]
+    rw [trace_mul_state_rpow_zero_eq_trace M σ]
+    exact le_of_eq (psdSchattenPNorm_one M hM).symm
+
+/-- Source-shaped maximum branch of Tomamichel's positive-operator Schatten
+variational formula, over normalized states, for `p ≥ 1`. -/
+theorem psdTraceHolderStateValueSet_isGreatest [Nonempty a]
+    {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp : 1 ≤ p) :
+    IsGreatest (psdTraceHolderStateValueSet M p) (psdSchattenPNorm M hM p) := by
+  rcases lt_or_eq_of_le hp with hp_lt | rfl
+  · exact psdTraceHolderStateValueSet_isGreatest_of_one_lt hM hp_lt
+  · exact psdTraceHolderStateValueSet_isGreatest_one hM
+
+/-- Supremum form of the `p ≥ 1` normalized-state Schatten variational
+formula. -/
+theorem psdTraceHolderStateValueSet_sSup_eq [Nonempty a]
+    {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp : 1 ≤ p) :
+    sSup (psdTraceHolderStateValueSet M p) = psdSchattenPNorm M hM p :=
+  (psdTraceHolderStateValueSet_isGreatest hM hp).csSup_eq
+
+/-- Boundary `p = 1` case of Tomamichel's reverse-Holder minimum branch. -/
+theorem psdTraceReverseHolderNormalizedStateValueSet_isLeast_one [Nonempty a]
+    {M : CMatrix a} (hM : M.PosSemidef) :
+    IsLeast (psdTraceReverseHolderNormalizedStateValueSet M (1 : ℝ))
+      (psdSchattenPNorm M hM (1 : ℝ)) := by
+  constructor
+  · exact psdTraceReverseHolderNormalizedStateValueSet_norm_mem hM zero_lt_one
+  · intro x hx
+    rcases hx with ⟨σ, _hSupport, rfl⟩
+    rw [show 1 - 1 / (1 : ℝ) = 0 by norm_num]
+    rw [trace_mul_state_rpow_zero_eq_trace M σ]
+    exact le_of_eq (psdSchattenPNorm_one M hM)
+
+/-- Strict subunit branch of Tomamichel's reverse-Holder normalized-state
+variational formula. -/
+theorem psdTraceReverseHolderNormalizedStateValueSet_isLeast_of_lt_one [Nonempty a]
+    {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ}
+    (hp0 : 0 < p) (hp1 : p < 1) :
+    IsLeast (psdTraceReverseHolderNormalizedStateValueSet M p)
+      (psdSchattenPNorm M hM p) := by
+  constructor
+  · exact psdTraceReverseHolderNormalizedStateValueSet_norm_mem hM hp0
+  · intro x hx
+    rcases hx with ⟨σ, hSupport, rfl⟩
+    exact psdTraceRpow_reverseHolder_source
+      hM σ.pos (state_trace_re_eq_one σ) hSupport hp0 hp1
+
+/-- Source-shaped minimum branch of Tomamichel's positive-operator Schatten
+variational formula, over normalized supporting states, for `0 < p ≤ 1`. -/
+theorem psdTraceReverseHolderNormalizedStateValueSet_isLeast [Nonempty a]
+    {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ}
+    (hp0 : 0 < p) (hp1 : p ≤ 1) :
+    IsLeast (psdTraceReverseHolderNormalizedStateValueSet M p)
+      (psdSchattenPNorm M hM p) := by
+  rcases lt_or_eq_of_le hp1 with hp_lt | rfl
+  · exact psdTraceReverseHolderNormalizedStateValueSet_isLeast_of_lt_one hM hp0 hp_lt
+  · exact psdTraceReverseHolderNormalizedStateValueSet_isLeast_one hM
+
+/-- Infimum form of the `0 < p ≤ 1` normalized-state reverse-Holder
+variational formula. -/
+theorem psdTraceReverseHolderNormalizedStateValueSet_sInf_eq [Nonempty a]
+    {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ}
+    (hp0 : 0 < p) (hp1 : p ≤ 1) :
+    sInf (psdTraceReverseHolderNormalizedStateValueSet M p) = psdSchattenPNorm M hM p :=
+  (psdTraceReverseHolderNormalizedStateValueSet_isLeast hM hp0 hp1).csInf_eq
 
 /-- The explicit reverse-Holder optimizer is the normalized positive power
 `M^p / Tr(M^p)`.

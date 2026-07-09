@@ -43,112 +43,6 @@ universe u v
 
 noncomputable section
 
-private theorem asymptotic_spectrum_real_diagonal_ofReal {n : Type u} [Fintype n] [DecidableEq n]
-    (d : n -> ℝ) :
-    spectrum ℝ (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) = Set.range d := by
-  ext r
-  rw [← spectrum.algebraMap_mem_iff ℂ]
-  change (r : ℂ) ∈ spectrum ℂ (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) ↔
-    r ∈ Set.range d
-  rw [spectrum_diagonal]
-  constructor
-  · rintro ⟨i, hi⟩
-    exact ⟨i, Complex.ofReal_injective hi⟩
-  · rintro ⟨i, rfl⟩
-    exact ⟨i, rfl⟩
-
-private theorem asymptotic_aeval_diagonal_ofReal {n : Type u} [Fintype n] [DecidableEq n]
-    (d : n -> ℝ) (p : ℝ[X]) :
-    aeval (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) p =
-      Matrix.diagonal (fun i => ((p.eval (d i) : ℝ) : ℂ)) := by
-  let dC : n -> ℂ := fun i => (d i : ℂ)
-  change aeval (Matrix.diagonal dC) p =
-    Matrix.diagonal (fun i => ((p.eval (d i) : ℝ) : ℂ))
-  rw [show Matrix.diagonal dC = Matrix.diagonalAlgHom (R := ℝ) dC by rfl]
-  rw [Polynomial.aeval_algHom (Matrix.diagonalAlgHom (R := ℝ)) dC]
-  rw [Polynomial.aeval_pi]
-  ext i j
-  by_cases h : i = j
-  · subst j
-    simpa [Matrix.diagonal, dC, Polynomial.aeval_def] using
-      (Polynomial.eval₂_at_apply (p := p) (algebraMap ℝ ℂ) (d i))
-  · simp [Matrix.diagonal, h]
-
-private theorem asymptotic_cfc_diagonal_ofReal {n : Type u} [Fintype n] [DecidableEq n]
-    (d : n -> ℝ) (f : ℝ -> ℝ) :
-    cfc f (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) =
-      Matrix.diagonal (fun i => ((f (d i) : ℝ) : ℂ)) := by
-  classical
-  obtain ⟨p, hp⟩ :=
-    (Polynomial.exists_eval_eq_iff d (fun i => f (d i))).mpr (by
-      intro i j hij
-      simp [hij])
-  calc
-    cfc f (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) =
-        cfc p.eval (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) := by
-      apply cfc_congr
-      intro x hx
-      rw [asymptotic_spectrum_real_diagonal_ofReal d] at hx
-      rcases hx with ⟨i, rfl⟩
-      exact (hp i).symm
-    _ = aeval (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) p := by
-      exact cfc_polynomial (q := p)
-        (a := (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n))
-        (ha := by
-          rw [isSelfAdjoint_iff, star_eq_conjTranspose, Matrix.diagonal_conjTranspose]
-          ext i j
-          by_cases h : i = j
-          · subst j
-            simp
-          · simp [Matrix.diagonal, h])
-    _ = Matrix.diagonal (fun i => ((f (d i) : ℝ) : ℂ)) := by
-      rw [asymptotic_aeval_diagonal_ofReal d p]
-      ext i j
-      by_cases h : i = j
-      · subst j
-        simp [hp i]
-      · simp [Matrix.diagonal, h]
-
-private theorem rpow_diagonal_ofReal {n : Type u} [Fintype n] [DecidableEq n]
-    (d : n -> ℝ) (hd : ∀ i, 0 ≤ d i) (s : ℝ) :
-    CFC.rpow (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) s =
-      Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ)) := by
-  change ((Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) ^ s) =
-    Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ))
-  have hnonneg : 0 ≤ (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) :=
-    Matrix.nonneg_iff_posSemidef.mpr
-      (Matrix.PosSemidef.diagonal (d := fun i => (d i : ℂ)) (by
-        intro i
-        change (0 : ℂ) ≤ (d i : ℂ)
-        exact_mod_cast hd i))
-  rw [CFC.rpow_eq_cfc_real (a := (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n))
-    (y := s) hnonneg]
-  exact asymptotic_cfc_diagonal_ofReal d (fun x => x ^ s)
-
-private theorem rpow_conjStarAlgAut {n : Type u} [Fintype n] [DecidableEq n]
-    (u : Matrix.unitaryGroup n ℂ) {A : CMatrix n} (hA : A.PosSemidef)
-    {s : ℝ} (hs0 : 0 ≤ s) :
-    CFC.rpow (Unitary.conjStarAlgAut ℂ _ u A) s =
-      Unitary.conjStarAlgAut ℂ _ u (CFC.rpow A s) := by
-  change (Unitary.conjStarAlgAut ℂ _ u A) ^ s =
-    Unitary.conjStarAlgAut ℂ _ u (A ^ s)
-  have hmap_nonneg : 0 ≤ Unitary.conjStarAlgAut ℂ (CMatrix n) u A := by
-    rw [Unitary.conjStarAlgAut_apply]
-    exact Matrix.nonneg_iff_posSemidef.mpr
-      (hA.mul_mul_conjTranspose_same (u : CMatrix n))
-  have hA_nonneg : 0 ≤ A := Matrix.nonneg_iff_posSemidef.mpr hA
-  rw [CFC.rpow_eq_cfc_real (a := Unitary.conjStarAlgAut ℂ (CMatrix n) u A) (y := s)
-    hmap_nonneg]
-  rw [CFC.rpow_eq_cfc_real (a := A) (y := s) hA_nonneg]
-  simpa using
-    (StarAlgHomClass.map_cfc
-      (Unitary.conjStarAlgAut ℂ (CMatrix n) u)
-      (fun x : ℝ => x ^ s) A
-      (hf := (Real.continuous_rpow_const hs0).continuousOn)
-      (hφ := by
-        change Continuous fun A : CMatrix n => (u : CMatrix n) * A * star (u : CMatrix n)
-        fun_prop)).symm
-
 theorem cMatrix_rpow_kronecker
     {a : Type u} {b : Type v} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
     {A : CMatrix a} {B : CMatrix b} (hA : A.PosSemidef) (hB : B.PosSemidef)
@@ -156,65 +50,6 @@ theorem cMatrix_rpow_kronecker
     CFC.rpow (Matrix.kronecker A B) s =
       Matrix.kronecker (CFC.rpow A s) (CFC.rpow B s) :=
   cMatrix_rpow_kronecker_nonneg hA hB hs0
-
-private theorem unitary_row_normSq_sum_local {n : Type u} [Fintype n] [DecidableEq n]
-    (U : Matrix.unitaryGroup n ℂ) (i : n) :
-    ∑ j, Complex.normSq ((U : CMatrix n) i j) = 1 := by
-  have hunit : (U : CMatrix n) * star (U : CMatrix n) = 1 := by
-    exact Unitary.coe_mul_star_self U
-  have hij := congrFun (congrFun hunit i) i
-  have hre := congrArg Complex.re hij
-  simpa [Matrix.mul_apply, Matrix.one_apply, Complex.normSq_eq_conj_mul_self,
-    mul_comm] using hre
-
-private theorem unitary_col_normSq_sum_local {n : Type u} [Fintype n] [DecidableEq n]
-    (U : Matrix.unitaryGroup n ℂ) (j : n) :
-    ∑ i, Complex.normSq ((U : CMatrix n) i j) = 1 := by
-  have hunit : star (U : CMatrix n) * (U : CMatrix n) = 1 := by
-    exact Unitary.coe_star_mul_self U
-  have hij := congrFun (congrFun hunit j) j
-  have hre := congrArg Complex.re hij
-  simpa [Matrix.mul_apply, Matrix.one_apply, Complex.normSq_eq_conj_mul_self,
-    mul_comm] using hre
-
-private theorem trace_mul_two_unitary_conj_diagonal_ofReal_re {n : Type u}
-    [Fintype n] [DecidableEq n]
-    (U V : Matrix.unitaryGroup n ℂ) (d e : n → ℝ) :
-    ((((U : CMatrix n) * (Matrix.diagonal fun i => (d i : ℂ)) *
-        star (U : CMatrix n)) *
-      ((V : CMatrix n) * (Matrix.diagonal fun i => (e i : ℂ)) *
-        star (V : CMatrix n))).trace).re =
-      ∑ i : n, ∑ j : n,
-        d i * e j * Complex.normSq ((star (U : CMatrix n) * (V : CMatrix n)) i j) := by
-  let D : CMatrix n := Matrix.diagonal fun i => (d i : ℂ)
-  let E : CMatrix n := Matrix.diagonal fun i => (e i : ℂ)
-  let W : CMatrix n := star (U : CMatrix n) * (V : CMatrix n)
-  have htrace :
-      (((U : CMatrix n) * D * star (U : CMatrix n)) *
-        ((V : CMatrix n) * E * star (V : CMatrix n))).trace =
-        (D * W * E * star W).trace := by
-    calc
-      (((U : CMatrix n) * D * star (U : CMatrix n)) *
-        ((V : CMatrix n) * E * star (V : CMatrix n))).trace =
-          ((U : CMatrix n) *
-            (D * star (U : CMatrix n) * ((V : CMatrix n) * E * star (V : CMatrix n)))).trace := by
-            congr 1
-            noncomm_ring
-      _ = ((D * star (U : CMatrix n) * ((V : CMatrix n) * E * star (V : CMatrix n))) *
-            (U : CMatrix n)).trace := by
-            rw [Matrix.trace_mul_comm]
-      _ = (D * (star (U : CMatrix n) * (V : CMatrix n)) *
-            E * (star (V : CMatrix n) * (U : CMatrix n))).trace := by
-            congr 1
-            noncomm_ring
-      _ = (D * W * E * star W).trace := by
-            simp [W, Matrix.star_eq_conjTranspose, Matrix.mul_assoc]
-  rw [htrace]
-  change ((D * W * E * star W).trace).re =
-    ∑ i : n, ∑ j : n, d i * e j * Complex.normSq (W i j)
-  simp [D, E, Matrix.trace, Matrix.mul_apply, Matrix.diagonal,
-    Matrix.star_apply, Complex.normSq_apply, Finset.mul_sum,
-    mul_assoc, mul_left_comm, mul_comm]
 
 private theorem matrix_mul_star_diag_re_eq_normSq_sum {n : Type u}
     [Fintype n] [DecidableEq n] (A : CMatrix n) (i : n) :
@@ -4997,14 +4832,14 @@ theorem nussbaumSzkolaOverlap_row_sum (rho sigma : State a) (x : a) :
     ∑ y : a, nussbaumSzkolaOverlap rho sigma x y = 1 := by
   apply NNReal.eq
   simpa [nussbaumSzkolaOverlap] using
-    unitary_row_normSq_sum_local (nussbaumSzkolaTransitionUnitary rho sigma) x
+    unitary_row_normSq_sum (nussbaumSzkolaTransitionUnitary rho sigma) x
 
 /-- Nussbaum--Szkola overlap weights sum to one along each `sigma` eigenvector. -/
 theorem nussbaumSzkolaOverlap_col_sum (rho sigma : State a) (y : a) :
     ∑ x : a, nussbaumSzkolaOverlap rho sigma x y = 1 := by
   apply NNReal.eq
   simpa [nussbaumSzkolaOverlap] using
-    unitary_col_normSq_sum_local (nussbaumSzkolaTransitionUnitary rho sigma) y
+    unitary_col_normSq_sum (nussbaumSzkolaTransitionUnitary rho sigma) y
 
 /-- Tensor product of a fixed one-copy unitary under the repository's
 left-associated `TensorPower` convention. -/

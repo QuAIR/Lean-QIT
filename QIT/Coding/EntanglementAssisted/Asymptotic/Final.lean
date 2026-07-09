@@ -1,0 +1,82 @@
+/-
+Copyright (c) 2026 QuAIR.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: QuAIR Team
+-/
+
+module
+
+public import QIT.Coding.EntanglementAssisted.Asymptotic.Lower
+public import QIT.Coding.EntanglementAssisted.Asymptotic.Upper.Assembly
+
+/-!
+# Asymptotic upper-bound public facade
+
+This module is part of the entanglement-assisted classical communication
+asymptotic proof spine.  It was split out mechanically from the historical
+`EntanglementAssistedAsymptotic` files; theorem statements and proof routes are
+unchanged.
+-/
+
+@[expose] public section
+
+open scoped ComplexOrder MatrixOrder NNReal Topology
+open Filter
+
+namespace QIT
+
+universe u v w x y
+
+noncomputable section
+
+variable {a : Type u} {b : Type v}
+variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+
+namespace Channel
+
+variable (N : Channel a b)
+
+/-- Khatri--Wilde asymptotic upper and strong-converse bounds from the completed
+sandwiched-Renyi route.
+
+This closes the source-shaped route in Chapters/EA_capacity.tex:1902-1906: the
+one-shot upper bound is lifted to all blocklengths, the sandwiched-Renyi channel
+quantity is additive and tends to `I(N)` as `α -> 1+`, and the lower-bound
+achievability theorem supplies the nonempty achievable-rate set needed for the
+capacity inequalities. -/
+theorem entanglementAssisted_asymptoticUpperBounds_of_sandwichedLimit
+    [Nonempty a] [Nonempty b] :
+    N.IsEntanglementAssistedClassicalRateUpperBound
+        N.entanglementAssistedInformation ∧
+      N.IsStrongConverseEntanglementAssistedClassicalRate
+        N.entanglementAssistedInformation ∧
+      N.entanglementAssistedClassicalCapacity ≤
+        N.entanglementAssistedInformation ∧
+      N.strongConverseEntanglementAssistedClassicalCapacity ≤
+        N.entanglementAssistedInformation := by
+  exact N.entanglementAssisted_asymptoticUpperBounds_of_sourceAsymptoticUpperInput
+    (N.entanglementAssistedInformation_isAchievable_of_oneShotPetzLowerBound)
+    (N.entanglementAssisted_sourceAsymptoticUpperInput_of_sandwichedLimit)
+
+/-- Final Khatri--Wilde entanglement-assisted classical communication capacity
+identity, assembled from the one-shot Petz lower bound and the sandwiched-Renyi
+strong-converse route.
+
+The conclusion is the Lean version of
+`C_EA(N) = \widetilde C_EA(N) = I(N)`: both the operational capacity and the
+strong-converse capacity are equal to the channel mutual information. -/
+theorem entanglementAssisted_capacity_and_strongConverseCapacity_eq_information_of_sandwichedLimit
+    [Nonempty a] [Nonempty b] :
+    N.entanglementAssistedClassicalCapacity = N.entanglementAssistedInformation ∧
+      N.strongConverseEntanglementAssistedClassicalCapacity =
+        N.entanglementAssistedInformation := by
+  exact N.entanglementAssisted_capacity_and_strongConverseCapacity_eq_information_of_sourceConverseWitness
+    (N.entanglementAssistedInformation_isAchievable_of_oneShotPetzLowerBound)
+    (N.entanglementAssisted_sourceConverseWitnessFamily_of_sourceAsymptoticUpperInput
+      (N.entanglementAssisted_sourceAsymptoticUpperInput_of_sandwichedLimit))
+
+end Channel
+
+end
+
+end QIT
