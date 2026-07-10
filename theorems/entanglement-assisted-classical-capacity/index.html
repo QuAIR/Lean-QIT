@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Entanglement-Assisted Classical Capacity | Lean-QIT</title><meta name="description" content="Readable statement, citations, and Lean context for Entanglement-Assisted Classical Capacity."><meta data-pagefind-meta="title" content="Entanglement-Assisted Classical Capacity"><script>
+  (() => {
+    const storageKey = "lqit-theme";
+    const systemTheme = () => window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    let stored = null;
+    try {
+      stored = window.localStorage.getItem(storageKey);
+    } catch {
+      stored = null;
+    }
+    const theme = stored === "light" || stored === "dark" ? stored : systemTheme();
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  })();
+</script><script>(function(){const mathjaxRoot = "/Lean-QIT/mathjax";
+const mathjaxFonts = "/Lean-QIT/mathjax-fonts";
+
+  window.MathJax = {
+    loader: {
+      paths: {
+        mathjax: mathjaxRoot,
+        fonts: mathjaxFonts
+      }
+    },
+    tex: {
+      inlineMath: [["$", "$"], ["\\(", "\\)"]],
+      displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+      macros: {
+        ket: ["\\left|#1\\right\\rangle", 1],
+        bra: ["\\left\\langle#1\\right|", 1],
+        ketbra: ["\\left|#1\\right\\rangle\\!\\left\\langle#2\\right|", 2]
+      }
+    }
+  };
+})();</script> <script defer src="/Lean-QIT/mathjax/tex-mml-chtml-nofont.js"></script><link rel="stylesheet" href="/Lean-QIT/_astro/TheoremDetail.Czg0wjW9.css"></head> <body> <div class="bg-decoration" aria-hidden="true"> <div class="qit-ambient-wash"></div> <div class="qit-manuscript"></div> <div class="qit-resource-linework"></div> <div class="paper-layer"></div> <svg class="deco deco-info-flow" viewBox="0 0 380 190" aria-hidden="true"> <path class="info-thread" d="M32 138 C78 42 132 152 188 78 S296 28 344 122"></path> <path class="info-thread secondary" d="M48 56 C112 118 154 34 214 104 S292 154 348 66"></path> <g class="info-nodes"> <circle cx="32" cy="138" r="7"></circle> <circle cx="188" cy="78" r="7"></circle> <circle cx="344" cy="122" r="7"></circle> <circle cx="214" cy="104" r="5"></circle> </g> </svg> <svg class="deco deco-resource-web" viewBox="0 0 260 240" aria-hidden="true"> <g class="resource-links"> <path d="M48 58 C92 18 142 30 188 62"></path> <path d="M48 58 C70 116 116 150 190 172"></path> <path d="M188 62 C210 104 208 142 190 172"></path> <path d="M92 128 C128 88 162 94 198 124"></path> </g> <g class="resource-nodes"> <circle cx="48" cy="58" r="9"></circle> <circle cx="188" cy="62" r="9"></circle> <circle cx="92" cy="128" r="7"></circle> <circle cx="198" cy="124" r="7"></circle> <circle cx="190" cy="172" r="9"></circle> </g> <path class="resource-arrow" d="M68 198 C112 210 156 206 204 188"></path> </svg> <svg class="deco deco-entanglement-sheet" viewBox="0 0 240 230" aria-hidden="true"> <path class="entropy-contour" d="M50 100 C62 38 170 42 184 98 C198 166 62 176 50 100 Z"></path> <path class="entropy-contour inner" d="M82 106 C90 76 146 78 154 110 C160 142 88 140 82 106 Z"></path> <path class="correlation-arc" d="M38 142 C76 72 134 162 198 90"></path> <circle class="correlation-tip" cx="38" cy="142" r="5"></circle> <circle class="correlation-tip" cx="198" cy="90" r="5"></circle> </svg> </div> <div class="page-shell theorem-shell"> <main class="standalone-detail" data-pagefind-body> <article class="theorem-detail"> <header class="detail-hero"> <p class="detail-kicker">Entanglement-assisted classical communication / Theorem</p> <div class="detail-title-row"> <h1>Entanglement-Assisted Classical Capacity</h1>  </div> </header> <section class="detail-card statement-card" aria-labelledby="entanglement-assisted-classical-capacity-statement-heading"> <h2 id="entanglement-assisted-classical-capacity-statement-heading">Theorem statement</h2> <div class="math-statement">For every quantum channel $\mathcal{N}$, its entanglement-assisted classical capacity $C_{\operatorname{EA}}(\mathcal{N})$ and its strong converse entanglement-assisted classical capacity $\widetilde{C}_{\operatorname{EA}}(\mathcal{N})$ are both equal to the mutual information $I(\mathcal{N})$:
+\[
+    C_{\operatorname{EA}}(\mathcal{N})
+    = \widetilde{C}_{\operatorname{EA}}(\mathcal{N})
+    = I(\mathcal{N}).
+\]
+Here $I(\mathcal{N}) := \sup_{\psi_{RA}} I(R;B)_{\omega}$ with $\omega_{RB}=\mathcal{N}_{A\to B}(\psi_{RA})$. This is the final capacity identity for the information quantity $I(\mathcal{N})$.</div>  </section> <div class="detail-secondary-grid"> <section class="detail-card sources-card" aria-labelledby="entanglement-assisted-classical-capacity-sources-heading"> <h2 id="entanglement-assisted-classical-capacity-sources-heading">Sources</h2> <ol class="citation-list"> <li> <div> <a class="citation-title-link" href="https://arxiv.org/abs/2011.04672" target="_blank" rel="noreferrer">Principles of Quantum Communication Theory: A Modern Approach</a> <p>Sumeet Khatri, Mark M. Wilde, 2024</p> </div> </li> </ol> </section> <section class="detail-card lean-context" aria-labelledby="entanglement-assisted-classical-capacity-lean-heading"> <h2 id="entanglement-assisted-classical-capacity-lean-heading">Lean context</h2> <div class="lean-context-panel"> <dl class="definition-list"> <div> <dt>Import</dt> <dd><a class="lean-context-link" href="https://github.com/QuAIR/Lean-QIT/blob/main/QIT/Coding/EntanglementAssisted/Asymptotic/Final.lean" target="_blank" rel="noreferrer"><code>QIT.Coding.EntanglementAssisted.Asymptotic.Final</code></a></dd> </div> <div> <dt>Lean declaration</dt> <dd><a class="lean-context-link" href="https://github.com/QuAIR/Lean-QIT/blob/main/QIT/Coding/EntanglementAssisted/Asymptotic/Final.lean#L68" target="_blank" rel="noreferrer"><code>QIT.Channel.entanglementAssisted_capacity_and_strongConverseCapacity_eq_information_of_sandwichedLimit</code></a></dd> </div> </dl> </div> </section> </div> <section class="detail-card copy-context" aria-label="Copy Lean context"> <p>Copy a short prompt with the import, Lean declaration, citations, and public source link.</p> <div class="detail-actions">  <div class="copy-box"> <button class="copy-button" type="button" data-copy-text="Task: Use this public Lean realization context to answer or verify a Lean-QIT claim.
+Catalog entry: entanglement-assisted-classical-capacity
+Import: import QIT.Coding.EntanglementAssisted.Asymptotic.Final
+Lean declaration: QIT.Channel.entanglementAssisted_capacity_and_strongConverseCapacity_eq_information_of_sandwichedLimit
+Citations: KhatriWilde2024Principles
+Source: https://github.com/QuAIR/Lean-QIT/blob/main/QIT/Coding/EntanglementAssisted/Asymptotic/Final.lean#L68">Copy Lean context</button> </div> <script type="module">function e(e){let t=document.createElement(`textarea`);t.value=e,t.setAttribute(`readonly`,`readonly`),t.style.position=`fixed`,t.style.left=`-9999px`,document.body.appendChild(t),t.select(),document.execCommand(`copy`),t.remove()}document.addEventListener(`click`,async t=>{let n=t.target,r=n instanceof Element?n.closest(`[data-copy-text]`):null;if(!(r instanceof HTMLElement))return;let i=r.dataset.copyText;if(i){try{navigator.clipboard?.writeText?await navigator.clipboard.writeText(i):e(i)}catch{e(i)}r.textContent=`Copied`,window.setTimeout(()=>{r.textContent=`Copy Lean context`},1800)}});</script> <a class="lean-source-link" href="https://github.com/QuAIR/Lean-QIT/blob/main/QIT/Coding/EntanglementAssisted/Asymptotic/Final.lean#L68" target="_blank" rel="noreferrer">Open Lean source</a>  </div> </section> </article> </main> <footer class="site-footer" data-pagefind-ignore> <a class="brand footer-brand" href="/Lean-QIT/">Lean-QIT</a> <p class="footer-meta"> <span>QuAIR</span> <span>Apache-2.0</span> </p> <button class="theme-toggle" type="button" aria-label="Toggle color theme" aria-pressed="false" data-theme-toggle> <span class="theme-toggle-icon" aria-hidden="true"></span> </button> <a class="footer-github" href="https://github.com/QuAIR/Lean-QIT"> <span>GitHub</span> <span>0 stars</span> </a> </footer> <script type="module">var e=`lqit-theme`,t=document.querySelector(`[data-theme-toggle]`),n=window.matchMedia(`(prefers-color-scheme: dark)`);function r(){try{return window.localStorage.getItem(e)}catch{return null}}function i(t){try{window.localStorage.setItem(e,t)}catch{return}}function a(){return n.matches?`dark`:`light`}function o(e){document.documentElement.dataset.theme=e,document.documentElement.style.colorScheme=e,t instanceof HTMLButtonElement&&t.setAttribute(`aria-pressed`,String(e===`dark`))}o(document.documentElement.dataset.theme||r()||a()),t?.addEventListener(`click`,()=>{let e=(document.documentElement.dataset.theme===`dark`?`dark`:`light`)==`dark`?`light`:`dark`;i(e),o(e)}),n.addEventListener(`change`,()=>{r()||o(a())});</script> </div> </body></html>
