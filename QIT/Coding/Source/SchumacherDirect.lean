@@ -517,7 +517,7 @@ This is the Wilde direct-achievability fidelity bound
 projective part `PiMat · φ · PiMat` (controlled by `gentle_projector`) and the PSD
 correction sum (whose trace is exactly the atypical spectral weight), then
 applying the trace-norm triangle. -/
-private theorem typicalCompressionCode_jointError_le (ρ : State a) (n : ℕ) (δ : ℝ)
+public theorem typicalCompressionCode_jointError_le (ρ : State a) (n : ℕ) (δ : ℝ)
     (i0 : TypicalSubspaceIndex ρ n δ) :
     (typicalCompressionCode ρ n δ i0).jointError ≤
       Real.sqrt (ρ.atypicalSubspaceSpectralWeight n δ) +
@@ -653,7 +653,7 @@ Uses `card_typicalSubspaceIndex`, `typicalSubspaceDimension_le_two_pow`, and the
 local `log2_two_rpow` / `log2_le_log2` lemmas (QIT's custom `log2`).  The
 `Nonempty` of the typical register (provided by `i0`) gives the strict
 positivity of `typicalSubspaceDimension` required by `log2_le_log2`. -/
-private theorem typicalCompressionCode_rate_le (ρ : State a) (n : ℕ) (δ : ℝ)
+public theorem typicalCompressionCode_rate_le (ρ : State a) (n : ℕ) (δ : ℝ)
     (hn : 1 ≤ n) (i0 : TypicalSubspaceIndex ρ n δ) :
     (typicalCompressionCode ρ n δ i0).rate ≤ ρ.schumacherRate + δ := by
   have hn_ne : n ≠ 0 := by omega
@@ -678,7 +678,7 @@ private theorem typicalCompressionCode_rate_le (ρ : State a) (n : ℕ) (δ : �
 
 /-- If the typical spectral weight is strictly positive, the typical register is
 nonempty (at least one eigenvalue index is typical). -/
-private theorem TypicalSubspaceIndex_nonempty_of_typical_pos
+public theorem TypicalSubspaceIndex_nonempty_of_typical_pos
     (ρ : State a) (n : ℕ) (δ : ℝ)
     (h : 0 < ρ.typicalSubspaceSpectralWeight n δ) :
     Nonempty (TypicalSubspaceIndex ρ n δ) := by

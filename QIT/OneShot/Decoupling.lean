@@ -19,6 +19,7 @@ import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Instances
 import Mathlib.Analysis.CStarAlgebra.Matrix
 import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.Rpow.Basic
 import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.Rpow.Isometric
+import Mathlib.MeasureTheory.Integral.Average
 import Mathlib.MeasureTheory.Function.L2Space
 
 /-!
@@ -68,6 +69,28 @@ noncomputable local instance decouplingMatrixSelfAdjointIsometricCFC {ι : Type 
     [Fintype ι] [DecidableEq ι] :
     IsometricContinuousFunctionalCalculus ℝ (Matrix ι ι ℂ) IsSelfAdjoint :=
   IsSelfAdjoint.instIsometricContinuousFunctionalCalculus
+
+/-- First-moment selection over finite-dimensional unitary Haar measure:
+some unitary attains at most the Haar average of an integrable real-valued
+quantity.  This is the abstract selection step used in ADHW fqsw.tex lines
+796-818 after the averaged decoupling estimate is obtained. -/
+theorem unitaryHaar_exists_le_integral
+    [Fintype a] [DecidableEq a] [Nonempty a]
+    {f : Matrix.unitaryGroup a ℂ → ℝ}
+    (hf : Integrable f (unitaryHaarMeasure (a := a))) :
+    ∃ U : Matrix.unitaryGroup a ℂ,
+      f U ≤ ∫ U, f U ∂unitaryHaarMeasure (a := a) :=
+  MeasureTheory.exists_le_integral (μ := unitaryHaarMeasure (a := a)) hf
+
+/-- First-moment selection with an explicit upper bound on the Haar average. -/
+theorem unitaryHaar_exists_le_of_integral_le
+    [Fintype a] [DecidableEq a] [Nonempty a]
+    {f : Matrix.unitaryGroup a ℂ → ℝ} {B : ℝ}
+    (hf : Integrable f (unitaryHaarMeasure (a := a)))
+    (hB : (∫ U, f U ∂unitaryHaarMeasure (a := a)) ≤ B) :
+    ∃ U : Matrix.unitaryGroup a ℂ, f U ≤ B := by
+  rcases unitaryHaar_exists_le_integral (a := a) hf with ⟨U, hU⟩
+  exact ⟨U, hU.trans hB⟩
 
 private instance unitaryGroupSecondCountableTopology {ι : Type u} [Fintype ι] [DecidableEq ι] :
     SecondCountableTopology (Matrix.unitaryGroup ι ℂ) := by
@@ -132,7 +155,7 @@ def haydenProjectedAE_meanTarget [Fintype a] [Fintype e]
 def hilbertSchmidtSq [Fintype a] [DecidableEq a] (M : CMatrix a) : ℝ :=
   ((star M * M).trace).re
 
-private theorem hilbertSchmidtSq_nonneg [Fintype a] [DecidableEq a] (M : CMatrix a) :
+theorem hilbertSchmidtSq_nonneg [Fintype a] [DecidableEq a] (M : CMatrix a) :
     0 ≤ hilbertSchmidtSq M := by
   exact (Matrix.PosSemidef.trace_nonneg
     (Matrix.posSemidef_conjTranspose_mul_self M)).1
@@ -160,7 +183,12 @@ private theorem decouplingTraceNorm_continuous [Fintype a] [DecidableEq a] :
     Continuous.matrix_trace hsqrt
   simpa [traceNorm, psdSqrt] using Complex.continuous_re.comp htrace
 
-private theorem traceNorm_sq_le_card_mul_hilbertSchmidtSq [Fintype a] [DecidableEq a]
+/-- The trace norm is continuous on finite-dimensional complex matrices. -/
+theorem traceNorm_continuous [Fintype a] [DecidableEq a] :
+    Continuous (traceNorm : CMatrix a → ℝ) :=
+  decouplingTraceNorm_continuous
+
+theorem traceNorm_sq_le_card_mul_hilbertSchmidtSq [Fintype a] [DecidableEq a]
     (M : CMatrix a) :
     traceNorm M ^ 2 ≤ (Fintype.card a : ℝ) * hilbertSchmidtSq M := by
   have hmain := traceNorm_sq_le_finrank_range_mul_hilbertSchmidt M
@@ -173,7 +201,47 @@ private theorem traceNorm_sq_le_card_mul_hilbertSchmidtSq [Fintype a] [Decidable
   exact hmain.trans
     (mul_le_mul_of_nonneg_right hrank (hilbertSchmidtSq_nonneg M))
 
-private theorem traceNorm_sq_le_rankBound_mul_hilbertSchmidtSq [Fintype a] [DecidableEq a]
+/-- A trace-one positive semidefinite matrix has purity at least `1 / d`.
+This is the Hilbert--Schmidt Cauchy--Schwarz estimate in trace-norm form. -/
+theorem State.one_le_card_mul_hilbertSchmidtSq_matrix [Fintype a] [DecidableEq a]
+    (ρ : State a) :
+    (1 : ℝ) ≤ (Fintype.card a : ℝ) * hilbertSchmidtSq ρ.matrix := by
+  have htn : traceNorm ρ.matrix = 1 := by
+    rw [traceNorm_posSemidef_eq_trace_re ρ.matrix ρ.pos]
+    exact ρ.trace_re_eq_one
+  have h := traceNorm_sq_le_card_mul_hilbertSchmidtSq ρ.matrix
+  nlinarith
+
+/-- If a state is bounded above by `c • I`, then its Hilbert--Schmidt purity is
+at most `c`. -/
+theorem State.hilbertSchmidtSq_matrix_le_of_le_smul_one [Fintype a] [DecidableEq a]
+    (ρ : State a) {c : ℝ} (hc : 0 ≤ c)
+    (hρ : ρ.matrix ≤ ((c : ℂ) • (1 : CMatrix a))) :
+    hilbertSchmidtSq ρ.matrix ≤ c := by
+  have _hcC : (0 : ℂ) ≤ (c : ℂ) := by
+    exact_mod_cast hc
+  have hpair :=
+    cMatrix_trace_mul_le_of_le_posSemidef_left
+      (A := ρ.matrix) (B := ((c : ℂ) • (1 : CMatrix a))) (W := ρ.matrix)
+      ρ.pos hρ
+  have hright :
+      ((ρ.matrix * ((c : ℂ) • (1 : CMatrix a))).trace).re = c := by
+    calc
+      ((ρ.matrix * ((c : ℂ) • (1 : CMatrix a))).trace).re =
+          (((c : ℂ) • ρ.matrix).trace).re := by
+            rw [Matrix.mul_smul, Matrix.mul_one]
+      _ = ((c : ℂ) * ρ.matrix.trace).re := by
+            simp [Matrix.trace_smul]
+      _ = c := by
+            rw [ρ.trace_eq_one]
+            simp
+  calc
+    hilbertSchmidtSq ρ.matrix = (ρ.matrix * ρ.matrix).trace.re :=
+      hilbertSchmidtSq_eq_trace_mul_self_of_isHermitian ρ.pos.isHermitian
+    _ ≤ ((ρ.matrix * ((c : ℂ) • (1 : CMatrix a))).trace).re := hpair
+    _ = c := hright
+
+theorem traceNorm_sq_le_rankBound_mul_hilbertSchmidtSq [Fintype a] [DecidableEq a]
     (M : CMatrix a) {r : ℝ}
     (hrank : (Module.finrank ℂ (LinearMap.range M.toEuclideanLin) : ℝ) ≤ r) :
     traceNorm M ^ 2 ≤ r * hilbertSchmidtSq M := by
@@ -318,7 +386,7 @@ private theorem haydenProjectedAE_diff_finrank_range_le_projected_dim
     exact_mod_cast hrange
   simpa [Delta, K] using hrange_real.trans_eq hKrank
 
-private theorem integral_traceNorm_le_sqrt_integral_hilbertSchmidtSq_of_rank_bound
+theorem integral_traceNorm_le_sqrt_integral_hilbertSchmidtSq_of_rank_bound
     {α : Type w} [MeasurableSpace α] {μ : Measure α}
     {ι : Type u} [Fintype ι] [DecidableEq ι] [IsProbabilityMeasure μ]
     {f : α → CMatrix ι} {r : ℝ}
@@ -385,7 +453,69 @@ private theorem integral_traceNorm_le_sqrt_integral_hilbertSchmidtSq_of_rank_bou
     exact Real.sqrt_le_sqrt hsquare_int_le
   exact hholder_nat.trans hsqrt_step
 
-private theorem integral_traceNorm_le_sqrt_integral_hilbertSchmidtSq
+/-- On a probability space, the integral of a nonnegative real function is at
+most the square root of its second moment. -/
+theorem integral_le_sqrt_integral_sq_of_nonneg
+    {α : Type w} [MeasurableSpace α] {μ : Measure α} [IsProbabilityMeasure μ]
+    {f : α → ℝ}
+    (hf_nonneg : 0 ≤ᵐ[μ] f)
+    (hf_int : Integrable f μ)
+    (hf_sq_int : Integrable (fun x => f x ^ 2) μ) :
+    (∫ x, f x ∂μ) ≤ Real.sqrt (∫ x, f x ^ 2 ∂μ) := by
+  have hf_memLp_two : MemLp f (ENNReal.ofReal (2 : ℝ)) μ := by
+    convert (memLp_two_iff_integrable_sq hf_int.aestronglyMeasurable).2
+      (by simpa [pow_two] using hf_sq_int) using 1
+    norm_num
+  have hone_memLp_two : MemLp (fun _ : α => (1 : ℝ)) (ENNReal.ofReal (2 : ℝ)) μ :=
+    memLp_const (1 : ℝ)
+  have hholder := integral_mul_le_Lp_mul_Lq_of_nonneg
+    (μ := μ) (p := (2 : ℝ)) (q := (2 : ℝ)) Real.HolderConjugate.two_two
+    (f := fun _ : α => (1 : ℝ)) (g := f)
+    (by filter_upwards with _; norm_num) hf_nonneg hone_memLp_two hf_memLp_two
+  have hleft : (∫ x, (1 : ℝ) * f x ∂μ) = ∫ x, f x ∂μ := by simp
+  rw [hleft] at hholder
+  have hone_int : (∫ _ : α, (1 : ℝ) ^ (2 : ℝ) ∂μ) ^ (1 / (2 : ℝ)) = 1 := by
+    simp [measureReal_def]
+  rw [hone_int, one_mul] at hholder
+  simpa [Real.rpow_natCast, Real.sqrt_eq_rpow] using hholder
+
+/-- Real-valued integral form of the elementary ADHW estimate
+`(x + y)^2 ≤ 2x^2 + 2y^2`, used to combine two averaged square-error
+bounds after a pointwise triangle-inequality step. -/
+theorem integral_sq_le_two_add_two_of_ae_le_add
+    {α : Type w} [MeasurableSpace α] {μ : Measure α}
+    {f g h : α → ℝ}
+    (hf_nonneg : ∀ᵐ x ∂μ, 0 ≤ f x)
+    (hg_nonneg : ∀ᵐ x ∂μ, 0 ≤ g x)
+    (hh_nonneg : ∀ᵐ x ∂μ, 0 ≤ h x)
+    (hfg : ∀ᵐ x ∂μ, f x ≤ g x + h x)
+    (hf_int : Integrable (fun x => f x ^ 2) μ)
+    (hg_int : Integrable (fun x => g x ^ 2) μ)
+    (hh_int : Integrable (fun x => h x ^ 2) μ) :
+    (∫ x, f x ^ 2 ∂μ) ≤
+      2 * (∫ x, g x ^ 2 ∂μ) + 2 * (∫ x, h x ^ 2 ∂μ) := by
+  have hpoint :
+      (fun x => f x ^ 2) ≤ᵐ[μ]
+        fun x => 2 * (g x ^ 2) + 2 * (h x ^ 2) := by
+    filter_upwards [hf_nonneg, hg_nonneg, hh_nonneg, hfg] with x hf0 hg0 hh0 hle
+    have hsum_nonneg : 0 ≤ g x + h x := add_nonneg hg0 hh0
+    have hf_sq_le : f x ^ 2 ≤ (g x + h x) ^ 2 := by
+      nlinarith [hf0, hsum_nonneg, hle]
+    have hsum_sq_le : (g x + h x) ^ 2 ≤ 2 * (g x ^ 2) + 2 * (h x ^ 2) := by
+      nlinarith [sq_nonneg (g x - h x)]
+    exact hf_sq_le.trans hsum_sq_le
+  have hright_int :
+      Integrable (fun x => 2 * (g x ^ 2) + 2 * (h x ^ 2)) μ :=
+    (hg_int.const_mul 2).add (hh_int.const_mul 2)
+  calc
+    (∫ x, f x ^ 2 ∂μ) ≤
+        ∫ x, 2 * (g x ^ 2) + 2 * (h x ^ 2) ∂μ :=
+      integral_mono_ae hf_int hright_int hpoint
+    _ = 2 * (∫ x, g x ^ 2 ∂μ) + 2 * (∫ x, h x ^ 2 ∂μ) := by
+      rw [integral_add (hg_int.const_mul 2) (hh_int.const_mul 2)]
+      rw [integral_const_mul, integral_const_mul]
+
+theorem integral_traceNorm_le_sqrt_integral_hilbertSchmidtSq
     {α : Type w} [MeasurableSpace α] {μ : Measure α}
     {ι : Type u} [Fintype ι] [DecidableEq ι] [IsProbabilityMeasure μ]
     {f : α → CMatrix ι}
@@ -598,7 +728,7 @@ private theorem haydenProjectedAE_hilbertSchmidt_variance_integrable [Fintype a]
   exact (hsecond.sub (hcross.const_mul (2 : ℝ))).add
     (integrable_const (hilbertSchmidtSq M))
 
-private theorem haydenProjectedAE_oneShotDecoupling_traceNorm_expectation_le_of_variance
+theorem haydenProjectedAE_oneShotDecoupling_traceNorm_expectation_le_of_variance
     [Fintype a] [Fintype e] [DecidableEq a] [DecidableEq e] [Nonempty a]
     (P : CMatrix a) (d : ℝ) (rho : CMatrix (Prod a e))
     (hPid : P * P = P) (hPtr : P.trace = (d : ℂ))
@@ -2438,6 +2568,102 @@ theorem haydenProjectedAE_hilbertSchmidt_variance_le_purity
     hd (by exact_mod_cast hdD) hD hSecond hMean
     (hilbertSchmidtSq_nonneg rho)
     (hilbertSchmidtSq_nonneg (partialTraceA (a := a) (b := e) rho))
+
+theorem haydenProjectedAE_oneShotDecoupling_traceNorm_sq_expectation_le
+    [Fintype a] [Fintype e] [DecidableEq a] [DecidableEq e] [Nontrivial a]
+    (P : CMatrix a) (d : ℝ) (rho : CMatrix (Prod a e))
+    (hPid : P * P = P) (hPherm : P.IsHermitian)
+    (hPtr : P.trace = (d : ℂ)) (hrho : rho.IsHermitian)
+    (hd : 1 ≤ d) (hdD : d ≤ Fintype.card a) :
+    (∫ U : Matrix.unitaryGroup a ℂ,
+      traceNorm (haydenProjectedAE (a := a) (e := e) P d rho U -
+        haydenProjectedAE_meanTarget (a := a) (e := e) P d rho) ^ 2
+      ∂unitaryHaarMeasure (a := a)) ≤
+      d * (Fintype.card e : ℝ) * hilbertSchmidtSq rho := by
+  have hvar :=
+    haydenProjectedAE_hilbertSchmidt_variance_le_purity
+      (a := a) (e := e) P d rho hPid hPherm hPtr hrho hd hdD
+  have htrace_sq : Integrable (fun U : Matrix.unitaryGroup a ℂ =>
+      traceNorm (haydenProjectedAE (a := a) (e := e) P d rho U -
+        haydenProjectedAE_meanTarget (a := a) (e := e) P d rho) ^ 2)
+      (unitaryHaarMeasure (a := a)) := by
+    have hproj := haydenProjectedAE_continuous (a := a) (e := e) P d rho
+    have htarget : Continuous fun _ : Matrix.unitaryGroup a ℂ =>
+        haydenProjectedAE_meanTarget (a := a) (e := e) P d rho :=
+      continuous_const
+    have htrace : Continuous fun U : Matrix.unitaryGroup a ℂ =>
+        traceNorm (haydenProjectedAE (a := a) (e := e) P d rho U -
+          haydenProjectedAE_meanTarget (a := a) (e := e) P d rho) :=
+      traceNorm_continuous.comp (hproj.sub htarget)
+    exact (htrace.pow 2).integrable_of_hasCompactSupport
+      (HasCompactSupport.of_compactSpace _)
+  have hproj_int := haydenProjectedAE_integrable (a := a) (e := e) P d rho
+  have hsecond_int :=
+    haydenProjectedAE_secondMoment_trace_integrable (a := a) (e := e) P d rho
+  have hsecond_real_int : Integrable (fun U : Matrix.unitaryGroup a ℂ =>
+      (haydenProjectedAE (a := a) (e := e) P d rho U *
+        haydenProjectedAE (a := a) (e := e) P d rho U).trace.re)
+      (unitaryHaarMeasure (a := a)) :=
+    Complex.reCLM.integrable_comp hsecond_int
+  have hMherm :
+      (haydenProjectedAE_meanTarget (a := a) (e := e) P d rho).IsHermitian :=
+    haydenProjectedAE_meanTarget_isHermitian
+      (a := a) (e := e) P d rho hPherm hrho
+  have hhs : Integrable (fun U : Matrix.unitaryGroup a ℂ =>
+      hilbertSchmidtSq (haydenProjectedAE (a := a) (e := e) P d rho U -
+        haydenProjectedAE_meanTarget (a := a) (e := e) P d rho))
+      (unitaryHaarMeasure (a := a)) :=
+    haydenProjectedAE_hilbertSchmidt_variance_integrable
+      (μ := unitaryHaarMeasure (a := a))
+      (f := fun U : Matrix.unitaryGroup a ℂ =>
+        haydenProjectedAE (a := a) (e := e) P d rho U)
+      (M := haydenProjectedAE_meanTarget (a := a) (e := e) P d rho)
+      hproj_int hsecond_real_int hMherm
+      (fun U => haydenProjectedAE_isHermitian
+        (a := a) (e := e) P d rho U hPherm hrho)
+  have hpoint : ∀ᵐ U : Matrix.unitaryGroup a ℂ ∂unitaryHaarMeasure (a := a),
+      traceNorm (haydenProjectedAE (a := a) (e := e) P d rho U -
+        haydenProjectedAE_meanTarget (a := a) (e := e) P d rho) ^ 2 ≤
+        (d * (Fintype.card e : ℝ)) *
+          hilbertSchmidtSq (haydenProjectedAE (a := a) (e := e) P d rho U -
+            haydenProjectedAE_meanTarget (a := a) (e := e) P d rho) := by
+    filter_upwards with U
+    exact traceNorm_sq_le_rankBound_mul_hilbertSchmidtSq
+      (haydenProjectedAE (a := a) (e := e) P d rho U -
+        haydenProjectedAE_meanTarget (a := a) (e := e) P d rho)
+      (haydenProjectedAE_diff_finrank_range_le_projected_dim
+        (a := a) (e := e) P d rho U hPid hPtr)
+  have hmono :
+      (∫ U : Matrix.unitaryGroup a ℂ,
+        traceNorm (haydenProjectedAE (a := a) (e := e) P d rho U -
+          haydenProjectedAE_meanTarget (a := a) (e := e) P d rho) ^ 2
+        ∂unitaryHaarMeasure (a := a)) ≤
+      ∫ U : Matrix.unitaryGroup a ℂ,
+        (d * (Fintype.card e : ℝ)) *
+          hilbertSchmidtSq (haydenProjectedAE (a := a) (e := e) P d rho U -
+            haydenProjectedAE_meanTarget (a := a) (e := e) P d rho)
+        ∂unitaryHaarMeasure (a := a) := by
+    exact integral_mono_ae htrace_sq
+      (hhs.const_mul (d * (Fintype.card e : ℝ))) hpoint
+  calc
+    (∫ U : Matrix.unitaryGroup a ℂ,
+      traceNorm (haydenProjectedAE (a := a) (e := e) P d rho U -
+        haydenProjectedAE_meanTarget (a := a) (e := e) P d rho) ^ 2
+      ∂unitaryHaarMeasure (a := a)) ≤
+        ∫ U : Matrix.unitaryGroup a ℂ,
+          (d * (Fintype.card e : ℝ)) *
+            hilbertSchmidtSq (haydenProjectedAE (a := a) (e := e) P d rho U -
+              haydenProjectedAE_meanTarget (a := a) (e := e) P d rho)
+          ∂unitaryHaarMeasure (a := a) := hmono
+    _ = (d * (Fintype.card e : ℝ)) *
+        ∫ U : Matrix.unitaryGroup a ℂ,
+          hilbertSchmidtSq (haydenProjectedAE (a := a) (e := e) P d rho U -
+            haydenProjectedAE_meanTarget (a := a) (e := e) P d rho)
+          ∂unitaryHaarMeasure (a := a) := by
+          rw [integral_const_mul]
+    _ ≤ d * (Fintype.card e : ℝ) * hilbertSchmidtSq rho := by
+          exact mul_le_mul_of_nonneg_left hvar
+            (mul_nonneg (le_trans zero_le_one hd) (Nat.cast_nonneg _))
 
 theorem haydenProjectedAE_oneShotDecoupling_traceNorm_expectation_le
     [Fintype a] [Fintype e] [DecidableEq a] [DecidableEq e] [Nontrivial a]

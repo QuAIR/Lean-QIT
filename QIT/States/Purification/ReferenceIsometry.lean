@@ -83,6 +83,26 @@ def ofInjective
           simp [Matrix.conjTranspose, hyi, hfi_ne_fj]
         · simp [Matrix.conjTranspose, hyi]
 
+variable {r₃ : Type w} [Fintype r₃] [DecidableEq r₃]
+
+/-- Compose two reference isometries. -/
+def comp (W : ReferenceIsometry r₂ r₃) (V : ReferenceIsometry r₁ r₂) :
+    ReferenceIsometry r₁ r₃ where
+  matrix := W.matrix * V.matrix
+  isometry := by
+    calc
+      Matrix.conjTranspose (W.matrix * V.matrix) * (W.matrix * V.matrix) =
+          Matrix.conjTranspose V.matrix *
+            (Matrix.conjTranspose W.matrix * W.matrix) * V.matrix := by
+            rw [Matrix.conjTranspose_mul]
+            rw [Matrix.mul_assoc]
+            rw [← Matrix.mul_assoc (Matrix.conjTranspose W.matrix) W.matrix V.matrix]
+            rw [← Matrix.mul_assoc (Matrix.conjTranspose V.matrix)
+              (Matrix.conjTranspose W.matrix * W.matrix) V.matrix]
+      _ = Matrix.conjTranspose V.matrix * V.matrix := by
+            rw [W.isometry, Matrix.mul_one]
+      _ = 1 := V.isometry
+
 /-- The reference-indexed block of a bipartite matrix at fixed target entries. -/
 def targetBlock (X : CMatrix (Prod r₁ a)) (x y : a) : CMatrix r₁ :=
   fun i j => X (i, x) (j, y)

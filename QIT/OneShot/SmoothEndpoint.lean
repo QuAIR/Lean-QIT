@@ -9,6 +9,7 @@ module
 public import Mathlib.Topology.Order.Monotone
 public import Mathlib.Topology.MetricSpace.Sequences
 public import Mathlib.Analysis.Normed.Operator.Basic
+public import Mathlib.Data.EReal.Basic
 public import Mathlib.Data.Real.Sqrt
 public import Mathlib.Analysis.CStarAlgebra.Matrix
 public import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Order
@@ -650,6 +651,7 @@ theorem smoothEndpoint_ofKraus_trace_duality
           simp only [Matrix.mul_assoc]
     _ = (X * (Matrix.conjTranspose (K k) * E * K k)).trace := by rfl
 
+omit [DecidableEq a] [DecidableEq b] in
 theorem smoothEndpointKrausAdjoint_posSemidef
     (K : κ → Matrix b a ℂ) {E : CMatrix b} (hE : E.PosSemidef) :
     (smoothEndpointKrausAdjoint K E).PosSemidef := by
@@ -688,6 +690,7 @@ def smoothEndpointKrausStack (K : κ → Matrix b a ℂ) :
     Matrix (Prod κ b) a ℂ :=
   fun x i => K x.1 x.2 i
 
+omit [Fintype a] [DecidableEq a] in
 theorem smoothEndpointKrausStack_conjTranspose_mul
     (K : κ → Matrix b a ℂ) :
     Matrix.conjTranspose (smoothEndpointKrausStack K) *
@@ -2621,6 +2624,7 @@ theorem conditionalMinEntropyDualEffectOfKraus_posSemidef
   simpa [conditionalMinEntropyDualEffectChoiMatrix] using
     hchoi.submatrix (fun x : Prod a b => (x.2, x.1))
 
+omit [DecidableEq a] [Fintype b] [DecidableEq b] in
 theorem partialTraceA_conditionalMinEntropyDualEffectOfKraus
     {κ : Type*} [Fintype κ]
     (K : κ → Matrix a b ℂ) :
@@ -8466,6 +8470,7 @@ def dualEffectKrausSuccessVector [Nonempty a]
     ((Real.sqrt ((Fintype.card a : ℝ)⁻¹) : ℝ) : ℂ) *
       ∑ i : a, ∑ z : c, K x.1 i z * ψ.amp ((i, x.2), z)
 
+omit [DecidableEq κ] in
 private theorem dualEffectTransposeMatrixMap_eq_ofKraus_entry
     {M : CMatrix (Prod a c)} {K : κ → Matrix a c ℂ}
     (hK :
@@ -8682,6 +8687,7 @@ private theorem sum_two_delta_collapse {δ : Type*} {α : Type*} {β : Type*} {�
       intro m hm
       exact Finset.sum_comm
 
+omit [DecidableEq κ] in
 set_option maxHeartbeats 800000 in
 theorem dualEffectTransposeLink_projector_trace_eq_successVector_trace [Nonempty a]
     (ψ : PureVector (Prod (Prod a b) c)) {M : CMatrix (Prod a c)}
@@ -8920,6 +8926,7 @@ theorem dualEffectObjective_re_eq_card_mul_trace_transposeLink [Nonempty a]
       (ψ.dualEffectObjective_eq_card_mul_trace_transposeLink (a := a) (b := b) M)
   simpa [Complex.re_ofReal_mul] using h
 
+omit [DecidableEq κ] in
 theorem dualEffectObjective_re_eq_card_mul_successVector_trace [Nonempty a]
     (ψ : PureVector (Prod (Prod a b) c)) {M : CMatrix (Prod a c)}
     {K : κ → Matrix a c ℂ}
@@ -8938,6 +8945,7 @@ theorem dualEffectObjective_re_eq_card_mul_successVector_trace [Nonempty a]
         (a := a) (b := b) hK)
   rw [hobj, htrace]
 
+omit [DecidableEq κ] in
 theorem dualEffectKrausSuccessVector_card_mul_trace_le_scaleFeasible_trace
     [Nonempty a]
     (ψ : PureVector (Prod (Prod a b) c)) {K : κ → Matrix a c ℂ}
@@ -8969,6 +8977,7 @@ theorem dualEffectKrausSuccessVector_card_mul_trace_le_scaleFeasible_trace
       (a := a) (b := b) hK
   rwa [hobj] at hweak
 
+omit [DecidableEq κ] in
 theorem dualEffectObjective_le_card_mul_sSup_fidelityValueSet_of_successVector_trace_le
     [Nonempty a] [Nonempty b]
     (ψ : PureVector (Prod (Prod a b) c)) {M : CMatrix (Prod a c)}
@@ -10098,6 +10107,78 @@ end State
 namespace SubnormalizedState
 
 variable {c : Type x} [Fintype c] [DecidableEq c]
+
+/-! ## Subnormalized endpoint companion values -/
+
+/-- Extended-real companion to the finite-real subnormalized conditional
+min-entropy branch.
+
+The zero subnormalized state has source-faithful endpoint value `⊤`; all
+nonzero states use the existing finite-real branch from `QIT.OneShot.Smooth`. -/
+def conditionalMinEntropyE (ρ : SubnormalizedState (Prod a b)) : EReal :=
+  if ρ.matrix = 0 then ⊤ else (ρ.conditionalMinEntropy : EReal)
+
+/-- Extended-real companion to the finite-real subnormalized conditional
+max-entropy branch.
+
+The zero subnormalized state has source-faithful endpoint value `⊥`; all
+nonzero states use the existing finite-real branch from `QIT.OneShot.Smooth`. -/
+def conditionalMaxEntropyE (ρ : SubnormalizedState (Prod a b)) : EReal :=
+  if ρ.matrix = 0 then ⊥ else (ρ.conditionalMaxEntropy : EReal)
+
+@[simp]
+theorem conditionalMinEntropyE_eq_top_of_matrix_eq_zero
+    {ρ : SubnormalizedState (Prod a b)} (hρ : ρ.matrix = 0) :
+    ρ.conditionalMinEntropyE = ⊤ := by
+  simp [conditionalMinEntropyE, hρ]
+
+@[simp]
+theorem conditionalMaxEntropyE_eq_bot_of_matrix_eq_zero
+    {ρ : SubnormalizedState (Prod a b)} (hρ : ρ.matrix = 0) :
+    ρ.conditionalMaxEntropyE = ⊥ := by
+  simp [conditionalMaxEntropyE, hρ]
+
+@[simp]
+theorem conditionalMinEntropyE_eq_coe_of_matrix_ne_zero
+    {ρ : SubnormalizedState (Prod a b)} (hρ : ρ.matrix ≠ 0) :
+    ρ.conditionalMinEntropyE = (ρ.conditionalMinEntropy : EReal) := by
+  simp [conditionalMinEntropyE, hρ]
+
+@[simp]
+theorem conditionalMaxEntropyE_eq_coe_of_matrix_ne_zero
+    {ρ : SubnormalizedState (Prod a b)} (hρ : ρ.matrix ≠ 0) :
+    ρ.conditionalMaxEntropyE = (ρ.conditionalMaxEntropy : EReal) := by
+  simp [conditionalMaxEntropyE, hρ]
+
+theorem conditionalMinEntropyE_eq_coe_of_trace_pos
+    {ρ : SubnormalizedState (Prod a b)} (hρ : 0 < ρ.matrix.trace.re) :
+    ρ.conditionalMinEntropyE = (ρ.conditionalMinEntropy : EReal) := by
+  exact ρ.conditionalMinEntropyE_eq_coe_of_matrix_ne_zero (by
+    intro hzero
+    rw [hzero] at hρ
+    simp at hρ)
+
+theorem conditionalMaxEntropyE_eq_coe_of_trace_pos
+    {ρ : SubnormalizedState (Prod a b)} (hρ : 0 < ρ.matrix.trace.re) :
+    ρ.conditionalMaxEntropyE = (ρ.conditionalMaxEntropy : EReal) := by
+  exact ρ.conditionalMaxEntropyE_eq_coe_of_matrix_ne_zero (by
+    intro hzero
+    rw [hzero] at hρ
+    simp at hρ)
+
+theorem conditionalMinEntropyE_eq_coe_of_purifiedBall_lt_sqrt_trace
+    {ρ ρ' : SubnormalizedState (Prod a b)} {ε : ℝ}
+    (hball : ρ.purifiedBall ε ρ') (hε : ε < Real.sqrt ρ.matrix.trace.re) :
+    ρ'.conditionalMinEntropyE = (ρ'.conditionalMinEntropy : EReal) := by
+  exact ρ'.conditionalMinEntropyE_eq_coe_of_trace_pos
+    (SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace ρ ρ' hε hball)
+
+theorem conditionalMaxEntropyE_eq_coe_of_purifiedBall_lt_sqrt_trace
+    {ρ ρ' : SubnormalizedState (Prod a b)} {ε : ℝ}
+    (hball : ρ.purifiedBall ε ρ') (hε : ε < Real.sqrt ρ.matrix.trace.re) :
+    ρ'.conditionalMaxEntropyE = (ρ'.conditionalMaxEntropy : EReal) := by
+  exact ρ'.conditionalMaxEntropyE_eq_coe_of_trace_pos
+    (SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace ρ ρ' hε hball)
 
 /-- A subnormalized conditional min-entropy is uniformly bounded above when the
 state trace has a positive lower bound. -/

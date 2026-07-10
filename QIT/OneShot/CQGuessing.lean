@@ -148,6 +148,7 @@ theorem cqDualOptimalValue_eq (E : Ensemble ι b) :
     E.cqDualOptimalValue = sInf E.cqDualValueSet :=
   rfl
 
+omit [DecidableEq ι] in
 /-- A normalized finite ensemble has at least one classical label. -/
 theorem index_nonempty (E : Ensemble ι b) : Nonempty ι := by
   by_contra hne
@@ -188,6 +189,7 @@ namespace CQEffectFamily
 instance : CoeFun (CQEffectFamily ι b) (fun _ => ι → CMatrix b) :=
   ⟨CQEffectFamily.val⟩
 
+omit [Fintype ι] [DecidableEq ι] in
 @[ext]
 theorem ext {M N : CQEffectFamily ι b} (h : ∀ x, M x = N x) : M = N := by
   cases M with
@@ -221,59 +223,76 @@ instance : SMul ℝ (CQEffectFamily ι b) :=
 instance : SMul NNReal (CQEffectFamily ι b) :=
   ⟨fun c M => ⟨fun x => c • M x⟩⟩
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_zero : (0 : CQEffectFamily ι b).val = 0 := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_add (M N : CQEffectFamily ι b) : (M + N).val = M.val + N.val := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_neg (M : CQEffectFamily ι b) : (-M).val = -M.val := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_sub (M N : CQEffectFamily ι b) : (M - N).val = M.val - N.val := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_nsmul (k : ℕ) (M : CQEffectFamily ι b) : (k • M).val = k • M.val := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_zsmul (k : ℤ) (M : CQEffectFamily ι b) : (k • M).val = k • M.val := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_smul (c : ℝ) (M : CQEffectFamily ι b) : (c • M).val = c • M.val := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_nnreal_smul (c : ℝ≥0) (M : CQEffectFamily ι b) :
     (c • M).val = c • M.val := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_zero_apply (x : ι) : (0 : CQEffectFamily ι b) x = 0 := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_add_apply (M N : CQEffectFamily ι b) (x : ι) : (M + N) x = M x + N x := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_neg_apply (M : CQEffectFamily ι b) (x : ι) : (-M) x = -M x := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_sub_apply (M N : CQEffectFamily ι b) (x : ι) : (M - N) x = M x - N x := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_nsmul_apply (k : ℕ) (M : CQEffectFamily ι b) (x : ι) :
     (k • M) x = k • M x := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_zsmul_apply (k : ℤ) (M : CQEffectFamily ι b) (x : ι) :
     (k • M) x = k • M x := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_smul_apply (c : ℝ) (M : CQEffectFamily ι b) (x : ι) :
     (c • M) x = c • M x := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 @[simp]
 theorem val_nnreal_smul_apply (c : ℝ≥0) (M : CQEffectFamily ι b) (x : ι) :
     (c • M) x = c • M x := rfl
 
+omit [Fintype ι] [DecidableEq ι] in
 theorem val_injective : Function.Injective (fun M : CQEffectFamily ι b => M.val) :=
   fun _ _ h => ext (congrFun h)
 
@@ -298,6 +317,7 @@ def toPiLinear : CQEffectFamily ι b →ₗ[ℝ] (ι → CMatrix b) where
     ext x
     simp
 
+omit [DecidableEq ι] in
 theorem toPiLinear_injective :
     Function.Injective (toPiLinear : CQEffectFamily ι b →ₗ[ℝ] (ι → CMatrix b)) :=
   val_injective
@@ -336,6 +356,7 @@ noncomputable def evalCLM (x : ι) : CQEffectFamily ι b →L[ℝ] CMatrix b :=
         simp } :
       CQEffectFamily ι b →ₗ[ℝ] CMatrix b)
 
+omit [DecidableEq ι] in
 @[simp]
 theorem evalCLM_apply (x : ι) (M : CQEffectFamily ι b) :
     evalCLM x M = M x :=
@@ -346,11 +367,13 @@ theorem evalCLM_apply (x : ι) (M : CQEffectFamily ι b) :
 def single (x : ι) (A : CMatrix b) : CQEffectFamily ι b :=
   ⟨fun y => if y = x then A else 0⟩
 
+omit [Fintype ι] in
 @[simp]
 theorem single_apply_same (x : ι) (A : CMatrix b) :
     single (ι := ι) (b := b) x A x = A := by
   simp [single]
 
+omit [Fintype ι] in
 @[simp]
 theorem single_apply_ne {x y : ι} (h : y ≠ x) (A : CMatrix b) :
     single (ι := ι) (b := b) x A y = 0 := by
@@ -482,6 +505,7 @@ def cqEffectFamilyCone : ProperCone ℝ (CQEffectFamily ι b) :=
             (isClosed_cMatrix_posSemidef_normed (b := b)).preimage
               ((CQEffectFamily.evalCLM (ι := ι) (b := b) x).continuous) }
 
+omit [DecidableEq ι] in
 theorem cqEffectFamilyCone_mem (M : CQEffectFamily ι b) :
     M ∈ cqEffectFamilyCone (ι := ι) (b := b) ↔ ∀ x, (M x).PosSemidef :=
   Iff.rfl
@@ -543,6 +567,7 @@ noncomputable def cqPrimalObjectiveCLM (E : Ensemble ι b) :
         simp [Matrix.trace_smul, Complex.real_smul, Finset.mul_sum] } :
       CQEffectFamily ι b →ₗ[ℝ] ℝ)
 
+omit [DecidableEq ι] in
 @[simp]
 theorem cqPrimalObjectiveCLM_apply (E : Ensemble ι b) (M : CQEffectFamily ι b) :
     cqPrimalObjectiveCLM E M = ∑ x, ((E.cqBlock x * M x).trace).re :=
@@ -587,6 +612,7 @@ theorem cqPrimalProgram_primalValueSet_eq (E : Ensemble ι b) :
       simp [QIT.SDP.ContinuousConeProgram.primalValue, cqPrimalProgram,
         cqPrimalObjectiveCLM, cqPrimalTraceValue, M]
 
+omit [DecidableEq ι] in
 /-- Weighted cq blocks are positive semidefinite. -/
 theorem cqBlock_posSemidef (E : Ensemble ι b) (x : ι) :
     (E.cqBlock x).PosSemidef := by
@@ -596,12 +622,14 @@ theorem cqBlock_posSemidef (E : Ensemble ι b) (x : ι) :
     exact NNReal.coe_nonneg (E.probs x)
   exact (E.states x).pos.smul hx
 
+omit [DecidableEq ι] in
 /-- The weighted cq block has trace equal to the corresponding probability. -/
 theorem cqBlock_trace (E : Ensemble ι b) (x : ι) :
     (E.cqBlock x).trace = (E.probs x : ℂ) := by
   rw [cqBlock_eq, Matrix.trace_smul, (E.states x).trace_eq_one]
   simp
 
+omit [DecidableEq ι] in
 /-- Real trace of the weighted cq block. -/
 theorem cqBlock_trace_re (E : Ensemble ι b) (x : ι) :
     (E.cqBlock x).trace.re = (E.probs x : ℝ) := by
@@ -792,6 +820,7 @@ theorem cqPrimalValue_le_dualValue (E : Ensemble ι b) (M : POVM ι b) {T : CMat
       rw [M.sum_eq_one]
       simp [cqDualValue]
 
+omit [DecidableEq ι] in
 /-- A matrix-feasible cq dual point induces a feasible conic dual functional. -/
 theorem cqPrimalProgram_dualFeasible_of_cqDualFeasible
     (E : Ensemble ι b) {T : CMatrix b} (hT : E.cqDualFeasible T) :
@@ -828,6 +857,7 @@ theorem cqPrimalProgram_dualFeasible_of_cqDualFeasible
         simp [cqPrimalProgram, cqEffectFamilySumCLM]
       rw [hA]
 
+omit [DecidableEq ι] in
 /-- Matrix dual values are conic dual values. -/
 theorem cqDualValueSet_subset_cqPrimalProgram_dualValueSet (E : Ensemble ι b) :
     E.cqDualValueSet ⊆ (cqPrimalProgram E).dualValueSet := by
@@ -911,6 +941,7 @@ theorem cqPrimalProgram_dualValueSet_eq (E : Ensemble ι b) :
     (cqPrimalProgram_dualValueSet_subset_cqDualValueSet E)
     (cqDualValueSet_subset_cqPrimalProgram_dualValueSet E)
 
+omit [DecidableEq ι] in
 /-- The cq primal conic program is feasible. -/
 theorem cqPrimalProgram_primalValueSet_nonempty (E : Ensemble ι b) :
     (cqPrimalProgram E).primalValueSet.Nonempty := by

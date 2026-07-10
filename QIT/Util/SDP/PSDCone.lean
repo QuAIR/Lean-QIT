@@ -28,7 +28,7 @@ namespace QIT
 
 universe u
 
-variable (n : Type u) [Fintype n] [DecidableEq n]
+variable (n : Type u)
 
 /-- A real nonneg scalar preserves PSD. -/
 private theorem posSemidef_real_smul (c : ℝ) (hc : 0 ≤ c) {M : CMatrix n} (hM : M.PosSemidef) :
@@ -50,6 +50,10 @@ private theorem posSemidef_real_smul (c : ℝ) (hc : 0 ≤ c) {M : CMatrix n} (h
     have hc' : 0 ≤ (c:ℂ) := by simp [Complex.le_def, hc]
     exact mul_nonneg hc' (hM.2 x)
 
+section FintypeDecidable
+
+variable [Fintype n] [DecidableEq n]
+
 /-- PSD cone as an `ℝ≥0`-submodule. -/
 def psdSubmodule : Submodule NNReal (CMatrix n) :=
   { carrier := { A | A.PosSemidef }
@@ -58,6 +62,8 @@ def psdSubmodule : Submodule NNReal (CMatrix n) :=
     smul_mem' := fun c _ hA => by
       rw [NNReal.smul_def]
       exact posSemidef_real_smul n (c : ℝ) (NNReal.coe_nonneg c) hA }
+
+end FintypeDecidable
 
 private theorem continuous_conjTranspose' : Continuous (fun A : CMatrix n => conjTranspose A) := by
   refine continuous_pi ?_; intro i
@@ -86,6 +92,10 @@ private theorem continuous_quadraticForm (x : n →₀ ℂ) :
     continuous_finsetSum x.support fun j _ =>
       Continuous.mul (Continuous.mul continuous_const (entry_continuous n i j)) continuous_const
 
+section FintypeDecidable
+
+variable [Fintype n] [DecidableEq n]
+
 /-- PSD cone as a `ProperCone ℝ (CMatrix n)`. -/
 def psdCone : ProperCone ℝ (CMatrix n) :=
   { psdSubmodule n with
@@ -104,6 +114,9 @@ def psdCone : ProperCone ℝ (CMatrix n) :=
       · exact isClosed_iInter fun x =>
           isClosed_setOf_zero_le_complex.preimage (continuous_quadraticForm n x) }
 
+omit [Fintype n] [DecidableEq n] in
 theorem psdCone_mem (A : CMatrix n) : A ∈ psdCone n ↔ A.PosSemidef := Iff.rfl
+
+end FintypeDecidable
 
 end QIT

@@ -9,6 +9,7 @@ module
 public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import QIT.Information.Renyi.Renyi
 public import QIT.Information.Renyi.ConditionalRenyi
+public import QIT.Information.Renyi.RenyiDPIStatement
 public import QIT.OneShot.SmoothEndpoint
 public import QIT.Measurements.Map
 public import QIT.Measurements.Projective
@@ -19,16 +20,16 @@ public import Mathlib.Analysis.CStarAlgebra.Matrix
 public import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Order
 
 /-!
-# Sandwiched Renyi DPI, duality, and measurement monotonicity (statement layer)
+# Sandwiched Renyi DPI, duality, and measurement monotonicity reductions
 
-Source-shaped statement targets for the deep theorems on the proof route of the
-tripartite entropic uncertainty relation: sandwiched Renyi data processing,
-upward sandwiched conditional Renyi duality, and the measurement-map monotonicity
-that follows from DPI.
+Reduction lemmas and proved local cases for sandwiched Renyi data processing,
+upward sandwiched conditional Renyi duality, and measurement-map monotonicity.
 
-These are statement-only (`def : Prop`); the proofs require pinching and complex
-interpolation not currently available in the local stack, so no proof is claimed
-and no forbidden placeholder tokens are introduced.
+The planning-only `Prop` surfaces consumed by these reductions are isolated in
+`QIT.Information.Renyi.RenyiDPIStatement`. The completed public PSD-reference
+sandwiched Renyi DPI theorem is
+`QIT.State.sandwichedRenyiPSDReferenceE_dataProcessing_channel_ge_of_half_le_lt_one_or_one_lt`
+in `QIT.Information.Renyi.FrankLieb`.
 
 Source: Tomamichel2015FiniteResources, `renyi.tex` (sandwiched DPI / pinching),
 `cond.tex` (upward conditional Renyi duality, `pr:dual-new`).
@@ -1199,6 +1200,8 @@ theorem stochasticChannel_applyState_diagonalState
 end Classical
 
 namespace State
+
+open RenyiDPI.Statement
 
 /-- The single-outcome POVM with effect `1`, used as the terminal/discard
 measurement channel in finite dimension. -/
@@ -5635,29 +5638,6 @@ theorem sandwichedRenyiInner_psdTracePower_half_eq_fidelity
   rw [hinner]
   simp [psdSqrt, CFC.sqrt_eq_rpow]
 
-/-- Sandwiched Renyi data-processing inequality `D̃_α(Φρ ‖ Φσ) ≤ D̃_α(ρ ‖ σ)`
-over the range `α ∈ [1/2, ∞)`, `α ≠ 1`. Statement only; the proof needs pinching
-and complex interpolation. -/
-def sandwichedRenyi_dataProcessing_statement (ρ σ : State a) (Φ : Channel a a)
-    (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
-    (hρΦ : (Φ.applyState ρ).matrix.PosDef) (hσΦ : (Φ.applyState σ).matrix.PosDef)
-    (α : ℝ) (hα : 1 / 2 ≤ α) (hα_ne_one : α ≠ 1) : Prop :=
-  sandwichedRenyi (Φ.applyState ρ) (Φ.applyState σ) hρΦ hσΦ α (by linarith) hα_ne_one ≤
-    sandwichedRenyi ρ σ hρ hσ α (by linarith) hα_ne_one
-
-/-- Same full-rank state-level sandwiched Renyi data-processing statement, but
-with a general input-output channel `Φ : Channel a b`.
-
-This is still weaker than the public source theorem for `m7-sandwiched-renyi-dpi`:
-the source statement allows a positive semidefinite reference operator `σ`, while
-this local sprint surface keeps the current full-rank `State + PosDef` domain. -/
-def sandwichedRenyi_dataProcessing_channel_statement (ρ σ : State a) (Φ : Channel a b)
-    (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
-    (hρΦ : (Φ.applyState ρ).matrix.PosDef) (hσΦ : (Φ.applyState σ).matrix.PosDef)
-    (α : ℝ) (hα : 1 / 2 ≤ α) (hα_ne_one : α ≠ 1) : Prop :=
-  sandwichedRenyi (Φ.applyState ρ) (Φ.applyState σ) hρΦ hσΦ α (by linarith) hα_ne_one ≤
-    sandwichedRenyi ρ σ hρ hσ α (by linarith) hα_ne_one
-
 /-- The `α = 1/2` endpoint of full-rank sandwiched Renyi DPI for a general
 finite-dimensional channel.
 
@@ -6979,7 +6959,7 @@ theorem sandwichedRenyi_idChannel_applyState
 
 This is a genuine proved specialization and an API check for the `Channel a b`
 statement shape; it is not the sandwiched Renyi DPI proof required to close
-`m7-sandwiched-renyi-dpi`. -/
+`sandwiched-renyi-dpi`. -/
 theorem sandwichedRenyi_dataProcessing_channel_statement_idChannel
     (ρ σ : State a) (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
     (α : ℝ) (hα : 1 / 2 ≤ α) (hα_ne_one : α ≠ 1) :
@@ -7832,18 +7812,6 @@ theorem conditionalSandwichedRenyiCandidate_le_of_reverseChannel_normalizedRefer
   rw [conditionalSandwichedRenyiCandidate_eq_log2_card_sub_sandwichedRenyi_normalizedReference
     ρ₁ hρ₁ σ₁ hσ₁ β (lt_trans zero_lt_one hβ_gt_one) (ne_of_gt hβ_gt_one)]
   simpa [ν₁, ν₂] using sub_le_sub hdim hDPI
-
-/-- Upward sandwiched conditional Renyi duality: for a pure tripartite state
-with `AB` and `AC` marginals, `H̃^↑_α(A|B) = -H̃^↑_β(A|C)` when
-`1/α + 1/β = 2`. The two bipartite arguments are the `AB` and `AC` marginals of
-a common pure state (the purity condition is the documented precondition).
-Statement only. -/
-def conditionalSandwichedRenyi_duality_statement (ρ : State (Prod a b))
-    (σ : State (Prod a c)) (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
-    (α β : ℝ) (hα : 1 / 2 ≤ α) (hβ : 1 / 2 ≤ β) (hα1 : α ≠ 1) (hβ1 : β ≠ 1)
-    (_hab : 1 / α + 1 / β = 2) : Prop :=
-  conditionalSandwichedRenyi ρ hρ α hα hα1 =
-    - conditionalSandwichedRenyi σ hσ β hβ hβ1
 
 /-- The upward conditional sandwiched Renyi duality statement is symmetric
 under swapping the complementary systems and the Holder-dual exponents.
@@ -8760,16 +8728,6 @@ theorem conditionalSandwichedRenyi_le_of_candidate_lift_of_forall_input_candidat
   exact
     conditionalSandwichedRenyi_le_of_candidate_lift
       ρ₁ ρ₂ hρ₁ hρ₂ β hβ hβ1 η₁ hη₁ hbdd₁ hlift
-
-/-- Measurement-map monotonicity: measuring subsystem `A` does not decrease the
-upward sandwiched conditional Renyi entropy `H̃^↑_α(·|B)` (a DPI instance).
-Statement only. -/
-def measurementMap_conditionalRenyi_monotonicity_statement (ρ : State (Prod a b))
-    (hρ : ρ.matrix.PosDef) (M : POVM c a)
-    (hρM : (measureSubsystemState M ρ).matrix.PosDef)
-    (α : ℝ) (hα : 1 / 2 ≤ α) (hα1 : α ≠ 1) : Prop :=
-  conditionalSandwichedRenyi (measureSubsystemState M ρ) hρM α hα hα1 ≥
-    conditionalSandwichedRenyi ρ hρ α hα hα1
 
 /-- Measurement-map monotonicity obtained from conditional duality and the
 complementary high-`β` reverse inequality.

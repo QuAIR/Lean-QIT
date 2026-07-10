@@ -483,12 +483,14 @@ def tensorWordPhase (phase : a → ℂ) :
   | 0, _ => 1
   | n + 1, x => phase x.1 * tensorWordPhase phase n x.2
 
+omit [Fintype a] [DecidableEq a] in
 @[simp]
 theorem tensorWordPhase_zero (phase : a → ℂ) (x : TensorPower a 0) :
     tensorWordPhase (a := a) phase 0 x = 1 := by
   cases x
   rfl
 
+omit [Fintype a] [DecidableEq a] in
 @[simp]
 theorem tensorWordPhase_succ (phase : a → ℂ) (n : ℕ)
     (x : TensorPower a (n + 1)) :
@@ -537,6 +539,7 @@ theorem unitaryTensorPowerMatrix_diagonalPhase_apply (phase : a → ℂ)
           exact h0 (Prod.mk.inj h).1
         simp [diagonalPhaseUnitary_apply, h0, hpair]
 
+omit [Fintype a] [DecidableEq a] in
 /-- Recursive tensor-word phases agree with the product over tensor positions. -/
 theorem tensorWordPhase_eq_fin_prod (phase : a → ℂ) :
     ∀ (n : ℕ) (x : TensorPower a n),
@@ -925,12 +928,14 @@ def twoLevelRotationEntry (i j : a) (θ : ℝ) (x y : a) : ℂ :=
 def twoLevelRotationMatrix (i j : a) (θ : ℝ) : CMatrix a :=
   if i = j then 1 else Matrix.of (twoLevelRotationEntry i j θ)
 
+omit [Fintype a] in
 private theorem twoLevelRotationEntry_row_i_support {i j : a} (hij : i ≠ j)
     (θ : ℝ) (k : a) (hki : k ≠ i) (hkj : k ≠ j) :
     twoLevelRotationEntry i j θ i k = 0 := by
   have hik : ¬ i = k := fun h => hki h.symm
   simp [twoLevelRotationEntry, hij, hki, hkj, hik]
 
+omit [Fintype a] in
 private theorem twoLevelRotationEntry_row_j_support {i j : a} (hij : i ≠ j)
     (θ : ℝ) (k : a) (hki : k ≠ i) (hkj : k ≠ j) :
     twoLevelRotationEntry i j θ j k = 0 := by
@@ -938,6 +943,7 @@ private theorem twoLevelRotationEntry_row_j_support {i j : a} (hij : i ≠ j)
   have hjk : ¬ j = k := fun h => hkj h.symm
   simp [twoLevelRotationEntry, hji, hki, hkj, hjk]
 
+omit [Fintype a] in
 private theorem twoLevelRotationEntry_row_other {i j : a} (θ : ℝ)
     {x k : a} (hxi : x ≠ i) (hxj : x ≠ j) :
     twoLevelRotationEntry i j θ x k = if x = k then 1 else 0 := by
@@ -1206,12 +1212,14 @@ def twoLevelGeneratorEntry (i j : a) (x y : a) : ℂ :=
 def twoLevelGeneratorMatrix (i j : a) : CMatrix a :=
   if i = j then 0 else Matrix.of (twoLevelGeneratorEntry i j)
 
+omit [Fintype a] in
 @[simp]
 theorem twoLevelGeneratorMatrix_apply {i j x y : a} (hij : i ≠ j) :
     twoLevelGeneratorMatrix (a := a) i j x y =
       twoLevelGeneratorEntry i j x y := by
   simp [twoLevelGeneratorMatrix, hij]
 
+omit [Fintype a] in
 @[simp]
 theorem twoLevelGeneratorEntry_self_left (i j : a) :
     twoLevelGeneratorEntry i j i j = -1 := by
@@ -1220,11 +1228,13 @@ theorem twoLevelGeneratorEntry_self_left (i j : a) :
     simp [twoLevelGeneratorEntry]
   · simp [twoLevelGeneratorEntry]
 
+omit [Fintype a] in
 @[simp]
 theorem twoLevelGeneratorEntry_self_right {i j : a} (hij : i ≠ j) :
     twoLevelGeneratorEntry i j j i = 1 := by
   simp [twoLevelGeneratorEntry, hij, hij.symm]
 
+omit [Fintype a] in
 theorem twoLevelRotationEntry_hasDerivAt_zero {i j : a} (hij : i ≠ j) (x y : a) :
     HasDerivAt (fun θ : ℝ => twoLevelRotationEntry i j θ x y)
       (twoLevelGeneratorEntry i j x y) 0 := by
@@ -1258,6 +1268,7 @@ theorem twoLevelRotationEntry_hasDerivAt_zero {i j : a} (hij : i ≠ j) (x y : a
           · simpa [h1, h2, h3, h4, h5] using
               hasDerivAt_const (x := (0 : ℝ)) (c := (0 : ℂ))
 
+omit [Fintype a] in
 theorem twoLevelRotationEntry_zero_apply {i j : a} (hij : i ≠ j) (x y : a) :
     twoLevelRotationEntry i j 0 x y = if x = y then 1 else 0 := by
   by_cases hxy : x = y
@@ -1277,6 +1288,7 @@ theorem twoLevelRotationEntry_zero_apply {i j : a} (hij : i ≠ j) (x y : a) :
       exact hxy rfl
     simp [twoLevelRotationEntry, h1, h4, hxy]
 
+omit [Fintype a] in
 private theorem twoLevelGeneratorEntry_ne_zero_cases {i j x y : a}
     (h : twoLevelGeneratorEntry i j x y ≠ 0) :
     (x = i ∧ y = j) ∨ (x = j ∧ y = i) := by
@@ -1288,12 +1300,14 @@ private theorem twoLevelGeneratorEntry_ne_zero_cases {i j x y : a}
     · exact Or.inr hright
     · simp [hleft, hright] at h
 
+omit [Fintype a] in
 private theorem twoLevelGeneratorEntry_eq_neg_one_of_left {i j x y : a}
     (hxy : x = i ∧ y = j) :
     twoLevelGeneratorEntry i j x y = -1 := by
   rcases hxy with ⟨rfl, rfl⟩
   simp
 
+omit [Fintype a] in
 private theorem twoLevelGeneratorEntry_eq_one_of_right {i j x y : a}
     (hij : i ≠ j) (hxy : x = j ∧ y = i) :
     twoLevelGeneratorEntry i j x y = 1 := by
@@ -1311,12 +1325,14 @@ def twoLevelTensorGeneratorMatrix (i j : a) (n : ℕ) : CMatrix (TensorPower a n
       twoLevelGeneratorEntry i j
         (tensorPowerEquiv n x r) (tensorPowerEquiv n y r)
 
+omit [Fintype a] in
 @[simp]
 theorem twoLevelTensorGeneratorMatrix_zero (i j : a) :
     twoLevelTensorGeneratorMatrix (a := a) i j 0 = 0 := by
   ext x y
   simp [twoLevelTensorGeneratorMatrix]
 
+omit [Fintype a] in
 theorem twoLevelTensorGeneratorMatrix_apply (i j : a) (n : ℕ)
     (x y : TensorPower a n) :
     twoLevelTensorGeneratorMatrix (a := a) i j n x y =
@@ -1466,12 +1482,14 @@ def tensorPowerUpdate (n : ℕ) (x : TensorPower a n) (r : Fin n) (z : a) :
   (tensorPowerEquiv (a := a) n).symm
     (Function.update (tensorPowerEquiv (a := a) n x) r z)
 
+omit [Fintype a] [DecidableEq a] in
 @[simp]
 theorem tensorPowerEquiv_tensorPowerUpdate_self (n : ℕ)
     (x : TensorPower a n) (r : Fin n) (z : a) :
     tensorPowerEquiv (a := a) n (tensorPowerUpdate (a := a) n x r z) r = z := by
   simp [tensorPowerUpdate]
 
+omit [Fintype a] [DecidableEq a] in
 @[simp]
 theorem tensorPowerEquiv_tensorPowerUpdate_of_ne (n : ℕ)
     (x : TensorPower a n) {r s : Fin n} (hrs : s ≠ r) (z : a) :
@@ -1479,6 +1497,7 @@ theorem tensorPowerEquiv_tensorPowerUpdate_of_ne (n : ℕ)
       tensorPowerEquiv (a := a) n x s := by
   simp [tensorPowerUpdate, Function.update_of_ne hrs]
 
+omit [Fintype a] in
 theorem twoLevelTensorGeneratorMatrix_apply_single_j_to_i {i j : a} (hij : i ≠ j)
     {n : ℕ} (x y : TensorPower a n) (r : Fin n)
     (hx : tensorPowerEquiv n x r = i)
@@ -1514,6 +1533,7 @@ theorem twoLevelTensorGeneratorMatrix_apply_single_j_to_i {i j : a} (hij : i ≠
   · intro hr
     exact (hr (Finset.mem_univ r)).elim
 
+omit [Fintype a] in
 theorem twoLevelTensorGeneratorMatrix_update_j_to_i {i j : a} (hij : i ≠ j)
     {n : ℕ} (y : TensorPower a n) (r : Fin n)
     (hy : tensorPowerEquiv (a := a) n y r = j) :
@@ -1525,6 +1545,7 @@ theorem twoLevelTensorGeneratorMatrix_update_j_to_i {i j : a} (hij : i ≠ j)
   · intro s hsr
     simp [tensorPowerEquiv_tensorPowerUpdate_of_ne (a := a) n y hsr i]
 
+omit [Fintype a] in
 theorem twoLevelTensorGeneratorMatrix_apply_single_i_to_j {i j : a} (hij : i ≠ j)
     {n : ℕ} (x y : TensorPower a n) (r : Fin n)
     (hx : tensorPowerEquiv n x r = j)
@@ -1560,6 +1581,7 @@ theorem twoLevelTensorGeneratorMatrix_apply_single_i_to_j {i j : a} (hij : i ≠
   · intro hr
     exact (hr (Finset.mem_univ r)).elim
 
+omit [Fintype a] in
 theorem twoLevelTensorGeneratorMatrix_update_i_to_j {i j : a} (hij : i ≠ j)
     {n : ℕ} (y : TensorPower a n) (r : Fin n)
     (hy : tensorPowerEquiv (a := a) n y r = i) :
@@ -1571,6 +1593,7 @@ theorem twoLevelTensorGeneratorMatrix_update_i_to_j {i j : a} (hij : i ≠ j)
   · intro s hsr
     simp [tensorPowerEquiv_tensorPowerUpdate_of_ne (a := a) n y hsr j]
 
+omit [Fintype a] in
 private theorem fin_card_filter_update_eq_add_one
     {n : ℕ} (f : Fin n → a) (r : Fin n) {i j : a}
     (hij : i ≠ j) (hr : f r = j) :
@@ -1608,6 +1631,7 @@ private theorem fin_card_filter_update_eq_add_one
         simp [Function.update_of_ne hsr, hfi]
   rw [hset, Finset.card_insert_of_notMem hr_not_mem]
 
+omit [Fintype a] in
 private theorem fin_card_filter_update_removed_add_one
     {n : ℕ} (f : Fin n → a) (r : Fin n) {i j : a}
     (hij : i ≠ j) (hr : f r = j) :
@@ -1642,6 +1666,7 @@ private theorem fin_card_filter_update_removed_add_one
         simpa [Function.update_of_ne hsr] using hupd
   rw [hset, Finset.card_insert_of_notMem hr_not_mem]
 
+omit [Fintype a] in
 private theorem fin_card_filter_update_other
     {n : ℕ} (f : Fin n → a) (r : Fin n) {i j z : a}
     (hzi : z ≠ i) (hzj : z ≠ j) (hr : f r = j) :
@@ -1674,6 +1699,7 @@ private theorem fin_card_filter_update_other
         simpa [Function.update_of_ne hsr] using hs
   rw [hset]
 
+omit [Fintype a] in
 theorem tensorPowerTypeProfile_tensorPowerUpdate_same {n : ℕ}
     (y : TensorPower a n) (r : Fin n) {i j : a}
     (hij : i ≠ j) (hy : tensorPowerEquiv (a := a) n y r = j) :
@@ -1685,6 +1711,7 @@ theorem tensorPowerTypeProfile_tensorPowerUpdate_same {n : ℕ}
     fin_card_filter_update_eq_add_one (a := a)
       (tensorPowerEquiv (a := a) n y) r hij hy
 
+omit [Fintype a] in
 theorem tensorPowerTypeProfile_tensorPowerUpdate_removed {n : ℕ}
     (y : TensorPower a n) (r : Fin n) {i j : a}
     (hij : i ≠ j) (hy : tensorPowerEquiv (a := a) n y r = j) :
@@ -1696,6 +1723,7 @@ theorem tensorPowerTypeProfile_tensorPowerUpdate_removed {n : ℕ}
     fin_card_filter_update_removed_add_one (a := a)
       (tensorPowerEquiv (a := a) n y) r hij hy
 
+omit [Fintype a] in
 theorem tensorPowerTypeProfile_tensorPowerUpdate_other {n : ℕ}
     (y : TensorPower a n) (r : Fin n) {i j z : a}
     (hzi : z ≠ i) (hzj : z ≠ j)
@@ -2213,6 +2241,7 @@ private theorem mem_twoCopyPairProfile_cases {i j : a} (hij : i ≠ j)
   · right
     exact twoCopyTensorWord_ext (a := a) h.1 h.2
 
+omit [Fintype a] in
 private theorem tensorPowerTypeProfile_twoCopyTensorWord_swap (i j : a) :
     tensorPowerTypeProfile (a := a) 2 (twoCopyTensorWord (a := a) j i) =
       tensorPowerTypeProfile (a := a) 2 (twoCopyTensorWord (a := a) i j) := by
@@ -2665,6 +2694,7 @@ def oneWayTensorGeneratorMatrix (i j : a) (n : ℕ) : CMatrix (TensorPower a n) 
           else if tensorPowerEquiv (a := a) n x s =
               tensorPowerEquiv (a := a) n y s then 1 else 0
 
+omit [Fintype a] in
 theorem oneWayTensorGeneratorMatrix_apply_single_i_to_j {i j : a} (hij : i ≠ j)
     {n : ℕ} (x y : TensorPower a n) (r : Fin n)
     (hx : tensorPowerEquiv n x r = j)
@@ -2701,6 +2731,7 @@ theorem oneWayTensorGeneratorMatrix_apply_single_i_to_j {i j : a} (hij : i ≠ j
   · intro hr
     exact (hr (Finset.mem_univ r)).elim
 
+omit [Fintype a] in
 theorem oneWayTensorGeneratorMatrix_update_i_to_j {i j : a} (hij : i ≠ j)
     {n : ℕ} (y : TensorPower a n) (r : Fin n)
     (hy : tensorPowerEquiv (a := a) n y r = i) :
@@ -2743,6 +2774,7 @@ theorem profileClassComponent_profileUnitVector_ne {n : ℕ}
 def constantTensorPowerWord (z₀ : a) (n : ℕ) : TensorPower a n :=
   (tensorPowerEquiv (a := a) n).symm (fun _ => z₀)
 
+omit [Fintype a] [DecidableEq a] in
 @[simp]
 theorem tensorPowerEquiv_constantTensorPowerWord (z₀ : a) (n : ℕ) (r : Fin n) :
     tensorPowerEquiv (a := a) n (constantTensorPowerWord (a := a) z₀ n) r = z₀ := by
@@ -4302,6 +4334,7 @@ private def twoCopyTensorWordEquiv : (a × a) ≃ TensorPower a 2 where
   right_inv x := by
     exact (twoCopyTensorWord_coords (a := a) x).symm
 
+omit [DecidableEq a] in
 private theorem sum_tensorPower_two {β : Type*} [AddCommMonoid β]
     (f : TensorPower a 2 → β) :
     (∑ x : TensorPower a 2, f x) =
@@ -4317,6 +4350,7 @@ private theorem sum_tensorPower_two {β : Type*} [AddCommMonoid β]
           rw [Fintype.sum_prod_type]
           rfl
 
+omit [DecidableEq a] in
 private theorem tensorPowerKroneckerTwo_mul_apply_twoCopyTensorWord
     (P Q : CMatrix a) (i j k l : a) :
     (tensorPowerKroneckerTwo (a := a) P * tensorPowerKroneckerTwo (a := a) Q)
@@ -4331,6 +4365,7 @@ private theorem tensorPowerKroneckerTwo_mul_apply_twoCopyTensorWord
   refine Finset.sum_congr rfl fun y _ => ?_
   ring
 
+omit [DecidableEq a] in
 theorem tensorPowerKroneckerTwo_mul (P Q : CMatrix a) :
     tensorPowerKroneckerTwo (a := a) P * tensorPowerKroneckerTwo (a := a) Q =
       tensorPowerKroneckerTwo (a := a) (P * Q) := by
@@ -4346,6 +4381,7 @@ def haydenRestrictedFlip (P : CMatrix a) : CMatrix (TensorPower a 2) :=
   tensorPowerKroneckerTwo (a := a) P * tensorPowerSwapMatrix_two (a := a) *
     tensorPowerKroneckerTwo (a := a) P
 
+omit [DecidableEq a] in
 theorem tensorPowerKroneckerTwo_trace (P : CMatrix a) :
     (tensorPowerKroneckerTwo (a := a) P).trace = P.trace * P.trace := by
   simp [Matrix.trace, sum_tensorPower_two, Finset.mul_sum,

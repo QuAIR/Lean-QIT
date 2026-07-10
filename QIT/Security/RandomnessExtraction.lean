@@ -45,6 +45,7 @@ def IsEpsilonSecretExtractor (H : HashFamily F Z S) (ε : ℝ) (E : Ensemble Z e
     Prop :=
   extractorSecrecyDistance (extractorOutputState H E) ≤ ε
 
+omit [Nonempty F] [DecidableEq Z] in
 @[simp]
 theorem isEpsilonSecretExtractor_iff
     (H : HashFamily F Z S) (ε : ℝ) (E : Ensemble Z e) :
@@ -52,6 +53,7 @@ theorem isEpsilonSecretExtractor_iff
       extractorSecrecyDistance (extractorOutputState H E) ≤ ε :=
   Iff.rfl
 
+omit [Nonempty F] [DecidableEq Z] in
 /--
 Extractor-level stability wrapper for two nearby output/ideal pairs.
 
@@ -72,6 +74,7 @@ theorem isEpsilonSecretExtractor_of_output_ideal_closeness
   extractorSecrecyDistance_le_two_mul_delta_add_of_ideal_closeness
     (extractorOutputState H E) (extractorOutputState H E') hstate hideal hsecret
 
+omit [Nonempty F] [DecidableEq Z] in
 /--
 Extractor secrecy is stable under normalized trace distance between the full
 public-seed extractor output states.  The ideal-output perturbation is handled
@@ -87,6 +90,7 @@ theorem isEpsilonSecretExtractor_of_output_closeness
   extractorSecrecyDistance_le_two_mul_normalizedTraceDistance_add
     (extractorOutputState H E) (extractorOutputState H E') hstate hsecret
 
+omit [Nonempty F] in
 /--
 Extractor secrecy transfers across a purified-distance ball between input cq
 states.  Fuchs--van de Graaf converts the purified-distance premise to
@@ -114,6 +118,7 @@ theorem isEpsilonSecretExtractor_of_purifiedBall_cqState
 def outputLength (_H : HashFamily F Z S) : Nat :=
   Fintype.card S
 
+omit [DecidableEq F] [Nonempty F] [Fintype Z] [DecidableEq Z] [DecidableEq S] [Nonempty S] in
 @[simp]
 theorem outputLength_eq_card (H : HashFamily F Z S) :
     H.outputLength = Fintype.card S :=
@@ -198,6 +203,7 @@ def extractableRandomnessLog (E : Ensemble Z e) (ε : ℝ) : ℝ :=
 
 namespace HashFamily
 
+omit [DecidableEq Z] in
 /-- A concrete `ε`-secret extractor witnesses achievability of its output length. -/
 theorem outputLengthAchievable
     (H : HashFamily F Z S) (E : Ensemble Z e) {ε : ℝ}
@@ -209,6 +215,7 @@ theorem outputLengthAchievable
   dsimp
   exact ⟨H, hsecret⟩
 
+omit [DecidableEq Z] in
 /-- A concrete `ε`-secret extractor contributes its `log₂ |S|` value. -/
 theorem extractableRandomnessLogValue_mem
     (H : HashFamily F Z S) (E : Ensemble Z e) {ε : ℝ}
@@ -217,6 +224,7 @@ theorem extractableRandomnessLogValue_mem
       ExtractableRandomnessLogValueSet.{uF, uZ, uS, ue} E ε := by
   exact ⟨H.outputLength, H.outputLengthAchievable E hsecret, rfl⟩
 
+omit [DecidableEq F] [Nonempty F] in
 /--
 Seed-averaged direct extractor bound in squared form.
 
@@ -261,6 +269,7 @@ theorem extractorSeedAverageTraceDistance_sq_le_card_mul_rpow_of_collisionUnifor
   exact havg.trans
     (mul_le_mul_of_nonneg_left (hcollapse.trans hcq) hcard_nonneg)
 
+omit [DecidableEq F] [Nonempty F] in
 /--
 Seed-averaged direct extractor bound from a positive-definite conditional
 min-entropy candidate.
@@ -280,6 +289,7 @@ theorem extractorSeedAverageTraceDistance_sq_le_card_mul_rpow_of_collisionUnifor
     H.extractorSeedAverageTraceDistance_sq_le_card_mul_rpow_of_collisionUniform_conditionalMinEntropyFeasible_posDef
       hH E σ lam hσ hmin
 
+omit [Nonempty F] in
 /--
 Direct leftover-hash achievability bound for extractor secrecy distance.
 
@@ -328,6 +338,7 @@ theorem extractorSecrecyDistance_le_sqrt_card_mul_rpow_of_collisionUniform_condi
       (mul_le_mul_of_nonneg_left (hcollapse.trans hcq) hcard_nonneg)
   exact Real.le_sqrt_of_sq_le hsec_sq
 
+omit [Nonempty F] in
 /--
 Direct leftover-hash secrecy-distance bound from a positive-definite
 conditional min-entropy candidate.

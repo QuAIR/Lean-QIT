@@ -426,7 +426,7 @@ theorem cbOneToAlphaOriginalInput_pos_real_smul
     rw [hexp, Real.rpow_add ht]
   unfold cbOneToAlphaOriginalInput
   rw [hW]
-  simpa [hc_mul, Matrix.smul_mul, Matrix.mul_smul, smul_smul, mul_assoc]
+  simp [hc_mul, smul_smul, mul_assoc]
 
 /-- Positive real scaling of the source-side CB original value.
 
@@ -504,8 +504,7 @@ theorem alphaToAlphaTraceValue_mix_le
             calc
               ((lambda • Y0.matrix + (1 - lambda) • Y1.matrix).trace).re =
                   lambda * Y0.matrix.trace.re + (1 - lambda) * Y1.matrix.trace.re := by
-                    simp [Matrix.trace_add, Matrix.trace_smul, add_comm, add_left_comm,
-                      add_assoc]
+                    simp [Matrix.trace_add, Matrix.trace_smul]
               _ ≤ lambda * 1 + (1 - lambda) * 1 := by
                     exact add_le_add
                       (mul_le_mul_of_nonneg_left Y0.trace_le_one hlambda0)
@@ -597,8 +596,7 @@ theorem cbOneToAlphaOriginalValue_ofState_mix_le
                 ((lambda • Y0.matrix + (1 - lambda) • Y1.matrix).trace).re =
                     lambda * Y0.matrix.trace.re +
                       (1 - lambda) * Y1.matrix.trace.re := by
-                    simp [Matrix.trace_add, Matrix.trace_smul, add_comm,
-                      add_left_comm, add_assoc]
+                    simp [Matrix.trace_add, Matrix.trace_smul]
                 _ ≤ lambda * 1 + (1 - lambda) * 1 := by
                     exact add_le_add
                       (mul_le_mul_of_nonneg_left Y0.trace_le_one hlambda0)
@@ -892,9 +890,8 @@ theorem referenceLift_referenceSandwich
   rcases rb' with ⟨r', b'⟩
   simp only [MatrixMap.referenceLift, MatrixMap.kron_idChannel_left_apply_slice,
     Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.one_apply,
-    Fintype.sum_prod_type, Finset.mul_sum]
-  simp only [eq_comm, Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte, mul_one,
-    mul_zero, zero_mul, Finset.sum_const_zero, add_zero]
+    Fintype.sum_prod_type]
+  simp only [eq_comm]
   have hleft :
       (fun j j' =>
           ∑ x, ∑ y,
@@ -907,7 +904,7 @@ theorem referenceLift_referenceSandwich
           (∑ u, ∑ v, (W r u * if j = v then 1 else 0) * X (u, v) (x, y)) *
             (W x r' * if j' = y then 1 else 0)) =
           ∑ x, W x r' * ∑ u, W r u * X (u, j) (x, j') := by
-            simp [mul_assoc, mul_left_comm, mul_comm]
+            simp [mul_comm]
       _ =
           ∑ x, ∑ u, W x r' * (W r u * X (u, j) (x, j')) := by
             apply Finset.sum_congr rfl
@@ -934,7 +931,7 @@ theorem referenceLift_referenceSandwich
             (W x r' * if b' = y then 1 else 0)) =
           ∑ x, W x r' * ∑ u, W r u *
             Phi (fun j j' => X (u, j) (x, j')) b b' := by
-            simp [mul_assoc, mul_left_comm, mul_comm]
+            simp [mul_comm]
       _ =
           ∑ x, W x r' * ∑ u, W r u *
             Phi (fun j j' => X (u, j) (x, j')) b b' :=
@@ -960,7 +957,7 @@ theorem referenceLift_referenceSandwich
       (fun j j' => ∑ x, ∑ y, W r x * (W y r' * X (x, j) (y, j'))) =
         ∑ x, ∑ y, (W r x * W y r') • (fun j j' => X (x, j) (y, j')) := by
     ext j j'
-    simpa [mul_assoc]
+    simp [mul_assoc]
   rw [hslice]
   have hmap1 :
       Phi (∑ x, ∑ y, (W r x * W y r') • (fun j j' => X (x, j) (y, j'))) =
@@ -2717,6 +2714,7 @@ private theorem cMatrix_conj_le_conj
     noncomm_ring
   simpa [heq]
 
+omit [DecidableEq b1] in
 private theorem kronecker_one_left_le_of_le
     {A B : CMatrix b1} (hAB : A ≤ B) :
     Matrix.kronecker (1 : CMatrix a1) A ≤ Matrix.kronecker (1 : CMatrix a1) B := by
@@ -2731,9 +2729,9 @@ private theorem kronecker_one_left_le_of_le
         Matrix.kronecker (1 : CMatrix a1) (B - A) := by
     ext i j
     by_cases hij : i.1 = j.1
-    · simp [Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.one_apply, hij,
+    · simp [Matrix.kronecker, Matrix.kroneckerMap_apply,
         sub_eq_add_neg, mul_add]
-    · simp [Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.one_apply, hij,
+    · simp [Matrix.kronecker, Matrix.kroneckerMap_apply, hij,
         sub_eq_add_neg]
   rw [heq]
   exact hdiffK
@@ -2799,7 +2797,7 @@ private theorem sandwichedChannelReferenceKWMatrix_le_convex_combo
         s • sandwichedChannelReferenceKWMatrix N tau alpha X +
           t • sandwichedChannelReferenceKWMatrix N tau alpha Y := by
     simp [S, WX, WY, PX, PY, base, p, sandwichedChannelReferenceKWMatrix,
-      Matrix.mul_add, Matrix.add_mul, Matrix.smul_mul, Matrix.mul_smul,
+      Matrix.mul_add, Matrix.add_mul,
       Matrix.mul_assoc]
   simpa [hS, hleft, hright] using hconj
 
@@ -3027,7 +3025,7 @@ private theorem sandwichedChannelOriginalValueLogReferenceDensity_continuousOn_f
           (State.densityMatrixSetState M.1
             (State.fullRankDensityMatrixSet_subset_densityMatrixSet M.2)).pos)).isHermitian.eq
     rw [hDherm]
-    simp [State.densityMatrixSetState_matrix, W]
+    simp [State.densityMatrixSetState_matrix]
   have hYexplicit_cont : Continuous Yexplicit := by
     have hkr :
         Continuous fun M : S => Matrix.kronecker (1 : CMatrix a1) (W M) := by

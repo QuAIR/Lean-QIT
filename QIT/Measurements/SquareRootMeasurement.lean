@@ -39,6 +39,7 @@ variable {a : Type u} {ι : Type v} [Fintype a] [DecidableEq a] [Fintype ι] [De
 def pgmTotal (S : ι → CMatrix a) (_hS : ∀ i, (S i).PosSemidef) : CMatrix a :=
   ∑ i, S i
 
+omit [Fintype a] [DecidableEq a] [DecidableEq ι] in
 /-- The total `Σᵢ Sᵢ` is positive semidefinite, hence Hermitian, giving the
 `IsHermitian` witness required by `psdInvSqrt`.
 [Wilde2011Qst, qit-notes.tex:29363-29415] -/
@@ -46,6 +47,7 @@ theorem pgmTotal_posSemidef (S : ι → CMatrix a) (hS : ∀ i, (S i).PosSemidef
     (pgmTotal S hS).PosSemidef :=
   Matrix.posSemidef_sum Finset.univ fun i _ => hS i
 
+omit [Fintype a] [DecidableEq a] [DecidableEq ι] in
 /-- The Hermitian witness for `pgmTotal`, threaded through the construction to
 avoid recomputing it. -/
 theorem pgmTotal_isHermitian (S : ι → CMatrix a) (hS : ∀ i, (S i).PosSemidef) :
@@ -59,6 +61,7 @@ def pgmEffect (S : ι → CMatrix a) (hS : ∀ i, (S i).PosSemidef) (i : ι) : C
   psdInvSqrt (pgmTotal S hS) (pgmTotal_isHermitian S hS) * S i *
     psdInvSqrt (pgmTotal S hS) (pgmTotal_isHermitian S hS)
 
+omit [DecidableEq ι] in
 /-- Each square-root-measurement effect is positive semidefinite: it is the
 conjugation `Bᴴ Sᵢ B` of the PSD operator `Sᵢ` by the Hermitian inverse square
 root `B = psdInvSqrt S`.
@@ -76,6 +79,7 @@ theorem pgmEffect_posSemidef (S : ι → CMatrix a) (hS : ∀ i, (S i).PosSemide
   nth_rewrite 1 [hB]
   exact (hS i).conjTranspose_mul_mul_same _
 
+omit [DecidableEq ι] in
 /-- The sum of the square-root-measurement effects equals the support projector
 of `S = Σᵢ Sᵢ`, i.e. `S^{-1/2} S S^{-1/2}`.
 [Wilde2011Qst, qit-notes.tex:29363-29415] -/
@@ -89,6 +93,7 @@ theorem sum_pgmEffect_eq_support (S : ι → CMatrix a) (hS : ∀ i, (S i).PosSe
   rw [← Finset.sum_mul, ← Finset.mul_sum]
   noncomm_ring
 
+omit [DecidableEq ι] in
 /-- The square-root-measurement effects form a sub-POVM: their sum is at most
 `1`, since it is the support projector of the PSD total `S`.
 [Wilde2011Qst, qit-notes.tex:29363-29415] -/

@@ -399,6 +399,23 @@ theorem gentle_operator (Λ : CMatrix a) (hΛ0 : Λ.PosSemidef)
     _ ≤ 2 * Real.sqrt (((1 - Λ) * ρ.matrix).trace).re := hs3
     _ = 2 * Real.sqrt (1 - ((Λ * ρ.matrix).trace).re) := hs4
 
+/-- A positive semidefinite idempotent matrix has positive semidefinite
+orthogonal complement. -/
+theorem projector_one_sub_posSemidef (P : CMatrix a) (hP : P.PosSemidef)
+    (hPid : P * P = P) :
+    (1 - P).PosSemidef := by
+  have h1P_herm : (1 - P).IsHermitian :=
+    (Matrix.isHermitian_one).sub hP.isHermitian
+  have h1P_conj : Matrix.conjTranspose (1 - P) = 1 - P := h1P_herm.eq
+  have h1P_sq : (1 - P) * (1 - P) = 1 - P := by
+    have e : (1 - P) * (1 - P) = 1 - P - P + P * P := by noncomm_ring
+    rw [e, hPid]
+    abel
+  have hkey : (1 - P) = Matrix.conjTranspose (1 - P) * (1 - P) := by
+    rw [h1P_conj, h1P_sq]
+  rw [hkey]
+  exact Matrix.posSemidef_conjTranspose_mul_self (1 - P)
+
 /-- **Gentle projector lemma.** Specialization of the gentle-operator lemma to
 a measurement described by an orthogonal projector `Π` (`Π.PosSemidef`,
 `Π * Π = Π`): the post-measurement un-normalized operator `Π ρ Π` is
@@ -415,26 +432,156 @@ theorem gentle_projector (Λ : CMatrix a) (hΛ : Λ.PosSemidef)
   have hsqrt : psdSqrt Λ = Λ := by
     rw [psdSqrt]
     exact CFC.sqrt_unique hΛid (Matrix.nonneg_iff_posSemidef.mpr hΛ)
-  -- `(1 - Λ).PosSemidef`: for an idempotent `Λ` one has `1 - Λ = (1 - Λ)²`,
-  -- and `(1 - Λ)² = (1 - Λ)ᴴ (1 - Λ)` (since `Λ` Hermitian ⇒ `1 - Λ` Hermitian),
-  -- which is PSD via `posSemidef_conjTranspose_mul_self`.
-  have hΛ_le_one : (1 - Λ).PosSemidef := by
-    have h1L_herm : (1 - Λ).IsHermitian :=
-      (Matrix.isHermitian_one).sub hΛ.isHermitian
-    have h1L_conj : Matrix.conjTranspose (1 - Λ) = 1 - Λ := h1L_herm.eq
-    have h1L_sq : (1 - Λ) * (1 - Λ) = 1 - Λ := by
-      have e : (1 - Λ) * (1 - Λ) = 1 - Λ - Λ + Λ * Λ := by noncomm_ring
-      rw [e, hΛid]; abel
-    have hkey : (1 - Λ) = Matrix.conjTranspose (1 - Λ) * (1 - Λ) := by
-      rw [h1L_conj, h1L_sq]
-    rw [hkey]
-    exact Matrix.posSemidef_conjTranspose_mul_self (1 - Λ)
+  have hΛ_le_one : (1 - Λ).PosSemidef :=
+    projector_one_sub_posSemidef Λ hΛ hΛid
   -- Reduce to `gentle_operator` with the projector as the effect.
   -- `gentle_operator` concludes `traceNorm (psdSqrt Λ * ρ * psdSqrt Λ - ρ) ≤ ...`;
   -- rewrite `psdSqrt Λ = Λ` (via `hsqrt`) into its conclusion.
   have hgo := gentle_operator Λ hΛ hΛ_le_one ρ
   rw [hsqrt] at hgo
   exact hgo
+
+/-- Projector sandwiches of states are positive semidefinite. -/
+theorem projector_sandwich_posSemidef (P : CMatrix a) (hP : P.PosSemidef)
+    (ρ : State a) :
+    (P * ρ.matrix * P).PosSemidef := by
+  have h := ρ.pos.mul_mul_conjTranspose_same P
+  simpa [hP.isHermitian.eq, Matrix.mul_assoc] using h
+
+/-- The real trace of a projector sandwich is the projector acceptance
+probability. -/
+theorem projector_sandwich_trace_re_eq_acceptance (P : CMatrix a)
+    (hPid : P * P = P) (ρ : State a) :
+    ((P * ρ.matrix * P).trace).re = ((P * ρ.matrix).trace).re := by
+  have htrace : (P * ρ.matrix * P).trace = (P * ρ.matrix).trace := by
+    calc
+      (P * ρ.matrix * P).trace = (P * P * ρ.matrix).trace := by
+        rw [Matrix.trace_mul_cycle]
+      _ = (P * ρ.matrix).trace := by
+        rw [hPid]
+  exact congrArg Complex.re htrace
+
+/-- A projector sandwich with acceptance at least `1 - η` has nonzero trace
+when `η < 1`. -/
+theorem projector_sandwich_trace_re_ne_zero_of_acceptance (P : CMatrix a)
+    (hPid : P * P = P) (ρ : State a) {η : ℝ} (hη_lt_one : η < 1)
+    (hacc : 1 - η ≤ ((P * ρ.matrix).trace).re) :
+    (P * ρ.matrix * P).trace.re ≠ 0 := by
+  have htrace := projector_sandwich_trace_re_eq_acceptance P hPid ρ
+  have hpos_one_sub : 0 < 1 - η := by linarith
+  have hpos : 0 < (P * ρ.matrix * P).trace.re := by
+    rw [htrace]
+    exact lt_of_lt_of_le hpos_one_sub hacc
+  exact hpos.ne'
+
+/-- Normalizing a high-acceptance projector sandwich gives a state close to the
+original state in normalized trace distance. The bound is intentionally
+generic and dimension-free: the unnormalized disturbance is controlled by
+`gentle_projector`, and the extra normalization cost is at most the rejection
+probability. -/
+theorem normalizedTraceDistance_normalize_projector_sandwich_le
+    (P : CMatrix a) (hP : P.PosSemidef) (hPid : P * P = P)
+    (ρ : State a) {η : ℝ} (hη_nonneg : 0 ≤ η) (hη_lt_one : η < 1)
+    (hacc : 1 - η ≤ ((P * ρ.matrix).trace).re) :
+    let τM := P * ρ.matrix * P
+    let hτ : τM.PosSemidef := projector_sandwich_posSemidef P hP ρ
+    let htr : τM.trace.re ≠ 0 :=
+      projector_sandwich_trace_re_ne_zero_of_acceptance P hPid ρ hη_lt_one hacc
+    (State.normalizePSD τM hτ htr).normalizedTraceDistance ρ ≤
+      Real.sqrt η + η := by
+  dsimp only
+  let τM : CMatrix a := P * ρ.matrix * P
+  have hτ : τM.PosSemidef := by
+    simpa [τM] using projector_sandwich_posSemidef P hP ρ
+  have htr : τM.trace.re ≠ 0 := by
+    simpa [τM] using
+      projector_sandwich_trace_re_ne_zero_of_acceptance P hPid ρ hη_lt_one hacc
+  have htrace : τM.trace.re = ((P * ρ.matrix).trace).re := by
+    simpa [τM] using projector_sandwich_trace_re_eq_acceptance P hPid ρ
+  have htr_pos : 0 < τM.trace.re := by
+    rw [htrace]
+    exact lt_of_lt_of_le (by linarith : 0 < 1 - η) hacc
+  have hacc_le_one : ((P * ρ.matrix).trace).re ≤ 1 := by
+    have hkey : 0 ≤ (((1 - P) * ρ.matrix).trace).re :=
+      cMatrix_trace_mul_posSemidef_re_nonneg
+        (projector_one_sub_posSemidef P hP hPid) ρ.pos
+    have hcyc : ((1 - P) * ρ.matrix).trace =
+        (1 : ℂ) - (P * ρ.matrix).trace := by
+      have : (1 - P) * ρ.matrix = ρ.matrix - P * ρ.matrix := by
+        noncomm_ring
+      rw [this, Matrix.trace_sub, ρ.trace_eq_one]
+    rw [hcyc, Complex.sub_re, Complex.one_re] at hkey
+    linarith
+  have htr_le_one : τM.trace.re ≤ 1 := by
+    rw [htrace]
+    exact hacc_le_one
+  have hgentle_eta : traceNorm (τM - ρ.matrix) ≤ 2 * Real.sqrt η := by
+    have hgentle := gentle_projector P hP hPid ρ
+    have hsqrt : Real.sqrt (1 - ((P * ρ.matrix).trace).re) ≤ Real.sqrt η := by
+      refine Real.sqrt_le_sqrt ?_
+      linarith [hη_nonneg]
+    calc
+      traceNorm (τM - ρ.matrix)
+          = traceNorm (P * ρ.matrix * P - ρ.matrix) := by rfl
+      _ ≤ 2 * Real.sqrt (1 - ((P * ρ.matrix).trace).re) := hgentle
+      _ ≤ 2 * Real.sqrt η := by
+        exact mul_le_mul_of_nonneg_left hsqrt (by norm_num)
+  have hcoeff_nonneg : 0 ≤ (τM.trace.re)⁻¹ - 1 := by
+    have hone_le_inv : 1 ≤ (τM.trace.re)⁻¹ :=
+      (one_le_inv₀ htr_pos).mpr htr_le_one
+    linarith
+  have hnorm_norm : traceNorm ((τM.trace.re)⁻¹ • τM - τM) ≤ η := by
+    have hdiff : (τM.trace.re)⁻¹ • τM - τM =
+        ((((τM.trace.re)⁻¹ - 1 : ℝ) : ℂ) • τM) := by
+      ext i j
+      simp [Matrix.sub_apply, Matrix.smul_apply, Complex.real_smul]
+      ring
+    have hscale :
+        traceNorm ((τM.trace.re)⁻¹ • τM - τM) ≤
+          ((τM.trace.re)⁻¹ - 1) * traceNorm τM := by
+      rw [hdiff]
+      exact traceNorm_real_smul_le hcoeff_nonneg τM
+    have htrace_norm : traceNorm τM = τM.trace.re :=
+      traceNorm_posSemidef_eq_trace_re τM hτ
+    have hmul : ((τM.trace.re)⁻¹ - 1) * traceNorm τM =
+        1 - τM.trace.re := by
+      rw [htrace_norm]
+      have hne : τM.trace.re ≠ 0 := htr
+      field_simp [hne]
+    have hrejection_le : 1 - τM.trace.re ≤ η := by
+      rw [htrace]
+      linarith
+    calc
+      traceNorm ((τM.trace.re)⁻¹ • τM - τM)
+          ≤ ((τM.trace.re)⁻¹ - 1) * traceNorm τM := hscale
+      _ = 1 - τM.trace.re := hmul
+      _ ≤ η := hrejection_le
+  have htri : traceNorm ((τM.trace.re)⁻¹ • τM - ρ.matrix) ≤
+      traceNorm ((τM.trace.re)⁻¹ • τM - τM) +
+        traceNorm (τM - ρ.matrix) := by
+    have hdecomp : (τM.trace.re)⁻¹ • τM - ρ.matrix =
+        ((τM.trace.re)⁻¹ • τM - τM) + (τM - ρ.matrix) := by
+      ext i j
+      simp [Matrix.sub_apply, Matrix.add_apply, Matrix.smul_apply, Complex.real_smul]
+    rw [hdecomp]
+    exact traceNorm_add_le _ _
+  calc
+    (State.normalizePSD (P * ρ.matrix * P)
+        (projector_sandwich_posSemidef P hP ρ)
+        (projector_sandwich_trace_re_ne_zero_of_acceptance P hPid ρ hη_lt_one hacc)
+      ).normalizedTraceDistance ρ
+        = (1 / 2 : ℝ) * traceNorm ((τM.trace.re)⁻¹ • τM - ρ.matrix) := by
+          simp [τM, State.normalizedTraceDistance, normalizedTraceDistance,
+            traceDistance, State.normalizePSD_matrix]
+    _ ≤ (1 / 2 : ℝ) *
+        (traceNorm ((τM.trace.re)⁻¹ • τM - τM) +
+          traceNorm (τM - ρ.matrix)) := by
+          exact mul_le_mul_of_nonneg_left htri (by norm_num)
+    _ ≤ (1 / 2 : ℝ) * (η + 2 * Real.sqrt η) := by
+          refine mul_le_mul_of_nonneg_left ?_ (by norm_num)
+          exact add_le_add hnorm_norm hgentle_eta
+    _ ≤ Real.sqrt η + η := by
+          nlinarith [hη_nonneg]
 
 end
 

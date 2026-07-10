@@ -69,21 +69,27 @@ def coordSplitEquiv (k : ℕ) (m : Fin k) :
     TensorPower a k ≃ Prod (TensorPower a 1) (CoordComplement (a := a) k m) :=
   (tensorPowerEquiv (a := a) k).trans (finFunctionCoordSplitEquiv (a := a) k m)
 
+omit [Fintype a] [DecidableEq a] in
 @[simp]
-theorem coordSplitEquiv_apply_fst (k : ℕ) (m : Fin k) (x : TensorPower a k) :
+theorem coordSplitEquiv_apply_fst
+    (k : ℕ) (m : Fin k) (x : TensorPower a k) :
     ((coordSplitEquiv (a := a) k m x).1).1 =
       tensorPowerEquiv (a := a) k x m :=
   rfl
 
+omit [Fintype a] [DecidableEq a] in
 @[simp]
-theorem coordSplitEquiv_apply_snd (k : ℕ) (m : Fin k) (x : TensorPower a k)
+theorem coordSplitEquiv_apply_snd
+    (k : ℕ) (m : Fin k) (x : TensorPower a k)
     (i : {i : Fin k // i ≠ m}) :
     (coordSplitEquiv (a := a) k m x).2 i =
       tensorPowerEquiv (a := a) k x i.1 :=
   rfl
 
+omit [Fintype a] [DecidableEq a] in
 @[simp]
-theorem coordSplitEquiv_symm_apply_fst (k : ℕ) (m : Fin k)
+theorem coordSplitEquiv_symm_apply_fst
+    (k : ℕ) (m : Fin k)
     (x : TensorPower a 1) (tail : CoordComplement (a := a) k m) :
     tensorPowerEquiv (a := a) k
         ((coordSplitEquiv (a := a) k m).symm (x, tail)) m = x.1 := by
@@ -92,8 +98,10 @@ theorem coordSplitEquiv_symm_apply_fst (k : ℕ) (m : Fin k)
       cases xu
       simp [coordSplitEquiv, finFunctionCoordSplitEquiv]
 
+omit [Fintype a] [DecidableEq a] in
 @[simp]
-theorem coordSplitEquiv_symm_apply_snd (k : ℕ) (m : Fin k)
+theorem coordSplitEquiv_symm_apply_snd
+    (k : ℕ) (m : Fin k)
     (x : TensorPower a 1) (tail : CoordComplement (a := a) k m)
     (i : {i : Fin k // i ≠ m}) :
     tensorPowerEquiv (a := a) k
@@ -115,7 +123,7 @@ def positionSelectionKraus (k : ℕ) (m : Fin k)
   fun out inp =>
     if TensorPower.coordSplitEquiv (a := a) k m inp = (out, tail) then 1 else 0
 
-theorem positionSelectionKraus_apply (k : ℕ) (m : Fin k)
+omit [Fintype a] in theorem positionSelectionKraus_apply (k : ℕ) (m : Fin k)
     (tail : TensorPower.CoordComplement (a := a) k m)
     (out : QIT.TensorPower a 1) (inp : QIT.TensorPower a k) :
     positionSelectionKraus (a := a) k m tail out inp =

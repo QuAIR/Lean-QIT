@@ -3298,6 +3298,7 @@ theorem tensorPower_q_eq_tensorPowerProbabilityQ
       rw [ih xs, Fin.prod_univ_succ]
       rfl
 
+omit [DecidableEq α] in
 @[simp]
 theorem tensorPowerProbabilityP_permEquiv
     (M : ClassicalBinaryModel α) (n : Nat) (σ : Equiv.Perm (Fin n))
@@ -3308,6 +3309,7 @@ theorem tensorPowerProbabilityP_permEquiv
   rw [tensorPowerEquiv_permEquiv]
   exact Equiv.prod_comp σ.symm (fun i => M.p (tensorPowerEquiv (a := α) n x i))
 
+omit [DecidableEq α] in
 @[simp]
 theorem tensorPowerProbabilityQ_permEquiv
     (M : ClassicalBinaryModel α) (n : Nat) (σ : Equiv.Perm (Fin n))
@@ -4210,6 +4212,7 @@ def distributionKLMax
     (M : ClassicalBinaryModel α) (r : ClassicalDistribution α) : EReal :=
   max (relativeEntropy r M.pDistribution) (relativeEntropy r M.qDistribution)
 
+omit [DecidableEq α] in
 /-- On common support, the support-aware KL maximum is the real KL maximum
 embedded into `EReal`. -/
 theorem distributionKLMax_eq_coe_real_of_supported
@@ -4235,6 +4238,7 @@ theorem distributionKLMax_eq_coe_real_of_supported
           relativeEntropyReal r M.pDistribution := le_of_not_ge hle
     rw [max_eq_left hge, max_eq_left (EReal.coe_le_coe_iff.mpr hge)]
 
+omit [DecidableEq α] in
 /-- A common-support tilted distribution at a common-support partition
 minimizer has KL maximum bounded by the negative log of the partition. -/
 theorem commonSupportTilted_distributionKLMax_le_neg_log_partition_at_min
@@ -4327,6 +4331,7 @@ theorem commonSupportTilted_distributionKLMax_le_neg_log_partition_at_min
       rw [hzero]
       simp
 
+omit [DecidableEq α] in
 /-- Direct tilted-distribution variational witness for the classical Chernoff
 bound.  In the finite-distance case the common support is nonempty, so the
 common-support tilted distribution at a partition minimizer is well-defined and
@@ -4773,6 +4778,7 @@ theorem limsup_finiteTypeKLDualValue_le_chernoffDistance_of_eq_top
   rw [htop]
   exact le_top
 
+omit [DecidableEq α] in
 /-- The finite-type KL dual limsup is bounded by the classical Chernoff
 distance.  Infinite Chernoff distance is immediate; otherwise the direct
 tilted-distribution witness supplies a common-support distribution whose KL
@@ -4792,6 +4798,7 @@ theorem limsup_finiteTypeKLDualValue_le_chernoffDistance
       (limsup_finiteTypeKLDualValue_le_distributionKLMax
         (M := M) (r := r) hp hq).trans hkl
 
+omit [DecidableEq α] in
 /-- Generic finite-alphabet classical method-of-types Chernoff converse. -/
 theorem methodOfTypesChernoffConverse
     (M : ClassicalBinaryModel α) [DecidableEq α] :

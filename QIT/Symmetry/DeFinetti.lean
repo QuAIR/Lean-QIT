@@ -53,9 +53,11 @@ local instance deFinettiCMatrixContinuousENorm {α : Type v} [Fintype α] [Decid
 
 namespace TensorPower
 
+omit [Fintype a] [DecidableEq a] in
 /-- A nonempty base alphabet gives a nonempty tensor-power basis at every
 block length. -/
-protected theorem nonempty [Nonempty a] : (n : ℕ) → Nonempty (TensorPower a n)
+protected theorem nonempty [Nonempty a] :
+    (n : ℕ) → Nonempty (TensorPower a n)
   | 0 => ⟨⟨⟩⟩
   | n + 1 =>
       let hn := TensorPower.nonempty n
@@ -356,94 +358,6 @@ theorem unitaryTensorPowerMatrix_takeDrop_submatrix
 namespace PureVector
 
 variable {b : Type w} [Fintype b] [DecidableEq b]
-
-/-- Product of normalized pure vectors. -/
-def prod (ψ : PureVector a) (φ : PureVector b) : PureVector (Prod a b) where
-  amp x := ψ.amp x.1 * φ.amp x.2
-  trace_rankOne_eq_one := by
-    rw [rankOneMatrix_trace]
-    calc
-      (fun x : Prod a b => ψ.amp x.1 * φ.amp x.2) ⬝ᵥ
-          (fun x : Prod a b => star (ψ.amp x.1 * φ.amp x.2)) =
-          (∑ i : a, ψ.amp i * star (ψ.amp i)) *
-            (∑ j : b, φ.amp j * star (φ.amp j)) := by
-            rw [dotProduct, Fintype.sum_prod_type]
-            simp only [star_mul]
-            calc
-              (∑ x : a, ∑ y : b,
-                  ψ.amp x * φ.amp y * (star (φ.amp y) * star (ψ.amp x))) =
-                  ∑ x : a, (ψ.amp x * star (ψ.amp x)) *
-                    (∑ y : b, φ.amp y * star (φ.amp y)) := by
-                    apply Finset.sum_congr rfl
-                    intro x hx
-                    calc
-                      (∑ y : b, ψ.amp x * φ.amp y *
-                          (star (φ.amp y) * star (ψ.amp x))) =
-                          ∑ y : b, (ψ.amp x * star (ψ.amp x)) *
-                            (φ.amp y * star (φ.amp y)) := by
-                            apply Finset.sum_congr rfl
-                            intro y hy
-                            ring
-                      _ = (ψ.amp x * star (ψ.amp x)) *
-                            (∑ y : b, φ.amp y * star (φ.amp y)) := by
-                            rw [Finset.mul_sum]
-              _ = (∑ i : a, ψ.amp i * star (ψ.amp i)) *
-                    (∑ j : b, φ.amp j * star (φ.amp j)) := by
-                    rw [Finset.sum_mul]
-      _ = (rankOneMatrix ψ.amp).trace * (rankOneMatrix φ.amp).trace := by
-            simp [rankOneMatrix_trace, dotProduct]
-      _ = 1 := by rw [ψ.trace_rankOne_eq_one, φ.trace_rankOne_eq_one, mul_one]
-
-@[simp]
-theorem prod_amp (ψ : PureVector a) (φ : PureVector b) (x : Prod a b) :
-    (ψ.prod φ).amp x = ψ.amp x.1 * φ.amp x.2 := rfl
-
-/-- Product pure vectors induce product density states. -/
-theorem prod_state (ψ : PureVector a) (φ : PureVector b) :
-    (ψ.prod φ).state = ψ.state.prod φ.state := by
-  apply State.ext
-  ext i j
-  simp [PureVector.state, State.prod, Matrix.kronecker, Matrix.kroneckerMap_apply,
-    rankOneMatrix_apply, mul_assoc, mul_left_comm, mul_comm]
-
-/-- IID tensor power of a normalized pure vector. -/
-def tensorPower (ψ : PureVector a) : (n : ℕ) → PureVector (TensorPower a n)
-  | 0 =>
-      { amp := fun _ => 1
-        trace_rankOne_eq_one := by
-          rw [rankOneMatrix_trace]
-          change (∑ _ : PUnit, (1 : ℂ) * star (1 : ℂ)) = 1
-          simp }
-  | n + 1 => ψ.prod (tensorPower ψ n)
-
-@[simp]
-theorem tensorPower_zero (ψ : PureVector a) :
-    ψ.tensorPower 0 =
-      ({ amp := fun _ : PUnit => 1
-         trace_rankOne_eq_one := by
-          rw [rankOneMatrix_trace]
-          change (∑ _ : PUnit, (1 : ℂ) * star (1 : ℂ)) = 1
-          simp } : PureVector (TensorPower a 0)) := rfl
-
-@[simp]
-theorem tensorPower_succ (ψ : PureVector a) (n : ℕ) :
-    ψ.tensorPower (n + 1) = ψ.prod (ψ.tensorPower n) := rfl
-
-theorem tensorPower_state (ψ : PureVector a) :
-    (n : ℕ) → (ψ.tensorPower n).state = ψ.state.tensorPower n
-  | 0 => by
-      apply State.ext
-      ext i j
-      cases i
-      cases j
-      simp [PureVector.tensorPower, PureVector.state, State.tensorPower, State.unit,
-        rankOneMatrix_apply]
-  | n + 1 => by
-      rw [PureVector.tensorPower_succ, State.tensorPower_succ]
-      calc
-        (ψ.prod (ψ.tensorPower n)).state =
-            ψ.state.prod (ψ.tensorPower n).state := PureVector.prod_state ψ (ψ.tensorPower n)
-        _ = ψ.state.prod (ψ.state.tensorPower n) := by rw [tensorPower_state ψ n]
 
 /-- Renner's rank-one-projector version of an `m`-IID vector, in the typed
 `m+r` tensor-power form. It says that after some permutation, the rank-one
@@ -2694,6 +2608,7 @@ private theorem posSemidef_one_sub_of_posSemidef_idempotent (P : CMatrix a)
   convert hPSD using 1
   rw [hQherm.eq, hQid]
 
+omit [Fintype a] [DecidableEq a] in
 private theorem cMatrix_eq_zero_of_posSemidef_and_neg_posSemidef_general
     {A : CMatrix a} (hA : A.PosSemidef) (hneg : (-A).PosSemidef) :
     A = 0 := by
@@ -2796,6 +2711,7 @@ private theorem rankOneMatrix_le_one_of_trace_eq_one (ψ : a → ℂ)
     simpa [Ψ, PureVector.state_matrix] using Ψ.state_matrix_mul_self
   exact posSemidef_one_sub_of_posSemidef_idempotent (rankOneMatrix ψ) hpos hid
 
+omit [DecidableEq a] in
 private theorem exists_nonzero_coord_of_rankOne_trace_one (ψ : a → ℂ)
     (hnorm : (rankOneMatrix ψ).trace = 1) :
     ∃ i, ψ i ≠ 0 := by
@@ -2807,6 +2723,7 @@ private theorem exists_nonzero_coord_of_rankOne_trace_one (ψ : a → ℂ)
   rw [hzero] at hnorm
   norm_num at hnorm
 
+omit [DecidableEq a] in
 private theorem rankOneMatrix_eq_colinear (ψ φ : a → ℂ)
     (_hψ : (rankOneMatrix ψ).trace = 1)
     (hφ : (rankOneMatrix φ).trace = 1)
@@ -2838,6 +2755,7 @@ private theorem pureVector_state_eq_colinear (ψ φ : PureVector a)
   rankOneMatrix_eq_colinear ψ.amp φ.amp ψ.trace_rankOne_eq_one
     φ.trace_rankOne_eq_one (by simpa [PureVector.state] using congrArg State.matrix h)
 
+omit [DecidableEq a] in
 private theorem rankOneMatrix_mul_of_mulVec_eq_self
     (P : CMatrix a) (ψ : a → ℂ) (hψ : P.mulVec ψ = ψ) :
     P * rankOneMatrix ψ = rankOneMatrix ψ := by
@@ -2853,6 +2771,7 @@ private theorem rankOneMatrix_mul_of_mulVec_eq_self
             rw [show ∑ k, P i k * ψ k = ψ i by
               simpa [Matrix.mulVec] using congrFun hψ i]
 
+omit [DecidableEq a] in
 private theorem rankOneMatrix_mul_right_of_mulVec_eq_self
     (P : CMatrix a) (ψ : a → ℂ) (hPherm : P.IsHermitian)
     (hψ : P.mulVec ψ = ψ) :
@@ -4818,6 +4737,7 @@ theorem sqrtMatrix_apply_permEquiv_of_invariant {n : ℕ}
 
 end State
 
+omit [Fintype a] [DecidableEq a] in
 private theorem tensorPowerProdEquiv_fst_apply {b : Type w}
     [Fintype b] [DecidableEq b]
     (n : ℕ) (z : TensorPower (Prod a b) n) (i : Fin n) :
@@ -4834,6 +4754,7 @@ private theorem tensorPowerProdEquiv_fst_apply {b : Type w}
             simp [tensorPowerProdEquiv, tensorPowerEquiv]
             exact ih tail i
 
+omit [Fintype a] [DecidableEq a] in
 private theorem tensorPowerProdEquiv_snd_apply {b : Type w}
     [Fintype b] [DecidableEq b]
     (n : ℕ) (z : TensorPower (Prod a b) n) (i : Fin n) :
@@ -4850,6 +4771,7 @@ private theorem tensorPowerProdEquiv_snd_apply {b : Type w}
             simp [tensorPowerProdEquiv, tensorPowerEquiv]
             exact ih tail i
 
+omit [Fintype a] [DecidableEq a] in
 private theorem tensorPowerProdEquiv_permEquiv_fst {b : Type w}
     [Fintype b] [DecidableEq b]
     {n : ℕ} (σ : Equiv.Perm (Fin n)) (z : TensorPower (Prod a b) n) :
@@ -4864,6 +4786,7 @@ private theorem tensorPowerProdEquiv_permEquiv_fst {b : Type w}
     (tensorPowerEquiv n ((tensorPowerProdEquiv a b n z).1) (σ⁻¹ i))
   rw [tensorPowerProdEquiv_fst_apply]
 
+omit [Fintype a] [DecidableEq a] in
 private theorem tensorPowerProdEquiv_permEquiv_snd {b : Type w}
     [Fintype b] [DecidableEq b]
     {n : ℕ} (σ : Equiv.Perm (Fin n)) (z : TensorPower (Prod a b) n) :
@@ -5735,6 +5658,7 @@ theorem ckrProfileCoordinateEffect_traceNonincreasingCP [Nonempty a]
     (ρ.ckrProfileCoordinateEffect_posSemidef (a := a))
     (ρ.ckrProfileCoordinateEffect_le_one (a := a) hρ)
 
+omit [Fintype a] [DecidableEq a] in
 private theorem cMatrix_eq_zero_of_posSemidef_and_neg_posSemidef
     {A : CMatrix (TensorPower (Prod a a) n)}
     (hA : A.PosSemidef) (hneg : (-A).PosSemidef) :

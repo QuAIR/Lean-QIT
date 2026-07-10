@@ -219,6 +219,7 @@ def hashSeedOutputState (H : HashFamily F Z S) (z : Z) : State (S × F) where
         rw [H.prob_sum]
         norm_num
 
+omit [Fintype Z] [DecidableEq Z] [Nonempty S] [Nonempty F] in
 @[simp]
 theorem hashSeedOutputState_matrix (H : HashFamily F Z S) (z : Z) :
     (hashSeedOutputState H z).matrix =
@@ -241,6 +242,7 @@ def extractorOutputChannel (H : HashFamily F Z S) :
   (Channel.reindex (Equiv.prodAssoc S F e)).comp
     ((hashSeedOutputChannel H).prod (Channel.idChannel e))
 
+omit [Nonempty S] [Nonempty F] in
 @[simp]
 theorem extractorOutputChannel_applyState_cqState
     (H : HashFamily F Z S) (E : Ensemble Z e) :
@@ -262,6 +264,7 @@ theorem extractorOutputChannel_applyState_cqState
   refine Finset.sum_congr rfl fun f0 _ => ?_
   simp [NNReal.smul_def, mul_assoc, mul_comm, mul_left_comm]
 
+omit [Nonempty S] [Nonempty F] in
 /-- The public-seed extractor output is contractive in normalized trace
 distance as a CPTP image of the input cq state. -/
 theorem extractorOutputState_normalizedTraceDistance_le_cqState
@@ -281,6 +284,7 @@ variable (H : HashFamily F Z S)
 def extractorSeedSideInfoMatrix (E : Ensemble Z e) (f : F) : CMatrix e :=
   partialTraceA (a := S) (b := e) (extractorSeedOutputMatrix H E f)
 
+omit [DecidableEq F] [DecidableEq Z] [Nonempty S] [Nonempty F] in
 @[simp]
 theorem extractorSeedSideInfoMatrix_eq_partialTraceA (E : Ensemble Z e) (f : F) :
     extractorSeedSideInfoMatrix H E f =
@@ -292,6 +296,7 @@ def extractorSeedIdealMatrix (E : Ensemble Z e) (f : F) : CMatrix (S × e) :=
   Matrix.kronecker (uniformExtractorOutputState (S := S)).matrix
     (extractorSeedSideInfoMatrix H E f)
 
+omit [DecidableEq F] [DecidableEq Z] [Nonempty F] in
 @[simp]
 theorem extractorSeedIdealMatrix_eq_kronecker (E : Ensemble Z e) (f : F) :
     extractorSeedIdealMatrix H E f =
@@ -303,6 +308,7 @@ theorem extractorSeedIdealMatrix_eq_kronecker (E : Ensemble Z e) (f : F) :
 def extractorSeedTraceDistance (E : Ensemble Z e) (f : F) : ℝ :=
   normalizedTraceDistance (extractorSeedOutputMatrix H E f) (extractorSeedIdealMatrix H E f)
 
+omit [DecidableEq F] [DecidableEq Z] [Nonempty F] in
 @[simp]
 theorem extractorSeedTraceDistance_eq_normalizedTraceDistance (E : Ensemble Z e) (f : F) :
     extractorSeedTraceDistance H E f =
@@ -313,6 +319,7 @@ theorem extractorSeedTraceDistance_eq_normalizedTraceDistance (E : Ensemble Z e)
 def extractorSeedAverageTraceDistance (E : Ensemble Z e) : ℝ :=
   ∑ f, (H.prob f : ℝ) * extractorSeedTraceDistance H E f
 
+omit [DecidableEq F] [DecidableEq Z] [Nonempty F] in
 @[simp]
 theorem extractorSeedAverageTraceDistance_eq_sum (E : Ensemble Z e) :
     extractorSeedAverageTraceDistance H E =
@@ -323,6 +330,8 @@ theorem extractorSeedAverageTraceDistance_eq_sum (E : Ensemble Z e) :
 def extractorSeedQuadraticAverage (q : F → ℝ) : ℝ :=
   ∑ f, (H.prob f : ℝ) * q f
 
+omit [DecidableEq F] [Fintype Z] [DecidableEq Z] [Fintype S] [DecidableEq S]
+    [Nonempty S] [Nonempty F] in
 @[simp]
 theorem extractorSeedQuadraticAverage_eq_sum (q : F → ℝ) :
     extractorSeedQuadraticAverage H q = ∑ f, (H.prob f : ℝ) * q f :=
@@ -333,11 +342,14 @@ namespace HashFamily
 private def seedBlock (M : CMatrix (S × (F × e))) (f : F) : CMatrix (S × e) :=
   fun se se' => M (se.1, (f, se.2)) (se'.1, (f, se'.2))
 
+omit [Fintype F] [DecidableEq F] [Fintype S] [DecidableEq S] [Nonempty S]
+    [Fintype e] [DecidableEq e] [Nonempty F] in
 private theorem seedBlock_posSemidef {M : CMatrix (S × (F × e))}
     (hM : M.PosSemidef) (f : F) :
     (seedBlock (S := S) (e := e) M f).PosSemidef := by
   simpa [seedBlock] using hM.submatrix (fun se : S × e => (se.1, (f, se.2)))
 
+omit [Fintype F] [Fintype S] [Nonempty S] [Fintype e] [Nonempty F] in
 private theorem seedBlock_le_one {M : CMatrix (S × (F × e))} (hM : M ≤ 1) (f : F) :
     seedBlock (S := S) (e := e) M f ≤ 1 := by
   rw [Matrix.le_iff] at hM ⊢
@@ -348,6 +360,7 @@ private theorem seedBlock_le_one {M : CMatrix (S × (F × e))} (hM : M ≤ 1) (f
   rcases y with ⟨sy, iy⟩
   simp [seedBlock, Matrix.sub_apply, Matrix.one_apply]
 
+omit [DecidableEq F] [DecidableEq S] [Nonempty S] [DecidableEq e] [Nonempty F] in
 private theorem trace_mul_seed_decomp_complex {H P : CMatrix (S × (F × e))}
     (hoff : ∀ (s s' : S) (f f' : F) (i j : e),
       f ≠ f' -> H (s, (f, i)) (s', (f', j)) = 0) :
@@ -371,6 +384,7 @@ private theorem trace_mul_seed_decomp_complex {H P : CMatrix (S × (F × e))}
         H (s, f, i) (s', f, j) * P (s', f, j) (s, f, i) := by
         rw [Finset.sum_comm]
 
+omit [DecidableEq F] [DecidableEq S] [Nonempty S] [DecidableEq e] [Nonempty F] in
 private theorem trace_mul_seed_decomp {H P : CMatrix (S × (F × e))}
     (hoff : ∀ (s s' : S) (f f' : F) (i j : e),
       f ≠ f' -> H (s, (f, i)) (s', (f', j)) = 0) :
@@ -379,6 +393,8 @@ private theorem trace_mul_seed_decomp {H P : CMatrix (S × (F × e))}
   rw [trace_mul_seed_decomp_complex (S := S) (e := e) hoff]
   simp
 
+omit [Fintype F] [DecidableEq F] [Fintype S] [DecidableEq S] [Nonempty S]
+    [Fintype e] [DecidableEq e] [Nonempty F] in
 private theorem seedBlock_isHermitian {M : CMatrix (S × (F × e))}
     (hM : M.IsHermitian) (f : F) :
     (seedBlock (S := S) (e := e) M f).IsHermitian := by
@@ -389,6 +405,7 @@ private theorem seedBlock_isHermitian {M : CMatrix (S × (F × e))}
   simpa [seedBlock, Matrix.conjTranspose] using
     congrFun (congrFun hM (sx, (f, ix))) (sy, (f, iy))
 
+omit [Nonempty S] [Nonempty F] in
 private theorem posPart_trace_seedBlock_le_sum {H : CMatrix (S × (F × e))}
     (hH : H.IsHermitian)
     (hoff : ∀ (s s' : S) (f f' : F) (i j : e),
@@ -410,6 +427,7 @@ private theorem posPart_trace_seedBlock_le_sum {H : CMatrix (S × (F × e))}
     (seedBlock (S := S) (e := e) H f) (seedBlock P f)
     (seedBlock_isHermitian (S := S) (e := e) hH f) hPpos hPle
 
+omit [DecidableEq F] [DecidableEq Z] [Nonempty S] [Nonempty F] in
 private theorem extractorSeedOutputMatrix_trace (H : HashFamily F Z S)
     (E : Ensemble Z e) (f : F) :
     (extractorSeedOutputMatrix H E f).trace = 1 := by
@@ -434,6 +452,7 @@ private theorem extractorSeedOutputMatrix_trace (H : HashFamily F Z S)
     _ = ↑(∑ z : Z, E.probs z) := by simp
     _ = 1 := by rw [E.weights_sum]; rfl
 
+omit [DecidableEq F] [DecidableEq Z] [Nonempty S] [Nonempty F] in
 private theorem extractorSeedOutputMatrix_posSemidef (H : HashFamily F Z S)
     (E : Ensemble Z e) (f : F) :
     (extractorSeedOutputMatrix H E f).PosSemidef := by
@@ -442,6 +461,7 @@ private theorem extractorSeedOutputMatrix_posSemidef (H : HashFamily F Z S)
     (((posSemidef_single (H.hash f z)).kronecker (E.states z).pos).smul
       (NNReal.coe_nonneg (E.probs z)))
 
+omit [DecidableEq F] [DecidableEq Z] [Nonempty F] in
 private theorem extractorSeedIdealMatrix_trace (H : HashFamily F Z S)
     (E : Ensemble Z e) (f : F) :
     (extractorSeedIdealMatrix H E f).trace = 1 := by
@@ -460,6 +480,7 @@ private theorem extractorSeedIdealMatrix_trace (H : HashFamily F Z S)
   rw [hU, partialTraceA_trace, extractorSeedOutputMatrix_trace H E f]
   norm_num
 
+omit [DecidableEq F] [DecidableEq Z] [Nonempty F] in
 private theorem extractorSeedIdealMatrix_posSemidef (H : HashFamily F Z S)
     (E : Ensemble Z e) (f : F) :
     (extractorSeedIdealMatrix H E f).PosSemidef := by
@@ -467,17 +488,20 @@ private theorem extractorSeedIdealMatrix_posSemidef (H : HashFamily F Z S)
   exact (uniformExtractorOutputState (S := S)).pos.kronecker
     (partialTraceA_posSemidef (extractorSeedOutputMatrix_posSemidef H E f))
 
+omit [DecidableEq F] [DecidableEq Z] [Nonempty F] in
 private theorem seedDiff_trace_zero (H : HashFamily F Z S) (E : Ensemble Z e) (f : F) :
     (extractorSeedOutputMatrix H E f - extractorSeedIdealMatrix H E f).trace = 0 := by
   rw [Matrix.trace_sub, extractorSeedOutputMatrix_trace H E f,
     extractorSeedIdealMatrix_trace H E f]
   norm_num
 
+omit [DecidableEq F] [DecidableEq Z] [Nonempty F] in
 private theorem seedDiff_isHermitian (H : HashFamily F Z S) (E : Ensemble Z e) (f : F) :
     (extractorSeedOutputMatrix H E f - extractorSeedIdealMatrix H E f).IsHermitian :=
   (extractorSeedOutputMatrix_posSemidef H E f).isHermitian.sub
     (extractorSeedIdealMatrix_posSemidef H E f).isHermitian
 
+omit [DecidableEq Z] [Fintype S] [Nonempty S] [Nonempty F] in
 private theorem extractorOutputMatrix_seed_offdiag (H : HashFamily F Z S)
     (E : Ensemble Z e) {s s' : S} {f f' : F} {i j : e} (hff : f ≠ f') :
     extractorOutputMatrix H E (s, (f, i)) (s', (f', j)) = 0 := by
@@ -493,12 +517,14 @@ private theorem extractorOutputMatrix_seed_offdiag (H : HashFamily F Z S)
     · simp [hgf]
   simp [Matrix.kronecker, Matrix.kroneckerMap_apply, hsingle]
 
+omit [DecidableEq Z] [Nonempty S] [Nonempty F] in
 private theorem extractorOutputMarginalB_seed_offdiag (H : HashFamily F Z S)
     (E : Ensemble Z e) {f f' : F} {i j : e} (hff : f ≠ f') :
     (extractorOutputState H E).marginalB.matrix (f, i) (f', j) = 0 := by
   simp [State.marginalB_matrix, partialTraceA, extractorOutputState_matrix,
     extractorOutputMatrix_seed_offdiag H E hff]
 
+omit [DecidableEq Z] [Fintype S] [Nonempty S] [Nonempty F] in
 private theorem seedBlock_extractorOutputMatrix (H : HashFamily F Z S)
     (E : Ensemble Z e) (f : F) :
     seedBlock (S := S) (e := e) (extractorOutputMatrix H E) f =
@@ -519,6 +545,7 @@ private theorem seedBlock_extractorOutputMatrix (H : HashFamily F Z S)
   rw [← smul_smul]
   exact smul_comm (E.probs z) (H.prob f) A
 
+omit [DecidableEq Z] [Nonempty S] [Nonempty F] in
 private theorem extractorOutputMarginalB_seedBlock (H : HashFamily F Z S)
     (E : Ensemble Z e) (f : F) :
     (fun i j => (extractorOutputState H E).marginalB.matrix (f, i) (f, j)) =
@@ -532,6 +559,7 @@ private theorem extractorOutputMarginalB_seedBlock (H : HashFamily F Z S)
   rw [seedBlock_extractorOutputMatrix H E f]
   simp [Matrix.smul_apply, Finset.smul_sum]
 
+omit [DecidableEq Z] [Nonempty F] in
 private theorem seedBlock_idealExtractorOutputMatrix (H : HashFamily F Z S)
     (E : Ensemble Z e) (f : F) :
     seedBlock (S := S) (e := e)
@@ -552,6 +580,7 @@ private theorem seedBlock_idealExtractorOutputMatrix (H : HashFamily F Z S)
   change A * (H.prob f • B) = H.prob f • (A * B)
   simp [mul_comm]
 
+omit [DecidableEq Z] [Nonempty F] in
 private theorem seedBlock_fullDiff_eq_seedDiff (H : HashFamily F Z S)
     (E : Ensemble Z e) (f : F) :
     seedBlock (S := S) (e := e)
@@ -569,6 +598,7 @@ private theorem seedBlock_fullDiff_eq_seedDiff (H : HashFamily F Z S)
   rw [extractorOutputState_matrix, hout, hideal]
   simp [sub_eq_add_neg, smul_add, smul_neg]
 
+omit [DecidableEq Z] [Nonempty F] in
 private theorem fullDiff_seed_offdiag (H : HashFamily F Z S) (E : Ensemble Z e)
     {s s' : S} {f f' : F} {i j : e} (hff : f ≠ f') :
     ((extractorOutputState H E).matrix -
@@ -584,6 +614,7 @@ private theorem fullDiff_seed_offdiag (H : HashFamily F Z S) (E : Ensemble Z e)
   rw [hmarg]
   simp
 
+omit [DecidableEq F] [DecidableEq Z] [Nonempty F] in
 private theorem normalizedTraceDistance_eq_posPart_trace_of_seedDiff
     (H : HashFamily F Z S) (E : Ensemble Z e) (f : F) :
     normalizedTraceDistance (extractorSeedOutputMatrix H E f) (extractorSeedIdealMatrix H E f) =
@@ -598,11 +629,13 @@ private theorem normalizedTraceDistance_eq_posPart_trace_of_seedDiff
     _ = (1 / 2 : ℝ) * (2 * (D⁺).trace.re) := by rw [hnorm]
     _ = (D⁺).trace.re := by ring
 
+omit [DecidableEq S] [Nonempty S] [DecidableEq e] in
 private theorem trace_seedBlock_smul_mul (c : ℝ≥0) (D E : CMatrix (S × e)) :
     (((c • D) * E).trace).re = (c : ℝ) * (((D * E).trace).re) := by
   rw [Matrix.smul_mul, Matrix.trace_smul]
   simp [NNReal.smul_def]
 
+omit [DecidableEq Z] [Nonempty F] in
 private theorem fullDiff_posPart_trace_le_seedAverage (H : HashFamily F Z S)
     (E : Ensemble Z e) :
     ((((extractorOutputState H E).matrix -
@@ -651,6 +684,7 @@ private theorem fullDiff_posPart_trace_le_seedAverage (H : HashFamily F Z S)
           (by rw [← normalizedTraceDistance_eq_posPart_trace_of_seedDiff H E f]; rfl)
     _ = extractorSeedAverageTraceDistance H E := rfl
 
+omit [DecidableEq Z] [Nonempty F] in
 /--
 The full extractor secrecy distance is bounded by the seed-average of the
 per-seed trace distances.
@@ -686,6 +720,7 @@ theorem extractorSecrecyDistance_le_seedAverageTraceDistance
       dsimp [D, ρ, σ]
       exact fullDiff_posPart_trace_le_seedAverage H E
 
+omit [DecidableEq F] [DecidableEq Z] [Nonempty F] in
 /--
 If every fixed-seed extractor trace distance is bounded by
 `sqrt (d * q f)`, the squared seed-average trace distance is bounded by the
@@ -705,6 +740,7 @@ theorem extractorSeedAverageTraceDistance_sq_le_scaled_quadraticAverage
           (extractorSeedIdealMatrix H E f))
     hq hseed
 
+omit [DecidableEq Z] [Nonempty F] in
 /--
 Combining public-seed trace-distance averaging with the abstract finite
 Jensen/Cauchy bridge gives a squared full extractor secrecy bound.

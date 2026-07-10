@@ -2307,6 +2307,8 @@ theorem epsteinTraceTerm_concave
 
 namespace State
 
+open RenyiDPI.Statement
+
 /-- In the low-`alpha` Frank--Lieb range, the sandwiched reference exponent
 `(1 - alpha) / (2 * alpha)` is nonnegative. -/
 theorem sandwichedRenyiQ_sandwichExponent_nonneg

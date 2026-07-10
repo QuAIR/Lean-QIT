@@ -84,12 +84,14 @@ instance tensorPowerMulAction (n : ℕ) : MulAction (Equiv.Perm (Fin n)) (Tensor
     ext i
     simp [permEquiv, precompPerm, Equiv.trans_apply, mul_inv_rev]
 
+omit [DecidableEq a] in
 @[simp]
 theorem permEquiv_one (n : ℕ) :
     permEquiv (a := a) n 1 = 1 := by
   ext x
   exact one_smul (Equiv.Perm (Fin n)) x
 
+omit [DecidableEq a] in
 @[simp]
 theorem permEquiv_inv (n : ℕ) (σ : Equiv.Perm (Fin n)) :
     permEquiv (a := a) n σ⁻¹ = (permEquiv (a := a) n σ)⁻¹ := by
@@ -98,6 +100,7 @@ theorem permEquiv_inv (n : ℕ) (σ : Equiv.Perm (Fin n)) :
   ext i
   simp [permEquiv, precompPerm, Equiv.trans_apply]
 
+omit [DecidableEq a] in
 @[simp]
 theorem permEquiv_symm (n : ℕ) (σ : Equiv.Perm (Fin n)) :
     permEquiv (a := a) n σ.symm = (permEquiv (a := a) n σ).symm := by
@@ -109,6 +112,7 @@ theorem permEquiv_symm (n : ℕ) (σ : Equiv.Perm (Fin n)) :
 def symmetricSubspace (n : ℕ) : Set ((TensorPower a n) → ℂ) :=
   { f | ∀ σ : Equiv.Perm (Fin n), f ∘ permEquiv n σ = f }
 
+omit [DecidableEq a] in
 /-- Membership characterization. -/
 theorem mem_symmetric (n : ℕ) (f : (TensorPower a n) → ℂ) :
     f ∈ symmetricSubspace n ↔ ∀ σ : Equiv.Perm (Fin n), f ∘ permEquiv n σ = f := by
@@ -136,12 +140,14 @@ def symmetricSubmodule (n : ℕ) : Submodule ℂ ((TensorPower a n) → ℂ) whe
       simpa [Function.comp_apply] using congrFun (hf σ) x
     simp [Function.comp_apply, hfσ]
 
+omit [DecidableEq a] in
 theorem mem_symmetricSubmodule_iff (n : ℕ) (f : (TensorPower a n) → ℂ) :
     f ∈ symmetricSubmodule (a := a) n ↔ f ∈ symmetricSubspace (a := a) n := by
   rfl
 
 variable [Fintype a]
 
+omit [DecidableEq a] in
 /-- The recursive tensor-power basis has the expected cardinality `|a|^n`. -/
 theorem tensorPower_card (n : ℕ) :
     Fintype.card (TensorPower a n) = Fintype.card a ^ n := by
@@ -156,12 +162,14 @@ theorem tensorPower_card (n : ℕ) :
         _ = Fintype.card a * Fintype.card a ^ n := by rw [ih]
         _ = Fintype.card a ^ (n + 1) := by rw [pow_succ']
 
+omit [DecidableEq a] [Fintype a] in
 @[simp]
 theorem tensorPowerEquiv_succ_zero (n : ℕ) (x0 : a) (xs : TensorPower a n) :
     tensorPowerEquiv (n + 1) (x0, xs) 0 = x0 := by
   change ((Fin.cons x0 (tensorPowerEquiv n xs) : Fin (n + 1) → a) 0) = x0
   simp
 
+omit [DecidableEq a] [Fintype a] in
 @[simp]
 theorem tensorPowerEquiv_succ_succ (n : ℕ) (x0 : a) (xs : TensorPower a n)
     (i : Fin n) :
@@ -170,6 +178,7 @@ theorem tensorPowerEquiv_succ_succ (n : ℕ) (x0 : a) (xs : TensorPower a n)
     tensorPowerEquiv n xs i
   simp
 
+omit [DecidableEq a] [Fintype a] in
 @[simp]
 theorem tensorPowerEquiv_permEquiv (n : ℕ) (σ : Equiv.Perm (Fin n))
     (x : TensorPower a n) :
@@ -183,6 +192,7 @@ positions carrying each alphabet symbol. -/
 def tensorPowerTypeProfile (n : ℕ) (x : TensorPower a n) (z : a) : ℕ :=
   Fintype.card {i : Fin n // tensorPowerEquiv n x i = z}
 
+omit [Fintype a] in
 @[simp]
 theorem tensorPowerTypeProfile_apply (n : ℕ) (x : TensorPower a n) (z : a) :
     tensorPowerTypeProfile (a := a) n x z =
@@ -203,6 +213,7 @@ theorem tensorPowerTypeProfile_sum (n : ℕ) (x : TensorPower a n) :
     _ = n := by
             simpa [Finset.card_univ] using h.symm
 
+omit [Fintype a] in
 /-- The type profile of a successor tensor word splits into the head symbol and
 the tail profile. -/
 theorem tensorPowerTypeProfile_succ (n : ℕ) (x0 : a) (xs : TensorPower a n) (z : a) :
@@ -292,6 +303,7 @@ private def symToTensorPower {n : ℕ} (s : Sym a n) : TensorPower a n :=
       exact s.2⟩
   (tensorPowerEquiv (a := a) n).symm fun i => v.get i
 
+omit [Fintype a] in
 private theorem tensorPowerTypeProfile_symToTensorPower {n : ℕ} (s : Sym a n) (z : a) :
     tensorPowerTypeProfile (a := a) n (symToTensorPower (a := a) s) z =
       (s : Multiset a).count z := by
@@ -765,6 +777,7 @@ theorem tensorPowerProfileClass_card_eq_multinomial
       · simp [hz, ih (TensorPowerProfile.tailAfterHead (a := a) p z hz)]
       · simp [hz]
 
+omit [Fintype a] in
 theorem tensorPowerTypeProfile_permEquiv (n : ℕ) (σ : Equiv.Perm (Fin n))
     (x : TensorPower a n) (z : a) :
     tensorPowerTypeProfile (a := a) n (permEquiv (a := a) n σ x) z =
@@ -789,6 +802,7 @@ theorem tensorPowerTypeProfile_permEquiv (n : ℕ) (σ : Equiv.Perm (Fin n))
         ext
         simp }
 
+omit [Fintype a] in
 theorem tensorPowerTypeProfile_eq_of_permEquiv (n : ℕ) (σ : Equiv.Perm (Fin n))
     (x : TensorPower a n) :
     tensorPowerTypeProfile (a := a) n (permEquiv (a := a) n σ x) =
@@ -796,6 +810,7 @@ theorem tensorPowerTypeProfile_eq_of_permEquiv (n : ℕ) (σ : Equiv.Perm (Fin n
   funext z
   exact tensorPowerTypeProfile_permEquiv (a := a) n σ x z
 
+omit [Fintype a] in
 theorem exists_permEquiv_of_tensorPowerTypeProfile_eq (n : ℕ)
     (x y : TensorPower a n)
     (h : tensorPowerTypeProfile (a := a) n x = tensorPowerTypeProfile (a := a) n y) :
@@ -821,6 +836,7 @@ theorem exists_permEquiv_of_tensorPowerTypeProfile_eq (n : ℕ)
   rw [tensorPowerEquiv_permEquiv]
   simpa [τ] using hτ i
 
+omit [Fintype a] in
 theorem mem_symmetric_eq_of_typeProfile_eq (n : ℕ) {f : TensorPower a n → ℂ}
     (hf : f ∈ symmetricSubspace (a := a) n) {x y : TensorPower a n}
     (hxy : tensorPowerTypeProfile (a := a) n x =
@@ -830,6 +846,7 @@ theorem mem_symmetric_eq_of_typeProfile_eq (n : ℕ) {f : TensorPower a n → �
   have hfix := congrFun (hf σ) x
   simpa [Function.comp_apply, hσ] using hfix.symm
 
+omit [Fintype a] in
 theorem mem_symmetric_of_eq_on_typeProfile (n : ℕ) {f : TensorPower a n → ℂ}
     (hf : ∀ x y : TensorPower a n,
       tensorPowerTypeProfile (a := a) n x =
@@ -840,6 +857,7 @@ theorem mem_symmetric_of_eq_on_typeProfile (n : ℕ) {f : TensorPower a n → �
   exact hf (permEquiv (a := a) n σ x) x
     (tensorPowerTypeProfile_eq_of_permEquiv (a := a) n σ x)
 
+omit [Fintype a] in
 theorem mem_symmetric_iff_eq_on_typeProfile (n : ℕ) (f : TensorPower a n → ℂ) :
     f ∈ symmetricSubspace (a := a) n ↔
       ∀ x y : TensorPower a n,
@@ -854,6 +872,7 @@ theorem mem_symmetric_iff_eq_on_typeProfile (n : ℕ) (f : TensorPower a n → �
 def tensorPowerBasisDelta {n : ℕ} (y : TensorPower a n) : TensorPower a n → ℂ :=
   fun x => if x = y then 1 else 0
 
+omit [Fintype a] in
 theorem tensorPowerBasisDelta_apply {n : ℕ} (y x : TensorPower a n) :
     tensorPowerBasisDelta (a := a) y x = if x = y then 1 else 0 := rfl
 
@@ -893,11 +912,13 @@ end State
 abbrev permutationMatrix (n : ℕ) (σ : Equiv.Perm (Fin n)) : CMatrix (TensorPower a n) :=
   Equiv.Perm.permMatrix ℂ (show Equiv.Perm (TensorPower a n) from permEquiv (a := a) n σ)
 
+omit [Fintype a] in
 @[simp]
 theorem permutationMatrix_one (n : ℕ) :
     permutationMatrix (a := a) n 1 = 1 := by
   simp [permutationMatrix]
 
+omit [Fintype a] in
 @[simp]
 theorem permutationMatrix_conjTranspose (n : ℕ) (σ : Equiv.Perm (Fin n)) :
     (permutationMatrix (a := a) n σ).conjTranspose =
@@ -961,12 +982,14 @@ def symmetricProjection (n : ℕ) (f : TensorPower a n → ℂ) : TensorPower a 
   fun x => ((Fintype.card (Equiv.Perm (Fin n)) : ℂ)⁻¹) *
     ∑ σ : Equiv.Perm (Fin n), f (permEquiv (a := a) n σ x)
 
+omit [DecidableEq a] [Fintype a] in
 @[simp]
 theorem symmetricProjection_apply (n : ℕ) (f : TensorPower a n → ℂ) (x : TensorPower a n) :
     symmetricProjection (a := a) n f x =
       ((Fintype.card (Equiv.Perm (Fin n)) : ℂ)⁻¹) *
         ∑ σ : Equiv.Perm (Fin n), f (permEquiv (a := a) n σ x) := rfl
 
+omit [DecidableEq a] [Fintype a] in
 theorem symmetricProjection_sum {ι : Type*} [Fintype ι] (n : ℕ)
     (g : ι → TensorPower a n → ℂ) :
     symmetricProjection (a := a) n (∑ i, g i) =
@@ -989,12 +1012,14 @@ theorem symmetricProjection_sum {ι : Type*} [Fintype ι] (n : ℕ)
     _ = (∑ i, symmetricProjection (a := a) n (g i)) x := by
             simp [symmetricProjection_apply]
 
+omit [DecidableEq a] [Fintype a] in
 theorem symmetricProjection_smul (n : ℕ) (c : ℂ) (f : TensorPower a n → ℂ) :
     symmetricProjection (a := a) n (c • f) =
       c • symmetricProjection (a := a) n f := by
   ext x
   simp [symmetricProjection_apply, Finset.mul_sum, mul_left_comm]
 
+omit [DecidableEq a] in
 theorem symmetricProjection_sum_values (n : ℕ) (f : TensorPower a n → ℂ) :
     ∑ x : TensorPower a n, symmetricProjection (a := a) n f x =
       ∑ x : TensorPower a n, f x := by
@@ -1047,6 +1072,7 @@ tensor-power subspace. Its columns are the projected coordinate deltas. -/
 def symmetricProjectionMatrix (n : ℕ) : CMatrix (TensorPower a n) :=
   Matrix.of fun x y => symmetricProjection (a := a) n (tensorPowerBasisDelta (a := a) y) x
 
+omit [Fintype a] in
 @[simp]
 theorem symmetricProjectionMatrix_apply (n : ℕ) (x y : TensorPower a n) :
     symmetricProjectionMatrix (a := a) n x y =
@@ -1069,6 +1095,7 @@ theorem symmetricProjectionMatrix_mulVec (n : ℕ) (f : TensorPower a n → ℂ)
     _ = symmetricProjection (a := a) n f x := by
           rw [← symmetricProjection_basisDelta_expansion (a := a) n f]
 
+omit [Fintype a] in
 /-- The Reynolds projection matrix is the average of the tensor-factor
 permutation matrices. -/
 theorem symmetricProjectionMatrix_eq_perm_average (n : ℕ) :
@@ -1180,6 +1207,7 @@ theorem permutationMatrix_conj_symmetricProjectionMatrix_complement (n : ℕ)
           rw [Matrix.mul_one, permutationMatrix_mul_conjTranspose_self,
             permutationMatrix_conj_symmetricProjectionMatrix]
 
+omit [Fintype a] in
 /-- The Reynolds projection matrix is self-adjoint. -/
 theorem symmetricProjectionMatrix_conjTranspose (n : ℕ) :
     (symmetricProjectionMatrix (a := a) n).conjTranspose =
@@ -1207,11 +1235,13 @@ theorem symmetricProjectionMatrix_conjTranspose (n : ℕ) :
     _ = symmetricProjectionMatrix (a := a) n := by
           rw [← symmetricProjectionMatrix_eq_perm_average]
 
+omit [Fintype a] in
 /-- The Reynolds projection matrix is Hermitian. -/
 theorem symmetricProjectionMatrix_isHermitian (n : ℕ) :
     (symmetricProjectionMatrix (a := a) n).IsHermitian := by
   simpa [Matrix.IsHermitian] using symmetricProjectionMatrix_conjTranspose (a := a) n
 
+omit [DecidableEq a] [Fintype a] in
 /-- Symmetric projection is unchanged by precomposing the input vector with a
 tensor-factor permutation. -/
 theorem symmetricProjection_comp_permEquiv (n : ℕ) (τ : Equiv.Perm (Fin n))
@@ -1232,6 +1262,7 @@ theorem symmetricProjection_comp_permEquiv (n : ℕ) (τ : Equiv.Perm (Fin n))
   simp
   exact congrArg f (mul_smul τ σ x).symm
 
+omit [Fintype a] in
 /-- Projected coordinate deltas only depend on the tensor-power type profile. -/
 theorem symmetricProjection_basisDelta_eq_of_typeProfile_eq {n : ℕ}
     {y z : TensorPower a n}
@@ -1273,6 +1304,7 @@ theorem symmetricProjection_basisDelta_eq_of_typeProfile_eq {n : ℕ}
 def tensorPowerProfileVector {n : ℕ} (p : TensorPowerProfile a n) : TensorPower a n → ℂ :=
   symmetricProjection (a := a) n (tensorPowerBasisDelta (a := a) p.rep)
 
+omit [Fintype a] in
 theorem symmetricProjection_basisDelta_eq_zero_of_typeProfile_ne {n : ℕ}
     (x y : TensorPower a n)
     (hxy : tensorPowerTypeProfile (a := a) n x ≠
@@ -1301,6 +1333,7 @@ theorem symmetricProjection_basisDelta_support_typeProfile {n : ℕ}
   by_contra hxy
   exact h (symmetricProjection_basisDelta_eq_zero_of_typeProfile_ne (a := a) x y hxy)
 
+omit [DecidableEq a] [Fintype a] in
 private theorem symmetricProjection_fixed_of_mem (n : ℕ) (f : TensorPower a n → ℂ)
     (hf : f ∈ symmetricSubspace (a := a) n) :
     symmetricProjection (a := a) n f = f := by
@@ -1321,6 +1354,7 @@ private theorem symmetricProjection_fixed_of_mem (n : ℕ) (f : TensorPower a n 
   field_simp [Nat.cast_ne_zero.mpr (Fintype.card_ne_zero :
     Fintype.card (Equiv.Perm (Fin n)) ≠ 0)]
 
+omit [DecidableEq a] [Fintype a] in
 theorem symmetricProjection_mem (n : ℕ) (f : TensorPower a n → ℂ) :
     symmetricProjection (a := a) n f ∈ symmetricSubspace (a := a) n := by
   intro τ
@@ -1338,6 +1372,7 @@ theorem symmetricProjection_mem (n : ℕ) (f : TensorPower a n → ℂ) :
   simp
   exact congrArg f (mul_smul σ τ x).symm
 
+omit [Fintype a] in
 /-- The projected coordinate delta lies in the symmetric subspace. -/
 theorem symmetricProjection_basisDelta_mem {n : ℕ} (y : TensorPower a n) :
     symmetricProjection (a := a) n (tensorPowerBasisDelta (a := a) y) ∈
@@ -1723,6 +1758,7 @@ theorem tensorPowerProfileVector_linearIndependent {n : ℕ} :
     inv_ne_zero (Nat.cast_ne_zero.mpr (p.class_card_ne_zero (a := a)))
   exact (mul_eq_zero.mp happ).resolve_right hinv_ne
 
+omit [DecidableEq a] [Fintype a] in
 theorem symmetricProjection_idempotent (n : ℕ) (f : TensorPower a n → ℂ) :
     symmetricProjection (a := a) n (symmetricProjection (a := a) n f) =
       symmetricProjection (a := a) n f :=
@@ -1757,6 +1793,7 @@ theorem symmetricProjectionMatrix_posSemidef (n : ℕ) :
   rw [symmetricProjectionMatrix_conjTranspose, symmetricProjectionMatrix_idempotent] at hpsd
   exact hpsd
 
+omit [Fintype a] in
 /-- The complement of the matrix Reynolds projection is Hermitian. -/
 theorem symmetricProjectionMatrix_complement_isHermitian (n : ℕ) :
     (1 - symmetricProjectionMatrix (a := a) n).IsHermitian := by
@@ -1788,6 +1825,7 @@ theorem symmetricProjectionMatrix_le_one (n : ℕ) :
   change (1 - symmetricProjectionMatrix (a := a) n).PosSemidef
   exact symmetricProjectionMatrix_complement_posSemidef (a := a) n
 
+omit [DecidableEq a] [Fintype a] in
 theorem mem_symmetric_iff_projection_eq_self (n : ℕ) (f : TensorPower a n → ℂ) :
     f ∈ symmetricSubspace (a := a) n ↔ symmetricProjection (a := a) n f = f := by
   constructor
@@ -2045,6 +2083,7 @@ theorem tensorPowerSwapMatrix_two_sq :
   ext x y
   simp [Matrix.one_apply, twoCopySwapPerm]
 
+omit [Fintype a] in
 private theorem permutationMatrix_sum_fin_two :
     (∑ σ : Equiv.Perm (Fin 2), permutationMatrix (a := a) 2 σ) =
       1 + tensorPowerSwapMatrix_two (a := a) := by
@@ -2067,6 +2106,7 @@ private theorem permutationMatrix_sum_fin_two :
   · intro hnot_mem
     exact (hnot_mem (by simp [twoCopySwapPerm])).elim
 
+omit [Fintype a] in
 /-- On two tensor copies, the Reynolds projection is `1/2 * (1 + F)`. -/
 theorem symmetricProjectionMatrix_two_eq_half_one_add_swap :
     symmetricProjectionMatrix (a := a) 2 =
@@ -2125,6 +2165,7 @@ theorem twoCopyTensorWord_coords (x : TensorPower a 2) :
   ext r
   fin_cases r <;> simp
 
+omit [DecidableEq a] [Fintype a] in
 theorem permEquiv_twoCopySwapPerm_twoCopyTensorWord (i j : a) :
     permEquiv (a := a) 2 twoCopySwapPerm (twoCopyTensorWord (a := a) i j) =
       twoCopyTensorWord (a := a) j i := by
@@ -2132,6 +2173,7 @@ theorem permEquiv_twoCopySwapPerm_twoCopyTensorWord (i j : a) :
   ext r
   fin_cases r <;> simp [tensorPowerEquiv_permEquiv, twoCopySwapPerm]
 
+omit [DecidableEq a] [Fintype a] in
 @[simp]
 theorem permEquiv_twoCopySwapPerm_permEquiv_twoCopySwapPerm (x : TensorPower a 2) :
     permEquiv (a := a) 2 twoCopySwapPerm
@@ -2158,6 +2200,7 @@ theorem antisymmetricPairVector_self (i : a) :
   ext x
   simp [antisymmetricPairVector]
 
+omit [Fintype a] in
 theorem antisymmetricPairVector_comp_permEquiv_twoCopySwapPerm (i j : a) :
     (fun x => antisymmetricPairVector (a := a) i j
       (permEquiv (a := a) 2 twoCopySwapPerm x)) =
@@ -2196,6 +2239,7 @@ theorem tensorPowerSwapMatrix_two_mulVec_antisymmetricPairVector (i j : a) :
     _ = -antisymmetricPairVector (a := a) i j :=
           antisymmetricPairVector_swap (a := a) i j
 
+omit [Fintype a] in
 /-- On two tensor copies, the antisymmetric projection is `1/2 * (1 - F)`. -/
 theorem antisymmetricProjectionMatrix_two_eq_half_one_sub_swap :
     antisymmetricProjectionMatrix_two (a := a) =
@@ -2601,6 +2645,7 @@ theorem antisymmetricProjectionMatrix_two_mul_tensorPowerSwapMatrix_two :
   simp [Matrix.sub_apply, Matrix.smul_apply]
   ring
 
+omit [Fintype a] in
 /-- The symmetric and antisymmetric two-copy projections sum to the identity. -/
 theorem symmetricProjectionMatrix_two_add_antisymmetricProjectionMatrix_two :
     symmetricProjectionMatrix (a := a) 2 + antisymmetricProjectionMatrix_two (a := a) = 1 := by
@@ -2654,6 +2699,7 @@ theorem antisymmetricProjectionMatrix_two_trace_ne_zero [Nontrivial a] :
     exact_mod_cast (ne_of_gt (Fintype.one_lt_card (α := a)))
   exact div_ne_zero (mul_ne_zero hcard_pos hcard_ne_one) (by norm_num)
 
+omit [Fintype a] in
 theorem symmetricProjection_basisDelta_value_eq_of_typeProfile_eq {n : ℕ}
     (y : TensorPower a n) {x z : TensorPower a n}
     (hxz : tensorPowerTypeProfile (a := a) n x =

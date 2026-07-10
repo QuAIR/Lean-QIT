@@ -140,6 +140,7 @@ namespace TensorPower
 
 variable {b : Type v} [Fintype b] [DecidableEq b]
 
+omit [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b] in
 /-- First-coordinate projection of `tensorPowerProdEquiv`, read at a tensor
 position. -/
 theorem tensorPowerProdEquiv_fst_apply
@@ -157,6 +158,7 @@ theorem tensorPowerProdEquiv_fst_apply
               simp [tensorPowerProdEquiv, tensorPowerEquiv]
               exact ih tail i
 
+omit [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b] in
 /-- Second-coordinate projection of `tensorPowerProdEquiv`, read at a tensor
 position. -/
 theorem tensorPowerProdEquiv_snd_apply
@@ -722,6 +724,7 @@ def outputReferenceCoordEquiv (k : ℕ) (m : Fin k) :
     · funext i
       exact coordSplitEquiv_symm_apply_snd (a := a) k m (yr, PUnit.unit) ytail i
 
+omit [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b] in
 @[simp]
 theorem outputReferenceCoordEquiv_apply_fst_fst
     (k : ℕ) (m : Fin k) (x : Prod (TensorPower b 1) (TensorPower a k)) :
@@ -729,6 +732,7 @@ theorem outputReferenceCoordEquiv_apply_fst_fst
       tensorPowerEquiv (a := a) k x.2 m :=
   rfl
 
+omit [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b] in
 @[simp]
 theorem outputReferenceCoordEquiv_apply_fst_snd
     (k : ℕ) (m : Fin k) (x : Prod (TensorPower b 1) (TensorPower a k)) :
@@ -736,6 +740,7 @@ theorem outputReferenceCoordEquiv_apply_fst_snd
       x.1.1 :=
   rfl
 
+omit [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b] in
 @[simp]
 theorem outputReferenceCoordEquiv_apply_snd
     (k : ℕ) (m : Fin k) (x : Prod (TensorPower b 1) (TensorPower a k))
@@ -1065,8 +1070,10 @@ def commonOutputReferenceEffectAt (E : CMatrix (Prod a b))
     (TensorPower.outputReferenceCoordEquiv (a := a) (b := b) k m)
     (TensorPower.outputReferenceCoordEquiv (a := a) (b := b) k m)
 
+omit [Fintype a] [Fintype b] [DecidableEq b] in
 @[simp]
-theorem commonOutputReferenceEffectAt_eq (E : CMatrix (Prod a b))
+theorem commonOutputReferenceEffectAt_eq
+    (E : CMatrix (Prod a b))
     (k : ℕ) (m : Fin k) :
     commonOutputReferenceEffectAt (a := a) (b := b) E k m =
       (Matrix.kronecker E
@@ -1075,6 +1082,7 @@ theorem commonOutputReferenceEffectAt_eq (E : CMatrix (Prod a b))
         (TensorPower.outputReferenceCoordEquiv (a := a) (b := b) k m) :=
   rfl
 
+omit [DecidableEq b] in
 /-- The lifted common-output/reference effect is positive whenever the local
 effect is positive. -/
 theorem commonOutputReferenceEffectAt_posSemidef
@@ -1084,6 +1092,7 @@ theorem commonOutputReferenceEffectAt_posSemidef
   exact (hE.kronecker Matrix.PosSemidef.one).submatrix
     (TensorPower.outputReferenceCoordEquiv (a := a) (b := b) k m)
 
+omit [Fintype a] [Fintype b] in
 /-- Complementing a lifted common-output/reference effect is the same as
 lifting the complement effect. -/
 theorem one_sub_commonOutputReferenceEffectAt
@@ -1182,7 +1191,7 @@ theorem effectTrace_reindex {α : Type u} {β : Type v}
   rw [← hρ]
   exact congrArg Complex.re (trace_mul_submatrix_equiv e (ρ.reindex e).matrix E)
 
-private theorem partialTraceB_mul_kronecker_one_left
+omit [DecidableEq a] in private theorem partialTraceB_mul_kronecker_one_left
     {b : Type v} [Fintype b] [DecidableEq b]
     (X : CMatrix (Prod a b)) (U : CMatrix a) :
     partialTraceB (a := a) (b := b) (X * Matrix.kronecker U (1 : CMatrix b)) =
@@ -1192,7 +1201,7 @@ private theorem partialTraceB_mul_kronecker_one_left
     Matrix.one_apply, Fintype.sum_prod_type, Finset.sum_mul]
   rw [Finset.sum_comm]
 
-private theorem partialTraceB_mul_trace_eq_trace_mul_kronecker_one_left
+omit [DecidableEq a] in private theorem partialTraceB_mul_trace_eq_trace_mul_kronecker_one_left
     {b : Type v} [Fintype b] [DecidableEq b]
     (X : CMatrix (Prod a b)) (U : CMatrix a) :
     ((partialTraceB (a := a) (b := b) X) * U).trace =

@@ -1225,16 +1225,6 @@ theorem asymptoticAEP_statement_of_min_and_max_duality
 
 end State
 
-/- One-shot decoupling bound (Hayden theo:oneshot):
-
-E || psi^RE - pi^R otimes phi^E ||_1 <= sqrt(|R||E| Tr[(phi^AE)^2]).
-
-Source: Hayden et al. 2007, theo:oneshot at lines 312-321. -/
-def oneShotDecoupling_statement
-    {r : Type u} [Fintype r] [DecidableEq r]
-    (_ρ : State (Prod (Prod a r) b)) : Prop :=
-  True
-
 end
 
 end QIT

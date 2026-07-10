@@ -173,9 +173,56 @@ theorem normalizedTraceDistance_le_sqrt_one_sub_overlapSq (ψ φ : PureVector a)
   change (1 / 2 : ℝ) * traceNorm D ≤ Real.sqrt (1 - ψ.overlapSq φ)
   exact Real.le_sqrt_of_sq_le hsq_normDist
 
+/-- Uhlmann purification selection upgraded to a pure-state trace-distance
+bound.  Given a purification `Ψ` of `ρ` on a sufficiently large reference,
+choose a purification `Φ` of `σ` whose squared overlap attains the squared
+fidelity, then apply the pure-state trace-distance estimate.  This is the
+generic purification bridge used by the ADHW FQSW Bob-isometry assembly. -/
+theorem exists_purification_normalizedTraceDistance_le_sqrt_one_sub_squaredFidelity
+    {r : Type v} [Fintype r] [DecidableEq r]
+    {ρ σ : State a} {Ψ : PureVector (Prod r a)}
+    (hΨ : Ψ.Purifies ρ) (hcard : Fintype.card a ≤ Fintype.card r) :
+    ∃ Φ : PureVector (Prod r a),
+      Φ.Purifies σ ∧
+        Ψ.state.normalizedTraceDistance Φ.state ≤
+          Real.sqrt (1 - ρ.squaredFidelity σ) := by
+  obtain ⟨Φ, hΦ, hoverlap⟩ :=
+    exists_purification_with_overlapSq_eq_squaredFidelity hΨ hcard
+  refine ⟨Φ, hΦ, ?_⟩
+  calc
+    Ψ.state.normalizedTraceDistance Φ.state
+        ≤ Real.sqrt (1 - Ψ.overlapSq Φ) :=
+          normalizedTraceDistance_le_sqrt_one_sub_overlapSq Ψ Φ
+    _ = Real.sqrt (1 - ρ.squaredFidelity σ) := by
+          rw [hoverlap]
+
 end PureVector
 
 namespace State
+
+/-- Squared fidelity between normalized finite-dimensional states is at most
+one.  This follows from Uhlmann's overlap maximizer and nonnegativity of the
+pure-state overlap deficit. -/
+theorem squaredFidelity_le_one (ρ σ : State a) :
+    ρ.squaredFidelity σ ≤ 1 := by
+  classical
+  obtain ⟨U, hUeq, _⟩ :=
+    State.exists_referenceUnitary_canonicalPurification_overlapSq_eq_squaredFidelity ρ σ
+  have hdeficit :
+      0 ≤ 1 -
+        ρ.canonicalPurification.overlapSq
+          (U.applyPureVector σ.canonicalPurification) :=
+    PureVector.one_sub_overlapSq_nonneg ρ.canonicalPurification
+      (U.applyPureVector σ.canonicalPurification)
+  rw [← hUeq] at hdeficit
+  linarith
+
+/-- Root fidelity between normalized finite-dimensional states is at most one. -/
+theorem fidelity_le_one (ρ σ : State a) : ρ.fidelity σ ≤ 1 := by
+  have hsq := squaredFidelity_le_one ρ σ
+  rw [State.squaredFidelity_eq_fidelity_sq] at hsq
+  have hnon := State.fidelity_nonneg ρ σ
+  nlinarith [sq_nonneg (ρ.fidelity σ - 1)]
 
 private theorem audenaert_half_ge_one_sub_normalizedTraceDistance (ρ σ : State a) :
     ((ρ.sqrtMatrix * σ.sqrtMatrix).trace).re ≥
@@ -230,6 +277,28 @@ theorem fuchs_van_de_graaf_lower (ρ σ : State a) :
   have hF := trace_re_sqrt_mul_sqrt_le_fidelity ρ σ
   linarith
 
+/-- Squared-fidelity deficit is controlled by twice the normalized trace
+distance.  This is the scalar form used by Uhlmann-to-protocol conversions. -/
+theorem one_sub_squaredFidelity_le_two_mul_normalizedTraceDistance (ρ σ : State a) :
+    1 - ρ.squaredFidelity σ ≤ 2 * ρ.normalizedTraceDistance σ := by
+  let F : ℝ := ρ.fidelity σ
+  let D : ℝ := ρ.normalizedTraceDistance σ
+  have hFnon : 0 ≤ F := by
+    simpa [F] using State.fidelity_nonneg ρ σ
+  have hFle : F ≤ 1 := by
+    simpa [F] using State.fidelity_le_one ρ σ
+  have hDnon : 0 ≤ D := by
+    simpa [D] using State.normalizedTraceDistance_nonneg ρ σ
+  have hdef : 1 - F ≤ D := by
+    simpa [F, D] using State.fuchs_van_de_graaf_lower ρ σ
+  have hone_add_nonneg : 0 ≤ 1 + F := by linarith
+  have hone_add_le : 1 + F ≤ 2 := by linarith
+  have hmul : (1 - F) * (1 + F) ≤ D * 2 :=
+    mul_le_mul hdef hone_add_le hone_add_nonneg hDnon
+  rw [State.squaredFidelity_eq_fidelity_sq]
+  change 1 - F ^ 2 ≤ 2 * D
+  nlinarith
+
 /--
 Fuchs--van de Graaf upper bound, using the local root-fidelity convention.
 
@@ -279,6 +348,65 @@ theorem fuchs_van_de_graaf (ρ σ : State a) :
   ⟨fuchs_van_de_graaf_lower ρ σ, fuchs_van_de_graaf_upper ρ σ⟩
 
 end State
+
+namespace PureVector
+
+/-- Uhlmann purification selection controlled directly by the normalized trace
+distance of the purified marginal.  This is the scalar bridge used in the ADHW
+FQSW route after the decoupling estimate: Fuchs--van de Graaf lower gives
+`1 - F(ρ,σ) ≤ D(ρ,σ)`, `F ≤ 1` gives `1 - F(ρ,σ)^2 ≤ 2D(ρ,σ)`, and the
+previous Uhlmann-to-pure-distance bridge finishes the estimate. -/
+theorem exists_purification_normalizedTraceDistance_le_sqrt_two_mul_normalizedTraceDistance
+    {r : Type v} [Fintype r] [DecidableEq r]
+    {ρ σ : State a} {Ψ : PureVector (Prod r a)}
+    (hΨ : Ψ.Purifies ρ) (hcard : Fintype.card a ≤ Fintype.card r) :
+    ∃ Φ : PureVector (Prod r a),
+      Φ.Purifies σ ∧
+        Ψ.state.normalizedTraceDistance Φ.state ≤
+          Real.sqrt (2 * ρ.normalizedTraceDistance σ) := by
+  obtain ⟨Φ, hΦ, hdist⟩ :=
+    exists_purification_normalizedTraceDistance_le_sqrt_one_sub_squaredFidelity hΨ hcard
+  refine ⟨Φ, hΦ, hdist.trans ?_⟩
+  exact Real.sqrt_le_sqrt
+    (State.one_sub_squaredFidelity_le_two_mul_normalizedTraceDistance ρ σ)
+
+/-- Uhlmann plus purification equivalence as a reference-isometry bridge.
+Given an actual purification `Ψ` of `ρ` and an ideal purification `Θ` of `σ`,
+choose a reference-side isometry from the actual reference to the ideal
+reference so that the transformed actual pure state is close to the ideal pure
+state.  The bound is controlled by the marginal normalized trace distance. -/
+theorem exists_referenceIsometry_applyPureVector_normalizedTraceDistance_le_sqrt_two_mul_normalizedTraceDistance
+    {r₁ : Type v} {r₂ : Type*} [Fintype r₁] [DecidableEq r₁]
+    [Fintype r₂] [DecidableEq r₂]
+    {ρ σ : State a} {Ψ : PureVector (Prod r₁ a)} {Θ : PureVector (Prod r₂ a)}
+    (hΨ : Ψ.Purifies ρ) (hΘ : Θ.Purifies σ)
+    (hcardTarget : Fintype.card a ≤ Fintype.card r₁)
+    (hcardRef : Fintype.card r₁ ≤ Fintype.card r₂) :
+    ∃ V : ReferenceIsometry r₁ r₂,
+      (V.applyPureVector Ψ).state.normalizedTraceDistance Θ.state ≤
+        Real.sqrt (2 * ρ.normalizedTraceDistance σ) := by
+  obtain ⟨Φ, hΦ, hoverlap⟩ :=
+    exists_purification_with_overlapSq_eq_squaredFidelity hΨ hcardTarget
+  obtain ⟨V, hV⟩ :=
+    exists_referenceIsometry_applyPureVector_eq_of_purifies_same_state hΦ hΘ hcardRef
+  refine ⟨V, ?_⟩
+  calc
+    (V.applyPureVector Ψ).state.normalizedTraceDistance Θ.state
+        = (V.applyPureVector Ψ).state.normalizedTraceDistance
+            (V.applyPureVector Φ).state := by
+          rw [← hV]
+    _ ≤ Real.sqrt (1 - (V.applyPureVector Ψ).overlapSq (V.applyPureVector Φ)) :=
+          normalizedTraceDistance_le_sqrt_one_sub_overlapSq
+            (V.applyPureVector Ψ) (V.applyPureVector Φ)
+    _ = Real.sqrt (1 - Ψ.overlapSq Φ) := by
+          rw [V.overlapSq_applyPureVector Ψ Φ]
+    _ = Real.sqrt (1 - ρ.squaredFidelity σ) := by
+          rw [hoverlap]
+    _ ≤ Real.sqrt (2 * ρ.normalizedTraceDistance σ) :=
+          Real.sqrt_le_sqrt
+            (State.one_sub_squaredFidelity_le_two_mul_normalizedTraceDistance ρ σ)
+
+end PureVector
 
 end
 

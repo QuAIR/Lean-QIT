@@ -223,8 +223,8 @@ theorem Matrix.Supports.kronecker_of_posSemidef
     rcases x with ⟨i, j⟩
     have hcases : d1 i = 0 ∨ d2 j = 0 := mul_eq_zero.mp hx
     rcases hcases with hi | hj
-    · simp [Matrix.kronecker, Matrix.kroneckerMap_apply, hdiagZero1 i hi]
-    · simp [Matrix.kronecker, Matrix.kroneckerMap_apply, hdiagZero2 j hj]
+    · simp [Matrix.kroneckerMap_apply, hdiagZero1 i hi]
+    · simp [Matrix.kroneckerMap_apply, hdiagZero2 j hj]
   have hprodDiag' :
       Matrix.Supports
         ((U : CMatrix (Prod a b)) * Matrix.kronecker rhoA rhoB * star (U : CMatrix (Prod a b)))
@@ -257,8 +257,8 @@ theorem Matrix.Supports.kronecker_of_posSemidef
   let rhoProd : CMatrix (Prod a b) := Matrix.kronecker rhoA rhoB
   let refProd : CMatrix (Prod a b) := Matrix.kronecker refA refB
   have hstarU_U : star Umat * Umat = 1 := by
-    simpa [Umat] using (Unitary.coe_star_mul_self U : star (U : CMatrix (Prod a b)) *
-      (U : CMatrix (Prod a b)) = 1)
+    change star (U : CMatrix (Prod a b)) * (U : CMatrix (Prod a b)) = 1
+    exact Unitary.coe_star_mul_self U
   have hmatRef : (Umat * refProd * star Umat) * Umat = Umat * refProd := by
     calc
       (Umat * refProd * star Umat) * Umat =

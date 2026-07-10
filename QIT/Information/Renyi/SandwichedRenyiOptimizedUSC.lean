@@ -187,6 +187,7 @@ theorem cMatrix_rpow_add_psd {A : CMatrix a} (hA : A.PosSemidef) {p q : ℝ}
     · simp [hij]
   rw [hDp, hDq, hDpq, hconjConj, hconjConj, hconjConj, ← map_mul, hDiagMul]
 
+omit [DecidableEq a] in
 /-- Trace pairing against a right identity Kronecker factor reduces to the
 partial trace over the right subsystem.
 

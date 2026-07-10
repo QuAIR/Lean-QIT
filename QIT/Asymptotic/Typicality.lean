@@ -193,6 +193,74 @@ theorem spectralPredicateProjector_trace_mul_re
       intro i _
       by_cases hi : p i <;> simp [hi]
 
+/-- Compressing a Hermitian matrix to a spectral predicate projector is bounded
+above by any scalar upper bound on the selected eigenvalues. -/
+theorem spectralPredicateProjector_compress_le
+    (H : CMatrix a) (hH : H.IsHermitian) (p : a → Prop) [DecidablePred p]
+    {c : ℝ} (hp : ∀ i, p i → hH.eigenvalues i ≤ c) :
+    spectralPredicateProjector H hH p * H * spectralPredicateProjector H hH p ≤
+      (↑c : ℂ) • spectralPredicateProjector H hH p := by
+  classical
+  let U : CMatrix a := hH.eigenvectorUnitary
+  let Λ : CMatrix a := Matrix.diagonal (fun i => (hH.eigenvalues i : ℂ))
+  let D : CMatrix a := Matrix.diagonal (fun i => if p i then (1 : ℂ) else 0)
+  have hspec : H = U * Λ * star U := by
+    simpa [U, Λ, Function.comp_def, Unitary.conjStarAlgAut_apply]
+      using hH.spectral_theorem
+  have hU : star U * U = 1 := by
+    simp [U, Unitary.coe_star_mul_self hH.eigenvectorUnitary]
+  set P : CMatrix a := spectralPredicateProjector H hH p with hP_def
+  have hP : P = U * D * star U := by
+    rw [hP_def]
+    rfl
+  have hPHP : P * H * P = U * (D * Λ * D) * star U := by
+    conv_lhs => rw [hP, hspec]
+    conv_lhs =>
+      rw [show (U * D * star U) * (U * Λ * star U) =
+            U * D * (star U * U) * Λ * star U by noncomm_ring]
+      rw [show U * D * (star U * U) * Λ * star U * (U * D * star U) =
+            U * D * (star U * U) * Λ * (star U * U) * D * star U by
+          noncomm_ring]
+      simp only [hU, one_mul, mul_one]
+    noncomm_ring
+  have hcP : (↑c : ℂ) • P = U * ((↑c : ℂ) • D) * star U := by
+    rw [hP]
+    calc
+      (↑c : ℂ) • (U * D * star U) =
+          ((↑c : ℂ) • (U * D)) * star U := by rw [← Matrix.smul_mul]
+      _ = (U * ((↑c : ℂ) • D)) * star U := by rw [← Matrix.mul_smul]
+      _ = U * ((↑c : ℂ) • D) * star U := rfl
+  rw [Matrix.le_iff]
+  rw [show (↑c : ℂ) • P - P * H * P =
+        U * ((↑c : ℂ) • D - D * Λ * D) * star U by
+      rw [hcP, hPHP]
+      noncomm_ring]
+  rw [Matrix.IsUnit.posSemidef_star_right_conjugate_iff (Unitary.isUnit_coe :
+    IsUnit (hH.eigenvectorUnitary : CMatrix a))]
+  have hdiag_inner :
+      ((↑c : ℂ) • D - D * Λ * D : CMatrix a) =
+        Matrix.diagonal (fun i =>
+          if p i then (↑c : ℂ) - hH.eigenvalues i else 0) := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      by_cases hi : p i
+      all_goals simp [hi, D, Λ, Matrix.diagonal_apply_eq, Matrix.diagonal_mul_diagonal]
+    · have hne : ∀ (f : a → ℂ), Matrix.diagonal f i j = 0 :=
+        fun f => Matrix.diagonal_apply_ne f hij
+      simp only [D, Λ, ← Matrix.diagonal_smul, Matrix.diagonal_mul_diagonal]
+      conv_lhs => rw [show ∀ (A B : CMatrix a), (A - B) i j = A i j - B i j
+        from fun _ _ => rfl]
+      simp only [hne, sub_zero]
+  rw [hdiag_inner]
+  rw [Matrix.posSemidef_diagonal_iff]
+  intro i
+  by_cases hi : p i
+  · simp only [hi, if_true]
+    exact_mod_cast sub_nonneg.mpr (hp i hi)
+  · simp only [hi, if_false]
+    exact le_refl _
+
 /-- The Schumacher compression rate equals the von Neumann entropy.
 
 rate(rho) = S(rho) = -sum lambda_i log2(lambda_i). -/
@@ -503,6 +571,32 @@ theorem typicalSubspaceProjector_trace_mul_re (ρ : State a) (n : ℕ) (δ : ℝ
   unfold typicalSubspaceProjector
   unfold typicalSubspaceSpectralWeight
   exact spectralPredicateProjector_trace_mul_re _ _ _
+
+/-- The tensor-power state compressed to its spectral typical subspace is
+bounded by the usual typical eigenvalue envelope. -/
+theorem typicalSubspaceProjector_tensorPower_compress_le
+    (ρ : State a) (n : ℕ) (δ : ℝ) :
+    ρ.typicalSubspaceProjector n δ * (ρ.tensorPower n).matrix *
+        ρ.typicalSubspaceProjector n δ ≤
+      (((((2 : ℝ) ^ (-((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ))) : ℝ) : ℂ) •
+        ρ.typicalSubspaceProjector n δ) := by
+  classical
+  set c : ℝ := (2 : ℝ) ^ (-((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ))
+  have hp :
+      ∀ i : TensorPower a n,
+        typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i) →
+          (ρ.tensorPower n).pos.isHermitian.eigenvalues i ≤ c := by
+    intro i hi
+    dsimp [c]
+    exact ρ.typicalEigenvalue_le_eigenvalueUpperBound n δ
+      ((ρ.tensorPower n).pos.isHermitian.eigenvalues i) hi
+  simpa [typicalSubspaceProjector, c] using
+    (spectralPredicateProjector_compress_le
+      (H := (ρ.tensorPower n).matrix)
+      (hH := (ρ.tensorPower n).pos.isHermitian)
+      (p := fun i =>
+        typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i))
+      (c := c) hp)
 
 /-- The bundled projector statement used by downstream theorem routes. -/
 def typicalSubspaceProjector_statement
@@ -1143,6 +1237,85 @@ theorem typicalSubspaceDimension_le_two_pow (ρ : State a) (n : ℕ) (δ : ℝ) 
         exact ρ.typicalSubspaceSpectralWeight_le_one n δ
     _ = 2 ^ ((n : ℝ) * (ρ.vonNeumann + δ)) := by ring
 
+/-- The accepted spectral weight is bounded by the number of accepted spectral
+directions times the typical eigenvalue upper envelope. -/
+theorem typicalSubspaceSpectralWeight_le_dimension_mul_eigenvalueUpperBound
+    (ρ : State a) (n : ℕ) (δ : ℝ) :
+    ρ.typicalSubspaceSpectralWeight n δ ≤
+      ρ.typicalSubspaceDimension n δ *
+        2 ^ (-((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ)) := by
+  classical
+  let upper : ℝ := 2 ^ (-((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ))
+  have hupper_nonneg : 0 ≤ upper := by
+    exact Real.rpow_nonneg (by norm_num : (0 : ℝ) ≤ 2) _
+  unfold typicalSubspaceSpectralWeight typicalSubspaceDimension
+  calc
+    (∑ i : TensorPower a n,
+        if typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
+        then (ρ.tensorPower n).pos.isHermitian.eigenvalues i else 0)
+      ≤ ∑ i : TensorPower a n,
+          (if typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
+            then upper else 0) := by
+        apply Finset.sum_le_sum
+        intro i _
+        by_cases hi : typicalEigenvalue ρ n δ
+            ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
+        · simp only [hi, if_true]
+          exact ρ.typicalEigenvalue_le_eigenvalueUpperBound n δ _ hi
+        · simp only [hi, if_false, le_refl]
+    _ = (∑ i : TensorPower a n,
+          if typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
+          then (1 : ℝ) else 0) * upper := by
+        rw [Finset.sum_mul]
+        apply Finset.sum_congr rfl
+        intro i _
+        by_cases hi : typicalEigenvalue ρ n δ
+            ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
+        · simp only [hi, if_true, one_mul]
+        · simp only [hi, if_false, zero_mul]
+    _ = (∑ i : TensorPower a n,
+          if typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
+          then (1 : ℝ) else 0) *
+        2 ^ (-((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ)) := by
+        rfl
+
+/-- Finite rank lower bound from accepted weight at least `1/2` and one bit of
+exponent slack between the target rate window `δ` and the internal typicality
+window `δ'`. -/
+theorem two_pow_sub_le_typicalSubspaceDimension_of_half_le_spectralWeight
+    (ρ : State a) {n : ℕ} {δ δ' : ℝ}
+    (hweight : (1 / 2 : ℝ) ≤ ρ.typicalSubspaceSpectralWeight n δ')
+    (hslack : 1 ≤ (n : ℝ) * (δ - δ')) :
+    (2 : ℝ) ^ ((n : ℝ) * (ρ.vonNeumann - δ)) ≤
+      ρ.typicalSubspaceDimension n δ' := by
+  let lower : ℝ := (2 : ℝ) ^ ((n : ℝ) * (ρ.vonNeumann - δ))
+  let upper : ℝ := (2 : ℝ) ^ (-((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ'))
+  have hupper_pos : 0 < upper :=
+    Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _
+  have hweight_upper :
+      ρ.typicalSubspaceSpectralWeight n δ' ≤
+        ρ.typicalSubspaceDimension n δ' * upper :=
+    ρ.typicalSubspaceSpectralWeight_le_dimension_mul_eigenvalueUpperBound n δ'
+  have hhalf_le_dim_mul : (1 / 2 : ℝ) ≤ ρ.typicalSubspaceDimension n δ' * upper :=
+    hweight.trans hweight_upper
+  have hexponent_le :
+      (n : ℝ) * (ρ.vonNeumann - δ) +
+          (-((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ')) ≤ (-1 : ℝ) := by
+    linarith
+  have hprod_le_half : lower * upper ≤ (1 / 2 : ℝ) := by
+    calc
+      lower * upper =
+          (2 : ℝ) ^ ((n : ℝ) * (ρ.vonNeumann - δ) +
+            (-((n : ℝ) * ρ.vonNeumann - (n : ℝ) * δ'))) := by
+          rw [Real.rpow_add (by norm_num : (0 : ℝ) < 2)]
+      _ ≤ (2 : ℝ) ^ (-1 : ℝ) :=
+          Real.rpow_le_rpow_of_exponent_le (by norm_num : (1 : ℝ) ≤ 2) hexponent_le
+      _ = (1 / 2 : ℝ) := by
+          norm_num [Real.rpow_neg_one]
+  have hmul : lower * upper ≤ ρ.typicalSubspaceDimension n δ' * upper :=
+    hprod_le_half.trans hhalf_le_dim_mul
+  exact le_of_mul_le_mul_right hmul hupper_pos
+
 /-- The atypical spectral weight tends to zero as `n → ∞`.
 
 Combines the Chebyshev bridge `atypical ≤ secondMoment / (nδ)²` with the exact
@@ -1201,6 +1374,44 @@ theorem tendsto_typicalSubspaceSpectralWeight (ρ : State a) {δ : ℝ} (hδ : 0
     linarith [ρ.typicalSubspaceSpectralWeight_add_atypical n δ]
   rw [hCast]
   simpa using tendsto_const_nhds.sub (ρ.tendsto_atypicalSubspaceSpectralWeight hδ)
+
+/-- Eventually, the typical-subspace dimension dominates
+`2^{n(S(ρ)-δ)}` when the caller supplies a smaller positive internal
+typicality window `δ' < δ`. -/
+theorem eventually_two_pow_sub_le_typicalSubspaceDimension
+    (ρ : State a) {δ δ' : ℝ} (hδ' : 0 < δ') (hslack : δ' < δ) :
+    ∃ N : ℕ, ∀ n ≥ N,
+      (2 : ℝ) ^ ((n : ℝ) * (ρ.vonNeumann - δ)) ≤
+        ρ.typicalSubspaceDimension n δ' := by
+  have hhalf_eventually :
+      ∀ᶠ n : ℕ in atTop, (1 / 2 : ℝ) ≤ ρ.typicalSubspaceSpectralWeight n δ' := by
+    have hgt :
+        ∀ᶠ n : ℕ in atTop, (1 / 2 : ℝ) < ρ.typicalSubspaceSpectralWeight n δ' :=
+      (ρ.tendsto_typicalSubspaceSpectralWeight hδ').eventually
+        (Ioi_mem_nhds (by norm_num : (1 / 2 : ℝ) < 1))
+    exact hgt.mono fun _ hn => hn.le
+  have hgap_pos : 0 < δ - δ' := sub_pos.mpr hslack
+  have hslack_eventually :
+      ∀ᶠ n : ℕ in atTop, 1 ≤ (n : ℝ) * (δ - δ') := by
+    apply eventually_atTop.mpr
+    refine ⟨Nat.ceil (1 / (δ - δ')), fun n hn => ?_⟩
+    have hceil : 1 / (δ - δ') ≤ (Nat.ceil (1 / (δ - δ')) : ℝ) :=
+      Nat.le_ceil _
+    have hnR : (Nat.ceil (1 / (δ - δ')) : ℝ) ≤ (n : ℝ) := by
+      exact_mod_cast hn
+    have hone_div_le_n : 1 / (δ - δ') ≤ (n : ℝ) := hceil.trans hnR
+    have hmul := mul_le_mul_of_nonneg_right hone_div_le_n hgap_pos.le
+    have hcancel : (1 / (δ - δ')) * (δ - δ') = 1 := by
+      field_simp [ne_of_gt hgap_pos]
+    linarith
+  have hevent :
+      ∀ᶠ n : ℕ in atTop,
+        (2 : ℝ) ^ ((n : ℝ) * (ρ.vonNeumann - δ)) ≤
+          ρ.typicalSubspaceDimension n δ' := by
+    filter_upwards [hhalf_eventually, hslack_eventually] with n hweight hnslack
+    exact ρ.two_pow_sub_le_typicalSubspaceDimension_of_half_le_spectralWeight
+      hweight hnslack
+  exact Filter.eventually_atTop.mp hevent
 
 end State
 
