@@ -827,8 +827,8 @@ theorem sandwichedRenyiPSDReferenceE_mono_posDef_reference_of_deriv_nonneg
     {alpha beta : {alpha : Real // 1 < alpha}} (hab : alpha.1 ≤ beta.1) :
     sandwichedRenyiPSDReferenceE rho sigma hsigma.posSemidef alpha.1 ≤
       sandwichedRenyiPSDReferenceE rho sigma hsigma.posSemidef beta.1 := by
-  rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt alpha.2)),
-    sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt beta.2))]
+  rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ alpha.2,
+    sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ beta.2]
   exact
     sandwichedRenyiPSDReferenceHighAlphaE_mono_posDef_reference_of_finite_mono
       rho hsigma
@@ -864,8 +864,8 @@ theorem sandwichedRenyiPSDReferenceE_mono_of_highAlphaFinite_mono
           sandwichedRenyiPSDReferenceHighAlphaFinite rho sigma hsigma beta.1) :
     sandwichedRenyiPSDReferenceE rho sigma hsigma alpha.1 ≤
       sandwichedRenyiPSDReferenceE rho sigma hsigma beta.1 := by
-  rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt alpha.2)),
-    sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt beta.2))]
+  rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ alpha.2,
+    sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ beta.2]
   exact sandwichedRenyiPSDReferenceHighAlphaE_mono_of_finite_mono
     rho hsigma hfinite
 

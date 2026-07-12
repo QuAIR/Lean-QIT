@@ -754,32 +754,32 @@ theorem hypothesisTestingBeta_reindex
   le_antisymm (hypothesisTestingBeta_reindex_le ρ σ ε hε e)
     (hypothesisTestingBeta_le_reindex ρ σ ε hε e)
 
+theorem hypothesisTestingRelativeEntropyFinite_reindex
+    {α : Type u} {β : Type v} [Fintype α] [DecidableEq α]
+    [Fintype β] [DecidableEq β]
+    (ρ σ : State α) (ε : ℝ) (hε : 0 ≤ ε) (e : α ≃ β) :
+    (ρ.reindex e).hypothesisTestingRelativeEntropyFinite (σ.reindex e) ε =
+      ρ.hypothesisTestingRelativeEntropyFinite σ ε := by
+  rw [hypothesisTestingRelativeEntropyFinite_eq, hypothesisTestingRelativeEntropyFinite_eq,
+    hypothesisTestingBeta_reindex ρ σ ε hε e]
+
 theorem hypothesisTestingRelativeEntropy_reindex
     {α : Type u} {β : Type v} [Fintype α] [DecidableEq α]
     [Fintype β] [DecidableEq β]
     (ρ σ : State α) (ε : ℝ) (hε : 0 ≤ ε) (e : α ≃ β) :
     (ρ.reindex e).hypothesisTestingRelativeEntropy (σ.reindex e) ε =
       ρ.hypothesisTestingRelativeEntropy σ ε := by
-  rw [hypothesisTestingRelativeEntropy_eq, hypothesisTestingRelativeEntropy_eq,
-    hypothesisTestingBeta_reindex ρ σ ε hε e]
-
-theorem hypothesisTestingRelativeEntropyE_reindex
-    {α : Type u} {β : Type v} [Fintype α] [DecidableEq α]
-    [Fintype β] [DecidableEq β]
-    (ρ σ : State α) (ε : ℝ) (hε : 0 ≤ ε) (e : α ≃ β) :
-    (ρ.reindex e).hypothesisTestingRelativeEntropyE (σ.reindex e) ε =
-      ρ.hypothesisTestingRelativeEntropyE σ ε := by
   have hβ := hypothesisTestingBeta_reindex ρ σ ε hε e
   by_cases hzero : ρ.hypothesisTestingBeta σ ε = 0
   · have hzero' :
         (ρ.reindex e).hypothesisTestingBeta (σ.reindex e) ε = 0 := by
       simpa [hβ] using hzero
-    simp [hypothesisTestingRelativeEntropyE, hzero, hzero']
+    simp [hypothesisTestingRelativeEntropy, hzero, hzero']
   · have hzero' :
         (ρ.reindex e).hypothesisTestingBeta (σ.reindex e) ε ≠ 0 := by
       simpa [hβ] using hzero
-    simp [hypothesisTestingRelativeEntropyE, hzero, hzero',
-      hypothesisTestingRelativeEntropy_reindex ρ σ ε hε e]
+    simp [hypothesisTestingRelativeEntropy, hzero, hzero',
+      hypothesisTestingRelativeEntropyFinite_reindex ρ σ ε hε e]
 
 private theorem prod_reindex_prodCongr_forHypothesisTestingDPI
     {α : Type u} {β : Type v} {γ : Type w} {δ : Type x}
@@ -792,29 +792,29 @@ private theorem prod_reindex_prodCongr_forHypothesisTestingDPI
   ext i j
   simp [State.reindex, State.prod, Matrix.kronecker]
 
-theorem hypothesisTestingMutualInformationE_reindex_prodCongr_le
+theorem hypothesisTestingMutualInformation_reindex_prodCongr_le
     {α : Type u} {β : Type v} {γ : Type w} {δ : Type x}
     [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
     [Fintype γ] [DecidableEq γ] [Fintype δ] [DecidableEq δ]
     (ρ : State (Prod α γ)) (ε : ℝ) (hε : 0 ≤ ε)
     (e : α ≃ β) (f : γ ≃ δ) :
-    (ρ.reindex (Equiv.prodCongr e f)).hypothesisTestingMutualInformationE ε ≤
-      ρ.hypothesisTestingMutualInformationE ε := by
+    (ρ.reindex (Equiv.prodCongr e f)).hypothesisTestingMutualInformation ε ≤
+      ρ.hypothesisTestingMutualInformation ε := by
   let ρ' : State (Prod β δ) := ρ.reindex (Equiv.prodCongr e f)
-  rw [hypothesisTestingMutualInformationE_eq_sInf]
+  rw [hypothesisTestingMutualInformation_eq_sInf]
   refine le_sInf ?_
   intro value hvalue
   rcases hvalue with ⟨σB, rfl⟩
   have houtMem :
-      ρ'.hypothesisTestingRelativeEntropyE
+      ρ'.hypothesisTestingRelativeEntropy
           (ρ'.marginalA.prod (σB.reindex f)) ε ∈
-        hypothesisTestingMutualInformationECandidateSet (a := β) (b := δ) ρ' ε := by
+        hypothesisTestingMutualInformationCandidateSet (a := β) (b := δ) ρ' ε := by
     exact ⟨σB.reindex f, rfl⟩
   have houtLe :
-      ρ'.hypothesisTestingMutualInformationE ε ≤
-        ρ'.hypothesisTestingRelativeEntropyE
+      ρ'.hypothesisTestingMutualInformation ε ≤
+        ρ'.hypothesisTestingRelativeEntropy
           (ρ'.marginalA.prod (σB.reindex f)) ε := by
-    rw [hypothesisTestingMutualInformationE_eq_sInf]
+    rw [hypothesisTestingMutualInformation_eq_sInf]
     exact sInf_le houtMem
   have hmarg : ρ'.marginalA = ρ.marginalA.reindex e := by
     simpa [ρ'] using State.marginalA_reindex_prodCongr ρ e f
@@ -825,33 +825,33 @@ theorem hypothesisTestingMutualInformationE_reindex_prodCongr_le
     exact (prod_reindex_prodCongr_forHypothesisTestingDPI
       ρ.marginalA σB e f).symm
   have hD :
-      ρ'.hypothesisTestingRelativeEntropyE
+      ρ'.hypothesisTestingRelativeEntropy
           ((ρ.marginalA.prod σB).reindex (Equiv.prodCongr e f)) ε =
-        ρ.hypothesisTestingRelativeEntropyE (ρ.marginalA.prod σB) ε := by
+        ρ.hypothesisTestingRelativeEntropy (ρ.marginalA.prod σB) ε := by
     simpa [ρ'] using
-      hypothesisTestingRelativeEntropyE_reindex ρ (ρ.marginalA.prod σB) ε hε
+      hypothesisTestingRelativeEntropy_reindex ρ (ρ.marginalA.prod σB) ε hε
         (Equiv.prodCongr e f)
   exact houtLe.trans (by simpa [hprod] using le_of_eq hD)
 
-theorem hypothesisTestingMutualInformationE_reindex_prodCongr
+theorem hypothesisTestingMutualInformation_reindex_prodCongr
     {α : Type u} {β : Type v} {γ : Type w} {δ : Type x}
     [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
     [Fintype γ] [DecidableEq γ] [Fintype δ] [DecidableEq δ]
     (ρ : State (Prod α γ)) (ε : ℝ) (hε : 0 ≤ ε)
     (e : α ≃ β) (f : γ ≃ δ) :
-    (ρ.reindex (Equiv.prodCongr e f)).hypothesisTestingMutualInformationE ε =
-      ρ.hypothesisTestingMutualInformationE ε := by
+    (ρ.reindex (Equiv.prodCongr e f)).hypothesisTestingMutualInformation ε =
+      ρ.hypothesisTestingMutualInformation ε := by
   let ρ' : State (Prod β δ) := ρ.reindex (Equiv.prodCongr e f)
   have hforward :
-      ρ'.hypothesisTestingMutualInformationE ε ≤
-        ρ.hypothesisTestingMutualInformationE ε := by
-    simpa [ρ'] using hypothesisTestingMutualInformationE_reindex_prodCongr_le
+      ρ'.hypothesisTestingMutualInformation ε ≤
+        ρ.hypothesisTestingMutualInformation ε := by
+    simpa [ρ'] using hypothesisTestingMutualInformation_reindex_prodCongr_le
       ρ ε hε e f
   have hback :
-      ρ.hypothesisTestingMutualInformationE ε ≤
-        ρ'.hypothesisTestingMutualInformationE ε := by
+      ρ.hypothesisTestingMutualInformation ε ≤
+        ρ'.hypothesisTestingMutualInformation ε := by
     have h :=
-      hypothesisTestingMutualInformationE_reindex_prodCongr_le
+      hypothesisTestingMutualInformation_reindex_prodCongr_le
         ρ' ε hε e.symm f.symm
     have hreindex : ρ'.reindex (Equiv.prodCongr e.symm f.symm) = ρ := by
       apply State.ext
@@ -933,13 +933,13 @@ theorem hypothesisTestingBeta_applyReferenceIsometry_le
   rw [ReferenceIsometry.pushForwardHypothesisTestingEffect_typeIIError V ρ σ ε Λ] at hle
   exact hle
 
-theorem hypothesisTestingRelativeEntropyE_le_applyReferenceIsometry
+theorem hypothesisTestingRelativeEntropy_le_applyReferenceIsometry
     {r₁ : Type x} {r₂ : Type y} [Fintype r₁] [DecidableEq r₁]
     [Fintype r₂] [DecidableEq r₂]
     (V : ReferenceIsometry r₁ r₂) (ρ σ : State (Prod r₁ a))
     (ε : ℝ) (hε : 0 ≤ ε) :
-    ρ.hypothesisTestingRelativeEntropyE σ ε ≤
-      State.hypothesisTestingRelativeEntropyE
+    ρ.hypothesisTestingRelativeEntropy σ ε ≤
+      State.hypothesisTestingRelativeEntropy
         (((Channel.ofReferenceIsometry V).prod (Channel.idChannel a)).applyState ρ)
         (((Channel.ofReferenceIsometry V).prod (Channel.idChannel a)).applyState σ)
         ε := by
@@ -954,12 +954,12 @@ theorem hypothesisTestingRelativeEntropyE_le_applyReferenceIsometry
       ρ'.hypothesisTestingBeta_nonneg_of_epsilon_nonneg σ' ε hε
     have hβout_zero : ρ'.hypothesisTestingBeta σ' ε = 0 :=
       le_antisymm (by simpa [hβin_zero] using hβle) hβout_nonneg
-    simp [hypothesisTestingRelativeEntropyE, hβin_zero, hβout_zero, ρ', σ']
+    simp [hypothesisTestingRelativeEntropy, hβin_zero, hβout_zero, ρ', σ']
   · have hβin_nonneg := ρ.hypothesisTestingBeta_nonneg_of_epsilon_nonneg σ ε hε
     have hβin_pos : 0 < ρ.hypothesisTestingBeta σ ε :=
       lt_of_le_of_ne' hβin_nonneg hβin_zero
     by_cases hβout_zero : ρ'.hypothesisTestingBeta σ' ε = 0
-    · simp [hypothesisTestingRelativeEntropyE, hβin_zero, hβout_zero, ρ', σ']
+    · simp [hypothesisTestingRelativeEntropy, hβin_zero, hβout_zero, ρ', σ']
     · have hβout_nonneg : 0 ≤ ρ'.hypothesisTestingBeta σ' ε :=
         ρ'.hypothesisTestingBeta_nonneg_of_epsilon_nonneg σ' ε hε
       have hβout_pos : 0 < ρ'.hypothesisTestingBeta σ' ε :=
@@ -972,15 +972,15 @@ theorem hypothesisTestingRelativeEntropyE_le_applyReferenceIsometry
           (Real.log_le_log hβout_pos hβle)
           (le_of_lt (Real.log_pos one_lt_two))
       have hrel :
-          ρ.hypothesisTestingRelativeEntropy σ ε ≤
-            ρ'.hypothesisTestingRelativeEntropy σ' ε := by
-        rw [hypothesisTestingRelativeEntropy_eq, hypothesisTestingRelativeEntropy_eq]
+          ρ.hypothesisTestingRelativeEntropyFinite σ ε ≤
+            ρ'.hypothesisTestingRelativeEntropyFinite σ' ε := by
+        rw [hypothesisTestingRelativeEntropyFinite_eq, hypothesisTestingRelativeEntropyFinite_eq]
         exact neg_le_neg hlog
       have hrelE :
-          (ρ.hypothesisTestingRelativeEntropy σ ε : EReal) ≤
-            (ρ'.hypothesisTestingRelativeEntropy σ' ε : EReal) := by
+          (ρ.hypothesisTestingRelativeEntropyFinite σ ε : EReal) ≤
+            (ρ'.hypothesisTestingRelativeEntropyFinite σ' ε : EReal) := by
         exact_mod_cast hrel
-      simpa [hypothesisTestingRelativeEntropyE, hβin_zero, hβout_zero, ρ', σ']
+      simpa [hypothesisTestingRelativeEntropy, hβin_zero, hβout_zero, ρ', σ']
         using hrelE
 
 theorem hypothesisTestingBeta_le_applyState
@@ -999,13 +999,13 @@ theorem hypothesisTestingBeta_le_applyState
   rw [Φ.pullbackHypothesisTestingEffect_typeIIError ρ σ ε Λ] at hle
   exact hle
 
-theorem hypothesisTestingRelativeEntropyE_applyState_le
+theorem hypothesisTestingRelativeEntropy_applyState_le
     (Φ : Channel a b) (ρ σ : State a) (ε : ℝ) (hε : 0 ≤ ε) :
-    (Φ.applyState ρ).hypothesisTestingRelativeEntropyE (Φ.applyState σ) ε ≤
-      ρ.hypothesisTestingRelativeEntropyE σ ε := by
+    (Φ.applyState ρ).hypothesisTestingRelativeEntropy (Φ.applyState σ) ε ≤
+      ρ.hypothesisTestingRelativeEntropy σ ε := by
   have hβle := ρ.hypothesisTestingBeta_le_applyState Φ σ ε hε
   by_cases hβin_zero : ρ.hypothesisTestingBeta σ ε = 0
-  · simp [hypothesisTestingRelativeEntropyE, hβin_zero]
+  · simp [hypothesisTestingRelativeEntropy, hβin_zero]
   · have hβin_nonneg := ρ.hypothesisTestingBeta_nonneg_of_epsilon_nonneg σ ε hε
     have hβin_pos : 0 < ρ.hypothesisTestingBeta σ ε :=
       lt_of_le_of_ne' hβin_nonneg hβin_zero
@@ -1022,16 +1022,16 @@ theorem hypothesisTestingRelativeEntropyE_applyState_le
       exact div_le_div_of_nonneg_right
         (Real.log_le_log hβin_pos hβle) (le_of_lt (Real.log_pos one_lt_two))
     have hrel :
-        (Φ.applyState ρ).hypothesisTestingRelativeEntropy (Φ.applyState σ) ε ≤
-          ρ.hypothesisTestingRelativeEntropy σ ε := by
-      rw [hypothesisTestingRelativeEntropy_eq, hypothesisTestingRelativeEntropy_eq]
+        (Φ.applyState ρ).hypothesisTestingRelativeEntropyFinite (Φ.applyState σ) ε ≤
+          ρ.hypothesisTestingRelativeEntropyFinite σ ε := by
+      rw [hypothesisTestingRelativeEntropyFinite_eq, hypothesisTestingRelativeEntropyFinite_eq]
       exact neg_le_neg hlog
     have hrelE :
-        ((Φ.applyState ρ).hypothesisTestingRelativeEntropy
+        ((Φ.applyState ρ).hypothesisTestingRelativeEntropyFinite
           (Φ.applyState σ) ε : EReal) ≤
-            (ρ.hypothesisTestingRelativeEntropy σ ε : EReal) := by
+            (ρ.hypothesisTestingRelativeEntropyFinite σ ε : EReal) := by
       exact_mod_cast hrel
-    simpa [hypothesisTestingRelativeEntropyE, hβin_zero, hβout_zero] using hrelE
+    simpa [hypothesisTestingRelativeEntropy, hβin_zero, hβout_zero] using hrelE
 
 /-- A right-local channel preserves the left marginal. -/
 theorem marginalA_applyState_id_prod
@@ -1130,29 +1130,29 @@ theorem marginalA_applyState_prod_id
 
 /-- Optimized extended-real hypothesis-testing mutual information does not
 decrease when the first/reference register is embedded by an isometry. -/
-theorem hypothesisTestingMutualInformationE_le_applyReferenceIsometry
+theorem hypothesisTestingMutualInformation_le_applyReferenceIsometry
     {r₁ : Type x} {r₂ : Type y} [Fintype r₁] [DecidableEq r₁]
     [Fintype r₂] [DecidableEq r₂]
     (V : ReferenceIsometry r₁ r₂) (ρ : State (Prod r₁ a))
     (ε : ℝ) (hε : 0 ≤ ε) :
-    ρ.hypothesisTestingMutualInformationE ε ≤
-      State.hypothesisTestingMutualInformationE
+    ρ.hypothesisTestingMutualInformation ε ≤
+      State.hypothesisTestingMutualInformation
         (((Channel.ofReferenceIsometry V).prod (Channel.idChannel a)).applyState ρ)
         ε := by
   let ρ' : State (Prod r₂ a) :=
     ((Channel.ofReferenceIsometry V).prod (Channel.idChannel a)).applyState ρ
-  rw [hypothesisTestingMutualInformationE_eq_sInf]
+  rw [hypothesisTestingMutualInformation_eq_sInf]
   refine le_sInf ?_
   intro value hvalue
   rcases hvalue with ⟨σA, rfl⟩
   have hinMem :
-      ρ.hypothesisTestingRelativeEntropyE (ρ.marginalA.prod σA) ε ∈
-        hypothesisTestingMutualInformationECandidateSet (a := r₁) (b := a) ρ ε := by
+      ρ.hypothesisTestingRelativeEntropy (ρ.marginalA.prod σA) ε ∈
+        hypothesisTestingMutualInformationCandidateSet (a := r₁) (b := a) ρ ε := by
     exact ⟨σA, rfl⟩
   have hinLe :
-      ρ.hypothesisTestingMutualInformationE ε ≤
-        ρ.hypothesisTestingRelativeEntropyE (ρ.marginalA.prod σA) ε := by
-    rw [hypothesisTestingMutualInformationE_eq_sInf]
+      ρ.hypothesisTestingMutualInformation ε ≤
+        ρ.hypothesisTestingRelativeEntropy (ρ.marginalA.prod σA) ε := by
+    rw [hypothesisTestingMutualInformation_eq_sInf]
     exact sInf_le hinMem
   have hprod :
       ρ'.marginalA.prod σA =
@@ -1161,21 +1161,21 @@ theorem hypothesisTestingMutualInformationE_le_applyReferenceIsometry
     simpa [ρ', marginalA_applyState_prod_id] using
       (applyState_prod_id_prod ρ.marginalA σA (Channel.ofReferenceIsometry V)).symm
   have hD :
-      ρ.hypothesisTestingRelativeEntropyE (ρ.marginalA.prod σA) ε ≤
-        ρ'.hypothesisTestingRelativeEntropyE (ρ'.marginalA.prod σA) ε := by
+      ρ.hypothesisTestingRelativeEntropy (ρ.marginalA.prod σA) ε ≤
+        ρ'.hypothesisTestingRelativeEntropy (ρ'.marginalA.prod σA) ε := by
     simpa [ρ', hprod] using
-      hypothesisTestingRelativeEntropyE_le_applyReferenceIsometry
+      hypothesisTestingRelativeEntropy_le_applyReferenceIsometry
         V ρ (ρ.marginalA.prod σA) ε hε
   exact hinLe.trans hD
 
 /-- Optimized hypothesis-testing mutual information is monotone under local
 post-processing on the second register, in the extended-real convention. -/
-theorem hypothesisTestingMutualInformationE_dataProcessing_right
+theorem hypothesisTestingMutualInformation_dataProcessing_right
     (ρ : State (Prod a b)) (D : Channel b c) (ε : ℝ) (hε : 0 ≤ ε) :
-    (((Channel.idChannel a).prod D).applyState ρ).hypothesisTestingMutualInformationE ε ≤
-      ρ.hypothesisTestingMutualInformationE ε := by
+    (((Channel.idChannel a).prod D).applyState ρ).hypothesisTestingMutualInformation ε ≤
+      ρ.hypothesisTestingMutualInformation ε := by
   let ρ' : State (Prod a c) := ((Channel.idChannel a).prod D).applyState ρ
-  rw [hypothesisTestingMutualInformationE_eq_sInf]
+  rw [hypothesisTestingMutualInformation_eq_sInf]
   refine le_sInf ?_
   intro value hvalue
   rcases hvalue with ⟨σB, rfl⟩
@@ -1187,32 +1187,32 @@ theorem hypothesisTestingMutualInformationE_dataProcessing_right
     rw [hρAmarg]
     exact (applyState_id_prod_prod ρ.marginalA σB D).symm
   have houtMem :
-      ρ'.hypothesisTestingRelativeEntropyE
+      ρ'.hypothesisTestingRelativeEntropy
           (ρ'.marginalA.prod (D.applyState σB)) ε ∈
-        hypothesisTestingMutualInformationECandidateSet (a := a) (b := c) ρ' ε := by
+        hypothesisTestingMutualInformationCandidateSet (a := a) (b := c) ρ' ε := by
     exact ⟨D.applyState σB, rfl⟩
   have houtLe :
-      ρ'.hypothesisTestingMutualInformationE ε ≤
-        ρ'.hypothesisTestingRelativeEntropyE
+      ρ'.hypothesisTestingMutualInformation ε ≤
+        ρ'.hypothesisTestingRelativeEntropy
           (ρ'.marginalA.prod (D.applyState σB)) ε := by
-    rw [hypothesisTestingMutualInformationE_eq_sInf]
+    rw [hypothesisTestingMutualInformation_eq_sInf]
     exact sInf_le houtMem
   have hDPI :
-      ρ'.hypothesisTestingRelativeEntropyE
+      ρ'.hypothesisTestingRelativeEntropy
           (((Channel.idChannel a).prod D).applyState (ρ.marginalA.prod σB)) ε ≤
-        ρ.hypothesisTestingRelativeEntropyE (ρ.marginalA.prod σB) ε := by
-    exact hypothesisTestingRelativeEntropyE_applyState_le
+        ρ.hypothesisTestingRelativeEntropy (ρ.marginalA.prod σB) ε := by
+    exact hypothesisTestingRelativeEntropy_applyState_le
       ((Channel.idChannel a).prod D) ρ (ρ.marginalA.prod σB) ε hε
   exact houtLe.trans (by simpa [hprod] using hDPI)
 
 /-- Optimized hypothesis-testing mutual information is monotone under local
 post-processing on the first register, in the extended-real convention. -/
-theorem hypothesisTestingMutualInformationE_dataProcessing_left
+theorem hypothesisTestingMutualInformation_dataProcessing_left
     (ρ : State (Prod a b)) (D : Channel a c) (ε : ℝ) (hε : 0 ≤ ε) :
-    ((D.prod (Channel.idChannel b)).applyState ρ).hypothesisTestingMutualInformationE ε ≤
-      ρ.hypothesisTestingMutualInformationE ε := by
+    ((D.prod (Channel.idChannel b)).applyState ρ).hypothesisTestingMutualInformation ε ≤
+      ρ.hypothesisTestingMutualInformation ε := by
   let ρ' : State (Prod c b) := (D.prod (Channel.idChannel b)).applyState ρ
-  rw [hypothesisTestingMutualInformationE_eq_sInf]
+  rw [hypothesisTestingMutualInformation_eq_sInf]
   refine le_sInf ?_
   intro value hvalue
   rcases hvalue with ⟨σB, rfl⟩
@@ -1247,19 +1247,19 @@ theorem hypothesisTestingMutualInformationE_dataProcessing_left
     rw [hρAmarg]
     exact (applyState_prod_id_prod ρ.marginalA σB D).symm
   have houtMem :
-      ρ'.hypothesisTestingRelativeEntropyE (ρ'.marginalA.prod σB) ε ∈
-        hypothesisTestingMutualInformationECandidateSet (a := c) (b := b) ρ' ε := by
+      ρ'.hypothesisTestingRelativeEntropy (ρ'.marginalA.prod σB) ε ∈
+        hypothesisTestingMutualInformationCandidateSet (a := c) (b := b) ρ' ε := by
     exact ⟨σB, rfl⟩
   have houtLe :
-      ρ'.hypothesisTestingMutualInformationE ε ≤
-        ρ'.hypothesisTestingRelativeEntropyE (ρ'.marginalA.prod σB) ε := by
-    rw [hypothesisTestingMutualInformationE_eq_sInf]
+      ρ'.hypothesisTestingMutualInformation ε ≤
+        ρ'.hypothesisTestingRelativeEntropy (ρ'.marginalA.prod σB) ε := by
+    rw [hypothesisTestingMutualInformation_eq_sInf]
     exact sInf_le houtMem
   have hDPI :
-      ρ'.hypothesisTestingRelativeEntropyE
+      ρ'.hypothesisTestingRelativeEntropy
           ((D.prod (Channel.idChannel b)).applyState (ρ.marginalA.prod σB)) ε ≤
-        ρ.hypothesisTestingRelativeEntropyE (ρ.marginalA.prod σB) ε := by
-    exact hypothesisTestingRelativeEntropyE_applyState_le
+        ρ.hypothesisTestingRelativeEntropy (ρ.marginalA.prod σB) ε := by
+    exact hypothesisTestingRelativeEntropy_applyState_le
       (D.prod (Channel.idChannel b)) ρ (ρ.marginalA.prod σB) ε hε
   exact houtLe.trans (by simpa [hprod] using hDPI)
 
@@ -1305,29 +1305,29 @@ private theorem product_reference_reindex_messageOutputSideInfoEquiv
   simp [State.reindex, State.prod, Matrix.kronecker,
     messageOutputSideInfoEquiv, hentry, mul_assoc, mul_left_comm, mul_comm]
 
-theorem hypothesisTestingMutualInformationE_repartition_le_of_marginalA_eq_prod
+theorem hypothesisTestingMutualInformation_repartition_le_of_marginalA_eq_prod
     {m e b : Type*} [Fintype m] [DecidableEq m]
     [Fintype e] [DecidableEq e] [Fintype b] [DecidableEq b]
     (θ : State (Prod (Prod m e) b)) (ε : ℝ) (hε : 0 ≤ ε)
     (hprod : θ.marginalA = θ.marginalA.marginalA.prod θ.marginalA.marginalB) :
-    ((θ.reindex (messageOutputSideInfoEquiv m e b)).hypothesisTestingMutualInformationE ε) ≤
-      θ.hypothesisTestingMutualInformationE ε := by
+    ((θ.reindex (messageOutputSideInfoEquiv m e b)).hypothesisTestingMutualInformation ε) ≤
+      θ.hypothesisTestingMutualInformation ε := by
   let θ' : State (Prod m (Prod b e)) :=
     θ.reindex (messageOutputSideInfoEquiv m e b)
-  rw [hypothesisTestingMutualInformationE_eq_sInf]
+  rw [hypothesisTestingMutualInformation_eq_sInf]
   refine le_sInf ?_
   intro value hvalue
   rcases hvalue with ⟨σB, rfl⟩
   let σBE : State (Prod b e) := σB.prod θ.marginalA.marginalB
   have houtMem :
-      θ'.hypothesisTestingRelativeEntropyE (θ'.marginalA.prod σBE) ε ∈
-        hypothesisTestingMutualInformationECandidateSet
+      θ'.hypothesisTestingRelativeEntropy (θ'.marginalA.prod σBE) ε ∈
+        hypothesisTestingMutualInformationCandidateSet
           (a := m) (b := Prod b e) θ' ε := by
     exact ⟨σBE, rfl⟩
   have houtLe :
-      θ'.hypothesisTestingMutualInformationE ε ≤
-        θ'.hypothesisTestingRelativeEntropyE (θ'.marginalA.prod σBE) ε := by
-    rw [hypothesisTestingMutualInformationE_eq_sInf]
+      θ'.hypothesisTestingMutualInformation ε ≤
+        θ'.hypothesisTestingRelativeEntropy (θ'.marginalA.prod σBE) ε := by
+    rw [hypothesisTestingMutualInformation_eq_sInf]
     exact sInf_le houtMem
   have hmarg : θ'.marginalA = θ.marginalA.marginalA := by
     simpa [θ'] using marginalA_reindex_messageOutputSideInfoEquiv θ
@@ -1338,11 +1338,11 @@ theorem hypothesisTestingMutualInformationE_repartition_le_of_marginalA_eq_prod
     exact (product_reference_reindex_messageOutputSideInfoEquiv
       θ.marginalA σB hprod).symm
   have hD :
-      θ'.hypothesisTestingRelativeEntropyE
+      θ'.hypothesisTestingRelativeEntropy
           ((θ.marginalA.prod σB).reindex (messageOutputSideInfoEquiv m e b)) ε =
-        θ.hypothesisTestingRelativeEntropyE (θ.marginalA.prod σB) ε := by
+        θ.hypothesisTestingRelativeEntropy (θ.marginalA.prod σB) ε := by
     simpa [θ'] using
-      hypothesisTestingRelativeEntropyE_reindex θ (θ.marginalA.prod σB) ε hε
+      hypothesisTestingRelativeEntropy_reindex θ (θ.marginalA.prod σB) ε hε
         (messageOutputSideInfoEquiv m e b)
   exact houtLe.trans (by simpa [hprodState] using le_of_eq hD)
 
@@ -1361,30 +1361,30 @@ hypothesis-testing mutual information is bounded by the channel quantity.
 This is the reusable channel-optimization bridge for converse arguments once a
 protocol-specific construction has represented the relevant state as a
 post-processed output for a pure input with the canonical input-copy reference. -/
-theorem hypothesisTestingMutualInformationE_postprocess_output_le_channel
+theorem hypothesisTestingMutualInformation_postprocess_output_le_channel
     (N : Channel a b) (D : Channel b c) (ψ : PureVector (Prod a a))
     (ε : ℝ) (hε : 0 ≤ ε) :
     (((Channel.idChannel a).prod D).applyState
-        (N.hypothesisTestingOutputState ψ)).hypothesisTestingMutualInformationE ε ≤
-      N.hypothesisTestingMutualInformationE ε := by
-  exact (State.hypothesisTestingMutualInformationE_dataProcessing_right
+        (N.hypothesisTestingOutputState ψ)).hypothesisTestingMutualInformation ε ≤
+      N.hypothesisTestingMutualInformation ε := by
+  exact (State.hypothesisTestingMutualInformation_dataProcessing_right
     (N.hypothesisTestingOutputState ψ) D ε hε).trans
-      (N.inputHypothesisTestingMutualInformationE_le_channel ε ψ)
+      (N.inputHypothesisTestingMutualInformation_le_channel ε ψ)
 
 /-- Equality-shaped version of
-`hypothesisTestingMutualInformationE_postprocess_output_le_channel`, useful when
+`hypothesisTestingMutualInformation_postprocess_output_le_channel`, useful when
 the protocol state has first been identified with a post-processed channel
 output. -/
-theorem hypothesisTestingMutualInformationE_le_channel_of_eq_postprocess_output
+theorem hypothesisTestingMutualInformation_le_channel_of_eq_postprocess_output
     (N : Channel a b) (D : Channel b c) (ψ : PureVector (Prod a a))
     (ω : State (Prod a c)) (ε : ℝ) (hε : 0 ≤ ε)
     (hω : ω =
       ((Channel.idChannel a).prod D).applyState
         (N.hypothesisTestingOutputState ψ)) :
-    ω.hypothesisTestingMutualInformationE ε ≤
-      N.hypothesisTestingMutualInformationE ε := by
+    ω.hypothesisTestingMutualInformation ε ≤
+      N.hypothesisTestingMutualInformation ε := by
   rw [hω]
-  exact N.hypothesisTestingMutualInformationE_postprocess_output_le_channel D ψ ε hε
+  exact N.hypothesisTestingMutualInformation_postprocess_output_le_channel D ψ ε hε
 
 variable {r₁ : Type x} {r₂ : Type y}
 variable [Fintype r₁] [DecidableEq r₁] [Fintype r₂] [DecidableEq r₂]
@@ -1416,12 +1416,12 @@ theorem hypothesisTestingOutputState_applyReferenceIsometry
 /-- Arbitrary-reference pure inputs whose reference system contains an
 input-copy reference are bounded by the channel extended-real
 hypothesis-testing mutual information. -/
-theorem inputHypothesisTestingMutualInformationE_le_channel_of_card_le
+theorem inputHypothesisTestingMutualInformation_le_channel_of_card_le
     (N : Channel a b) {r : Type w} [Fintype r] [DecidableEq r]
     (ψ : PureVector (Prod r a)) (ε : ℝ) (hε : 0 ≤ ε)
     (hcard : Fintype.card a ≤ Fintype.card r) :
-    N.inputHypothesisTestingMutualInformationE ψ ε ≤
-      N.hypothesisTestingMutualInformationE ε := by
+    N.inputHypothesisTestingMutualInformation ψ ε ≤
+      N.hypothesisTestingMutualInformation ε := by
   let φ : PureVector (Prod a a) := ψ.state.marginalB.canonicalPurification
   have hφ : φ.Purifies ψ.state.marginalB := by
     exact ψ.state.marginalB.canonicalPurification_purifies
@@ -1435,21 +1435,21 @@ theorem inputHypothesisTestingMutualInformationE_le_channel_of_card_le
           (N.hypothesisTestingOutputState φ) := by
     rw [hV]
     exact N.hypothesisTestingOutputState_applyReferenceIsometry V φ
-  rw [inputHypothesisTestingMutualInformationE, hout]
-  exact (State.hypothesisTestingMutualInformationE_dataProcessing_left
+  rw [inputHypothesisTestingMutualInformation, hout]
+  exact (State.hypothesisTestingMutualInformation_dataProcessing_left
       (N.hypothesisTestingOutputState φ) (Channel.ofReferenceIsometry V) ε hε).trans
-    (N.inputHypothesisTestingMutualInformationE_le_channel ε φ)
+    (N.inputHypothesisTestingMutualInformation_le_channel ε φ)
 
 /-- Arbitrary-reference pure inputs are bounded by the channel optimized
 extended-real hypothesis-testing mutual information.  The proof pads the
 reference by an isometric embedding, uses the sufficiently-large-reference
 purification bridge, and transports the hypothesis-testing mutual information
 back along the isometry. -/
-theorem inputHypothesisTestingMutualInformationE_le_channel_of_arbitrary_reference
+theorem inputHypothesisTestingMutualInformation_le_channel_of_arbitrary_reference
     (N : Channel a b) {r : Type w} [Fintype r] [DecidableEq r]
     (ψ : PureVector (Prod r a)) (ε : ℝ) (hε : 0 ≤ ε) :
-    N.inputHypothesisTestingMutualInformationE ψ ε ≤
-      N.hypothesisTestingMutualInformationE ε := by
+    N.inputHypothesisTestingMutualInformation ψ ε ≤
+      N.hypothesisTestingMutualInformation ε := by
   let V : ReferenceIsometry r (Sum a r) :=
     ReferenceIsometry.sumInrForHypothesisTestingDPI a r
   let ψ' : PureVector (Prod (Sum a r) a) := V.applyPureVector ψ
@@ -1457,16 +1457,16 @@ theorem inputHypothesisTestingMutualInformationE_le_channel_of_arbitrary_referen
     rw [Fintype.card_sum]
     exact Nat.le_add_right _ _
   have hleft :
-      N.inputHypothesisTestingMutualInformationE ψ ε ≤
-        N.inputHypothesisTestingMutualInformationE ψ' ε := by
-    unfold inputHypothesisTestingMutualInformationE
+      N.inputHypothesisTestingMutualInformation ψ ε ≤
+        N.inputHypothesisTestingMutualInformation ψ' ε := by
+    unfold inputHypothesisTestingMutualInformation
     rw [N.hypothesisTestingOutputState_applyReferenceIsometry V ψ]
-    exact State.hypothesisTestingMutualInformationE_le_applyReferenceIsometry
+    exact State.hypothesisTestingMutualInformation_le_applyReferenceIsometry
       V (N.hypothesisTestingOutputState ψ) ε hε
   have hright :
-      N.inputHypothesisTestingMutualInformationE ψ' ε ≤
-        N.hypothesisTestingMutualInformationE ε := by
-    exact N.inputHypothesisTestingMutualInformationE_le_channel_of_card_le
+      N.inputHypothesisTestingMutualInformation ψ' ε ≤
+        N.hypothesisTestingMutualInformation ε := by
+    exact N.inputHypothesisTestingMutualInformation_le_channel_of_card_le
       ψ' ε hε hlarge
   exact hleft.trans hright
 
@@ -1479,32 +1479,32 @@ protocol state is identified as a reference-side post-processing of a pure
 input-reference channel output, data processing reduces it to the channel
 quantity `I_H^ε(N)`.
 -/
-theorem hypothesisTestingMutualInformationE_referencePostprocess_output_le_channel
+theorem hypothesisTestingMutualInformation_referencePostprocess_output_le_channel
     (N : Channel a b) {r : Type w} [Fintype r] [DecidableEq r]
     {s : Type x} [Fintype s] [DecidableEq s]
     (D : Channel r s) (ψ : PureVector (Prod r a)) (ε : ℝ) (hε : 0 ≤ ε) :
     (((D.prod (Channel.idChannel b)).applyState
-        (N.hypothesisTestingOutputState ψ)).hypothesisTestingMutualInformationE ε) ≤
-      N.hypothesisTestingMutualInformationE ε := by
-  exact (State.hypothesisTestingMutualInformationE_dataProcessing_left
+        (N.hypothesisTestingOutputState ψ)).hypothesisTestingMutualInformation ε) ≤
+      N.hypothesisTestingMutualInformation ε := by
+  exact (State.hypothesisTestingMutualInformation_dataProcessing_left
       (N.hypothesisTestingOutputState ψ) D ε hε).trans
-    (N.inputHypothesisTestingMutualInformationE_le_channel_of_arbitrary_reference ψ ε hε)
+    (N.inputHypothesisTestingMutualInformation_le_channel_of_arbitrary_reference ψ ε hε)
 
 /-- Equality-shaped version of
-`hypothesisTestingMutualInformationE_referencePostprocess_output_le_channel`,
+`hypothesisTestingMutualInformation_referencePostprocess_output_le_channel`,
 for protocol constructions that first identify the tested state with a
 reference-side post-processing of a pure channel output. -/
-theorem hypothesisTestingMutualInformationE_le_channel_of_eq_referencePostprocess_output
+theorem hypothesisTestingMutualInformation_le_channel_of_eq_referencePostprocess_output
     (N : Channel a b) {r : Type w} [Fintype r] [DecidableEq r]
     {s : Type x} [Fintype s] [DecidableEq s]
     (D : Channel r s) (ψ : PureVector (Prod r a)) (ω : State (Prod s b))
     (ε : ℝ) (hε : 0 ≤ ε)
     (hω : ω =
       (D.prod (Channel.idChannel b)).applyState (N.hypothesisTestingOutputState ψ)) :
-    ω.hypothesisTestingMutualInformationE ε ≤
-      N.hypothesisTestingMutualInformationE ε := by
+    ω.hypothesisTestingMutualInformation ε ≤
+      N.hypothesisTestingMutualInformation ε := by
   rw [hω]
-  exact N.hypothesisTestingMutualInformationE_referencePostprocess_output_le_channel
+  exact N.hypothesisTestingMutualInformation_referencePostprocess_output_le_channel
     D ψ ε hε
 
 /-- Mixed input-reference states are also bounded by the channel optimized
@@ -1514,11 +1514,11 @@ The proof purifies the mixed input-reference state, traces out the extra
 purifying reference after the channel use, and then applies reference-side data
 processing together with the arbitrary-reference pure-input optimization
 bridge. -/
-theorem mixedInputOutput_hypothesisTestingMutualInformationE_le_channel
+theorem mixedInputOutput_hypothesisTestingMutualInformation_le_channel
     (N : Channel a b) {r : Type w} [Fintype r] [DecidableEq r]
     (ρ : State (Prod r a)) (ε : ℝ) (hε : 0 ≤ ε) :
-    (((Channel.idChannel r).prod N).applyState ρ).hypothesisTestingMutualInformationE ε ≤
-      N.hypothesisTestingMutualInformationE ε := by
+    (((Channel.idChannel r).prod N).applyState ρ).hypothesisTestingMutualInformation ε ≤
+      N.hypothesisTestingMutualInformation ε := by
   let ψ : PureVector (Prod (Prod (Prod r a) r) a) :=
     ρ.purifiedInputForHypothesisTestingDPI
   let D : Channel (Prod (Prod r a) r) r :=
@@ -1537,7 +1537,7 @@ theorem mixedInputOutput_hypothesisTestingMutualInformationE_le_channel
       _ = ((Channel.idChannel r).prod N).applyState ρ := by
           rw [State.traceOut_purifiedInputForHypothesisTestingDPI]
   rw [← hstate]
-  exact N.hypothesisTestingMutualInformationE_referencePostprocess_output_le_channel
+  exact N.hypothesisTestingMutualInformation_referencePostprocess_output_le_channel
     D ψ ε hε
 
 end Channel

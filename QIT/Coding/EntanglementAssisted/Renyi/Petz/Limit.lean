@@ -10,6 +10,7 @@ public import QIT.Coding.EntanglementAssisted.OneShot.Lower.Petz
 public import QIT.Coding.EntanglementAssisted.Basic
 public import QIT.Information.Entropy.EntropyTensorPower
 public import QIT.Information.Renyi.RenyiLimit
+public import QIT.Util.Order.EReal
 
 /-!
 # Petz--Renyi alpha-to-one limit for entanglement-assisted information
@@ -1058,10 +1059,10 @@ theorem productMarginalNussbaumSzkolaModel_relativeEntropyReal_div_log_two_eq_mu
 
 /-- In the PSD source branch, barred Petz--Renyi mutual information is the
 base-2 Chernoff log partition of the product-marginal Nussbaum--Szkola model. -/
-theorem barPetzRenyiMutualInformationPSD_eq_productMarginal_chernoffLog2
+theorem barPetzRenyiMutualInformationPSDFinite_eq_productMarginal_chernoffLog2
     (rhoAB : State (Prod a b)) {alpha : ℝ}
     (halpha0 : 0 < alpha) (halpha1 : alpha < 1) :
-    rhoAB.barPetzRenyiMutualInformationPSD alpha halpha0 (ne_of_lt halpha1) =
+    rhoAB.barPetzRenyiMutualInformationPSDFinite alpha halpha0 (ne_of_lt halpha1) =
       (1 / (alpha - 1)) *
         log2 ((BinaryHypothesisTest.productMarginalNussbaumSzkolaModel rhoAB).chernoffPartition alpha) := by
   classical
@@ -1098,7 +1099,7 @@ theorem barPetzRenyiMutualInformationPSD_eq_productMarginal_chernoffLog2
       (BinaryHypothesisTest.productMarginalNussbaumSzkolaModel rhoAB).chernoffPartition alpha =
         (rhoAB.petzRenyiCoefficient (rhoAB.marginalA.prod rhoAB.marginalB) alpha : ℝ) := by
     simpa [M, sigma] using hpart
-  unfold State.barPetzRenyiMutualInformationPSD State.petzRenyiPSD
+  unfold State.barPetzRenyiMutualInformationPSDFinite State.petzRenyiPSDFinite
   change
     (1 / (alpha - 1)) *
         log2 ((CFC.rpow rhoAB.matrix alpha *
@@ -1109,11 +1110,11 @@ theorem barPetzRenyiMutualInformationPSD_eq_productMarginal_chernoffLog2
 
 /-- State-level barred PSD Petz--Renyi mutual information converges to the
 entropy-form mutual information as `alpha -> 1^-`. -/
-theorem barPetzRenyiMutualInformationPSD_tendsto_mutualInformation_left
+theorem barPetzRenyiMutualInformationPSDFinite_tendsto_mutualInformation_left
     (rhoAB : State (Prod a b)) :
     Tendsto
       (fun alpha : PetzRenyiAlpha =>
-        rhoAB.barPetzRenyiMutualInformationPSD
+        rhoAB.barPetzRenyiMutualInformationPSDFinite
           alpha.1 alpha.2.1 (ne_of_lt alpha.2.2))
       PetzRenyiAlpha.leftToOne
       (nhds (mutualInformation rhoAB)) := by
@@ -1138,15 +1139,31 @@ theorem barPetzRenyiMutualInformationPSD_tendsto_mutualInformation_left
         (M := M) hpq
   refine hclassical.congr' ?_
   filter_upwards with alpha
-  exact (barPetzRenyiMutualInformationPSD_eq_productMarginal_chernoffLog2
+  exact (barPetzRenyiMutualInformationPSDFinite_eq_productMarginal_chernoffLog2
     (rhoAB := rhoAB) (alpha := alpha.1) alpha.2.1 alpha.2.2).symm
+
+/-- The canonical extended-real barred Petz quantity has the same left
+endpoint as its finite representative. -/
+theorem barPetzRenyiMutualInformationPSD_tendsto_mutualInformation_left
+    (rhoAB : State (Prod a b)) :
+    Tendsto
+      (fun alpha : PetzRenyiAlpha =>
+        rhoAB.barPetzRenyiMutualInformationPSD
+          alpha.1 alpha.2.1 alpha.2.2)
+      PetzRenyiAlpha.leftToOne
+      (nhds (mutualInformation rhoAB : EReal)) := by
+  refine (EReal.tendsto_coe.mpr
+    (barPetzRenyiMutualInformationPSDFinite_tendsto_mutualInformation_left rhoAB)).congr' ?_
+  filter_upwards with alpha
+  exact (rhoAB.barPetzRenyiMutualInformationPSD_eq_coe_finite
+    alpha.1 alpha.2.1 alpha.2.2).symm
 
 /-- Source-range comparison needed for the channel-level `sSup` upper bound:
 barred PSD Petz--Renyi mutual information is bounded by entropy-form mutual
 information. -/
-theorem barPetzRenyiMutualInformationPSD_le_mutualInformation
+theorem barPetzRenyiMutualInformationPSDFinite_le_mutualInformation
     (rhoAB : State (Prod a b)) (alpha : PetzRenyiAlpha) :
-    rhoAB.barPetzRenyiMutualInformationPSD
+    rhoAB.barPetzRenyiMutualInformationPSDFinite
         alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) ≤
       mutualInformation rhoAB := by
   classical
@@ -1160,11 +1177,11 @@ theorem barPetzRenyiMutualInformationPSD_le_mutualInformation
     simpa [M] using
       productMarginalNussbaumSzkolaModel_relativeEntropyReal_div_log_two_eq_mutualInformation rhoAB
   calc
-    rhoAB.barPetzRenyiMutualInformationPSD
+    rhoAB.barPetzRenyiMutualInformationPSDFinite
         alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) =
       (1 / (alpha.1 - 1)) * log2 (M.chernoffPartition alpha.1) := by
         simpa [M] using
-          barPetzRenyiMutualInformationPSD_eq_productMarginal_chernoffLog2
+          barPetzRenyiMutualInformationPSDFinite_eq_productMarginal_chernoffLog2
             (rhoAB := rhoAB) (alpha := alpha.1) alpha.2.1 alpha.2.2
     _ ≤ BinaryHypothesisTest.relativeEntropyReal M.pDistribution M.qDistribution /
         Real.log 2 :=
@@ -1172,13 +1189,24 @@ theorem barPetzRenyiMutualInformationPSD_le_mutualInformation
           (M := M) hpq alpha.2.1 alpha.2.2
     _ = mutualInformation rhoAB := hendpoint
 
+/-- Canonical extended-real source-range comparison with entropy-form mutual
+information. -/
+theorem barPetzRenyiMutualInformationPSD_le_mutualInformation
+    (rhoAB : State (Prod a b)) (alpha : PetzRenyiAlpha) :
+    rhoAB.barPetzRenyiMutualInformationPSD
+        alpha.1 alpha.2.1 alpha.2.2 ≤
+      (mutualInformation rhoAB : EReal) := by
+  rw [rhoAB.barPetzRenyiMutualInformationPSD_eq_coe_finite]
+  exact_mod_cast
+    barPetzRenyiMutualInformationPSDFinite_le_mutualInformation rhoAB alpha
+
 /-- State-level barred PSD Petz--Renyi mutual information converges to the
 Nussbaum--Szkola classical relative entropy for the product-marginal pair. -/
-theorem barPetzRenyiMutualInformationPSD_tendsto_nussbaumSzkola_relativeEntropyReal_left
+theorem barPetzRenyiMutualInformationPSDFinite_tendsto_nussbaumSzkola_relativeEntropyReal_left
     (rhoAB : State (Prod a b)) :
     Tendsto
       (fun alpha : PetzRenyiAlpha =>
-        rhoAB.barPetzRenyiMutualInformationPSD
+        rhoAB.barPetzRenyiMutualInformationPSDFinite
           alpha.1 alpha.2.1 (ne_of_lt alpha.2.2))
       PetzRenyiAlpha.leftToOne
       (nhds
@@ -1188,8 +1216,8 @@ theorem barPetzRenyiMutualInformationPSD_tendsto_nussbaumSzkola_relativeEntropyR
           (BinaryHypothesisTest.nussbaumSzkolaModel rhoAB
             (rhoAB.marginalA.prod rhoAB.marginalB)).qDistribution /
             Real.log 2)) := by
-  simpa [State.barPetzRenyiMutualInformationPSD] using
-    State.petzRenyiPSD_tendsto_nussbaumSzkola_relativeEntropyReal_left
+  simpa [State.barPetzRenyiMutualInformationPSDFinite] using
+    State.petzRenyiPSDFinite_tendsto_nussbaumSzkola_relativeEntropyReal_left
       rhoAB (rhoAB.marginalA.prod rhoAB.marginalB)
       rhoAB.matrix_supports_prod_marginals
 
@@ -1209,11 +1237,11 @@ theorem hypothesisTestingOutputState_eq_entanglementAssistedOutputState
 /-- Fixed-input channel bridge for the PSD barred Petz--Renyi endpoint, with
 the endpoint still expressed as the Nussbaum--Szkola classical relative
 entropy of the output/product-marginal pair. -/
-theorem inputBarPetzRenyiMutualInformationPSD_tendsto_nussbaumSzkola_relativeEntropyReal_left
+theorem inputBarPetzRenyiMutualInformationPSDFinite_tendsto_nussbaumSzkola_relativeEntropyReal_left
     (psi : PureVector (Prod a a)) :
     Tendsto
       (fun alpha : PetzRenyiAlpha =>
-        N.inputBarPetzRenyiMutualInformationPSD
+        N.inputBarPetzRenyiMutualInformationPSDFinite
           psi alpha.1 alpha.2.1 (ne_of_lt alpha.2.2))
       PetzRenyiAlpha.leftToOne
       (nhds
@@ -1227,41 +1255,58 @@ theorem inputBarPetzRenyiMutualInformationPSD_tendsto_nussbaumSzkola_relativeEnt
             ((N.hypothesisTestingOutputState psi).marginalA.prod
               (N.hypothesisTestingOutputState psi).marginalB)).qDistribution /
             Real.log 2)) := by
-  simpa [Channel.inputBarPetzRenyiMutualInformationPSD] using
-    State.barPetzRenyiMutualInformationPSD_tendsto_nussbaumSzkola_relativeEntropyReal_left
+  simpa [Channel.inputBarPetzRenyiMutualInformationPSDFinite] using
+    State.barPetzRenyiMutualInformationPSDFinite_tendsto_nussbaumSzkola_relativeEntropyReal_left
       (N.hypothesisTestingOutputState psi)
 
 /-- Fixed-input channel bridge for the PSD barred Petz--Renyi endpoint, with
 the endpoint expressed as entropy-form entanglement-assisted mutual
 information. -/
+theorem inputBarPetzRenyiMutualInformationPSDFinite_tendsto_entanglementAssistedMutualInformation_left
+    (psi : PureVector (Prod a a)) :
+    Tendsto
+      (fun alpha : PetzRenyiAlpha =>
+        N.inputBarPetzRenyiMutualInformationPSDFinite
+          psi alpha.1 alpha.2.1 (ne_of_lt alpha.2.2))
+      PetzRenyiAlpha.leftToOne
+      (nhds (N.entanglementAssistedMutualInformation psi)) := by
+  simpa [Channel.inputBarPetzRenyiMutualInformationPSDFinite,
+    Channel.entanglementAssistedMutualInformation,
+    N.hypothesisTestingOutputState_eq_entanglementAssistedOutputState psi] using
+    State.barPetzRenyiMutualInformationPSDFinite_tendsto_mutualInformation_left
+      (N.hypothesisTestingOutputState psi)
+
+/-- Canonical extended-real fixed-input barred Petz information converges to
+the ordinary entanglement-assisted mutual information. -/
 theorem inputBarPetzRenyiMutualInformationPSD_tendsto_entanglementAssistedMutualInformation_left
     (psi : PureVector (Prod a a)) :
     Tendsto
       (fun alpha : PetzRenyiAlpha =>
         N.inputBarPetzRenyiMutualInformationPSD
-          psi alpha.1 alpha.2.1 (ne_of_lt alpha.2.2))
+          psi alpha.1 alpha.2.1 alpha.2.2)
       PetzRenyiAlpha.leftToOne
-      (nhds (N.entanglementAssistedMutualInformation psi)) := by
-  simpa [Channel.inputBarPetzRenyiMutualInformationPSD,
-    Channel.entanglementAssistedMutualInformation,
-    N.hypothesisTestingOutputState_eq_entanglementAssistedOutputState psi] using
-    State.barPetzRenyiMutualInformationPSD_tendsto_mutualInformation_left
-      (N.hypothesisTestingOutputState psi)
+      (nhds (N.entanglementAssistedMutualInformation psi : EReal)) := by
+  refine (EReal.tendsto_coe.mpr
+    (N.inputBarPetzRenyiMutualInformationPSDFinite_tendsto_entanglementAssistedMutualInformation_left
+      psi)).congr' ?_
+  filter_upwards with alpha
+  exact (N.inputBarPetzRenyiMutualInformationPSD_eq_coe_finite
+    psi alpha.1 alpha.2.1 alpha.2.2).symm
 
 /-- Fixed-input source-range comparison against the channel's ordinary
 entanglement-assisted information. -/
-theorem inputBarPetzRenyiMutualInformationPSD_le_entanglementAssistedInformation
+theorem inputBarPetzRenyiMutualInformationPSDFinite_le_entanglementAssistedInformation
     [Nonempty a] (psi : PureVector (Prod a a)) (alpha : PetzRenyiAlpha) :
-    N.inputBarPetzRenyiMutualInformationPSD
+    N.inputBarPetzRenyiMutualInformationPSDFinite
         psi alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) ≤
       N.entanglementAssistedInformation := by
   calc
-    N.inputBarPetzRenyiMutualInformationPSD
+    N.inputBarPetzRenyiMutualInformationPSDFinite
         psi alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) =
-      (N.hypothesisTestingOutputState psi).barPetzRenyiMutualInformationPSD
+      (N.hypothesisTestingOutputState psi).barPetzRenyiMutualInformationPSDFinite
         alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) := rfl
     _ ≤ mutualInformation (N.hypothesisTestingOutputState psi) :=
-        State.barPetzRenyiMutualInformationPSD_le_mutualInformation
+        State.barPetzRenyiMutualInformationPSDFinite_le_mutualInformation
           (N.hypothesisTestingOutputState psi) alpha
     _ = N.entanglementAssistedMutualInformation psi := by
         simp [Channel.entanglementAssistedMutualInformation,
@@ -1269,50 +1314,115 @@ theorem inputBarPetzRenyiMutualInformationPSD_le_entanglementAssistedInformation
     _ ≤ N.entanglementAssistedInformation :=
         N.entanglementAssistedMutualInformation_le_information psi
 
+/-- Canonical fixed-input source-range comparison against the channel's
+ordinary entanglement-assisted information. -/
+theorem inputBarPetzRenyiMutualInformationPSD_le_entanglementAssistedInformation
+    [Nonempty a] (psi : PureVector (Prod a a)) (alpha : PetzRenyiAlpha) :
+    N.inputBarPetzRenyiMutualInformationPSD
+        psi alpha.1 alpha.2.1 alpha.2.2 ≤
+      (N.entanglementAssistedInformation : EReal) := by
+  rw [N.inputBarPetzRenyiMutualInformationPSD_eq_coe_finite]
+  exact_mod_cast
+    N.inputBarPetzRenyiMutualInformationPSDFinite_le_entanglementAssistedInformation
+      psi alpha
+
 /-- The PSD barred channel Petz value set is bounded above by `I(N)` in the
 source range. -/
-theorem barPetzRenyiMutualInformationPSDValueSet_bddAbove
+theorem barPetzRenyiMutualInformationPSDFiniteValueSet_bddAbove
     [Nonempty a] (alpha : PetzRenyiAlpha) :
     BddAbove
-      (N.barPetzRenyiMutualInformationPSDValueSet
+      (N.barPetzRenyiMutualInformationPSDFiniteValueSet
         alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)) := by
   refine ⟨N.entanglementAssistedInformation, ?_⟩
   intro value hvalue
   rcases hvalue with ⟨psi, rfl⟩
-  exact N.inputBarPetzRenyiMutualInformationPSD_le_entanglementAssistedInformation
+  exact N.inputBarPetzRenyiMutualInformationPSDFinite_le_entanglementAssistedInformation
     psi alpha
+
+/-- The optimized canonical PSD quantity is the coercion of the optimized
+finite real quantity throughout the source range. -/
+theorem barPetzRenyiMutualInformationPSD_eq_coe_finite
+    [Nonempty a] (alpha : PetzRenyiAlpha) :
+    N.barPetzRenyiMutualInformationPSD alpha.1 alpha.2.1 alpha.2.2 =
+      (N.barPetzRenyiMutualInformationPSDFinite
+        alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) : EReal) := by
+  classical
+  letI : Nonempty (PureVector (Prod a a)) := ⟨PureVector.basisPureVector⟩
+  let f : PureVector (Prod a a) → ℝ := fun psi =>
+    N.inputBarPetzRenyiMutualInformationPSDFinite
+      psi alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)
+  have hfiniteSet :
+      N.barPetzRenyiMutualInformationPSDFiniteValueSet
+          alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) = Set.range f := by
+    ext value
+    simp only [barPetzRenyiMutualInformationPSDFiniteValueSet, Set.mem_setOf_eq,
+      Set.mem_range, f]
+    constructor <;> rintro ⟨psi, rfl⟩ <;> exact ⟨psi, rfl⟩
+  have hcanonicalSet :
+      N.barPetzRenyiMutualInformationPSDValueSet
+          alpha.1 alpha.2.1 alpha.2.2 =
+        Set.range fun psi => (f psi : EReal) := by
+    ext value
+    simp only [barPetzRenyiMutualInformationPSDValueSet, Set.mem_setOf_eq,
+      Set.mem_range]
+    constructor
+    · rintro ⟨psi, rfl⟩
+      refine ⟨psi, ?_⟩
+      exact (N.inputBarPetzRenyiMutualInformationPSD_eq_coe_finite
+        psi alpha.1 alpha.2.1 alpha.2.2).symm
+    · rintro ⟨psi, rfl⟩
+      refine ⟨psi, ?_⟩
+      exact (N.inputBarPetzRenyiMutualInformationPSD_eq_coe_finite
+        psi alpha.1 alpha.2.1 alpha.2.2).symm
+  have hf : BddAbove (Set.range f) := by
+    rw [← hfiniteSet]
+    exact N.barPetzRenyiMutualInformationPSDFiniteValueSet_bddAbove alpha
+  rw [N.barPetzRenyiMutualInformationPSD_eq_sSup,
+    N.barPetzRenyiMutualInformationPSDFinite_eq_sSup, hcanonicalSet, hfiniteSet]
+  exact ereal_sSup_range_coe_eq_coe_real_sSup f hf
 
 /-- Channel-level source-range upper bound for PSD barred Petz--Renyi mutual
 information. -/
-theorem barPetzRenyiMutualInformationPSD_le_entanglementAssistedInformation
+theorem barPetzRenyiMutualInformationPSDFinite_le_entanglementAssistedInformation
     [Nonempty a] (alpha : PetzRenyiAlpha) :
-    N.barPetzRenyiMutualInformationPSD
+    N.barPetzRenyiMutualInformationPSDFinite
         alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) ≤
       N.entanglementAssistedInformation := by
   classical
-  rw [N.barPetzRenyiMutualInformationPSD_eq_sSup
+  rw [N.barPetzRenyiMutualInformationPSDFinite_eq_sSup
     alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)]
   have hne :
-      (N.barPetzRenyiMutualInformationPSDValueSet
+      (N.barPetzRenyiMutualInformationPSDFiniteValueSet
         alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)).Nonempty := by
     let psi0 : PureVector (Prod a a) := PureVector.basisPureVector
-    refine ⟨N.inputBarPetzRenyiMutualInformationPSD
+    refine ⟨N.inputBarPetzRenyiMutualInformationPSDFinite
       psi0 alpha.1 alpha.2.1 (ne_of_lt alpha.2.2), ?_⟩
     exact ⟨psi0, rfl⟩
   refine csSup_le hne ?_
   intro value hvalue
   rcases hvalue with ⟨psi, rfl⟩
-  exact N.inputBarPetzRenyiMutualInformationPSD_le_entanglementAssistedInformation
+  exact N.inputBarPetzRenyiMutualInformationPSDFinite_le_entanglementAssistedInformation
     psi alpha
+
+/-- Channel-level canonical source-range upper bound for PSD barred
+Petz--Renyi mutual information. -/
+theorem barPetzRenyiMutualInformationPSD_le_entanglementAssistedInformation
+    [Nonempty a] (alpha : PetzRenyiAlpha) :
+    N.barPetzRenyiMutualInformationPSD
+        alpha.1 alpha.2.1 alpha.2.2 ≤
+      (N.entanglementAssistedInformation : EReal) := by
+  rw [N.barPetzRenyiMutualInformationPSD_eq_coe_finite alpha]
+  exact_mod_cast
+    N.barPetzRenyiMutualInformationPSDFinite_le_entanglementAssistedInformation alpha
 
 /-- Source-shaped alpha-to-one theorem for the PSD-domain barred
 Petz--Renyi channel mutual information:
 `lim_{alpha -> 1^-} \bar I_alpha^{Petz,PSD}(N) = I(N)`. -/
-theorem barPetzRenyiMutualInformationPSD_tendsto_entanglementAssistedInformation_left
+theorem barPetzRenyiMutualInformationPSDFinite_tendsto_entanglementAssistedInformation_left
     [Nonempty a] :
     Tendsto
       (fun alpha : PetzRenyiAlpha =>
-        N.barPetzRenyiMutualInformationPSD
+        N.barPetzRenyiMutualInformationPSDFinite
           alpha.1 alpha.2.1 (ne_of_lt alpha.2.2))
       PetzRenyiAlpha.leftToOne
       (nhds N.entanglementAssistedInformation) := by
@@ -1321,12 +1431,12 @@ theorem barPetzRenyiMutualInformationPSD_tendsto_entanglementAssistedInformation
   have hfixed :
       Tendsto
         (fun alpha : PetzRenyiAlpha =>
-          N.inputBarPetzRenyiMutualInformationPSD
+          N.inputBarPetzRenyiMutualInformationPSDFinite
             psi alpha.1 alpha.2.1 (ne_of_lt alpha.2.2))
         PetzRenyiAlpha.leftToOne
         (nhds N.entanglementAssistedInformation) := by
     simpa [hpsi] using
-      N.inputBarPetzRenyiMutualInformationPSD_tendsto_entanglementAssistedMutualInformation_left
+      N.inputBarPetzRenyiMutualInformationPSDFinite_tendsto_entanglementAssistedMutualInformation_left
         psi
   have hconst :
       Tendsto
@@ -1335,30 +1445,45 @@ theorem barPetzRenyiMutualInformationPSD_tendsto_entanglementAssistedInformation
         (nhds N.entanglementAssistedInformation) := tendsto_const_nhds
   have hlower :
       (fun alpha : PetzRenyiAlpha =>
-        N.inputBarPetzRenyiMutualInformationPSD
+        N.inputBarPetzRenyiMutualInformationPSDFinite
           psi alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)) ≤
       (fun alpha : PetzRenyiAlpha =>
-        N.barPetzRenyiMutualInformationPSD
+        N.barPetzRenyiMutualInformationPSDFinite
           alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)) := by
     intro alpha
     change
-      N.inputBarPetzRenyiMutualInformationPSD
+      N.inputBarPetzRenyiMutualInformationPSDFinite
           psi alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) ≤
-        N.barPetzRenyiMutualInformationPSD
+        N.barPetzRenyiMutualInformationPSDFinite
           alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)
-    rw [N.barPetzRenyiMutualInformationPSD_eq_sSup
+    rw [N.barPetzRenyiMutualInformationPSDFinite_eq_sSup
       alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)]
     exact le_csSup
-      (N.barPetzRenyiMutualInformationPSDValueSet_bddAbove alpha)
+      (N.barPetzRenyiMutualInformationPSDFiniteValueSet_bddAbove alpha)
       ⟨psi, rfl⟩
   have hupper :
       (fun alpha : PetzRenyiAlpha =>
-        N.barPetzRenyiMutualInformationPSD
+        N.barPetzRenyiMutualInformationPSDFinite
           alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)) ≤
       (fun _alpha : PetzRenyiAlpha => N.entanglementAssistedInformation) := by
     intro alpha
-    exact N.barPetzRenyiMutualInformationPSD_le_entanglementAssistedInformation alpha
+    exact N.barPetzRenyiMutualInformationPSDFinite_le_entanglementAssistedInformation alpha
   exact tendsto_of_tendsto_of_tendsto_of_le_of_le hfixed hconst hlower hupper
+
+/-- Source-shaped canonical alpha-to-one theorem for PSD barred Petz--Renyi
+channel mutual information. -/
+theorem barPetzRenyiMutualInformationPSD_tendsto_entanglementAssistedInformation_left
+    [Nonempty a] :
+    Tendsto
+      (fun alpha : PetzRenyiAlpha =>
+        N.barPetzRenyiMutualInformationPSD
+          alpha.1 alpha.2.1 alpha.2.2)
+      PetzRenyiAlpha.leftToOne
+      (nhds (N.entanglementAssistedInformation : EReal)) := by
+  refine (EReal.tendsto_coe.mpr
+    N.barPetzRenyiMutualInformationPSDFinite_tendsto_entanglementAssistedInformation_left).congr' ?_
+  filter_upwards with alpha
+  exact (N.barPetzRenyiMutualInformationPSD_eq_coe_finite alpha).symm
 
 end Channel
 

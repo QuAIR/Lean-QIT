@@ -23,8 +23,9 @@ public import Mathlib.LinearAlgebra.Matrix.Vec
 # Fixed-side smooth conditional min-entropy
 
 This module adds the fixed-reference side of the conditional min-entropy API.
-The existing `State.conditionalMinEntropy` and `State.smoothConditionalMinEntropy`
-optimize over the conditioning state.  For the finite fully quantum AEP route,
+The existing `State.conditionalMinEntropy` optimizes over the conditioning
+state, while the source-facing `State.smoothConditionalMinEntropy` delegates to
+the subnormalized smoothing convention. For the finite fully quantum AEP route,
 we also need the candidate where the same reference state `σ_B` is kept fixed
 through the purified-distance smoothing ball, plus the order bridge into the
 optimized quantity.
@@ -3771,16 +3772,17 @@ theorem smoothConditionalMinEntropyFixed_mono
     (SmoothConditionalMinEntropyFixedCandidate_mono (a := a) (ρ := ρ)
       (σ := σ) hεδ hh)
 
-/-- Fixed-reference smooth min-entropy is bounded by the existing optimized
-smooth min-entropy. -/
-theorem smoothConditionalMinEntropyFixed_le_smoothConditionalMinEntropy
+/-- Fixed-reference smooth min-entropy is bounded by the normalized-candidate
+optimized smooth min-entropy variant. -/
+theorem smoothConditionalMinEntropyFixed_le_smoothConditionalMinEntropyNormalizedCandidates
     (ρ : State (Prod a b)) (σ : State b) (ε : ℝ)
     (hε : 0 ≤ ε)
     (hfixed : ∀ ρ' : State (Prod a b), ρ.purifiedBall ε ρ' →
       ({lam : ℝ | ConditionalMinEntropyFeasible (a := a) ρ' σ lam}).Nonempty) :
-    ρ.smoothConditionalMinEntropyFixed σ ε ≤ ρ.smoothConditionalMinEntropy ε := by
+    ρ.smoothConditionalMinEntropyFixed σ ε ≤
+      ρ.smoothConditionalMinEntropyNormalizedCandidates ε := by
   rw [smoothConditionalMinEntropyFixed_eq_sSup_candidates,
-    smoothConditionalMinEntropy_eq_sSup_candidates]
+    smoothConditionalMinEntropyNormalizedCandidates_eq_sSup_candidates]
   refine csSup_le ?_ ?_
   · exact ⟨ρ.conditionalMinEntropyFixed σ, ρ, State.purifiedBall_self_of_nonneg ρ hε, rfl⟩
   intro h hh
@@ -4331,15 +4333,15 @@ theorem SubnormalizedState.SmoothConditionalMinEntropyCandidate_bddAbove_of_stat
 /-- Moving a normalized center only increases the smoothing radius needed for
 subnormalized smooth min-entropy.  This is the `sSup`-level form of
 `SubnormalizedState.SmoothConditionalMinEntropyCandidate_center_migration`. -/
-theorem subnormalizedSmoothConditionalMinEntropy_center_migration
+theorem subnormalizedSmoothConditionalMinEntropyRaw_center_migration
     (ρ η : State (Prod a b)) {ε δ : ℝ}
     (hε_nonneg : 0 ≤ ε)
     (hεδ_nonneg : 0 ≤ ε + δ) (hεδ_lt : ε + δ < 1)
     (hcenter : η.toSubnormalized.purifiedDistance ρ.toSubnormalized ≤ δ) :
-    η.toSubnormalized.smoothConditionalMinEntropy ε ≤
-      ρ.toSubnormalized.smoothConditionalMinEntropy (ε + δ) := by
-  rw [SubnormalizedState.smoothConditionalMinEntropy_eq_sSup_candidates,
-    SubnormalizedState.smoothConditionalMinEntropy_eq_sSup_candidates]
+    η.toSubnormalized.smoothConditionalMinEntropyRaw ε ≤
+      ρ.toSubnormalized.smoothConditionalMinEntropyRaw (ε + δ) := by
+  rw [SubnormalizedState.smoothConditionalMinEntropyRaw_eq_sSup_candidates,
+    SubnormalizedState.smoothConditionalMinEntropyRaw_eq_sSup_candidates]
   refine csSup_le ?_ ?_
   · exact ⟨η.toSubnormalized.conditionalMinEntropy, η.toSubnormalized,
       SubnormalizedState.purifiedBall_self_of_nonneg η.toSubnormalized hε_nonneg, rfl⟩
@@ -4350,26 +4352,27 @@ theorem subnormalizedSmoothConditionalMinEntropy_center_migration
     (SubnormalizedState.SmoothConditionalMinEntropyCandidate_center_migration
       (a := a) hcenter hh)
 
-/-- Tensor-power spelling of center migration for the public smooth-min
-quantity used in the finite-AEP statement. -/
-theorem tensorPowerSubnormalizedSmoothConditionalMinEntropy_center_migration
+/-- Tensor-power spelling of center migration for the unrestricted internal
+smooth-min helper. Source-facing finite-AEP statements use the canonical
+finite-domain API instead. -/
+theorem tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_center_migration
     (ρ η : State (Prod a b)) (n : ℕ) {ε δ : ℝ}
     (hε_nonneg : 0 ≤ ε)
     (hεδ_nonneg : 0 ≤ ε + δ) (hεδ_lt : ε + δ < 1)
     (hcenter :
       (η.tensorPowerBipartite n).toSubnormalized.purifiedDistance
         (ρ.tensorPowerBipartite n).toSubnormalized ≤ δ) :
-    η.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n ≤
-      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy (ε + δ) n := by
-  simpa [State.tensorPowerSubnormalizedSmoothConditionalMinEntropy_eq] using
-    subnormalizedSmoothConditionalMinEntropy_center_migration
+    η.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw ε n ≤
+      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw (ε + δ) n := by
+  simpa [State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_eq] using
+    subnormalizedSmoothConditionalMinEntropyRaw_center_migration
       (a := TensorPower a n) (b := TensorPower b n)
       (ρ := ρ.tensorPowerBipartite n) (η := η.tensorPowerBipartite n)
       hε_nonneg hεδ_nonneg hεδ_lt hcenter
 
 /-- Transfer a tensor-power smooth-min lower bound across nearby centers by
 paying the purified-distance gap in the smoothing radius. -/
-theorem tensorPowerSubnormalizedSmoothConditionalMinEntropy_lower_bound_of_center_migration
+theorem tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_lower_bound_of_center_migration
     (ρ η : State (Prod a b)) (n : ℕ) {ε δ L : ℝ}
     (hε_nonneg : 0 ≤ ε)
     (hεδ_nonneg : 0 ≤ ε + δ) (hεδ_lt : ε + δ < 1)
@@ -4377,10 +4380,10 @@ theorem tensorPowerSubnormalizedSmoothConditionalMinEntropy_lower_bound_of_cente
       (η.tensorPowerBipartite n).toSubnormalized.purifiedDistance
         (ρ.tensorPowerBipartite n).toSubnormalized ≤ δ)
     (hlower :
-      L ≤ η.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n) :
-    L ≤ ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy (ε + δ) n := by
+      L ≤ η.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw ε n) :
+    L ≤ ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw (ε + δ) n := by
   exact le_trans hlower
-    (tensorPowerSubnormalizedSmoothConditionalMinEntropy_center_migration
+    (tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_center_migration
       (ρ := ρ) (η := η) (n := n)
       hε_nonneg hεδ_nonneg hεδ_lt hcenter)
 
@@ -4399,7 +4402,8 @@ theorem smoothConditionalMinEntropyFixedSubnormalized_le_subnormalizedSmoothCond
           SubnormalizedState.ConditionalMinEntropyFeasible (a := a)
             ρ' σ lam}).Nonempty) :
     ρ.smoothConditionalMinEntropyFixedSubnormalized σ ε ≤
-      ρ.toSubnormalized.smoothConditionalMinEntropy ε := by
+      ρ.toSubnormalized.smoothConditionalMinEntropy ε hε_nonneg
+        (by rw [State.toSubnormalized_trace]; simpa using hε_lt) := by
   haveI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
   rw [smoothConditionalMinEntropyFixedSubnormalized_eq_sSup_candidates,
     SubnormalizedState.smoothConditionalMinEntropy_eq_sSup_candidates]
@@ -7658,11 +7662,11 @@ theorem finiteAEPFullRankRegularization_tensorLowerBound_transfer
         (ρ.tensorPowerBipartite n).toSubnormalized ≤ δ)
     (hreg :
       regL ≤
-        (ρ.finiteAEPFullRankRegularization ξ hξ.1.le hξ.2.le).tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n)
+        (ρ.finiteAEPFullRankRegularization ξ hξ.1.le hξ.2.le).tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw ε n)
     (hscalar : targetL ≤ regL) :
-    targetL ≤ ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy (ε + δ) n := by
+    targetL ≤ ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw (ε + δ) n := by
   exact le_trans hscalar
-    (tensorPowerSubnormalizedSmoothConditionalMinEntropy_lower_bound_of_center_migration
+    (tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_lower_bound_of_center_migration
       (ρ := ρ)
       (η := ρ.finiteAEPFullRankRegularization ξ hξ.1.le hξ.2.le)
       (n := n) hε_nonneg hεδ_nonneg hεδ_lt hcenter hreg)
@@ -7674,15 +7678,16 @@ This is the arbitrary-state assembly shell: subsequent support/regularization
 work only has to provide the displayed tensor lower bound for each admissible
 positive smoothing parameter and blocklength. -/
 theorem finiteNAEP_statement_of_explicitEta_tensorLowerBound
-    (ρ : State (Prod a b)) (ε η : ℝ) (hε_lt : ε < 1) (n : ℕ)
+    (ρ : State (Prod a b)) (ε η : ℝ) (hε_nonneg : 0 ≤ ε) (hε_lt : ε < 1) (n : ℕ)
     (hcore :
       ∀ (_hε_pos : 0 < ε)
         (_hn : 0 < n)
         (_hn_ge : (8 / 5 : ℝ) * log2 (2 / ε ^ 2) ≤ (n : ℝ)),
-        ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n ≥
+        ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy
+            ε n hε_nonneg hε_lt ≥
           (n : ℝ) * ρ.conditionalEntropy -
             finiteAEPDelta ε η * Real.sqrt (n : ℝ)) :
-    QIT.finiteNAEP_statement ρ ε η n := by
+    QIT.finiteNAEP_statement ρ ε η n hε_nonneg hε_lt := by
   intro hε_pos hn_ge
   have hM : 0 < log2 (2 / ε ^ 2) :=
     finiteAEP_log2_two_div_sq_pos hε_pos hε_lt
@@ -7692,7 +7697,8 @@ theorem finiteNAEP_statement_of_explicitEta_tensorLowerBound
   have hbound := hcore hε_pos hn hn_ge
   exact
     finiteAEP_normalized_rate_of_tensor_lower_bound
-      (S := ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n)
+      (S := ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy
+        ε n hε_nonneg hε_lt)
       (H := ρ.conditionalEntropy)
       (δ := QIT.finiteAEPDelta ε η)
       (n := n) hn hbound
@@ -9192,7 +9198,7 @@ theorem tensorPowerFiniteAEP_core_fullReference_optimized_subnormalizedSmooth_ad
     (hα_lt :
       α < 1 + log2 3 /
         (4 * log2 ρ.finiteAEPEtaTrace)) :
-    (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε ≥
+    ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_pos.le hε_lt ≥
       (n : ℝ) * ρ.conditionalEntropy -
         QIT.finiteAEPDelta ε ρ.finiteAEPEtaTrace *
           Real.sqrt (n : ℝ) := by
@@ -9207,7 +9213,7 @@ theorem tensorPowerFiniteAEP_core_fullReference_optimized_subnormalizedSmooth_ad
   have hbridge :
       (ρ.tensorPowerBipartite n).smoothConditionalMinEntropyFixedSubnormalized
           (ρ.tensorPowerBipartite n).marginalB.toSubnormalized ε ≤
-        (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε :=
+        ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_pos.le hε_lt :=
     (ρ.tensorPowerBipartite n)
       |>.smoothConditionalMinEntropyFixedSubnormalized_le_subnormalizedSmoothConditionalMinEntropy
         (ρ.tensorPowerBipartite n).marginalB.toSubnormalized ε
@@ -9720,7 +9726,7 @@ theorem tensorPowerFiniteAEP_core_posDef_optimized_subnormalizedSmooth_of_unitar
       cMatrixPetzTraceUnitaryDephaseMonotone (ρ.tensorPowerBipartite n).matrix
         (identityTensorStateMatrix (a := TensorPower a n)
           (ρ.tensorPowerBipartite n).marginalB) U α) :
-    (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε ≥
+    ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_pos.le hε_lt ≥
       (n : ℝ) * ρ.conditionalEntropy -
         QIT.finiteAEPDelta ε (ρ.finiteAEPEta hρ hρB) *
           Real.sqrt (n : ℝ) := by
@@ -9735,7 +9741,7 @@ theorem tensorPowerFiniteAEP_core_posDef_optimized_subnormalizedSmooth_of_unitar
   have hbridge :
       (ρ.tensorPowerBipartite n).smoothConditionalMinEntropyFixedSubnormalized
           (ρ.tensorPowerBipartite n).marginalB.toSubnormalized ε ≤
-        (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε :=
+        ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_pos.le hε_lt :=
     (ρ.tensorPowerBipartite n)
       |>.smoothConditionalMinEntropyFixedSubnormalized_le_subnormalizedSmoothConditionalMinEntropy
         (ρ.tensorPowerBipartite n).marginalB.toSubnormalized ε
@@ -9772,7 +9778,7 @@ theorem tensorPowerFiniteAEP_core_posDef_optimized_subnormalizedSmooth_of_unifor
       ∀ {κ : Type (max u v)} [Fintype κ] [Nonempty κ],
         (Aκ Bκ : κ → CMatrix (Prod (TensorPower a n) (TensorPower b n))) →
           cMatrixPetzTraceUniformJointConvex Aκ Bκ α) :
-    (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε ≥
+    ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_pos.le hε_lt ≥
       (n : ℝ) * ρ.conditionalEntropy -
         QIT.finiteAEPDelta ε (ρ.finiteAEPEta hρ hρB) *
           Real.sqrt (n : ℝ) := by
@@ -9843,7 +9849,7 @@ theorem tensorPowerFiniteAEP_core_posDef_optimized_subnormalizedSmooth_of_rpow_p
     (hα_lt :
       α < 1 + log2 3 /
         (4 * log2 (ρ.finiteAEPEta hρ hρB))) :
-    (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε ≥
+    ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_pos.le hε_lt ≥
       (n : ℝ) * ρ.conditionalEntropy -
         QIT.finiteAEPDelta ε (ρ.finiteAEPEta hρ hρB) *
           Real.sqrt (n : ℝ) := by
@@ -9864,14 +9870,14 @@ normalization by `n` are all discharged here. -/
 theorem finiteNAEP_statement_posDef_of_uniformJointConvex_all
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
     (hρB : ρ.marginalB.matrix.PosDef)
-    (ε : ℝ) (hε_lt : ε < 1) (n : ℕ)
+    (ε : ℝ) (hε_nonneg : 0 ≤ ε) (hε_lt : ε < 1) (n : ℕ)
     (hjoint :
       ∀ {κ : Type (max u v)} [Fintype κ] [Nonempty κ],
         (Aκ Bκ : κ → CMatrix (Prod (TensorPower a n) (TensorPower b n))) →
           cMatrixPetzTraceUniformJointConvex Aκ Bκ
             (1 + Real.sqrt (log2 (2 / ε ^ 2)) /
               (2 * log2 (ρ.finiteAEPEta hρ hρB) * Real.sqrt (n : ℝ)))) :
-    QIT.finiteNAEP_statement ρ ε (ρ.finiteAEPEta hρ hρB) n := by
+    QIT.finiteNAEP_statement ρ ε (ρ.finiteAEPEta hρ hρB) n hε_nonneg hε_lt := by
   intro hε_pos hn_ge
   let α : ℝ :=
     1 + Real.sqrt (log2 (2 / ε ^ 2)) /
@@ -9901,7 +9907,7 @@ theorem finiteNAEP_statement_posDef_of_uniformJointConvex_all
       finiteAEP_alpha_window_of_n_ge ε (ρ.finiteAEPEta hρ hρB)
         hM_nonneg hL hn hn_ge
   have hcore :
-      (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε ≥
+      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_pos.le hε_lt ≥
         (n : ℝ) * ρ.conditionalEntropy -
           QIT.finiteAEPDelta ε (ρ.finiteAEPEta hρ hρB) *
             Real.sqrt (n : ℝ) :=
@@ -9913,9 +9919,9 @@ theorem finiteNAEP_statement_posDef_of_uniformJointConvex_all
       simpa [α] using hjoint (κ := κ) Aκ Bκ
     ρ.tensorPowerFiniteAEP_core_posDef_optimized_subnormalizedSmooth_of_uniformJointConvex_all_additivePetz
       hρ hρB ε α hM hn hα_opt hε_pos hε_lt hα_le_two hα_lt hjointAlpha
-  simpa [State.tensorPowerSubnormalizedSmoothConditionalMinEntropy_eq] using
+  simpa [State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_eq] using
     finiteAEP_normalized_rate_of_tensor_lower_bound
-      (S := (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε)
+      (S := ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_pos.le hε_lt)
       (H := ρ.conditionalEntropy)
       (δ := QIT.finiteAEPDelta ε (ρ.finiteAEPEta hρ hρB))
       (n := n) hn hcore
@@ -9925,8 +9931,8 @@ trace-term eta parameter. -/
 theorem finiteNAEP_statement_traceEta_of_marginal_posDef
     (ρ : State (Prod a b))
     (hρB : ρ.marginalB.matrix.PosDef)
-    (ε : ℝ) (hε_lt : ε < 1) (n : ℕ) :
-    QIT.finiteNAEP_statement ρ ε ρ.finiteAEPEtaTrace n := by
+    (ε : ℝ) (hε_nonneg : 0 ≤ ε) (hε_lt : ε < 1) (n : ℕ) :
+    QIT.finiteNAEP_statement ρ ε ρ.finiteAEPEtaTrace n hε_nonneg hε_lt := by
   intro hε_pos hn_ge
   let α : ℝ :=
     1 + Real.sqrt (log2 (2 / ε ^ 2)) /
@@ -9961,15 +9967,15 @@ theorem finiteNAEP_statement_traceEta_of_marginal_posDef
       finiteAEP_alpha_window_of_n_ge ε ρ.finiteAEPEtaTrace
         hM_nonneg hL hn hn_ge
   have hcore :
-      (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε ≥
+      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_pos.le hε_lt ≥
         (n : ℝ) * ρ.conditionalEntropy -
           QIT.finiteAEPDelta ε ρ.finiteAEPEtaTrace *
             Real.sqrt (n : ℝ) :=
     ρ.tensorPowerFiniteAEP_core_fullReference_optimized_subnormalizedSmooth_additivePetz
       hρB ε α hM hn hα_opt hε_pos hε_lt hα_le_two hα_lt
-  simpa [State.tensorPowerSubnormalizedSmoothConditionalMinEntropy_eq] using
+  simpa [State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_eq] using
     finiteAEP_normalized_rate_of_tensor_lower_bound
-      (S := (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε)
+      (S := ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_pos.le hε_lt)
       (H := ρ.conditionalEntropy)
       (δ := QIT.finiteAEPDelta ε ρ.finiteAEPEtaTrace)
       (n := n) hn hcore
@@ -9977,10 +9983,10 @@ theorem finiteNAEP_statement_traceEta_of_marginal_posDef
 /-- Tensor-power subnormalized smooth min-entropy is unchanged by compressing
 the conditioning register to the support of the canonical marginal and applying
 the tensor-power support isometry back, with the same smoothing radius. -/
-theorem tensorPowerSubnormalizedSmoothConditionalMinEntropy_conditioningSupportCompressedState
+theorem tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_conditioningSupportCompressedState
     (ρ : State (Prod a b)) (ε : ℝ) (hε0 : 0 ≤ ε) (hε_lt : ε < 1) (n : ℕ) :
-    ρ.conditioningSupportCompressedState.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n =
-      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n := by
+    ρ.conditioningSupportCompressedState.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw ε n =
+      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw ε n := by
   let ρc := ρ.conditioningSupportCompressedState
   let V : ReferenceIsometry (psdSupportIndex ρ.marginalB.matrix ρ.marginalB.pos) b :=
     psdSupportReferenceIsometry ρ.marginalB.matrix ρ.marginalB.pos
@@ -10020,27 +10026,50 @@ theorem tensorPowerSubnormalizedSmoothConditionalMinEntropy_conditioningSupportC
         (ρ.tensorPowerBipartite n).toSubnormalized := by
     rw [← State.toSubnormalized_conditioningIsometryApply]
     rw [htensorState]
-  rw [State.tensorPowerSubnormalizedSmoothConditionalMinEntropy_eq,
-    State.tensorPowerSubnormalizedSmoothConditionalMinEntropy_eq]
+  rw [State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_eq,
+    State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_eq]
   rw [← hsubState]
   exact hsmooth.symm
+
+/-- Canonical finite-domain support-compression invariance for the tensor-power
+smooth conditional min-entropy. -/
+theorem tensorPowerSubnormalizedSmoothConditionalMinEntropy_conditioningSupportCompressedState
+    (ρ : State (Prod a b)) (ε : ℝ) (hε0 : 0 ≤ ε) (hε_lt : ε < 1) (n : ℕ) :
+    ρ.conditioningSupportCompressedState.tensorPowerSubnormalizedSmoothConditionalMinEntropy
+        ε n hε0 hε_lt =
+      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε0 hε_lt := by
+  change
+    ρ.conditioningSupportCompressedState.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw
+        ε n =
+      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw ε n
+  exact tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_conditioningSupportCompressedState
+    ρ ε hε0 hε_lt n
 
 /-- Arbitrary-state finite-N AEP with the trace-term eta parameter, obtained
 from the full-rank-marginal theorem by support compression of the conditioning
 register. -/
 theorem finiteNAEP_statement_traceEta
-    (ρ : State (Prod a b)) (ε : ℝ) (hε_lt : ε < 1) (n : ℕ) :
-    QIT.finiteNAEP_statement ρ ε ρ.finiteAEPEtaTrace n := by
+    (ρ : State (Prod a b)) (ε : ℝ) (hε_nonneg : 0 ≤ ε) (hε_lt : ε < 1) (n : ℕ) :
+    QIT.finiteNAEP_statement ρ ε ρ.finiteAEPEtaTrace n hε_nonneg hε_lt := by
   let ρc := ρ.conditioningSupportCompressedState
   have hcompressed :
-      QIT.finiteNAEP_statement ρc ε ρc.finiteAEPEtaTrace n :=
+      QIT.finiteNAEP_statement ρc ε ρc.finiteAEPEtaTrace n hε_nonneg hε_lt :=
     finiteNAEP_statement_traceEta_of_marginal_posDef
       (ρ := ρc) (State.conditioningSupportCompressedState_marginalB_posDef ρ)
-      ε hε_lt n
+      ε hε_nonneg hε_lt n
   intro hε_pos hn_ge
   have hε0 : 0 ≤ ε := le_of_lt hε_pos
   have hbound := hcompressed hε_pos hn_ge
-  rw [← State.tensorPowerSubnormalizedSmoothConditionalMinEntropy_conditioningSupportCompressedState
+  change
+    (1 / (n : ℝ)) *
+        ρc.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw ε n ≥
+      ρc.conditionalEntropy -
+        finiteAEPDelta ε ρc.finiteAEPEtaTrace / Real.sqrt (n : ℝ) at hbound
+  change
+    (1 / (n : ℝ)) * ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw ε n ≥
+      ρ.conditionalEntropy -
+        finiteAEPDelta ε ρ.finiteAEPEtaTrace / Real.sqrt (n : ℝ)
+  rw [← State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_conditioningSupportCompressedState
     ρ ε hε0 hε_lt n]
   rw [← State.conditionalEntropy_conditioningSupportCompressedState ρ]
   rw [← State.finiteAEPEtaTrace_conditioningSupportCompressedState ρ]
@@ -10064,6 +10093,7 @@ theorem SmoothMinRateLowerFromFiniteNAEP_traceEta
       ∀ᶠ ε : ℝ in nhdsWithin (0 : ℝ) (Set.Ioi 0), ε < 1 := by
     exact nhdsWithin_le_nhds (Iio_mem_nhds (by norm_num : (0 : ℝ) < 1))
   filter_upwards [hε_pos, hε_lt_one] with ε hε_pos hε_lt_one
+  intro hε_nonneg hε_lt_domain
   have hdelta_tend :
       Tendsto
         (fun n : ℕ => QIT.finiteAEPDelta ε ρ.finiteAEPEtaTrace / Real.sqrt (n : ℝ))
@@ -10081,9 +10111,12 @@ theorem SmoothMinRateLowerFromFiniteNAEP_traceEta
     exact (Nat.le_ceil ((8 / 5 : ℝ) * log2 (2 / ε ^ 2))).trans
       (by exact_mod_cast hn)
   filter_upwards [hdelta_small, hn_ge] with n hdelta_small hn_ge
-  have hfinite := finiteNAEP_statement_traceEta ρ ε hε_lt_one n hε_pos hn_ge
+  have hfinite := finiteNAEP_statement_traceEta
+    ρ ε hε_nonneg hε_lt_domain n hε_pos hn_ge
   change ρ.conditionalEntropy - γ ≤
-    (1 / (n : ℝ)) * ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n
+    (1 / (n : ℝ)) *
+      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy
+        ε n hε_nonneg hε_lt_domain
   linarith
 
 /-- AFW continuity supplies the upper half of the source proof of TCR
@@ -10106,8 +10139,10 @@ handoff left explicit. -/
 theorem asymptoticAEPMin_statement_of_traceEta_and_continuity
     (ρ : State (Prod a b))
     (hupper : ρ.SmoothMinRateUpperFromContinuity) :
-    SourceTwoStageLimitTo
-      (fun ε n => ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n)
+    SourceFiniteDomainTwoStageLimitTo
+      (fun ε hε_nonneg hε_lt_one n =>
+        ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+          ε n hε_nonneg hε_lt_one)
       ρ.conditionalEntropy :=
   ρ.asymptoticAEPMin_statement_of_finiteNAEP_and_continuity
     (ρ.SmoothMinRateLowerFromFiniteNAEP_traceEta) hupper
@@ -10129,12 +10164,12 @@ The finite-N lower half is supplied by the finite-AEP theorem.  The remaining
 two inputs are exactly the source proof's later ingredients: ordering plus
 AFW/Fannes continuity for the min upper half, and smooth min/max plus von
 Neumann duality for the max half. -/
-theorem asymptoticAEP_statement_of_traceEta_continuity_and_duality
+theorem asymptoticAEPTwoStage_statement_of_traceEta_continuity_and_duality
     (ρ : State (Prod a b))
     (hupper : ρ.SmoothMinRateUpperFromContinuity)
     (hmax : ρ.SmoothMaxRateFromMinDuality) :
-    QIT.asymptoticAEP_statement ρ :=
-  ρ.asymptoticAEP_statement_of_min_and_max_duality
+    QIT.asymptoticAEPTwoStage_statement ρ :=
+  ρ.asymptoticAEPTwoStage_statement_of_min_and_max_duality
     (ρ.asymptoticAEPMin_statement_of_traceEta_and_continuity hupper) hmax
 
 /-- Fully quantum asymptotic equipartition property, TCR 2008 `thm:qaep`.
@@ -10143,16 +10178,16 @@ The proof follows the source route: finite-N AEP gives the smooth-min lower
 limit, AFW continuity and `H_min ≤ H` give the smooth-min upper limit, and
 smooth min/max duality plus conditional-entropy duality gives the max-entropy
 limit. -/
-theorem fullyQuantumAsymptoticEquipartitionProperty
+theorem fullyQuantumAsymptoticEquipartitionProperty_twoStage
     (ρ : State (Prod a b)) :
-    QIT.asymptoticAEP_statement ρ := by
+    QIT.asymptoticAEPTwoStage_statement ρ := by
   letI : Nonempty a := by
     rcases ρ.nonempty with ⟨x⟩
     exact ⟨x.1⟩
   letI : Nonempty b := by
     rcases ρ.nonempty with ⟨x⟩
     exact ⟨x.2⟩
-  exact ρ.asymptoticAEP_statement_of_traceEta_continuity_and_duality
+  exact ρ.asymptoticAEPTwoStage_statement_of_traceEta_continuity_and_duality
     (State.SmoothMinRateUpperFromContinuity.afw ρ)
     (State.SmoothMaxRateFromMinDuality.smoothDuality ρ)
 
@@ -10161,10 +10196,10 @@ discharged by the finite-dimensional rpow perspective theorem. -/
 theorem finiteNAEP_statement_posDef_of_rpow_perspective_one_two
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
     (hρB : ρ.marginalB.matrix.PosDef)
-    (ε : ℝ) (hε_lt : ε < 1) (n : ℕ) :
-    QIT.finiteNAEP_statement ρ ε (ρ.finiteAEPEta hρ hρB) n :=
+    (ε : ℝ) (hε_nonneg : 0 ≤ ε) (hε_lt : ε < 1) (n : ℕ) :
+    QIT.finiteNAEP_statement ρ ε (ρ.finiteAEPEta hρ hρB) n hε_nonneg hε_lt :=
   ρ.finiteNAEP_statement_posDef_of_uniformJointConvex_all
-    hρ hρB ε hε_lt n
+    hρ hρB ε hε_nonneg hε_lt n
     (fun {κ} [Fintype κ] [Nonempty κ]
         (Aκ Bκ : κ → CMatrix (Prod (TensorPower a n) (TensorPower b n))) =>
       cMatrixPetzTraceUniformJointConvex_of_rpow_perspective_one_two Aκ Bκ)
@@ -10177,22 +10212,22 @@ theorem finiteNAEP_statement_posDef_explicitEta_of_rpow_perspective_one_two
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
     (hρB : ρ.marginalB.matrix.PosDef)
     (η ε : ℝ) (hη : η = ρ.finiteAEPEta hρ hρB)
-    (hε_lt : ε < 1) (n : ℕ) :
-    QIT.finiteNAEP_statement ρ ε η n := by
+    (hε_nonneg : 0 ≤ ε) (hε_lt : ε < 1) (n : ℕ) :
+    QIT.finiteNAEP_statement ρ ε η n hε_nonneg hε_lt := by
   subst η
   exact ρ.finiteNAEP_statement_posDef_of_rpow_perspective_one_two
-    hρ hρB ε hε_lt n
+    hρ hρB ε hε_nonneg hε_lt n
 
 /-- Positive-definite finite-N AEP using the arbitrary-state trace-term eta
 spelling of `Upsilon(A|B)_{rho|rho}`. -/
 theorem finiteNAEP_statement_posDef_traceEta_of_rpow_perspective_one_two
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
     (hρB : ρ.marginalB.matrix.PosDef)
-    (ε : ℝ) (hε_lt : ε < 1) (n : ℕ) :
-    QIT.finiteNAEP_statement ρ ε ρ.finiteAEPEtaTrace n := by
+    (ε : ℝ) (hε_nonneg : 0 ≤ ε) (hε_lt : ε < 1) (n : ℕ) :
+    QIT.finiteNAEP_statement ρ ε ρ.finiteAEPEtaTrace n hε_nonneg hε_lt := by
   rw [← ρ.finiteAEPEta_eq_trace hρ hρB]
   exact ρ.finiteNAEP_statement_posDef_of_rpow_perspective_one_two
-    hρ hρB ε hε_lt n
+    hρ hρB ε hε_nonneg hε_lt n
 
 /-- Tensor-power optimized finite-AEP core using conditional Petz alpha-entropy
 additivity and the single-copy eta parameter.

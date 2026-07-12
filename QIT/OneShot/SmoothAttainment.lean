@@ -249,7 +249,8 @@ theorem smoothConditionalMaxEntropy_exists_optimizer
     (hε_nonneg : 0 ≤ ε) (hε : ε < Real.sqrt ρ.matrix.trace.re) :
     ∃ ρmax : SubnormalizedState (Prod a b),
       ρ.purifiedBall ε ρmax ∧
-        ρ.smoothConditionalMaxEntropy ε = ρmax.conditionalMaxEntropy ∧
+        ρ.smoothConditionalMaxEntropy ε hε_nonneg hε =
+          ρmax.conditionalMaxEntropy ∧
           ∀ ρ' : SubnormalizedState (Prod a b),
             ρ.purifiedBall ε ρ' →
               ρmax.conditionalMaxEntropy ≤ ρ'.conditionalMaxEntropy := by
@@ -306,18 +307,22 @@ private theorem neg_log2_antitone_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y
     (div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
       (le_of_lt (Real.log_pos one_lt_two)))
 
-/-- Smooth subnormalized conditional min-entropy attains its maximum on every
-purified-distance ball with radius below `sqrt (Tr ρ)`. -/
-theorem smoothConditionalMinEntropy_exists_optimizer
+/-- Smooth subnormalized conditional min-entropy attains its maximum together
+with an optimal feasible side operator.  This is the source-level witness pair
+used by the normalized-extension argument for smooth min/max comparison. -/
+theorem smoothConditionalMinEntropy_exists_scale_optimizer
     [Nonempty a] [Nonempty b]
     (ρ : SubnormalizedState (Prod a b)) {ε : ℝ}
     (hε_nonneg : 0 ≤ ε) (hε : ε < Real.sqrt ρ.matrix.trace.re) :
-    ∃ ρmin : SubnormalizedState (Prod a b),
+    ∃ (ρmin : SubnormalizedState (Prod a b)) (Tmin : CMatrix b),
       ρ.purifiedBall ε ρmin ∧
-        ρ.smoothConditionalMinEntropy ε = ρmin.conditionalMinEntropy ∧
-          ∀ ρ' : SubnormalizedState (Prod a b),
-            ρ.purifiedBall ε ρ' →
-  ρ'.conditionalMinEntropy ≤ ρmin.conditionalMinEntropy := by
+        ConditionalMinEntropyScaleFeasible (a := a) ρmin Tmin ∧
+          ρmin.conditionalMinEntropyScale (a := a) = Tmin.trace.re ∧
+            ρ.smoothConditionalMinEntropy ε hε_nonneg hε =
+              ρmin.conditionalMinEntropy ∧
+              ∀ ρ' : SubnormalizedState (Prod a b),
+                ρ.purifiedBall ε ρ' →
+                  ρ'.conditionalMinEntropy ≤ ρmin.conditionalMinEntropy := by
   let B : ℝ := Fintype.card b
   let feasibleSet :=
     conditionalMinEntropyScaleFeasiblePairSet (a := a) (b := b) ρ ε B
@@ -413,7 +418,7 @@ theorem smoothConditionalMinEntropy_exists_optimizer
         (a := a) hρmin_trace_pos,
       hscale_ρmin_eq_Tmin]
     exact neg_log2_antitone_of_pos hTmin_trace_pos hscale_ge
-  refine ⟨ρmin, hρmin_ball, ?_, hoptimizer⟩
+  refine ⟨ρmin, Tmin, hρmin_ball, hTmin_feas, hscale_ρmin_eq_Tmin, ?_, hoptimizer⟩
   rw [smoothConditionalMinEntropy_eq_sSup_candidates]
   apply le_antisymm
   · refine csSup_le
@@ -427,6 +432,24 @@ theorem smoothConditionalMinEntropy_exists_optimizer
         (a := a) ρ hε)
       ⟨ρmin, hρmin_ball, rfl⟩
 
+/-- Smooth subnormalized conditional min-entropy attains its maximum on every
+purified-distance ball with radius below `sqrt (Tr ρ)`. -/
+theorem smoothConditionalMinEntropy_exists_optimizer
+    [Nonempty a] [Nonempty b]
+    (ρ : SubnormalizedState (Prod a b)) {ε : ℝ}
+    (hε_nonneg : 0 ≤ ε) (hε : ε < Real.sqrt ρ.matrix.trace.re) :
+    ∃ ρmin : SubnormalizedState (Prod a b),
+      ρ.purifiedBall ε ρmin ∧
+        ρ.smoothConditionalMinEntropy ε hε_nonneg hε =
+          ρmin.conditionalMinEntropy ∧
+          ∀ ρ' : SubnormalizedState (Prod a b),
+            ρ.purifiedBall ε ρ' →
+              ρ'.conditionalMinEntropy ≤ ρmin.conditionalMinEntropy := by
+  rcases ρ.smoothConditionalMinEntropy_exists_scale_optimizer
+      (a := a) hε_nonneg hε with
+    ⟨ρmin, _Tmin, hρmin_ball, _hTmin_feas, _hscale, hmin_eq, hoptimizer⟩
+  exact ⟨ρmin, hρmin_ball, hmin_eq, hoptimizer⟩
+
 /-- Combined smooth min/max source-spine theorem: both smooth extrema over the
 subnormalized purified-distance ball are attained. -/
 theorem smoothConditionalMinMaxEntropy_exists_optimizers
@@ -435,9 +458,11 @@ theorem smoothConditionalMinMaxEntropy_exists_optimizers
     (hε_nonneg : 0 ≤ ε) (hε : ε < Real.sqrt ρ.matrix.trace.re) :
     ∃ ρmin ρmax : SubnormalizedState (Prod a b),
       ρ.purifiedBall ε ρmin ∧
-        ρ.purifiedBall ε ρmax ∧
-          ρ.smoothConditionalMinEntropy ε = ρmin.conditionalMinEntropy ∧
-            ρ.smoothConditionalMaxEntropy ε = ρmax.conditionalMaxEntropy ∧
+          ρ.purifiedBall ε ρmax ∧
+          ρ.smoothConditionalMinEntropy ε hε_nonneg hε =
+              ρmin.conditionalMinEntropy ∧
+            ρ.smoothConditionalMaxEntropy ε hε_nonneg hε =
+              ρmax.conditionalMaxEntropy ∧
               (∀ ρ' : SubnormalizedState (Prod a b),
                 ρ.purifiedBall ε ρ' →
                   ρ'.conditionalMinEntropy ≤ ρmin.conditionalMinEntropy) ∧

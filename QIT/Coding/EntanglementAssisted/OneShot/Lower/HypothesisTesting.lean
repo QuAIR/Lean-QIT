@@ -441,10 +441,10 @@ theorem Channel.oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_endpo
     (N : Channel a b) {ε η : ℝ}
     (hstrict :
       ∀ lower : ℝ,
-        lower < N.barHypothesisTestingMutualInformation (ε - η) →
+        lower < N.barHypothesisTestingMutualInformationFinite (ε - η) →
           ((lower - log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
             N.oneShotEntanglementAssistedClassicalCapacityE ε) :
-    ((N.barHypothesisTestingMutualInformation (ε - η) -
+    ((N.barHypothesisTestingMutualInformationFinite (ε - η) -
         log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
       N.oneShotEntanglementAssistedClassicalCapacityE ε :=
   ereal_sub_endpoint_le_of_forall_strict_lower hstrict
@@ -455,10 +455,10 @@ theorem Channel.oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_endpo
     (N : Channel a b) {ε η : ℝ}
     (hstrict :
       ∀ lower : ℝ,
-        (lower : EReal) < N.barHypothesisTestingMutualInformationE (ε - η) →
+        (lower : EReal) < N.barHypothesisTestingMutualInformation (ε - η) →
           ((lower - log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
             N.oneShotEntanglementAssistedClassicalCapacityE ε) :
-    N.barHypothesisTestingMutualInformationE (ε - η) -
+    N.barHypothesisTestingMutualInformation (ε - η) -
         (log2 (4 * ε / η ^ 2) : EReal) ≤
       N.oneShotEntanglementAssistedClassicalCapacityE ε :=
   ereal_sub_endpoint_le_of_forall_strict_lower_E hstrict
@@ -976,10 +976,10 @@ branch once the zero-beta case is available. -/
 theorem oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_strict
     (N : Channel a b) [Nonempty a] {ε η lower : ℝ}
     (hε_pos : 0 < ε) (hη_pos : 0 < η) (hη_lt : η < ε)
-    (hlower : lower < N.barHypothesisTestingMutualInformation (ε - η))
+    (hlower : lower < N.barHypothesisTestingMutualInformationFinite (ε - η))
     (hbeta_pos :
       ∀ psi : PureVector (Prod a a),
-        lower < N.inputBarHypothesisTestingMutualInformation psi (ε - η) →
+        lower < N.inputBarHypothesisTestingMutualInformationFinite psi (ε - η) →
           0 <
             (N.hypothesisTestingOutputState psi).hypothesisTestingBeta
               ((N.hypothesisTestingOutputState psi).marginalA.prod
@@ -991,7 +991,7 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_strict
     ⟨PureVector.basisPureVector⟩
   have htol_nonneg : 0 ≤ ε - η := le_of_lt (sub_pos.mpr hη_lt)
   obtain ⟨ψ, Λ, hΛlt⟩ :=
-    N.exists_inputBarHypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt
+    N.exists_inputBarHypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_Finite
       htol_nonneg hlower hbeta_pos
   let beta : ℝ := Real.rpow 2 (-lower)
   have hbeta_real_pos : 0 < beta := by
@@ -1058,7 +1058,7 @@ these witnesses by the supremum closure theorem below.
 theorem exists_oneShotAchievabilityWitness_htLowerBound_strict_E
     (N : Channel a b) [Nonempty a] {ε η lower : ℝ}
     (hε_pos : 0 < ε) (hη_pos : 0 < η) (hη_lt : η < ε)
-    (hlower : (lower : EReal) < N.barHypothesisTestingMutualInformationE (ε - η)) :
+    (hlower : (lower : EReal) < N.barHypothesisTestingMutualInformation (ε - η)) :
     ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
       ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
         ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
@@ -1068,7 +1068,7 @@ theorem exists_oneShotAchievabilityWitness_htLowerBound_strict_E
     ⟨PureVector.basisPureVector⟩
   have htol_nonneg : 0 ≤ ε - η := le_of_lt (sub_pos.mpr hη_lt)
   obtain ⟨ψ, Λ, hΛlt⟩ :=
-    N.exists_inputBarHypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_E
+    N.exists_inputBarHypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt
       htol_nonneg hlower
   let beta : ℝ := Real.rpow 2 (-lower)
   have hbeta_real_pos : 0 < beta := by
@@ -1137,7 +1137,7 @@ theorem exists_oneShotAchievabilityWitness_htLowerBound_rate_strict_E
     (hε_pos : 0 < ε) (hη_pos : 0 < η) (hη_lt : η < ε)
     (hrate :
       ((rate + log2 (4 * ε / η ^ 2) : ℝ) : EReal) <
-        N.barHypothesisTestingMutualInformationE (ε - η)) :
+        N.barHypothesisTestingMutualInformation (ε - η)) :
     ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
       ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
         ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
@@ -1176,14 +1176,14 @@ is `⊤`. -/
 theorem oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_strict_E
     (N : Channel a b) [Nonempty a] {ε η lower : ℝ}
     (hε_pos : 0 < ε) (hη_pos : 0 < η) (hη_lt : η < ε)
-    (hlower : (lower : EReal) < N.barHypothesisTestingMutualInformationE (ε - η)) :
+    (hlower : (lower : EReal) < N.barHypothesisTestingMutualInformation (ε - η)) :
     ((lower - log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
       N.oneShotEntanglementAssistedClassicalCapacityE ε := by
   haveI : Nonempty (PureVector (Prod a a)) :=
     ⟨PureVector.basisPureVector⟩
   have htol_nonneg : 0 ≤ ε - η := le_of_lt (sub_pos.mpr hη_lt)
   obtain ⟨ψ, Λ, hΛlt⟩ :=
-    N.exists_inputBarHypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_E
+    N.exists_inputBarHypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt
       htol_nonneg hlower
   let beta : ℝ := Real.rpow 2 (-lower)
   have hbeta_real_pos : 0 < beta := by
@@ -1245,7 +1245,7 @@ This is the source-shaped extended-real formulation:
 theorem oneShotEntanglementAssistedClassicalCapacityE_htLowerBound
     (N : Channel a b) [Nonempty a] {ε η : ℝ}
     (hε_pos : 0 < ε) (hη_pos : 0 < η) (hη_lt : η < ε) :
-    N.barHypothesisTestingMutualInformationE (ε - η) -
+    N.barHypothesisTestingMutualInformation (ε - η) -
         (log2 (4 * ε / η ^ 2) : EReal) ≤
       N.oneShotEntanglementAssistedClassicalCapacityE ε :=
   QIT.PositionBasedCodingProtocol.Channel.oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_endpoint_E
@@ -1266,13 +1266,13 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_endpoint_of_b
     (hε_pos : 0 < ε) (hη_pos : 0 < η) (hη_lt : η < ε)
     (hbeta_pos :
       ∀ lower : ℝ, ∀ psi : PureVector (Prod a a),
-        lower < N.inputBarHypothesisTestingMutualInformation psi (ε - η) →
+        lower < N.inputBarHypothesisTestingMutualInformationFinite psi (ε - η) →
           0 <
             (N.hypothesisTestingOutputState psi).hypothesisTestingBeta
               ((N.hypothesisTestingOutputState psi).marginalA.prod
                 (N.hypothesisTestingOutputState psi).marginalB)
               (ε - η)) :
-    ((N.barHypothesisTestingMutualInformation (ε - η) -
+    ((N.barHypothesisTestingMutualInformationFinite (ε - η) -
         log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
       N.oneShotEntanglementAssistedClassicalCapacityE ε :=
   QIT.PositionBasedCodingProtocol.Channel.oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_endpoint

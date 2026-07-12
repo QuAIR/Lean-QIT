@@ -352,31 +352,48 @@ def hypothesisTestingBetaCandidateSet : Set ℝ :=
 def hypothesisTestingBeta : ℝ :=
   sInf (rho.hypothesisTestingBetaCandidateSet sigma epsilon)
 
-/-- Hypothesis-testing relative entropy in bits. -/
-def hypothesisTestingRelativeEntropy : ℝ :=
+/-- Finite real helper `-log₂ β_ε`.  At `β_ε = 0` this uses Lean's totalized
+real logarithm; source-facing statements should use
+`hypothesisTestingRelativeEntropy` instead. -/
+def hypothesisTestingRelativeEntropyFinite : ℝ :=
   -log2 (rho.hypothesisTestingBeta sigma epsilon)
 
-/-- Extended-real hypothesis-testing relative entropy.  This is the
-source-faithful convention for the zero-beta branch: `β_ε = 0` gives `⊤`. -/
-def hypothesisTestingRelativeEntropyE : EReal :=
+/-- Canonical extended-real hypothesis-testing relative entropy.  This is the
+source-faithful convention: `β_ε = 0` gives `⊤`. -/
+def hypothesisTestingRelativeEntropy : EReal :=
   if rho.hypothesisTestingBeta sigma epsilon = 0 then ⊤
-  else (rho.hypothesisTestingRelativeEntropy sigma epsilon : EReal)
+  else (rho.hypothesisTestingRelativeEntropyFinite sigma epsilon : EReal)
 
 theorem hypothesisTestingBeta_eq_sInf :
     rho.hypothesisTestingBeta sigma epsilon =
       sInf (rho.hypothesisTestingBetaCandidateSet sigma epsilon) :=
   rfl
 
-theorem hypothesisTestingRelativeEntropy_eq :
-    rho.hypothesisTestingRelativeEntropy sigma epsilon =
+theorem hypothesisTestingRelativeEntropyFinite_eq :
+    rho.hypothesisTestingRelativeEntropyFinite sigma epsilon =
       -log2 (rho.hypothesisTestingBeta sigma epsilon) :=
   rfl
 
-theorem hypothesisTestingRelativeEntropyE_eq :
-    rho.hypothesisTestingRelativeEntropyE sigma epsilon =
+theorem hypothesisTestingRelativeEntropy_eq :
+    rho.hypothesisTestingRelativeEntropy sigma epsilon =
       if rho.hypothesisTestingBeta sigma epsilon = 0 then ⊤
-      else (rho.hypothesisTestingRelativeEntropy sigma epsilon : EReal) :=
+      else (rho.hypothesisTestingRelativeEntropyFinite sigma epsilon : EReal) :=
   rfl
+
+/-- The canonical hypothesis-testing relative entropy is infinite exactly on
+the explicit zero-`β` branch. -/
+theorem hypothesisTestingRelativeEntropy_eq_top_of_beta_eq_zero
+    (hzero : rho.hypothesisTestingBeta sigma epsilon = 0) :
+    rho.hypothesisTestingRelativeEntropy sigma epsilon = (⊤ : EReal) := by
+  simp [hypothesisTestingRelativeEntropy, hzero]
+
+/-- A positive `β` value selects the finite real branch of the canonical
+hypothesis-testing relative entropy. -/
+theorem hypothesisTestingRelativeEntropy_eq_coe_finite_of_beta_pos
+    (hpos : 0 < rho.hypothesisTestingBeta sigma epsilon) :
+    rho.hypothesisTestingRelativeEntropy sigma epsilon =
+      (rho.hypothesisTestingRelativeEntropyFinite sigma epsilon : EReal) := by
+  simp [hypothesisTestingRelativeEntropy, ne_of_gt hpos]
 
 theorem hypothesisTestingBetaCandidateSet_nonempty_of_nonneg (hε : 0 ≤ epsilon) :
     (rho.hypothesisTestingBetaCandidateSet sigma epsilon).Nonempty := by
@@ -582,14 +599,14 @@ by a concrete feasible effect.
 If `lower < D_H^ε(ρ‖σ)` and the beta value is positive, some feasible
 hypothesis-testing effect has type-II error strictly below `2^{-lower}`.  This
 is the exact non-optimizer witness form used by one-shot coding proofs. -/
-theorem exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativeEntropy
+theorem exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativeEntropyFinite
     (hε : 0 ≤ epsilon)
     (hbeta_pos : 0 < rho.hypothesisTestingBeta sigma epsilon)
     {lower : ℝ}
-    (hlower : lower < rho.hypothesisTestingRelativeEntropy sigma epsilon) :
+    (hlower : lower < rho.hypothesisTestingRelativeEntropyFinite sigma epsilon) :
     ∃ Lambda : HypothesisTestingEffect rho epsilon,
       Lambda.typeIIError sigma < Real.rpow 2 (-lower) := by
-  rw [hypothesisTestingRelativeEntropy_eq] at hlower
+  rw [hypothesisTestingRelativeEntropyFinite_eq] at hlower
   have hbeta_lt :
       rho.hypothesisTestingBeta sigma epsilon < Real.rpow 2 (-lower) :=
     hypothesisTestingBeta_lt_rpow_two_neg_of_lt_neg_log2 hbeta_pos hlower
@@ -602,13 +619,13 @@ For any finite real `lower` strictly below the extended-real
 `D_H^ε(ρ‖σ)`, some feasible effect has type-II error below `2^{-lower}`.  This
 handles both branches of the source convention: the usual positive-beta branch
 and the zero-beta branch, where `D_H = ⊤`. -/
-theorem exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativeEntropyE
+theorem exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativeEntropy
     (hε : 0 ≤ epsilon)
     {lower : ℝ}
-    (hlower : (lower : EReal) < rho.hypothesisTestingRelativeEntropyE sigma epsilon) :
+    (hlower : (lower : EReal) < rho.hypothesisTestingRelativeEntropy sigma epsilon) :
     ∃ Lambda : HypothesisTestingEffect rho epsilon,
       Lambda.typeIIError sigma < Real.rpow 2 (-lower) := by
-  rw [hypothesisTestingRelativeEntropyE_eq] at hlower
+  rw [hypothesisTestingRelativeEntropy_eq] at hlower
   by_cases hzero :
       rho.hypothesisTestingBeta sigma epsilon = 0
   · rw [if_pos hzero] at hlower
@@ -621,7 +638,7 @@ theorem exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativ
       sigma epsilon hε hbeta_lt
   · rw [if_neg hzero] at hlower
     have hlower_real :
-        lower < rho.hypothesisTestingRelativeEntropy sigma epsilon :=
+        lower < rho.hypothesisTestingRelativeEntropyFinite sigma epsilon :=
       EReal.coe_lt_coe_iff.mp hlower
     have hbeta_nonneg :
         0 ≤ rho.hypothesisTestingBeta sigma epsilon :=
@@ -630,45 +647,51 @@ theorem exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativ
         0 < rho.hypothesisTestingBeta sigma epsilon :=
       lt_of_le_of_ne hbeta_nonneg (Ne.symm hzero)
     exact
-      rho.exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativeEntropy
+      rho.exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativeEntropyFinite
         sigma epsilon hε hbeta_pos hlower_real
 
-/-- Candidate set for optimized state hypothesis-testing mutual information. -/
-def hypothesisTestingMutualInformationCandidateSet
+/-- Finite-real candidate set retained for internal real arithmetic. -/
+def hypothesisTestingMutualInformationFiniteCandidateSet
     (rhoAB : State (Prod a b)) (epsilon : ℝ) : Set ℝ :=
+  {value | ∃ sigmaB : State b,
+    value =
+      rhoAB.hypothesisTestingRelativeEntropyFinite (rhoAB.marginalA.prod sigmaB) epsilon}
+
+/-- Candidate set for optimized extended-real state hypothesis-testing mutual
+information. -/
+def hypothesisTestingMutualInformationCandidateSet
+    (rhoAB : State (Prod a b)) (epsilon : ℝ) : Set EReal :=
   {value | ∃ sigmaB : State b,
     value =
       rhoAB.hypothesisTestingRelativeEntropy (rhoAB.marginalA.prod sigmaB) epsilon}
 
-/-- Candidate set for optimized extended-real state hypothesis-testing mutual
-information. -/
-def hypothesisTestingMutualInformationECandidateSet
-    (rhoAB : State (Prod a b)) (epsilon : ℝ) : Set EReal :=
-  {value | ∃ sigmaB : State b,
-    value =
-      rhoAB.hypothesisTestingRelativeEntropyE (rhoAB.marginalA.prod sigmaB) epsilon}
-
-/-- Optimized hypothesis-testing mutual information `I_H^epsilon(A;B)_rho`. -/
-def hypothesisTestingMutualInformation
+/-- Finite-real helper for optimized hypothesis-testing mutual information. -/
+def hypothesisTestingMutualInformationFinite
     (rhoAB : State (Prod a b)) (epsilon : ℝ) : ℝ :=
+  sInf (hypothesisTestingMutualInformationFiniteCandidateSet (a := a) (b := b) rhoAB epsilon)
+
+/-- Canonical extended-real optimized hypothesis-testing mutual information. -/
+def hypothesisTestingMutualInformation
+    (rhoAB : State (Prod a b)) (epsilon : ℝ) : EReal :=
   sInf (hypothesisTestingMutualInformationCandidateSet (a := a) (b := b) rhoAB epsilon)
 
-/-- Optimized extended-real hypothesis-testing mutual information. -/
-def hypothesisTestingMutualInformationE
-    (rhoAB : State (Prod a b)) (epsilon : ℝ) : EReal :=
-  sInf (hypothesisTestingMutualInformationECandidateSet (a := a) (b := b) rhoAB epsilon)
-
-/-- Non-optimized, barred hypothesis-testing mutual information
-`bar I_H^epsilon(A;B)_rho`. -/
-def barHypothesisTestingMutualInformation
+/-- Finite-real helper for non-optimized barred hypothesis-testing mutual
+information. -/
+def barHypothesisTestingMutualInformationFinite
     (rhoAB : State (Prod a b)) (epsilon : ℝ) : ℝ :=
-  rhoAB.hypothesisTestingRelativeEntropy (rhoAB.marginalA.prod rhoAB.marginalB) epsilon
+  rhoAB.hypothesisTestingRelativeEntropyFinite (rhoAB.marginalA.prod rhoAB.marginalB) epsilon
 
 /-- Non-optimized, barred extended-real hypothesis-testing mutual information
 `bar I_H^epsilon(A;B)_rho`, with the source-faithful zero-beta branch. -/
-def barHypothesisTestingMutualInformationE
+def barHypothesisTestingMutualInformation
     (rhoAB : State (Prod a b)) (epsilon : ℝ) : EReal :=
-  rhoAB.hypothesisTestingRelativeEntropyE (rhoAB.marginalA.prod rhoAB.marginalB) epsilon
+  rhoAB.hypothesisTestingRelativeEntropy (rhoAB.marginalA.prod rhoAB.marginalB) epsilon
+
+theorem hypothesisTestingMutualInformationFinite_eq_sInf
+    (rhoAB : State (Prod a b)) (epsilon : ℝ) :
+    rhoAB.hypothesisTestingMutualInformationFinite epsilon =
+      sInf (hypothesisTestingMutualInformationFiniteCandidateSet (a := a) (b := b) rhoAB epsilon) :=
+  rfl
 
 theorem hypothesisTestingMutualInformation_eq_sInf
     (rhoAB : State (Prod a b)) (epsilon : ℝ) :
@@ -676,34 +699,28 @@ theorem hypothesisTestingMutualInformation_eq_sInf
       sInf (hypothesisTestingMutualInformationCandidateSet (a := a) (b := b) rhoAB epsilon) :=
   rfl
 
-theorem hypothesisTestingMutualInformationE_eq_sInf
+theorem barHypothesisTestingMutualInformationFinite_eq
     (rhoAB : State (Prod a b)) (epsilon : ℝ) :
-    rhoAB.hypothesisTestingMutualInformationE epsilon =
-      sInf (hypothesisTestingMutualInformationECandidateSet (a := a) (b := b) rhoAB epsilon) :=
+    rhoAB.barHypothesisTestingMutualInformationFinite epsilon =
+      rhoAB.hypothesisTestingRelativeEntropyFinite (rhoAB.marginalA.prod rhoAB.marginalB) epsilon :=
   rfl
 
 theorem barHypothesisTestingMutualInformation_eq
     (rhoAB : State (Prod a b)) (epsilon : ℝ) :
     rhoAB.barHypothesisTestingMutualInformation epsilon =
-      rhoAB.hypothesisTestingRelativeEntropy (rhoAB.marginalA.prod rhoAB.marginalB) epsilon :=
-  rfl
-
-theorem barHypothesisTestingMutualInformationE_eq
-    (rhoAB : State (Prod a b)) (epsilon : ℝ) :
-    rhoAB.barHypothesisTestingMutualInformationE epsilon =
-      rhoAB.hypothesisTestingRelativeEntropyE
+      rhoAB.hypothesisTestingRelativeEntropy
         (rhoAB.marginalA.prod rhoAB.marginalB) epsilon :=
   rfl
 
 /-- The real-valued barred hypothesis-testing mutual information embeds below
 the extended-real source-faithful version. -/
-theorem barHypothesisTestingMutualInformation_le_E
+theorem barHypothesisTestingMutualInformationFinite_le_E
     (rhoAB : State (Prod a b)) (epsilon : ℝ) :
-    (rhoAB.barHypothesisTestingMutualInformation epsilon : EReal) ≤
-      rhoAB.barHypothesisTestingMutualInformationE epsilon := by
-  rw [barHypothesisTestingMutualInformation_eq,
-    barHypothesisTestingMutualInformationE_eq,
-    hypothesisTestingRelativeEntropyE_eq]
+    (rhoAB.barHypothesisTestingMutualInformationFinite epsilon : EReal) ≤
+      rhoAB.barHypothesisTestingMutualInformation epsilon := by
+  rw [barHypothesisTestingMutualInformationFinite_eq,
+    barHypothesisTestingMutualInformation_eq,
+    hypothesisTestingRelativeEntropy_eq]
   by_cases hzero :
       rhoAB.hypothesisTestingBeta
         (rhoAB.marginalA.prod rhoAB.marginalB) epsilon = 0
@@ -721,67 +738,67 @@ def hypothesisTestingOutputState {r : Type w} [Fintype r] [DecidableEq r]
     (psi : PureVector (Prod r a)) : State (Prod r b) :=
   ((Channel.idChannel r).prod N).applyState psi.state
 
-/-- Optimized hypothesis-testing mutual information of an input-reference pure state. -/
-def inputHypothesisTestingMutualInformation {r : Type w} [Fintype r] [DecidableEq r]
+/-- Finite-real input-state helper for optimized hypothesis-testing mutual information. -/
+def inputHypothesisTestingMutualInformationFinite {r : Type w} [Fintype r] [DecidableEq r]
     (psi : PureVector (Prod r a)) (epsilon : ℝ) : ℝ :=
-  (N.hypothesisTestingOutputState psi).hypothesisTestingMutualInformation epsilon
+  (N.hypothesisTestingOutputState psi).hypothesisTestingMutualInformationFinite epsilon
 
 /-- Optimized extended-real hypothesis-testing mutual information of an
 input-reference pure state. -/
-def inputHypothesisTestingMutualInformationE {r : Type w} [Fintype r] [DecidableEq r]
+def inputHypothesisTestingMutualInformation {r : Type w} [Fintype r] [DecidableEq r]
     (psi : PureVector (Prod r a)) (epsilon : ℝ) : EReal :=
-  (N.hypothesisTestingOutputState psi).hypothesisTestingMutualInformationE epsilon
+  (N.hypothesisTestingOutputState psi).hypothesisTestingMutualInformation epsilon
 
 /-- Non-optimized barred hypothesis-testing mutual information of an input-reference pure state. -/
-def inputBarHypothesisTestingMutualInformation {r : Type w} [Fintype r] [DecidableEq r]
+def inputBarHypothesisTestingMutualInformationFinite {r : Type w} [Fintype r] [DecidableEq r]
     (psi : PureVector (Prod r a)) (epsilon : ℝ) : ℝ :=
-  (N.hypothesisTestingOutputState psi).barHypothesisTestingMutualInformation epsilon
+  (N.hypothesisTestingOutputState psi).barHypothesisTestingMutualInformationFinite epsilon
 
 /-- Non-optimized barred extended-real hypothesis-testing mutual information
 of an input-reference pure state. -/
-def inputBarHypothesisTestingMutualInformationE {r : Type w} [Fintype r] [DecidableEq r]
+def inputBarHypothesisTestingMutualInformation {r : Type w} [Fintype r] [DecidableEq r]
     (psi : PureVector (Prod r a)) (epsilon : ℝ) : EReal :=
-  (N.hypothesisTestingOutputState psi).barHypothesisTestingMutualInformationE epsilon
+  (N.hypothesisTestingOutputState psi).barHypothesisTestingMutualInformation epsilon
 
-/-- Value set for channel `I_H^epsilon(N)`, using a reference copy of the input system. -/
-def hypothesisTestingMutualInformationValueSet (epsilon : ℝ) : Set ℝ :=
+/-- Finite-real value set for channel `I_H^epsilon(N)`. -/
+def hypothesisTestingMutualInformationFiniteValueSet (epsilon : ℝ) : Set ℝ :=
   Set.range fun psi : PureVector (Prod a a) =>
-    N.inputHypothesisTestingMutualInformation psi epsilon
+    N.inputHypothesisTestingMutualInformationFinite psi epsilon
 
-/-- Channel hypothesis-testing mutual information `I_H^epsilon(N)`. -/
-def hypothesisTestingMutualInformation (epsilon : ℝ) : ℝ :=
-  sSup (N.hypothesisTestingMutualInformationValueSet epsilon)
+/-- Finite-real helper for channel hypothesis-testing mutual information. -/
+def hypothesisTestingMutualInformationFinite (epsilon : ℝ) : ℝ :=
+  sSup (N.hypothesisTestingMutualInformationFiniteValueSet epsilon)
 
 /-- Value set for channel extended-real `I_H^epsilon(N)`, using a reference copy
 of the input system. -/
-def hypothesisTestingMutualInformationEValueSet (epsilon : ℝ) : Set EReal :=
+def hypothesisTestingMutualInformationValueSet (epsilon : ℝ) : Set EReal :=
   Set.range fun psi : PureVector (Prod a a) =>
-    N.inputHypothesisTestingMutualInformationE psi epsilon
+    N.inputHypothesisTestingMutualInformation psi epsilon
 
-/-- Channel extended-real hypothesis-testing mutual information. -/
-def hypothesisTestingMutualInformationE (epsilon : ℝ) : EReal :=
-  sSup (N.hypothesisTestingMutualInformationEValueSet epsilon)
+/-- Canonical extended-real channel hypothesis-testing mutual information. -/
+def hypothesisTestingMutualInformation (epsilon : ℝ) : EReal :=
+  sSup (N.hypothesisTestingMutualInformationValueSet epsilon)
 
 /-- Value set for the barred non-optimized channel quantity `bar I_H^epsilon(N)`. -/
-def barHypothesisTestingMutualInformationValueSet (epsilon : ℝ) : Set ℝ :=
+def barHypothesisTestingMutualInformationFiniteValueSet (epsilon : ℝ) : Set ℝ :=
   Set.range fun psi : PureVector (Prod a a) =>
-    N.inputBarHypothesisTestingMutualInformation psi epsilon
+    N.inputBarHypothesisTestingMutualInformationFinite psi epsilon
 
 /-- Barred non-optimized channel hypothesis-testing mutual information
 `bar I_H^epsilon(N)`. -/
-def barHypothesisTestingMutualInformation (epsilon : ℝ) : ℝ :=
-  sSup (N.barHypothesisTestingMutualInformationValueSet epsilon)
+def barHypothesisTestingMutualInformationFinite (epsilon : ℝ) : ℝ :=
+  sSup (N.barHypothesisTestingMutualInformationFiniteValueSet epsilon)
 
 /-- Value set for the barred non-optimized extended-real channel quantity
 `bar I_H^epsilon(N)`. -/
-def barHypothesisTestingMutualInformationEValueSet (epsilon : ℝ) : Set EReal :=
+def barHypothesisTestingMutualInformationValueSet (epsilon : ℝ) : Set EReal :=
   Set.range fun psi : PureVector (Prod a a) =>
-    N.inputBarHypothesisTestingMutualInformationE psi epsilon
+    N.inputBarHypothesisTestingMutualInformation psi epsilon
 
 /-- Barred non-optimized extended-real channel hypothesis-testing mutual
 information. -/
-def barHypothesisTestingMutualInformationE (epsilon : ℝ) : EReal :=
-  sSup (N.barHypothesisTestingMutualInformationEValueSet epsilon)
+def barHypothesisTestingMutualInformation (epsilon : ℝ) : EReal :=
+  sSup (N.barHypothesisTestingMutualInformationValueSet epsilon)
 
 theorem hypothesisTestingOutputState_eq {r : Type w} [Fintype r] [DecidableEq r]
     (psi : PureVector (Prod r a)) :
@@ -789,73 +806,56 @@ theorem hypothesisTestingOutputState_eq {r : Type w} [Fintype r] [DecidableEq r]
       ((Channel.idChannel r).prod N).applyState psi.state :=
   rfl
 
+theorem hypothesisTestingMutualInformationFinite_eq_sSup (epsilon : ℝ) :
+    N.hypothesisTestingMutualInformationFinite epsilon =
+      sSup (N.hypothesisTestingMutualInformationFiniteValueSet epsilon) :=
+  rfl
+
 theorem hypothesisTestingMutualInformation_eq_sSup (epsilon : ℝ) :
     N.hypothesisTestingMutualInformation epsilon =
       sSup (N.hypothesisTestingMutualInformationValueSet epsilon) :=
   rfl
 
-theorem hypothesisTestingMutualInformationE_eq_sSup (epsilon : ℝ) :
-    N.hypothesisTestingMutualInformationE epsilon =
-      sSup (N.hypothesisTestingMutualInformationEValueSet epsilon) :=
-  rfl
-
-theorem inputHypothesisTestingMutualInformationE_le_channel
+theorem inputHypothesisTestingMutualInformation_le_channel
     (epsilon : ℝ) (psi : PureVector (Prod a a)) :
-    N.inputHypothesisTestingMutualInformationE psi epsilon ≤
-      N.hypothesisTestingMutualInformationE epsilon := by
-  rw [hypothesisTestingMutualInformationE_eq_sSup]
+    N.inputHypothesisTestingMutualInformation psi epsilon ≤
+      N.hypothesisTestingMutualInformation epsilon := by
+  rw [hypothesisTestingMutualInformation_eq_sSup]
   exact le_sSup ⟨psi, rfl⟩
 
-theorem inputBarHypothesisTestingMutualInformation_le_E {r : Type w}
+theorem inputBarHypothesisTestingMutualInformationFinite_le_E {r : Type w}
     [Fintype r] [DecidableEq r]
     (psi : PureVector (Prod r a)) (epsilon : ℝ) :
-    (N.inputBarHypothesisTestingMutualInformation psi epsilon : EReal) ≤
-      N.inputBarHypothesisTestingMutualInformationE psi epsilon := by
-  exact State.barHypothesisTestingMutualInformation_le_E
+    (N.inputBarHypothesisTestingMutualInformationFinite psi epsilon : EReal) ≤
+      N.inputBarHypothesisTestingMutualInformation psi epsilon := by
+  exact State.barHypothesisTestingMutualInformationFinite_le_E
     (N.hypothesisTestingOutputState psi) epsilon
+
+theorem barHypothesisTestingMutualInformationFinite_eq_sSup (epsilon : ℝ) :
+    N.barHypothesisTestingMutualInformationFinite epsilon =
+      sSup (N.barHypothesisTestingMutualInformationFiniteValueSet epsilon) :=
+  rfl
 
 theorem barHypothesisTestingMutualInformation_eq_sSup (epsilon : ℝ) :
     N.barHypothesisTestingMutualInformation epsilon =
       sSup (N.barHypothesisTestingMutualInformationValueSet epsilon) :=
   rfl
 
-theorem barHypothesisTestingMutualInformationE_eq_sSup (epsilon : ℝ) :
-    N.barHypothesisTestingMutualInformationE epsilon =
-      sSup (N.barHypothesisTestingMutualInformationEValueSet epsilon) :=
-  rfl
-
-theorem inputBarHypothesisTestingMutualInformationE_le_channel
+theorem inputBarHypothesisTestingMutualInformation_le_channel
     (epsilon : ℝ) (psi : PureVector (Prod a a)) :
-    N.inputBarHypothesisTestingMutualInformationE psi epsilon ≤
-      N.barHypothesisTestingMutualInformationE epsilon := by
-  rw [barHypothesisTestingMutualInformationE_eq_sSup]
+    N.inputBarHypothesisTestingMutualInformation psi epsilon ≤
+      N.barHypothesisTestingMutualInformation epsilon := by
+  rw [barHypothesisTestingMutualInformation_eq_sSup]
   exact le_sSup ⟨psi, rfl⟩
 
 /-- Approximate the barred extended-real channel hypothesis-testing mutual
 information supremum by a concrete pure input-reference state. -/
-theorem exists_inputBarHypothesisTestingMutualInformationE_gt_of_lt
-    [Nonempty (PureVector (Prod a a))]
-    {epsilon lower : ℝ}
-    (hlower : (lower : EReal) < N.barHypothesisTestingMutualInformationE epsilon) :
-    ∃ psi : PureVector (Prod a a),
-      (lower : EReal) < N.inputBarHypothesisTestingMutualInformationE psi epsilon := by
-  rw [barHypothesisTestingMutualInformationE_eq_sSup] at hlower
-  obtain ⟨value, hvalue_mem, hlt⟩ :=
-    exists_lt_of_lt_csSup (Set.range_nonempty
-      (fun psi : PureVector (Prod a a) =>
-        N.inputBarHypothesisTestingMutualInformationE psi epsilon)) hlower
-  rcases hvalue_mem with ⟨psi, rfl⟩
-  exact ⟨psi, hlt⟩
-
-/-- Approximate the barred channel hypothesis-testing mutual information
-supremum by a concrete pure input-reference state.  This avoids assuming a
-maximizer while giving downstream coding proofs the concrete state they need. -/
 theorem exists_inputBarHypothesisTestingMutualInformation_gt_of_lt
     [Nonempty (PureVector (Prod a a))]
     {epsilon lower : ℝ}
-    (hlower : lower < N.barHypothesisTestingMutualInformation epsilon) :
+    (hlower : (lower : EReal) < N.barHypothesisTestingMutualInformation epsilon) :
     ∃ psi : PureVector (Prod a a),
-      lower < N.inputBarHypothesisTestingMutualInformation psi epsilon := by
+      (lower : EReal) < N.inputBarHypothesisTestingMutualInformation psi epsilon := by
   rw [barHypothesisTestingMutualInformation_eq_sSup] at hlower
   obtain ⟨value, hvalue_mem, hlt⟩ :=
     exists_lt_of_lt_csSup (Set.range_nonempty
@@ -864,23 +864,40 @@ theorem exists_inputBarHypothesisTestingMutualInformation_gt_of_lt
   rcases hvalue_mem with ⟨psi, rfl⟩
   exact ⟨psi, hlt⟩
 
+/-- Approximate the barred channel hypothesis-testing mutual information
+supremum by a concrete pure input-reference state.  This avoids assuming a
+maximizer while giving downstream coding proofs the concrete state they need. -/
+theorem exists_inputBarHypothesisTestingMutualInformationFinite_gt_of_lt
+    [Nonempty (PureVector (Prod a a))]
+    {epsilon lower : ℝ}
+    (hlower : lower < N.barHypothesisTestingMutualInformationFinite epsilon) :
+    ∃ psi : PureVector (Prod a a),
+      lower < N.inputBarHypothesisTestingMutualInformationFinite psi epsilon := by
+  rw [barHypothesisTestingMutualInformationFinite_eq_sSup] at hlower
+  obtain ⟨value, hvalue_mem, hlt⟩ :=
+    exists_lt_of_lt_csSup (Set.range_nonempty
+      (fun psi : PureVector (Prod a a) =>
+        N.inputBarHypothesisTestingMutualInformationFinite psi epsilon)) hlower
+  rcases hvalue_mem with ⟨psi, rfl⟩
+  exact ⟨psi, hlt⟩
+
 /-- The real barred channel hypothesis-testing information embeds below the
 extended-real barred channel information. -/
-theorem barHypothesisTestingMutualInformation_le_E
+theorem barHypothesisTestingMutualInformationFinite_le_E
     [Nonempty (PureVector (Prod a a))] (epsilon : ℝ) :
-    (N.barHypothesisTestingMutualInformation epsilon : EReal) ≤
-      N.barHypothesisTestingMutualInformationE epsilon := by
-  rw [barHypothesisTestingMutualInformation_eq_sSup]
+    (N.barHypothesisTestingMutualInformationFinite epsilon : EReal) ≤
+      N.barHypothesisTestingMutualInformation epsilon := by
+  rw [barHypothesisTestingMutualInformationFinite_eq_sSup]
   rw [← EReal.ge_of_forall_gt_iff_ge]
   intro z hz
   have hz_real :
-      z < N.barHypothesisTestingMutualInformation epsilon :=
+      z < N.barHypothesisTestingMutualInformationFinite epsilon :=
     EReal.coe_lt_coe_iff.mp hz
   obtain ⟨psi, hpsi⟩ :=
-    N.exists_inputBarHypothesisTestingMutualInformation_gt_of_lt hz_real
+    N.exists_inputBarHypothesisTestingMutualInformationFinite_gt_of_lt hz_real
   exact (EReal.coe_le_coe_iff.mpr hpsi.le).trans
-    ((N.inputBarHypothesisTestingMutualInformation_le_E psi epsilon).trans
-      (N.inputBarHypothesisTestingMutualInformationE_le_channel epsilon psi))
+    ((N.inputBarHypothesisTestingMutualInformationFinite_le_E psi epsilon).trans
+      (N.inputBarHypothesisTestingMutualInformation_le_channel epsilon psi))
 
 /-- Concrete input state and feasible effect witnessing any strict lower bound
 on the barred channel hypothesis-testing mutual information.
@@ -891,19 +908,47 @@ entanglement-assisted lower-bound proof: strict inequality below the channel
 state `D_H` gives a feasible test whose type-II error is below the corresponding
 power-of-two threshold.  The beta positivity hypothesis marks the real-valued
 branch; the extended-real zero-beta branch is handled separately downstream. -/
-theorem exists_inputBarHypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt
+theorem exists_inputBarHypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_Finite
     [Nonempty (PureVector (Prod a a))]
     {epsilon lower : ℝ}
     (hε : 0 ≤ epsilon)
-    (hlower : lower < N.barHypothesisTestingMutualInformation epsilon)
+    (hlower : lower < N.barHypothesisTestingMutualInformationFinite epsilon)
     (hbeta_pos :
       ∀ psi : PureVector (Prod a a),
-        lower < N.inputBarHypothesisTestingMutualInformation psi epsilon →
+        lower < N.inputBarHypothesisTestingMutualInformationFinite psi epsilon →
           0 <
             (N.hypothesisTestingOutputState psi).hypothesisTestingBeta
               ((N.hypothesisTestingOutputState psi).marginalA.prod
                 (N.hypothesisTestingOutputState psi).marginalB)
               epsilon) :
+    ∃ psi : PureVector (Prod a a),
+      ∃ Lambda : HypothesisTestingEffect (N.hypothesisTestingOutputState psi) epsilon,
+        Lambda.typeIIError
+            ((N.hypothesisTestingOutputState psi).marginalA.prod
+              (N.hypothesisTestingOutputState psi).marginalB)
+          < Real.rpow 2 (-lower) := by
+  obtain ⟨psi, hpsi⟩ :=
+    N.exists_inputBarHypothesisTestingMutualInformationFinite_gt_of_lt hlower
+  unfold inputBarHypothesisTestingMutualInformationFinite State.barHypothesisTestingMutualInformationFinite
+    at hpsi
+  obtain ⟨Lambda, hLambda⟩ :=
+    (N.hypothesisTestingOutputState psi)
+      |>.exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativeEntropyFinite
+        ((N.hypothesisTestingOutputState psi).marginalA.prod
+          (N.hypothesisTestingOutputState psi).marginalB)
+        epsilon hε (hbeta_pos psi (by
+          simpa [inputBarHypothesisTestingMutualInformationFinite,
+            State.barHypothesisTestingMutualInformationFinite] using hpsi))
+        hpsi
+  exact ⟨psi, Lambda, hLambda⟩
+
+/-- Extended-real concrete input-state and feasible-effect extraction for the
+barred channel hypothesis-testing information. -/
+theorem exists_inputBarHypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt
+    [Nonempty (PureVector (Prod a a))]
+    {epsilon lower : ℝ}
+    (hε : 0 ≤ epsilon)
+    (hlower : (lower : EReal) < N.barHypothesisTestingMutualInformation epsilon) :
     ∃ psi : PureVector (Prod a a),
       ∃ Lambda : HypothesisTestingEffect (N.hypothesisTestingOutputState psi) epsilon,
         Lambda.typeIIError
@@ -917,34 +962,6 @@ theorem exists_inputBarHypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt
   obtain ⟨Lambda, hLambda⟩ :=
     (N.hypothesisTestingOutputState psi)
       |>.exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativeEntropy
-        ((N.hypothesisTestingOutputState psi).marginalA.prod
-          (N.hypothesisTestingOutputState psi).marginalB)
-        epsilon hε (hbeta_pos psi (by
-          simpa [inputBarHypothesisTestingMutualInformation,
-            State.barHypothesisTestingMutualInformation] using hpsi))
-        hpsi
-  exact ⟨psi, Lambda, hLambda⟩
-
-/-- Extended-real concrete input-state and feasible-effect extraction for the
-barred channel hypothesis-testing information. -/
-theorem exists_inputBarHypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_E
-    [Nonempty (PureVector (Prod a a))]
-    {epsilon lower : ℝ}
-    (hε : 0 ≤ epsilon)
-    (hlower : (lower : EReal) < N.barHypothesisTestingMutualInformationE epsilon) :
-    ∃ psi : PureVector (Prod a a),
-      ∃ Lambda : HypothesisTestingEffect (N.hypothesisTestingOutputState psi) epsilon,
-        Lambda.typeIIError
-            ((N.hypothesisTestingOutputState psi).marginalA.prod
-              (N.hypothesisTestingOutputState psi).marginalB)
-          < Real.rpow 2 (-lower) := by
-  obtain ⟨psi, hpsi⟩ :=
-    N.exists_inputBarHypothesisTestingMutualInformationE_gt_of_lt hlower
-  unfold inputBarHypothesisTestingMutualInformationE State.barHypothesisTestingMutualInformationE
-    at hpsi
-  obtain ⟨Lambda, hLambda⟩ :=
-    (N.hypothesisTestingOutputState psi)
-      |>.exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativeEntropyE
         ((N.hypothesisTestingOutputState psi).marginalA.prod
           (N.hypothesisTestingOutputState psi).marginalB)
         epsilon hε hpsi

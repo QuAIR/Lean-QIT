@@ -13,16 +13,16 @@ public import QIT.Nonlocality.TwoQubit
 # Self-testing manifest scaffold
 
 This module introduces the minimal statement surface for self-testing.
-It separates a reusable witness layer from the future uniqueness theorem:
-`RealizesTargetState` records that one quantum realization extracts a target
-state, while `SelfTestsState` is the full "all realizations extract the target"
-predicate [ColadangeloGohScarani2016SelfTesting, all_pure_v2.tex:70-128] and
-[MayersYao2003SelfTesting, mayers-yao-2003-self-testing.tex:344-373] and
-[MayersYao2003SelfTesting, mayers-yao-2003-self-testing.tex:375-390].
+The source-facing predicates keep the standard auxiliary output: a local
+isometry extracts `garbage ⊗ target`. The direct target-only predicates remain
+available as a junk-free special case, not as the standard source convention.
 
-The auxiliary extraction predicate records the source-correct Yang-Navascues
-shape `extra ⊗ target` from [ColadangeloGohScarani2016SelfTesting,
-all_pure_v2.tex:161-188].
+The auxiliary extraction predicate records the source-correct Mayers-Yao and
+Yang-Navascues shape `extra ⊗ target` from
+[MayersYao2003SelfTesting, mayers-yao-2003-self-testing.tex:344-373],
+[MayersYao2003SelfTesting, mayers-yao-2003-self-testing.tex:375-390],
+[ColadangeloGohScarani2016SelfTesting, all_pure_v2.tex:161-188], and
+[ColadangeloGohScarani2016SelfTesting, all_pure_v2.tex:190-200].
 -/
 
 @[expose] public section
@@ -152,16 +152,16 @@ theorem garbageTensorTargetState_matrix {GA : Type uGA} {GB : Type uGB}
   rfl
 
 /--
-A physical bipartite state extracts a target bipartite state when a local
-isometry maps the physical state to the target state.
+A junk-free special case of state extraction: a local isometry maps the
+physical state directly to the target state, with no auxiliary output.
 -/
 def ExtractsBipartiteState (rho : State (HA × HB)) (target : State (TA × TB)) : Prop :=
   ∃ V : TwoQubit.LocalIsometry HA TA HB TB, V.applyState rho = target
 
 /--
-Source-correct auxiliary extraction predicate for the Yang-Navascues route:
-a local isometry maps the physical state to auxiliary garbage tensored with the
-target state, in the local output ordering.
+Source-facing auxiliary extraction predicate for standard self-testing: a local
+isometry maps the physical state to auxiliary garbage tensored with the target
+state, in the local output ordering.
 -/
 def ExtractsBipartiteStateWithAux {GA : Type uGA} {GB : Type uGB}
     {TA : Type uTA} {TB : Type uTB}
@@ -181,8 +181,8 @@ def RealizesBehavior (R : QuantumRealization X Y A B) (p : Behavior X Y A B) : P
 end QuantumRealization
 
 /--
-Witness layer for self-testing: one quantum realization reproduces the behavior
-and its state extracts the target state by a local isometry.
+Junk-free special case of the witness layer: one quantum realization reproduces
+the behavior and its state extracts the target state directly.
 -/
 def RealizesTargetState (p : Behavior X Y A B) (target : State (TA × TB)) : Prop :=
   ∃ R : QuantumRealization X Y A B,
@@ -211,7 +211,7 @@ theorem of_realization (R : QuantumRealization X Y A B)
 end RealizesTargetState
 
 /--
-Source-strength witness layer for self-testing with auxiliary garbage: one
+Source-facing witness layer for self-testing with auxiliary garbage: one
 quantum realization reproduces the behavior and its state extracts
 `garbage ⊗ target` by a local isometry.
 
@@ -259,8 +259,9 @@ theorem of_realization (R : QuantumRealization X Y A B)
 end RealizesTargetStateWithAux
 
 /--
-Full state self-testing predicate: the behavior has a target realization, and
-every quantum realization of the behavior extracts the same target state.
+Junk-free special case of full state self-testing: the behavior has a direct
+target realization, and every quantum realization of the behavior extracts the
+same target state without auxiliary output.
 -/
 def SelfTestsState (p : Behavior X Y A B) (target : State (TA × TB)) : Prop :=
   RealizesTargetState p target ∧
@@ -308,7 +309,7 @@ theorem extracts_every_realization {p : Behavior X Y A B} {target : State (TA ×
 end SelfTestsState
 
 /--
-Source-strength full state self-testing predicate: the behavior has an
+Source-facing full state self-testing predicate: the behavior has an
 auxiliary-garbage target realization, and every realization extracts
 `garbage ⊗ target` for some finite auxiliary systems and garbage state.
 -/
@@ -406,8 +407,9 @@ variable [Fintype TA] [DecidableEq TA] [Fintype TB] [DecidableEq TB]
 /--
 Public catalog-support entrypoint for a full state self-testing theorem.
 
-This packages the two source-strength clauses: a manifest target realization,
-and extraction of the same target from every realization of the behavior.
+This is the junk-free special case: it packages direct target extraction with
+no auxiliary output. Use `main_with_aux` for source-facing self-testing
+statements.
 -/
 public theorem main {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
     (hRealizes : Bell.RealizesTargetState p target)
@@ -423,7 +425,7 @@ public theorem main {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
   Bell.SelfTestsState.of_realizesTargetState hRealizes hAll
 
 /--
-Public catalog-support entrypoint for a full state self-testing theorem with
+Source-facing public catalog-support entrypoint for a full state self-testing theorem with
 explicit auxiliary garbage in each local-isometry output.
 
 This packages the manifest auxiliary target realization and the
@@ -463,7 +465,10 @@ variable {HA : Type u} {HB : Type v} {TA : Type w} {TB : Type z}
 variable [Fintype HA] [DecidableEq HA] [Fintype HB] [DecidableEq HB]
 variable [Fintype TA] [DecidableEq TA] [Fintype TB] [DecidableEq TB]
 
-/-- Public catalog entrypoint for the manifest self-testing witness. -/
+/--
+Public catalog entrypoint for the junk-free special case of the manifest
+self-testing witness.
+-/
 public theorem main (R : Bell.QuantumRealization X Y A B)
     {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
     (hR : R.RealizesBehavior p)
@@ -484,7 +489,7 @@ public theorem of_selfTestsState {p : Bell.Behavior X Y A B}
   Bell.SelfTestsState.realizesTargetState h
 
 /--
-Public catalog-support entrypoint for a manifest self-testing witness with
+Source-facing public catalog-support entrypoint for a manifest self-testing witness with
 explicit auxiliary garbage in the local-isometry output.
 -/
 public theorem main_with_aux (R : Bell.QuantumRealization X Y A B)

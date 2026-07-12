@@ -6,6 +6,7 @@ Authors: QuAIR Team
 
 module
 
+public import QIT.Information.Entropy.RelativeEntropyTraceLog
 public import QIT.Information.Renyi.RenyiDPI
 public import QIT.HypothesisTesting.Audenaert
 public import QIT.Util.BlockMatrix
@@ -10735,17 +10736,46 @@ theorem sandwichedRenyiPSDReferenceHighAlphaE_dataProcessing_channel
     sandwichedRenyiPSDReferenceHighAlphaFinite_dataProcessing_channel_supported
       ρ hσ Φ α hα hSupport
 
-/-- Source-facing extended-real PSD-reference sandwiched Rényi divergence,
-assembled from the low- and high-`α` branches.
+/-- Source-facing extended-real PSD-reference sandwiched Rényi divergence.
 
-For `α < 1` this uses the positive-power `Q_α` branch; for `α ≥ 1` it uses
-the support-aware high-`α` branch. -/
+For `α < 1` this uses the positive-power `Q_α` branch.  At `α = 1` it uses
+the ordinary trace-log/Umegaki relative entropy with the PSD-reference support
+convention.  For `1 < α` it uses the support-aware high-`α` branch. -/
 noncomputable def sandwichedRenyiPSDReferenceE
     (ρ : State a) (σ : CMatrix a) (hσ : σ.PosSemidef) (α : ℝ) : EReal :=
   if α < 1 then
     sandwichedRenyiPSDReferenceLowAlphaE ρ σ hσ α
+  else if α = 1 then
+    relativeEntropyPSDReferenceTraceLogE ρ σ hσ
   else
     sandwichedRenyiPSDReferenceHighAlphaE ρ σ hσ α
+
+@[simp]
+theorem sandwichedRenyiPSDReferenceE_eq_lowAlphaE_of_lt_one
+    (ρ : State a) {σ : CMatrix a} (hσ : σ.PosSemidef) {α : ℝ}
+    (hα : α < 1) :
+    sandwichedRenyiPSDReferenceE ρ σ hσ α =
+      sandwichedRenyiPSDReferenceLowAlphaE ρ σ hσ α := by
+  simp [sandwichedRenyiPSDReferenceE, hα]
+
+@[simp]
+theorem sandwichedRenyiPSDReferenceE_eq_traceLogE_of_eq_one
+    (ρ : State a) {σ : CMatrix a} (hσ : σ.PosSemidef) {α : ℝ}
+    (hα : α = 1) :
+    sandwichedRenyiPSDReferenceE ρ σ hσ α =
+      relativeEntropyPSDReferenceTraceLogE ρ σ hσ := by
+  subst α
+  simp [sandwichedRenyiPSDReferenceE]
+
+@[simp]
+theorem sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt
+    (ρ : State a) {σ : CMatrix a} (hσ : σ.PosSemidef) {α : ℝ}
+    (hα : 1 < α) :
+    sandwichedRenyiPSDReferenceE ρ σ hσ α =
+      sandwichedRenyiPSDReferenceHighAlphaE ρ σ hσ α := by
+  have hnot_lt : ¬ α < 1 := not_lt.mpr hα.le
+  have hne : α ≠ 1 := ne_of_gt hα
+  simp [sandwichedRenyiPSDReferenceE, hnot_lt, hne]
 
 /-- PSD-reference sandwiched Rényi DPI on the already proved source ranges:
 strict `1/2 < α < 1` and high `α > 1`.
@@ -10760,18 +10790,18 @@ theorem sandwichedRenyiPSDReferenceE_dataProcessing_channel_of_half_lt_lt_one_or
         (Φ.applyState ρ) (Φ.map σ) (Φ.mapsPositive σ hσ) α ≤
       sandwichedRenyiPSDReferenceE ρ σ hσ α := by
   by_cases hlt : α < 1
-  · rw [sandwichedRenyiPSDReferenceE, if_pos hlt,
-      sandwichedRenyiPSDReferenceE, if_pos hlt]
+  · rw [sandwichedRenyiPSDReferenceE_eq_lowAlphaE_of_lt_one _ _ hlt,
+      sandwichedRenyiPSDReferenceE_eq_lowAlphaE_of_lt_one _ _ hlt]
     rcases hα_range with hlow | hhigh
     · exact
         sandwichedRenyiPSDReferenceLowAlphaE_dataProcessing_channel
           ρ hσ Φ α hlow.1 hlow.2
     · linarith
-  · rw [sandwichedRenyiPSDReferenceE, if_neg hlt,
-      sandwichedRenyiPSDReferenceE, if_neg hlt]
-    rcases hα_range with hlow | hhigh
+  · rcases hα_range with hlow | hhigh
     · linarith
-    · exact
+    · rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ hhigh,
+        sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ hhigh]
+      exact
         sandwichedRenyiPSDReferenceHighAlphaE_dataProcessing_channel
           ρ hσ Φ α hhigh
 
@@ -10789,8 +10819,8 @@ theorem sandwichedRenyiPSDReferenceE_dataProcessing_channel_of_half_le_lt_one_or
         (Φ.applyState ρ) (Φ.map σ) (Φ.mapsPositive σ hσ) α ≤
       sandwichedRenyiPSDReferenceE ρ σ hσ α := by
   by_cases hlt : α < 1
-  · rw [sandwichedRenyiPSDReferenceE, if_pos hlt,
-      sandwichedRenyiPSDReferenceE, if_pos hlt]
+  · rw [sandwichedRenyiPSDReferenceE_eq_lowAlphaE_of_lt_one _ _ hlt,
+      sandwichedRenyiPSDReferenceE_eq_lowAlphaE_of_lt_one _ _ hlt]
     rcases hα_range with hlow | hhigh
     · rcases hlow with ⟨hhalf, hlt_one⟩
       by_cases hEq : α = 1 / 2
@@ -10802,11 +10832,11 @@ theorem sandwichedRenyiPSDReferenceE_dataProcessing_channel_of_half_le_lt_one_or
           sandwichedRenyiPSDReferenceLowAlphaE_dataProcessing_channel
             ρ hσ Φ α hhalf_strict hlt_one
     · linarith
-  · rw [sandwichedRenyiPSDReferenceE, if_neg hlt,
-      sandwichedRenyiPSDReferenceE, if_neg hlt]
-    rcases hα_range with hlow | hhigh
+  · rcases hα_range with hlow | hhigh
     · linarith
-    · exact
+    · rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ hhigh,
+        sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ hhigh]
+      exact
         sandwichedRenyiPSDReferenceHighAlphaE_dataProcessing_channel
           ρ hσ Φ α hhigh
 

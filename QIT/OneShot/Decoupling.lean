@@ -36,7 +36,7 @@ namespace QIT
 open scoped ComplexOrder MatrixOrder Matrix.Norms.L2Operator NNReal
 open MeasureTheory
 
-universe u v w
+universe u v w x
 
 noncomputable section
 
@@ -150,6 +150,66 @@ def haydenProjectedAE [Fintype a] [Fintype e] [DecidableEq a] [DecidableEq e]
 def haydenProjectedAE_meanTarget [Fintype a] [Fintype e]
     (P : CMatrix a) (d : ℝ) (ρ : CMatrix (Prod a e)) : CMatrix (Prod a e) :=
   (((1 : ℝ) / d : ℝ) : ℂ) • Matrix.kronecker P (partialTraceA (a := a) (b := e) ρ)
+
+/-! ## Source setup bridge -/
+
+/-- Regroup the post-Stinespring source system `A × (B × E)` as `(A × B) × E`. -/
+def haydenPostStinespringToABEEquiv (a : Type u) (b : Type w) (e : Type v) :
+    Prod a (Prod b e) ≃ Prod (Prod a b) e where
+  toFun x := ((x.1, x.2.1), x.2.2)
+  invFun x := (x.1.1, (x.1.2, x.2))
+  left_inv x := by
+    cases x with
+    | mk a be =>
+      cases be
+      rfl
+  right_inv x := by
+    cases x with
+    | mk ab e =>
+      cases ab
+      rfl
+
+/-- Pure post-Stinespring `ABE` vector obtained from a source pure state
+`phi^{AA'}` and a Stinespring isometry `W : A' -> B × E`. -/
+def haydenPostStinespringABEPureVector {ap : Type x} {b : Type w}
+    [Fintype a] [Fintype ap] [Fintype b] [Fintype e]
+    [DecidableEq a] [DecidableEq ap] [DecidableEq b] [DecidableEq e]
+    (phi : PureVector (Prod a ap)) (W : ReferenceIsometry ap (Prod b e)) :
+    PureVector (Prod (Prod a b) e) :=
+  (W.applyPureVectorRight phi).reindex (haydenPostStinespringToABEEquiv a b e)
+
+/-- Source `phi^{AE}` obtained by applying the Stinespring isometry and tracing out `B`. -/
+def haydenPostStinespringAEState {ap : Type x} {b : Type w}
+    [Fintype a] [Fintype ap] [Fintype b] [Fintype e]
+    [DecidableEq a] [DecidableEq ap] [DecidableEq b] [DecidableEq e]
+    (phi : PureVector (Prod a ap)) (W : ReferenceIsometry ap (Prod b e)) :
+    State (Prod a e) :=
+  (haydenPostStinespringABEPureVector (a := a) (e := e) phi W).state.marginalAC
+
+/-- Source projected `RE` matrix after the random projection on Alice's side.
+The projected `R` label is represented by the `P`-supported subspace of the
+ambient `A` basis, matching the post-Stinespring matrix bound below. -/
+def haydenSourceProjectedRE {ap : Type x} {b : Type w}
+    [Fintype a] [Fintype ap] [Fintype b] [Fintype e]
+    [DecidableEq a] [DecidableEq ap] [DecidableEq b] [DecidableEq e]
+    (P : CMatrix a) (d : ℝ)
+    (phi : PureVector (Prod a ap)) (W : ReferenceIsometry ap (Prod b e))
+    (U : Matrix.unitaryGroup a ℂ) : CMatrix (Prod a e) :=
+  haydenProjectedAE (a := a) (e := e) P d
+    (haydenPostStinespringAEState (a := a) (e := e) phi W).matrix U
+
+/-- The source projected `RE` matrix is exactly the existing post-Stinespring
+projected `AE` matrix expression. -/
+theorem haydenSourceProjectedRE_eq_haydenProjectedAE {ap : Type x} {b : Type w}
+    [Fintype a] [Fintype ap] [Fintype b] [Fintype e]
+    [DecidableEq a] [DecidableEq ap] [DecidableEq b] [DecidableEq e]
+    (P : CMatrix a) (d : ℝ)
+    (phi : PureVector (Prod a ap)) (W : ReferenceIsometry ap (Prod b e))
+    (U : Matrix.unitaryGroup a ℂ) :
+    haydenSourceProjectedRE (a := a) (e := e) P d phi W U =
+      haydenProjectedAE (a := a) (e := e) P d
+        (haydenPostStinespringAEState (a := a) (e := e) phi W).matrix U :=
+  rfl
 
 /-- Hilbert--Schmidt square used in the Step 4 variance computation. -/
 def hilbertSchmidtSq [Fintype a] [DecidableEq a] (M : CMatrix a) : ℝ :=
@@ -2708,14 +2768,13 @@ theorem haydenProjectedAE_oneShotDecoupling_traceNorm_expectation_le
   exact haydenProjectedAE_oneShotDecoupling_traceNorm_expectation_le_of_variance
     (a := a) (e := e) P d rho hPid hPtr hd htrace hhs hvar
 
-/-- Source-facing one-shot decoupling theorem for
-[HaydenHorodeckiWinterYard2007Decoupling, simple.tex:312-321].
+/-- The post-Stinespring matrix representation of the one-shot decoupling theorem for
+[HaydenHorodeckiWinterYard2007Decoupling, simple.tex:308-321].
 
-The source constructs `rhoAE` from an initial purification and a Stinespring
-isometry, then projects the `A` register by `sqrt(|A| / d) P U` for Haar-random
-`U`.  This wrapper states the resulting projected-state trace-norm bound in
-that post-Stinespring `A × E` representation, with `P` the projection onto the
-selected subspace and `d = dim R`. -/
+This theorem starts after the source pure state and Stinespring isometry have
+already produced the `A × E` density matrix.  Use
+`hayden_oneShotDecoupling_traceNorm_expectation_le_of_stinespring` for the
+source setup bridge. -/
 theorem hayden_oneShotDecoupling_traceNorm_expectation_le
     [Fintype a] [Fintype e] [DecidableEq a] [DecidableEq e] [Nontrivial a]
     (P : CMatrix a) (d : ℝ) (rhoAE : CMatrix (Prod a e))
@@ -2730,6 +2789,39 @@ theorem hayden_oneShotDecoupling_traceNorm_expectation_le
   haydenProjectedAE_oneShotDecoupling_traceNorm_expectation_le
     (a := a) (e := e) P d rhoAE
     hP_idem hP_herm hP_trace hrhoAE hd_pos hd_le_dimA
+
+/-- Source-facing one-shot decoupling theorem for
+[HaydenHorodeckiWinterYard2007Decoupling, simple.tex:308-321].
+
+Starting from the source pure state `phi^{AA'}` and a Stinespring isometry
+`W : A' -> B × E`, this wrapper forms the source `phi^{AE}`, identifies the
+projected `RE` matrix with the post-Stinespring matrix representation, and
+reuses the existing matrix decoupling bound. -/
+theorem hayden_oneShotDecoupling_traceNorm_expectation_le_of_stinespring
+    {ap : Type x} {b : Type w}
+    [Fintype a] [Fintype ap] [Fintype b] [Fintype e]
+    [DecidableEq a] [DecidableEq ap] [DecidableEq b] [DecidableEq e]
+    [Nontrivial a]
+    (phi : PureVector (Prod a ap)) (W : ReferenceIsometry ap (Prod b e))
+    (P : CMatrix a) (d : ℝ)
+    (hP_idem : P * P = P) (hP_herm : P.IsHermitian)
+    (hP_trace : P.trace = (d : ℂ))
+    (hd_pos : 1 ≤ d) (hd_le_dimA : d ≤ Fintype.card a) :
+    (∫ U : Matrix.unitaryGroup a ℂ,
+      traceNorm (haydenSourceProjectedRE (a := a) (e := e) P d phi W U -
+        haydenProjectedAE_meanTarget (a := a) (e := e) P d
+          (haydenPostStinespringAEState (a := a) (e := e) phi W).matrix)
+      ∂unitaryHaarMeasure (a := a)) ≤
+      Real.sqrt (d * (Fintype.card e : ℝ) *
+        hilbertSchmidtSq
+          (haydenPostStinespringAEState (a := a) (e := e) phi W).matrix) := by
+  simpa [haydenSourceProjectedRE] using
+    hayden_oneShotDecoupling_traceNorm_expectation_le
+      (a := a) (e := e) P d
+      (haydenPostStinespringAEState (a := a) (e := e) phi W).matrix
+      hP_idem hP_herm hP_trace
+      (haydenPostStinespringAEState (a := a) (e := e) phi W).pos.isHermitian
+      hd_pos hd_le_dimA
 
 end
 

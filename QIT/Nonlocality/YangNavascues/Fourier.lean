@@ -169,22 +169,6 @@ theorem inverseFourierMatrix_mul_fourierMatrix (d : ℕ) [NeZero d] :
     inverseFourierMatrix d * fourierMatrix d = 1 := by
   simpa [inverseFourierMatrix] using fourierMatrix_isUnitary d
 
-namespace SchmidtTarget
-
-variable {ι : Type u} [Fintype ι] [DecidableEq ι]
-
-/-- A source-sensitive bridge from an arbitrary finite Schmidt index to `Fin d`. -/
-structure reindexToFin (target : SchmidtTarget ι) (e : ι ≃ Fin (Fintype.card ι)) : Prop where
-  /-- The bridge keeps the original target data and only records the chosen ordering. -/
-  valid : True := trivial
-
-/-- Default noncomputable finite-index bridge via `Fintype.equivFin`. -/
-def defaultReindexToFin (target : SchmidtTarget ι) :
-    reindexToFin target (Fintype.equivFin ι) :=
-  ⟨trivial⟩
-
-end SchmidtTarget
-
 /-- A block-controlled operator on `H × Fin d`. -/
 def controlledOperator {H : Type u} [Fintype H] [DecidableEq H]
     {d : ℕ} [NeZero d] (U : Fin d → CMatrix H) : CMatrix (H × Fin d) :=

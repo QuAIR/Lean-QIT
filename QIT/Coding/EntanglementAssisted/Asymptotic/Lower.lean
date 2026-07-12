@@ -60,11 +60,11 @@ theorem entanglementAssistedInformation_isAchievable_of_oneShotPetzLowerBound
     linarith
   have hhalfδ : 0 < δ / 2 := by positivity
   have hlim :=
-    N.barPetzRenyiMutualInformationPSD_tendsto_entanglementAssistedInformation_left
+    N.barPetzRenyiMutualInformationPSDFinite_tendsto_entanglementAssistedInformation_left
   have hα_eventually :
       ∀ᶠ alpha in PetzRenyiAlpha.leftToOne,
         N.entanglementAssistedInformation - δ / 2 <
-          N.barPetzRenyiMutualInformationPSD
+          N.barPetzRenyiMutualInformationPSDFinite
             alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) := by
     exact (tendsto_order.mp hlim).1
       (N.entanglementAssistedInformation - δ / 2) (by linarith)
@@ -94,21 +94,21 @@ theorem entanglementAssistedInformation_isAchievable_of_oneShotPetzLowerBound
     simpa [mul_comm, mul_left_comm] using this
   let blockN : Channel (QIT.TensorPower a n) (QIT.TensorPower b n) := N.tensorPower n
   let blockPetz : ℝ :=
-    blockN.barPetzRenyiMutualInformationPSD
+    blockN.barPetzRenyiMutualInformationPSDFinite
       alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)
   have hsingle_scaled :
       (n : ℝ) * (N.entanglementAssistedInformation - δ / 2) <
         (n : ℝ) *
-          N.barPetzRenyiMutualInformationPSD
+          N.barPetzRenyiMutualInformationPSDFinite
             alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) :=
     mul_lt_mul_of_pos_left hα_lower hnR_pos
   have htensor :
       (n : ℝ) *
-          N.barPetzRenyiMutualInformationPSD
+          N.barPetzRenyiMutualInformationPSDFinite
             alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) ≤
         blockPetz := by
     dsimp [blockPetz, blockN]
-    exact N.barPetzRenyiMutualInformationPSD_tensorPower_lower_bound
+    exact N.barPetzRenyiMutualInformationPSDFinite_tensorPower_lower_bound
       hn_pos alpha
   have hblock_gt :
       (n : ℝ) * (N.entanglementAssistedInformation - δ / 2) <
@@ -126,12 +126,12 @@ theorem entanglementAssistedInformation_isAchievable_of_oneShotPetzLowerBound
       (oneShotLower : EReal) ≤
         blockN.oneShotEntanglementAssistedClassicalCapacityE ε := by
     change
-      ((blockN.barPetzRenyiMutualInformationPSD
+      ((blockN.barPetzRenyiMutualInformationPSDFinite
             alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) -
           alpha.1 / (1 - alpha.1) * log2 (1 / (ε - η)) -
           log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
         blockN.oneShotEntanglementAssistedClassicalCapacityE ε
-    exact @Channel.oneShotEntanglementAssistedClassicalCapacityE_petzPSDLowerBound
+    exact @Channel.oneShotEntanglementAssistedClassicalCapacityE_petzPSDFiniteLowerBound
       (QIT.TensorPower a n)
       (QIT.tensorPowerFintype (a := a) n)
       (QIT.tensorPowerDecidableEq (a := a) n)

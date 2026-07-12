@@ -159,9 +159,9 @@ theorem hypothesisTestingBetaPSD_le_of_effect
 
 theorem hypothesisTestingRelativeEntropyPSDE_eq_state (sigma : State a) :
     rho.hypothesisTestingRelativeEntropyPSDE sigma.matrix epsilon =
-      rho.hypothesisTestingRelativeEntropyE sigma epsilon := by
-  simp [hypothesisTestingRelativeEntropyPSDE, hypothesisTestingRelativeEntropyE,
-    hypothesisTestingRelativeEntropyPSD, hypothesisTestingRelativeEntropy,
+      rho.hypothesisTestingRelativeEntropy sigma epsilon := by
+  simp [hypothesisTestingRelativeEntropyPSDE, hypothesisTestingRelativeEntropy,
+    hypothesisTestingRelativeEntropyPSD, hypothesisTestingRelativeEntropyFinite,
     hypothesisTestingBetaPSD, hypothesisTestingBeta,
     hypothesisTestingBetaPSDCandidateSet, hypothesisTestingBetaCandidateSet,
     HypothesisTestingEffect.typeIIErrorPSD_eq_state]
@@ -434,8 +434,7 @@ theorem hypothesisTestingRelativeEntropyPSDE_le_sandwichedRenyiPSDReferenceE_add
     rho.hypothesisTestingRelativeEntropyPSDE sigma epsilon ≤
       sandwichedRenyiPSDReferenceE rho sigma hsigma alpha +
         ((alpha / (alpha - 1) * log2 (1 / (1 - epsilon)) : ℝ) : EReal) := by
-  have hnot_lt : ¬ alpha < 1 := not_lt.mpr halpha.le
-  rw [sandwichedRenyiPSDReferenceE, if_neg hnot_lt]
+  rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt rho hsigma halpha]
   rw [sandwichedRenyiPSDReferenceHighAlphaE_eq_top_of_not_supports
     rho hsigma alpha hSupport]
   rw [EReal.top_add_coe]
@@ -476,11 +475,11 @@ private theorem typeIIErrorPSD_rpow_lower_bound_of_sandwichedRenyi
   have hDPIE :=
     sandwichedRenyiPSDReferenceE_dataProcessing_channel_ge_of_half_le_lt_one_or_one_lt
       rho hsigma Phi alpha (Or.inr halpha)
-  have hnot_low : ¬ alpha < 1 := not_lt.mpr halpha.le
-  rw [sandwichedRenyiPSDReferenceE, if_neg hnot_low,
+  rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt rho hsigma halpha,
     sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports
       rho hsigma alpha hSupport,
-    sandwichedRenyiPSDReferenceE, if_neg hnot_low,
+    sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt
+      (Phi.applyState rho) (Phi.mapsPositive sigma hsigma) halpha,
     sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports
       (Phi.applyState rho) (Phi.mapsPositive sigma hsigma) alpha hOutSupport] at hDPIE
   have hDPI :
@@ -527,8 +526,7 @@ theorem hypothesisTestingRelativeEntropyPSDE_le_sandwichedRenyiPSDReferenceE_add
         (fun Lambda =>
           typeIIErrorPSD_rpow_lower_bound_of_sandwichedRenyi
             rho hsigma hε_lt_one halpha hSupport Lambda)
-    have hnot_low : ¬ alpha < 1 := not_lt.mpr halpha.le
-    rw [sandwichedRenyiPSDReferenceE, if_neg hnot_low,
+    rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt rho hsigma halpha,
       sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports
         rho hsigma alpha hSupport]
     simpa [EReal.coe_add] using hfinite

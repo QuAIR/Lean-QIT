@@ -395,18 +395,18 @@ This is the channel-optimization part of the one-shot converse: first regroup
 Bob's retained side information with the message reference, then use the
 product reference marginal `θ_{ME_B}=π_M⊗θ_{E_B}`, and finally optimize over
 all mixed input-reference states of the channel. -/
-theorem preDecodedMessageOutputState_hypothesisTestingMutualInformationE_le_channel
+theorem preDecodedMessageOutputState_hypothesisTestingMutualInformation_le_channel
     (C : EntanglementAssistedClassicalCode N 1 M EA EB)
     (ε : ℝ) (hε : 0 ≤ ε) :
-    C.preDecodedMessageOutputState.hypothesisTestingMutualInformationE ε ≤
-      N.hypothesisTestingMutualInformationE ε := by
+    C.preDecodedMessageOutputState.hypothesisTestingMutualInformation ε ≤
+      N.hypothesisTestingMutualInformation ε := by
   let dropBE : Prod (TensorPower b 1) EB ≃ Prod b EB :=
     Equiv.prodCongr (tensorPowerOneEquiv b) (Equiv.refl EB)
   have hdrop :
       (C.preDecodedMessageOutputState.reindex
-          (Equiv.prodCongr (Equiv.refl M) dropBE)).hypothesisTestingMutualInformationE ε =
-        C.preDecodedMessageOutputState.hypothesisTestingMutualInformationE ε := by
-    exact State.hypothesisTestingMutualInformationE_reindex_prodCongr
+          (Equiv.prodCongr (Equiv.refl M) dropBE)).hypothesisTestingMutualInformation ε =
+        C.preDecodedMessageOutputState.hypothesisTestingMutualInformation ε := by
+    exact State.hypothesisTestingMutualInformation_reindex_prodCongr
       C.preDecodedMessageOutputState ε hε (Equiv.refl M) dropBE
   have hstate :
       C.preDecodedMessageOutputState.reindex
@@ -416,16 +416,16 @@ theorem preDecodedMessageOutputState_hypothesisTestingMutualInformationE_le_chan
       C.preDecodedMessageOutputState_reindex_oneUseMessageOutputEquiv
   have hrepart :
       (C.oneUseReferenceOutputState.reindex
-          (State.messageOutputSideInfoEquiv M EB b)).hypothesisTestingMutualInformationE ε ≤
-        C.oneUseReferenceOutputState.hypothesisTestingMutualInformationE ε :=
-    State.hypothesisTestingMutualInformationE_repartition_le_of_marginalA_eq_prod
+          (State.messageOutputSideInfoEquiv M EB b)).hypothesisTestingMutualInformation ε ≤
+        C.oneUseReferenceOutputState.hypothesisTestingMutualInformation ε :=
+    State.hypothesisTestingMutualInformation_repartition_le_of_marginalA_eq_prod
       C.oneUseReferenceOutputState ε hε
       C.oneUseReferenceOutputState_marginalA_eq_prod_marginals
   have hchan :
-      C.oneUseReferenceOutputState.hypothesisTestingMutualInformationE ε ≤
-        N.hypothesisTestingMutualInformationE ε := by
+      C.oneUseReferenceOutputState.hypothesisTestingMutualInformation ε ≤
+        N.hypothesisTestingMutualInformation ε := by
     rw [C.oneUseReferenceOutputState_eq_channel_referenceInputState]
-    exact N.mixedInputOutput_hypothesisTestingMutualInformationE_le_channel
+    exact N.mixedInputOutput_hypothesisTestingMutualInformation_le_channel
       C.oneUseReferenceInputState ε hε
   rw [← hdrop]
   rw [hstate]
@@ -518,12 +518,12 @@ theorem uniformDecodedMessageState_eq_measure_preDecoded
 
 /-- Measuring Bob's pre-decoding register cannot increase optimized
 extended-real hypothesis-testing mutual information. -/
-theorem uniformDecodedMessageState_hypothesisTestingMutualInformationE_le_preDecoded
+theorem uniformDecodedMessageState_hypothesisTestingMutualInformation_le_preDecoded
     (C : EntanglementAssistedClassicalCode N n M EA EB) (ε : ℝ) (hε : 0 ≤ ε) :
-    C.uniformDecodedMessageState.hypothesisTestingMutualInformationE ε ≤
-      C.preDecodedMessageOutputState.hypothesisTestingMutualInformationE ε := by
+    C.uniformDecodedMessageState.hypothesisTestingMutualInformation ε ≤
+      C.preDecodedMessageOutputState.hypothesisTestingMutualInformation ε := by
   rw [C.uniformDecodedMessageState_eq_measure_preDecoded]
-  exact State.hypothesisTestingMutualInformationE_dataProcessing_right
+  exact State.hypothesisTestingMutualInformation_dataProcessing_right
     C.preDecodedMessageOutputState (Channel.measure C.decoder) ε hε
 
 /-- The transmitted-message marginal of the pre-decoding cq state is uniform. -/
@@ -632,35 +632,35 @@ theorem comparator_accept_ge_of_maxErrorAtMost
       exact mul_le_mul_of_nonneg_left hsucc (NNReal.coe_nonneg _)
 
 /-- Comparator-test meta-bound for the decoded classical message pair. -/
-theorem log_card_le_uniformDecodedMessageState_hypothesisTestingMutualInformationE
+theorem log_card_le_uniformDecodedMessageState_hypothesisTestingMutualInformation
     (C : EntanglementAssistedClassicalCode N n M EA EB) {ε : ℝ}
     (hC : C.maxErrorAtMost ε) :
     (log2 (Fintype.card M : ℝ) : EReal) ≤
-      C.uniformDecodedMessageState.hypothesisTestingMutualInformationE ε := by
-  exact comparator_hypothesisTestingMutualInformationE_lower_bound
+      C.uniformDecodedMessageState.hypothesisTestingMutualInformation ε := by
+  exact comparator_hypothesisTestingMutualInformation_lower_bound
     C.uniformDecodedMessageState ε
     C.uniformDecodedMessageState_marginalA
     (C.comparator_accept_ge_of_maxErrorAtMost hC)
 
 /-- Reliable decoding and decoder data processing give the pre-decoding
 meta-converse bound `log₂ |M| ≤ I_H^ε(M;BⁿE_B)`. -/
-theorem log_card_le_preDecodedMessageOutputState_hypothesisTestingMutualInformationE
+theorem log_card_le_preDecodedMessageOutputState_hypothesisTestingMutualInformation
     (C : EntanglementAssistedClassicalCode N n M EA EB) {ε : ℝ}
     (hε : 0 ≤ ε) (hC : C.maxErrorAtMost ε) :
     (log2 (Fintype.card M : ℝ) : EReal) ≤
-      C.preDecodedMessageOutputState.hypothesisTestingMutualInformationE ε :=
-  (C.log_card_le_uniformDecodedMessageState_hypothesisTestingMutualInformationE hC).trans
-    (C.uniformDecodedMessageState_hypothesisTestingMutualInformationE_le_preDecoded ε hε)
+      C.preDecodedMessageOutputState.hypothesisTestingMutualInformation ε :=
+  (C.log_card_le_uniformDecodedMessageState_hypothesisTestingMutualInformation hC).trans
+    (C.uniformDecodedMessageState_hypothesisTestingMutualInformation_le_preDecoded ε hε)
 
 /-- One-shot entanglement-assisted hypothesis-testing meta-converse for a
 fixed one-use code. -/
-theorem log_card_le_channel_hypothesisTestingMutualInformationE
+theorem log_card_le_channel_hypothesisTestingMutualInformation
     (C : EntanglementAssistedClassicalCode N 1 M EA EB) {ε : ℝ}
     (hε : 0 ≤ ε) (hC : C.maxErrorAtMost ε) :
     (log2 (Fintype.card M : ℝ) : EReal) ≤
-      N.hypothesisTestingMutualInformationE ε :=
-  (C.log_card_le_preDecodedMessageOutputState_hypothesisTestingMutualInformationE hε hC).trans
-    (C.preDecodedMessageOutputState_hypothesisTestingMutualInformationE_le_channel ε hε)
+      N.hypothesisTestingMutualInformation ε :=
+  (C.log_card_le_preDecodedMessageOutputState_hypothesisTestingMutualInformation hε hC).trans
+    (C.preDecodedMessageOutputState_hypothesisTestingMutualInformation_le_channel ε hε)
 
 end EntanglementAssistedClassicalCode
 
@@ -670,22 +670,22 @@ variable (N : Channel a b)
 
 /-- The one-shot hypothesis-testing mutual information is an extended-real
 upper bound on every `ε`-reliable one-use entanglement-assisted classical code. -/
-theorem hypothesisTestingMutualInformationE_isOneShotEntanglementAssistedClassicalCapacityUpperBoundE
+theorem hypothesisTestingMutualInformation_isOneShotEntanglementAssistedClassicalCapacityUpperBoundE
     {ε : ℝ} (hε : 0 ≤ ε) :
     N.IsOneShotEntanglementAssistedClassicalCapacityUpperBoundE ε
-      (N.hypothesisTestingMutualInformationE ε) := by
+      (N.hypothesisTestingMutualInformation ε) := by
   intro M _hM _hMeq _hMne EA _hEA _hEAeq EB _hEB _hEBeq C hC
   rw [EntanglementAssistedClassicalCode.rate_one C]
-  exact C.log_card_le_channel_hypothesisTestingMutualInformationE hε hC
+  exact C.log_card_le_channel_hypothesisTestingMutualInformation hε hC
 
 /-- One-shot entanglement-assisted hypothesis-testing converse in capacity
 form, in the extended-real convention. -/
-theorem oneShotEntanglementAssistedClassicalCapacityE_le_hypothesisTestingMutualInformationE
+theorem oneShotEntanglementAssistedClassicalCapacityE_le_hypothesisTestingMutualInformation
     {ε : ℝ} (hε : 0 ≤ ε) :
     N.oneShotEntanglementAssistedClassicalCapacityE ε ≤
-      N.hypothesisTestingMutualInformationE ε :=
+      N.hypothesisTestingMutualInformation ε :=
   N.oneShotEntanglementAssistedClassicalCapacityE_le_of_upperBound
-    (N.hypothesisTestingMutualInformationE_isOneShotEntanglementAssistedClassicalCapacityUpperBoundE
+    (N.hypothesisTestingMutualInformation_isOneShotEntanglementAssistedClassicalCapacityUpperBoundE
       hε)
 
 end Channel

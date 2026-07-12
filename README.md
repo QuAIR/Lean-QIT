@@ -46,7 +46,7 @@ The library currently includes:
 - `QIT.Asymptotic`: typicality and AEP-oriented interfaces.
 - `QIT.Symmetry`: symmetric-subspace, twirling, and de Finetti infrastructure.
 - `QIT.Coding`: classical, source, and entanglement-assisted coding surfaces.
-- `QIT.Protocols`: state merging and recovery surfaces.
+- `QIT.Protocols`: state merging and FQSW surfaces.
 - `QIT.Entanglement`: separability and PPT-oriented definitions.
 - `QIT.Nonlocality`: Bell scenario, CHSH, Tsirelson, and certification entry points.
 - `QIT.Security`: BB84, key security, and randomness-extractor interfaces.

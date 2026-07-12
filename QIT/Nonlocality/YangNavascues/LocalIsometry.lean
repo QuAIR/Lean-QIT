@@ -49,8 +49,8 @@ theorem baseIndex_val (target : SchmidtTarget ι) :
 /--
 A base-aware finite-index bridge for the YN Fourier construction.
 
-Unlike the convenience `reindexToFin`, this explicitly records that the
-distinguished source index `target.base` is sent to Fourier index `0`.
+This records the source indexing convention that the distinguished source index
+`target.base` is sent to Fourier index `0`.
 -/
 structure BaseReindexToFin (target : SchmidtTarget ι) where
   /-- The chosen finite ordering used by the Fourier construction. -/
@@ -61,11 +61,6 @@ structure BaseReindexToFin (target : SchmidtTarget ι) where
 namespace BaseReindexToFin
 
 variable {target : SchmidtTarget ι}
-
-/-- Forget the base-aware proof to the lighter bridge consumed by Fourier APIs. -/
-def toReindexToFin (B : BaseReindexToFin target) :
-    SchmidtTarget.reindexToFin target B.toEquiv :=
-  ⟨trivial⟩
 
 @[simp]
 theorem toEquiv_base (B : BaseReindexToFin target) :

@@ -43,7 +43,11 @@ variable [DecidableEq A] [DecidableEq B]
 variable {TA : Type w} {TB : Type z}
 variable [Fintype TA] [DecidableEq TA] [Fintype TB] [DecidableEq TB]
 
-/-- Public nonlocality entrypoint for a full state self-testing theorem. -/
+/--
+Public nonlocality entrypoint for the junk-free special case of a full state
+self-testing theorem. Use `main_with_aux` for the source-facing version with
+auxiliary output.
+-/
 public theorem main {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
     (hRealizes : Bell.RealizesTargetState p target)
     (hAll :
@@ -58,8 +62,8 @@ public theorem main {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
   SelfTesting.Definition.main hRealizes hAll
 
 /--
-Public nonlocality entrypoint for a full state self-testing theorem with
-explicit auxiliary garbage in the local-isometry output.
+Source-facing public nonlocality entrypoint for a full state self-testing
+theorem with explicit auxiliary garbage in the local-isometry output.
 -/
 public theorem main_with_aux {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
     (hRealizes :
@@ -94,7 +98,11 @@ variable {HA : Type u} {HB : Type v} {TA : Type w} {TB : Type z}
 variable [Fintype HA] [DecidableEq HA] [Fintype HB] [DecidableEq HB]
 variable [Fintype TA] [DecidableEq TA] [Fintype TB] [DecidableEq TB]
 
-/-- Public nonlocality entrypoint for the manifest self-testing witness. -/
+/--
+Public nonlocality entrypoint for the junk-free special case of the manifest
+self-testing witness. Use `main_with_aux` for the source-facing version with
+auxiliary output.
+-/
 public theorem main (R : Bell.QuantumRealization X Y A B)
     {p : Bell.Behavior X Y A B} {target : State (TA × TB)}
     (hR : R.RealizesBehavior p)
@@ -115,8 +123,8 @@ public theorem of_selfTestsState {p : Bell.Behavior X Y A B}
   SelfTesting.Manifest.of_selfTestsState h
 
 /--
-Public nonlocality entrypoint for the manifest self-testing witness with
-explicit auxiliary garbage in the local-isometry output.
+Source-facing public nonlocality entrypoint for the manifest self-testing
+witness with explicit auxiliary garbage in the local-isometry output.
 -/
 public theorem main_with_aux (R : Bell.QuantumRealization X Y A B)
     {p : Bell.Behavior X Y A B} {target : State (TA × TB)}

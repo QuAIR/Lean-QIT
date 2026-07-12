@@ -151,43 +151,43 @@ theorem entanglementAssistedInformation_tensorPower_lower_bound
 
 /-- Fixed-input PSD barred Petz--Renyi mutual information is additive under
 memoryless tensor powers. -/
-theorem inputBarPetzRenyiMutualInformationPSD_tensorPowerBipartite
+theorem inputBarPetzRenyiMutualInformationPSDFinite_tensorPowerBipartite
     (ψ : PureVector (Prod a a)) (n : ℕ) (alpha : PetzRenyiAlpha) :
-    (N.tensorPower n).inputBarPetzRenyiMutualInformationPSD
+    (N.tensorPower n).inputBarPetzRenyiMutualInformationPSDFinite
         (ψ.tensorPowerBipartite n)
         alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) =
       (n : ℝ) *
-        N.inputBarPetzRenyiMutualInformationPSD
+        N.inputBarPetzRenyiMutualInformationPSDFinite
           ψ alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) := by
-  unfold Channel.inputBarPetzRenyiMutualInformationPSD
+  unfold Channel.inputBarPetzRenyiMutualInformationPSDFinite
   rw [Channel.hypothesisTestingOutputState_tensorPowerBipartite]
-  exact State.barPetzRenyiMutualInformationPSD_tensorPowerBipartite
+  exact State.barPetzRenyiMutualInformationPSDFinite_tensorPowerBipartite
     (N.hypothesisTestingOutputState ψ) alpha.2.1 alpha.2.2 n
 
 /-- The PSD barred Petz--Renyi channel mutual information is superadditive
 under tensor powers in the direction needed by the asymptotic achievability
 proof. -/
-theorem barPetzRenyiMutualInformationPSD_tensorPower_lower_bound
+theorem barPetzRenyiMutualInformationPSDFinite_tensorPower_lower_bound
     [Nonempty a] {n : ℕ} (hn : 0 < n) (alpha : PetzRenyiAlpha) :
     (n : ℝ) *
-        N.barPetzRenyiMutualInformationPSD
+        N.barPetzRenyiMutualInformationPSDFinite
           alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) ≤
-      (N.tensorPower n).barPetzRenyiMutualInformationPSD
+      (N.tensorPower n).barPetzRenyiMutualInformationPSDFinite
         alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) := by
   classical
-  rw [N.barPetzRenyiMutualInformationPSD_eq_sSup,
-    (N.tensorPower n).barPetzRenyiMutualInformationPSD_eq_sSup]
-  let S := N.barPetzRenyiMutualInformationPSDValueSet
+  rw [N.barPetzRenyiMutualInformationPSDFinite_eq_sSup,
+    (N.tensorPower n).barPetzRenyiMutualInformationPSDFinite_eq_sSup]
+  let S := N.barPetzRenyiMutualInformationPSDFiniteValueSet
     alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)
-  let T := (N.tensorPower n).barPetzRenyiMutualInformationPSDValueSet
+  let T := (N.tensorPower n).barPetzRenyiMutualInformationPSDFiniteValueSet
     alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)
   have hne : S.Nonempty := by
     let ψ0 : PureVector (Prod a a) := PureVector.basisPureVector
-    refine ⟨N.inputBarPetzRenyiMutualInformationPSD
+    refine ⟨N.inputBarPetzRenyiMutualInformationPSDFinite
       ψ0 alpha.1 alpha.2.1 (ne_of_lt alpha.2.2), ?_⟩
     exact ⟨ψ0, rfl⟩
   have hbddTensor : BddAbove T :=
-    (N.tensorPower n).barPetzRenyiMutualInformationPSDValueSet_bddAbove alpha
+    (N.tensorPower n).barPetzRenyiMutualInformationPSDFiniteValueSet_bddAbove alpha
   have hnR : 0 < (n : ℝ) := by
     exact_mod_cast hn
   have hsSup :
@@ -197,14 +197,14 @@ theorem barPetzRenyiMutualInformationPSD_tensorPower_lower_bound
     rcases hx with ⟨ψ, rfl⟩
     have hmemT :
         (n : ℝ) *
-            N.inputBarPetzRenyiMutualInformationPSD
+            N.inputBarPetzRenyiMutualInformationPSDFinite
               ψ alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) ∈ T := by
       refine ⟨ψ.tensorPowerBipartite n, ?_⟩
-      exact (N.inputBarPetzRenyiMutualInformationPSD_tensorPowerBipartite
+      exact (N.inputBarPetzRenyiMutualInformationPSDFinite_tensorPowerBipartite
         ψ n alpha).symm
     have hleT :
         (n : ℝ) *
-            N.inputBarPetzRenyiMutualInformationPSD
+            N.inputBarPetzRenyiMutualInformationPSDFinite
               ψ alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) ≤ sSup T :=
       le_csSup hbddTensor hmemT
     exact (le_div_iff₀ hnR).mpr (by simpa [mul_comm] using hleT)

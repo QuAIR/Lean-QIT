@@ -57,9 +57,9 @@ theorem log_card_le_channel_sandwichedRenyiMutualInformationE_add
     (log2 (Fintype.card M : ℝ) : EReal) ≤
       N.sandwichedRenyiMutualInformationE alpha +
         ((alpha / (alpha - 1) * log2 (1 / (1 - epsilon)) : ℝ) : EReal) :=
-  (C.log_card_le_channel_hypothesisTestingMutualInformationE
+  (C.log_card_le_channel_hypothesisTestingMutualInformation
     hepsilon_nonneg hC).trans
-    (N.hypothesisTestingMutualInformationE_le_sandwichedRenyiMutualInformationE_add
+    (N.hypothesisTestingMutualInformation_le_sandwichedRenyiMutualInformationE_add
       hepsilon_nonneg hepsilon_lt_one halpha)
 
 end EntanglementAssistedClassicalCode
@@ -78,9 +78,9 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_le_sandwichedRenyiMutualIn
     N.oneShotEntanglementAssistedClassicalCapacityE epsilon ≤
       N.sandwichedRenyiMutualInformationE alpha +
         ((alpha / (alpha - 1) * log2 (1 / (1 - epsilon)) : ℝ) : EReal) :=
-  (N.oneShotEntanglementAssistedClassicalCapacityE_le_hypothesisTestingMutualInformationE
+  (N.oneShotEntanglementAssistedClassicalCapacityE_le_hypothesisTestingMutualInformation
     hepsilon_nonneg).trans
-    (N.hypothesisTestingMutualInformationE_le_sandwichedRenyiMutualInformationE_add
+    (N.hypothesisTestingMutualInformation_le_sandwichedRenyiMutualInformationE_add
       hepsilon_nonneg hepsilon_lt_one halpha)
 
 end Channel

@@ -11,6 +11,7 @@ public import QIT.HypothesisTesting.MutualInformation
 public import QIT.Core.Channel
 public import QIT.Core.POVMProbability
 public import QIT.Core.Pure
+public import QIT.Channels.Topology
 
 /-!
 # Entanglement-assisted classical capacity API
@@ -50,6 +51,7 @@ Source alignment:
 
 open scoped ComplexOrder MatrixOrder
 open Matrix
+open Filter
 
 namespace QIT
 
@@ -60,110 +62,9 @@ noncomputable section
 variable {a : Type u} {b : Type v}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 
-/-- Pure vectors carry the topology induced by their amplitudes. -/
-instance PureVector.instTopologicalSpace {a : Type u} [Fintype a] [DecidableEq a] :
-    TopologicalSpace (PureVector a) :=
-  TopologicalSpace.induced PureVector.amp inferInstance
-
 namespace PureVector
 
 variable {a : Type u} [Fintype a] [DecidableEq a]
-
-@[fun_prop]
-theorem continuous_amp : Continuous (fun ψ : PureVector a => ψ.amp) :=
-  continuous_induced_dom
-
-omit [Fintype a] [DecidableEq a] in
-theorem rankOneMatrix_continuous : Continuous (fun ψ : a → ℂ => rankOneMatrix ψ) := by
-  refine continuous_pi ?_
-  intro i
-  refine continuous_pi ?_
-  intro j
-  simp only [rankOneMatrix_apply]
-  exact (continuous_apply i).mul (continuous_star.comp (continuous_apply j))
-
-theorem state_continuous : Continuous (fun ψ : PureVector a => ψ.state) := by
-  rw [continuous_induced_rng]
-  change Continuous fun ψ : PureVector a => rankOneMatrix ψ.amp
-  exact rankOneMatrix_continuous.comp PureVector.continuous_amp
-
-/-- The amplitude vectors underlying normalized pure vectors. -/
-private def normalizedAmplitudeSet (a : Type u) [Fintype a] : Set (a → ℂ) :=
-  {ψ | (rankOneMatrix ψ).trace = 1}
-
-omit [DecidableEq a] in
-private theorem trace_eq_sum_norm_sq {ψ : a → ℂ}
-    (hψ : (rankOneMatrix ψ).trace = 1) :
-    ∑ i, ‖ψ i‖ ^ 2 = (1 : ℝ) := by
-  have hre := congrArg Complex.re hψ
-  rw [rankOneMatrix_trace] at hre
-  simp [dotProduct] at hre
-  calc
-    ∑ i, ‖ψ i‖ ^ 2 =
-        ∑ i, ((ψ i).re * (ψ i).re + (ψ i).im * (ψ i).im) := by
-          refine Finset.sum_congr rfl ?_
-          intro i _
-          rw [Complex.sq_norm, Complex.normSq_apply]
-    _ = 1 := hre
-
-omit [DecidableEq a] in
-private theorem norm_le_one_of_mem_normalizedAmplitudeSet
-    {ψ : a → ℂ} (hψ : ψ ∈ normalizedAmplitudeSet a) (i : a) :
-    ‖ψ i‖ ≤ 1 := by
-  have hsum : ∑ j, ‖ψ j‖ ^ 2 = (1 : ℝ) :=
-    trace_eq_sum_norm_sq hψ
-  have hsingle : ‖ψ i‖ ^ 2 ≤ ∑ j, ‖ψ j‖ ^ 2 :=
-    Finset.single_le_sum (fun j _ => sq_nonneg (‖ψ j‖)) (Finset.mem_univ i)
-  have hsquare : ‖ψ i‖ ^ 2 ≤ 1 := by simpa [hsum] using hsingle
-  exact (sq_le_one_iff₀ (norm_nonneg (ψ i))).mp hsquare
-
-omit [DecidableEq a] in
-private theorem normalizedAmplitudeSet_isClosed :
-    IsClosed (normalizedAmplitudeSet a) := by
-  unfold normalizedAmplitudeSet
-  exact isClosed_eq (Continuous.matrix_trace rankOneMatrix_continuous) continuous_const
-
-omit [DecidableEq a] in
-private theorem normalizedAmplitudeSet_isBounded :
-    Bornology.IsBounded (normalizedAmplitudeSet a) := by
-  rw [Metric.isBounded_iff_subset_closedBall (0 : a → ℂ)]
-  refine ⟨1, ?_⟩
-  intro ψ hψ
-  rw [Metric.mem_closedBall, dist_zero_right]
-  rw [pi_norm_le_iff_of_nonneg zero_le_one]
-  intro i
-  exact norm_le_one_of_mem_normalizedAmplitudeSet hψ i
-
-omit [DecidableEq a] in
-private theorem normalizedAmplitudeSet_isCompact :
-    IsCompact (normalizedAmplitudeSet a) :=
-  Metric.isCompact_iff_isClosed_bounded.mpr
-    ⟨normalizedAmplitudeSet_isClosed, normalizedAmplitudeSet_isBounded⟩
-
-private def ampSubtypeEquiv :
-    PureVector a ≃ {ψ : a → ℂ // ψ ∈ normalizedAmplitudeSet a} where
-  toFun ψ := ⟨ψ.amp, ψ.trace_rankOne_eq_one⟩
-  invFun ψ := ⟨ψ.1, ψ.2⟩
-  left_inv ψ := by
-    cases ψ
-    rfl
-  right_inv ψ := by
-    cases ψ
-    rfl
-
-private noncomputable def ampSubtypeHomeomorph :
-    PureVector a ≃ₜ {ψ : a → ℂ // ψ ∈ normalizedAmplitudeSet a} where
-  toEquiv := ampSubtypeEquiv
-  continuous_toFun := PureVector.continuous_amp.subtype_mk fun ψ => ψ.trace_rankOne_eq_one
-  continuous_invFun := by
-    rw [continuous_induced_rng]
-    change Continuous fun ψ : {ψ : a → ℂ // ψ ∈ normalizedAmplitudeSet a} => ψ.1
-    exact continuous_subtype_val
-
-instance instCompactSpace : CompactSpace (PureVector a) := by
-  haveI : CompactSpace {ψ : a → ℂ // ψ ∈ normalizedAmplitudeSet a} :=
-    isCompact_iff_compactSpace.mp normalizedAmplitudeSet_isCompact
-  exact ampSubtypeHomeomorph.symm.compactSpace
 
 /-- A canonical basis pure vector on a nonempty finite system. -/
 def basisPureVector [Nonempty a] : PureVector a where
@@ -184,11 +85,6 @@ theorem mutualInformation_continuous :
 namespace Channel
 
 variable (N : Channel a b)
-
-theorem applyState_continuous : Continuous (fun ρ : State a => N.applyState ρ) := by
-  rw [continuous_induced_rng]
-  change Continuous fun ρ : State a => N.map ρ.matrix
-  exact (LinearMap.continuous_of_finiteDimensional N.map).comp State.continuous_matrix
 
 /-- Output state `(id_R ⊗ N)(|ψ⟩⟨ψ|)` for a pure input-reference state. -/
 def entanglementAssistedOutputState {r : Type w} [Fintype r] [DecidableEq r]
@@ -381,12 +277,14 @@ strong-converse rates, following
 def strongConverseEntanglementAssistedClassicalCapacity : ℝ :=
   sInf {R : ℝ | N.IsStrongConverseEntanglementAssistedClassicalRate R}
 
-/-- One-shot `ε`-error entanglement-assisted classical capacity.
+/-- Finite real helper for one-shot `ε`-error entanglement-assisted classical
+capacity.
 
-This is the Lean counterpart of `C_EA^ε(N)`: the supremum of one-use code rates
-over entanglement-assisted classical codes whose maximal error is at most `ε`.
-For `n = 1`, the rate unfolds to `log2 |M|`. -/
-def oneShotEntanglementAssistedClassicalCapacity (ε : ℝ) : ℝ :=
+This real-valued supremum is intended only for finite-domain helper statements.
+The canonical source-facing one-shot capacity on the full endpoint range
+`ε ∈ [0, 1]` is `oneShotEntanglementAssistedClassicalCapacityE`, because the
+endpoint `ε = 1` can be `⊤`. -/
+def oneShotEntanglementAssistedClassicalCapacityFinite (ε : ℝ) : ℝ :=
   sSup {R : ℝ |
     ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
       ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
@@ -396,10 +294,11 @@ def oneShotEntanglementAssistedClassicalCapacity (ε : ℝ) : ℝ :=
 
 /-- Extended-real one-shot `ε`-error entanglement-assisted classical capacity.
 
-This version matches the extended-real hypothesis-testing convention used by
-`D_H^ε`: if the type-II beta quantity vanishes, the converse upper bound is
-`⊤`.  The real-valued capacity above is kept as the compatibility wrapper for
-finite numerical statements. -/
+This is the canonical source-facing Lean counterpart of `C_EA^ε(N)` on
+`ε ∈ [0, 1]`: the supremum of one-use code rates over entanglement-assisted
+classical codes whose maximal error is at most `ε`, valued in `EReal` so the
+endpoint `ε = 1` can be `⊤`.  For `n = 1`, each finite code rate unfolds to
+`log2 |M|`. -/
 def oneShotEntanglementAssistedClassicalCapacityE (ε : ℝ) : EReal :=
   sSup {R : EReal |
     ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
@@ -437,6 +336,126 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_le_of_upperBound
   rcases hR with
     ⟨M, _hM, _hMeq, _hMne, EA, _hEA, _hEAeq, EB, _hEB, _hEBeq, C, hC, rfl⟩
   exact hB M EA EB C hC
+
+namespace OneShotEndpoint
+
+/-- Deterministic decoder POVM that always reports one fixed message. -/
+def deterministicPOVM
+    (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M]
+    (q : Type v) [Fintype q] [DecidableEq q] : POVM M q where
+  effects m :=
+    if m = Classical.choice (inferInstance : Nonempty M) then
+      (1 : CMatrix q)
+    else
+      0
+  pos m := by
+    by_cases hm : m = Classical.choice (inferInstance : Nonempty M)
+    · simp [hm, Matrix.PosSemidef.one]
+    · simp [hm, Matrix.PosSemidef.zero]
+  sum_eq_one := by
+    ext i j
+    rw [Matrix.sum_apply]
+    rw [Finset.sum_eq_single (Classical.choice (inferInstance : Nonempty M))]
+    · simp
+    · intro m _ hm
+      simp [hm]
+    · intro hmem
+      exact False.elim (hmem (Finset.mem_univ _))
+
+end OneShotEndpoint
+
+/-- A simple one-use entanglement-assisted code for an arbitrary finite
+nonempty message type.
+
+The encoder ignores the message and prepares a fixed input state, while the
+decoder is deterministic.  It is used only for the `ε = 1` endpoint: every
+message error is automatically at most one. -/
+def arbitraryMessageOneShotEntanglementAssistedCode
+    [Nonempty a]
+    (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M] :
+    EntanglementAssistedClassicalCode N 1 M PUnit PUnit where
+  sharedState := State.unit.prod State.unit
+  encoder _ := by
+    letI : Nonempty (QIT.TensorPower a 1) :=
+      ⟨(Classical.choice (inferInstance : Nonempty a), PUnit.unit)⟩
+    exact
+    Channel.prepare (fun _ : PUnit =>
+      (PureVector.basisPureVector : PureVector (QIT.TensorPower a 1)).state)
+  decoder := OneShotEndpoint.deterministicPOVM M (Prod (QIT.TensorPower b 1) PUnit)
+
+/-- Every arbitrary-message endpoint code has maximal error at most one. -/
+theorem arbitraryMessageOneShotEntanglementAssistedCode_maxErrorAtMost_one
+    [Nonempty a]
+    (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M] :
+    (N.arbitraryMessageOneShotEntanglementAssistedCode M).maxErrorAtMost 1 := by
+  intro m
+  unfold EntanglementAssistedClassicalCode.error
+    EntanglementAssistedClassicalCode.successProbability
+  have hprob_nonneg :
+      0 ≤
+        (((N.arbitraryMessageOneShotEntanglementAssistedCode M).decoder.prob
+          ((N.arbitraryMessageOneShotEntanglementAssistedCode M).outputState m) m) : ℝ) := by
+    exact NNReal.coe_nonneg _
+  linarith
+
+private theorem exists_lt_log2_nat_succ (y : ℝ) :
+    ∃ n : ℕ, y < log2 ((Nat.succ n : ℕ) : ℝ) := by
+  have hnat : Tendsto (fun n : ℕ => n + 1) atTop atTop :=
+    tendsto_add_atTop_nat 1
+  have hcast : Tendsto (fun n : ℕ => ((n + 1 : ℕ) : ℝ)) atTop atTop :=
+    tendsto_natCast_atTop_atTop.comp hnat
+  have hlog : Tendsto (fun n : ℕ => log2 ((n + 1 : ℕ) : ℝ)) atTop atTop := by
+    unfold log2
+    exact Tendsto.atTop_div_const (Real.log_pos one_lt_two)
+      (Real.tendsto_log_atTop.comp hcast)
+  obtain ⟨n, _hn, hy⟩ := exists_lt_of_tendsto_atTop hlog 0 y
+  exact ⟨n, by simpa [Nat.succ_eq_add_one] using hy⟩
+
+/-- At the endpoint `ε = 1`, the full-range extended-real one-shot
+entanglement-assisted classical capacity is infinite. -/
+theorem oneShotEntanglementAssistedClassicalCapacityE_one_eq_top
+    [Nonempty a] :
+    N.oneShotEntanglementAssistedClassicalCapacityE 1 = ⊤ := by
+  rw [EReal.eq_top_iff_forall_lt]
+  intro y
+  obtain ⟨n, hyn⟩ := exists_lt_log2_nat_succ y
+  let M : Type u := ULift (Fin (Nat.succ n))
+  let C : EntanglementAssistedClassicalCode N 1 M PUnit PUnit :=
+    N.arbitraryMessageOneShotEntanglementAssistedCode M
+  have hcard : Fintype.card M = Nat.succ n := by
+    simp [M]
+  have hrate : C.rate = log2 ((Nat.succ n : ℕ) : ℝ) := by
+    rw [EntanglementAssistedClassicalCode.rate_one]
+    simp [M, hcard]
+  have hmem :
+      ((C.rate : ℝ) : EReal) ∈
+        {R : EReal |
+          ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
+            ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
+              ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
+                ∃ C : EntanglementAssistedClassicalCode N 1 M EA EB,
+                  C.maxErrorAtMost 1 ∧ R = (C.rate : EReal)} := by
+    exact ⟨M, inferInstance, inferInstance, inferInstance,
+      PUnit, inferInstance, inferInstance,
+      PUnit, inferInstance, inferInstance,
+      C,
+      by
+        simpa [C] using
+          N.arbitraryMessageOneShotEntanglementAssistedCode_maxErrorAtMost_one M,
+      rfl⟩
+  have hle :
+      ((C.rate : ℝ) : EReal) ≤
+        sSup {R : EReal |
+          ∃ (M : Type u), ∃ (_ : Fintype M), ∃ (_ : DecidableEq M), ∃ (_ : Nonempty M),
+            ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
+              ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
+                ∃ C : EntanglementAssistedClassicalCode N 1 M EA EB,
+                  C.maxErrorAtMost 1 ∧ R = (C.rate : EReal)} :=
+    le_sSup hmem
+  have hyC : (y : EReal) < ((C.rate : ℝ) : EReal) := by
+    rw [hrate]
+    exact EReal.coe_lt_coe_iff.mpr hyn
+  exact hyC.trans_le hle
 
 end Channel
 

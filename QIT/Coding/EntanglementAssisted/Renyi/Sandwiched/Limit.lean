@@ -618,9 +618,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_tendsto_relativeEntropyPSDRef
       filter_upwards with alpha
       unfold State.sandwichedRenyiMutualInformationCandidateE
       change sandwichedRenyiPSDReferenceE rhoAB sigmaAB.matrix sigmaAB.pos alpha.1 = ⊤
-      rw [sandwichedRenyiPSDReferenceE]
-      have hNotLow : ¬ alpha.1 < 1 := not_lt.mpr (le_of_lt alpha.2)
-      rw [if_neg hNotLow]
+      rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt rhoAB sigmaAB.pos alpha.2]
       exact sandwichedRenyiPSDReferenceHighAlphaE_eq_top_of_not_supports
         rhoAB sigmaAB.pos alpha.1 hSupport
     simpa [hendpoint'] using hconst.congr' heq.symm
@@ -899,7 +897,7 @@ private theorem relativeEntropyPSDReferenceTraceLogE_unit_one_eq_zero :
     rw [State.vonNeumann]
     simp [hEig, xlog2, log2]
   have hCompressedEntropy :
-      (psdSupportCompressedState (State.unit : State PUnit.{1})
+      (_root_.QIT.psdSupportCompressedState (State.unit : State PUnit.{1})
           Matrix.PosSemidef.one hSupport).vonNeumann = 0 := by
     have hEntropyEq :=
       @State.vonNeumann_psdSupportCompressedState_eq PUnit.{1}
@@ -1416,11 +1414,11 @@ theorem relativeEntropyPSDReferenceTraceLogFinite_prod_leftReference_eq_mutualIn
   let sigmaAB : State (Prod a b) := rhoAB.marginalA.prod sigmaB
   let f : Real -> Real := fun x => if x = 0 then 0 else Real.log x
   have hEntropyAB :
-      (psdSupportCompressedState rhoAB sigmaAB.pos hSupport).vonNeumann =
+      (_root_.QIT.psdSupportCompressedState rhoAB sigmaAB.pos hSupport).vonNeumann =
         rhoAB.vonNeumann :=
     State.vonNeumann_psdSupportCompressedState_eq rhoAB sigmaAB.pos hSupport
   have hEntropyB :
-      (psdSupportCompressedState rhoAB.marginalB sigmaB.pos hSupportB).vonNeumann =
+      (_root_.QIT.psdSupportCompressedState rhoAB.marginalB sigmaB.pos hSupportB).vonNeumann =
         rhoAB.marginalB.vonNeumann :=
     State.vonNeumann_psdSupportCompressedState_eq rhoAB.marginalB sigmaB.pos hSupportB
   have hTraceAB :
@@ -1453,7 +1451,7 @@ theorem relativeEntropyPSDReferenceTraceLogFinite_prod_leftReference_eq_mutualIn
       trace_mul_cfc_logZero_prod_leftReference_eq rhoAB sigmaB hSupport
   simp [relativeEntropyPSDReferenceTraceLogFinite, sigmaAB, hEntropyAB, hEntropyB,
     hSplit, mutualInformation]
-  ring
+  ring_nf
 
 /-- The finite trace-log branch of every supported side-information candidate
 dominates the ordinary mutual information. -/

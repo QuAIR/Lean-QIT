@@ -43,7 +43,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_eq_top_of_not_side_posDef
     {alphaR : ℝ} (halpha : 1 < alphaR) :
     rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alphaR = ⊤ := by
   rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-  rw [State.sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+  rw [State.sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
   refine State.sandwichedRenyiPSDReferenceHighAlphaE_eq_top_of_not_supports
     rhoAB (rhoAB.marginalA.prod sigmaB).pos alphaR ?_
   intro hSupport
@@ -1456,7 +1456,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_eq_coe_schattenNorm_of_suppor
       log2_rpow_pos (x := psdTracePower inner hinner alpha) (y := 1 / alpha)
         htrace_pos
   rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-  rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+  rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
   rw [sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports
     rhoAB href alpha hSupport]
   change (((1 / (alpha - 1)) * log2 (psdTracePower inner hinner alpha) : Real) :
@@ -1503,7 +1503,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_eq_coe_highAlphaFinite_of_sid
       Matrix.Supports rhoAB.matrix (rhoAB.marginalA.prod sigmaB).matrix :=
     State.supports_marginalA_prod_of_side_posDef rhoAB sigmaB hsigmaB
   rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-  rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+  rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
   rw [sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports
     rhoAB (rhoAB.marginalA.prod sigmaB).pos alpha hsupport]
 
@@ -1566,7 +1566,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_nonneg
             (rhoAB.marginalA.prod sigmaB).matrix
             (rhoAB.marginalA.prod sigmaB).pos alpha : EReal) := by
       rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-      rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+      rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
       rw [sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports
         rhoAB (rhoAB.marginalA.prod sigmaB).pos alpha hSupport]
     rw [hfinite]
@@ -1613,7 +1613,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_bipartiteProduct_prod_of_supp
           (ref1.prod ref2).matrix (ref1.prod ref2).pos alphaR : EReal) := by
     let e := State.bipartiteProductEquiv (a1 := a1) (b1 := b1) (a2 := a2) (b2 := b2)
     rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-    rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+    rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
     rw [sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports
       (xi.bipartiteProduct omega)
       ((xi.bipartiteProduct omega).marginalA.prod (sigma1.prod sigma2)).pos
@@ -1655,7 +1655,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_bipartiteProduct_prod_of_supp
         (State.sandwichedRenyiPSDReferenceHighAlphaFinite xi ref1.matrix ref1.pos alphaR :
           EReal) := by
     rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-    rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+    rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
     rw [sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports
       xi ref1.pos alphaR hsupport1]
   have hright2 :
@@ -1663,7 +1663,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_bipartiteProduct_prod_of_supp
         (State.sandwichedRenyiPSDReferenceHighAlphaFinite omega ref2.matrix ref2.pos alphaR :
           EReal) := by
     rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-    rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+    rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
     rw [sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports
       omega ref2.pos alphaR hsupport2]
   rw [hleft, hright1, hright2]
@@ -1864,7 +1864,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_eq_coe_schattenNorm_of_refere
   have hSupport : Matrix.Supports rhoAB.matrix ref :=
     Matrix.Supports.of_right_posDef rhoAB.matrix ref hRef
   rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-  rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+  rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
   rw [sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports
     rhoAB hRef.posSemidef alpha hSupport]
   change (((1 / (alpha - 1)) * log2 (psdTracePower inner hinner alpha) : Real) :

@@ -14,6 +14,8 @@ public import QIT.States.Product
 public import QIT.States.Schatten
 public import QIT.States.Subnormalized
 public import QIT.States.SubnormalizedTopology
+public import QIT.States.SubnormalizedConvexity
+public import QIT.States.Topology
 public import QIT.States.Purification.Canonical
 public import QIT.States.Purification.Equivalence
 public import QIT.States.Purification.Gram

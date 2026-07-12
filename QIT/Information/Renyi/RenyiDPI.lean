@@ -7819,19 +7819,19 @@ under swapping the complementary systems and the Holder-dual exponents.
 This is only an algebraic statement-layer bridge: it reuses a proved instance
 of the source duality equality in one direction and flips the real equality.
 It does not assert or prove the missing conditional-duality theorem itself. -/
-theorem conditionalSandwichedRenyi_duality_statement.symm
+theorem conditionalSandwichedRenyi_duality_pair_algebraic_statement.symm
     (ρ : State (Prod a b)) (σ : State (Prod a c))
     (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
     (α β : ℝ) (hα : 1 / 2 ≤ α) (hβ : 1 / 2 ≤ β)
     (hα1 : α ≠ 1) (hβ1 : β ≠ 1)
     (hab : 1 / α + 1 / β = 2)
     (hdual :
-      conditionalSandwichedRenyi_duality_statement ρ σ hρ hσ
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement ρ σ hρ hσ
         α β hα hβ hα1 hβ1 hab) :
-    conditionalSandwichedRenyi_duality_statement
+    conditionalSandwichedRenyi_duality_pair_algebraic_statement
       (a := a) (b := c) (c := b) σ ρ hσ hρ
       β α hβ hα hβ1 hα1 (by simpa [add_comm] using hab) := by
-  unfold conditionalSandwichedRenyi_duality_statement at hdual ⊢
+  unfold conditionalSandwichedRenyi_duality_pair_algebraic_statement at hdual ⊢
   linarith
 
 /-- Conditional-duality symmetry specialized to the low-`α` dual parameter
@@ -7841,17 +7841,17 @@ This is the exact exponent bookkeeping needed by the `1 / 2 < α < 1` route:
 once the conditional duality theorem is available in one direction, this lemma
 turns it into the swapped complementary-system statement whose exponent lies in
 the already-proved `β > 1` range. -/
-theorem conditionalSandwichedRenyi_duality_statement.symm_dualParameter
+theorem conditionalSandwichedRenyi_duality_pair_algebraic_statement.symm_dualParameter
     (ρ : State (Prod a b)) (σ : State (Prod a c))
     (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdual :
-      conditionalSandwichedRenyi_duality_statement ρ σ hρ hσ
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement ρ σ hρ hσ
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one)) :
-    conditionalSandwichedRenyi_duality_statement
+    conditionalSandwichedRenyi_duality_pair_algebraic_statement
       (a := a) (b := c) (c := b) σ ρ hσ hρ
       (renyiDualParameter α) α
       (renyiDualParameter_half_le hα_half hα_lt_one) (le_of_lt hα_half)
@@ -7860,7 +7860,7 @@ theorem conditionalSandwichedRenyi_duality_statement.symm_dualParameter
         simpa [add_comm] using
           renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one) := by
   exact
-    conditionalSandwichedRenyi_duality_statement.symm
+    conditionalSandwichedRenyi_duality_pair_algebraic_statement.symm
       ρ σ hρ hσ α (renyiDualParameter α)
       (le_of_lt hα_half) (renyiDualParameter_half_le hα_half hα_lt_one)
       (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
@@ -7874,12 +7874,12 @@ This is the direction used when the source proof supplies the high-`β`
 conditional duality statement first: it converts
 `H̃^↑_β(A|C) = -H̃^↑_α(A|B)` back to the low-`α` statement consumed by the
 strict subunit monotonicity route. -/
-theorem conditionalSandwichedRenyi_duality_statement.symm_swappedDualParameter
+theorem conditionalSandwichedRenyi_duality_pair_algebraic_statement.symm_swappedDualParameter
     (ρ : State (Prod a b)) (σ : State (Prod a c))
     (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdual :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := c) (c := b) σ ρ hσ hρ
         (renyiDualParameter α) α
         (renyiDualParameter_half_le hα_half hα_lt_one) (le_of_lt hα_half)
@@ -7887,13 +7887,13 @@ theorem conditionalSandwichedRenyi_duality_statement.symm_swappedDualParameter
         (by
           simpa [add_comm] using
             renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one)) :
-    conditionalSandwichedRenyi_duality_statement ρ σ hρ hσ
+    conditionalSandwichedRenyi_duality_pair_algebraic_statement ρ σ hρ hσ
       α (renyiDualParameter α) (le_of_lt hα_half)
       (renyiDualParameter_half_le hα_half hα_lt_one)
       (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
       (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one) := by
   exact
-    conditionalSandwichedRenyi_duality_statement.symm
+    conditionalSandwichedRenyi_duality_pair_algebraic_statement.symm
       σ ρ hσ hρ (renyiDualParameter α) α
       (renyiDualParameter_half_le hα_half hα_lt_one) (le_of_lt hα_half)
       (renyiDualParameter_ne_one hα_half hα_lt_one) (ne_of_lt hα_lt_one)
@@ -7920,17 +7920,17 @@ theorem conditionalSandwichedRenyi_low_monotonicity_of_duality_and_high_reverse
     (hα1 : α ≠ 1) (hβ1 : β ≠ 1)
     (hab : 1 / α + 1 / β = 2)
     (hdual₁ :
-      conditionalSandwichedRenyi_duality_statement ρ₁ σ₁ hρ₁ hσ₁
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement ρ₁ σ₁ hρ₁ hσ₁
         α β hα hβ hα1 hβ1 hab)
     (hdual₂ :
-      conditionalSandwichedRenyi_duality_statement ρ₂ σ₂ hρ₂ hσ₂
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement ρ₂ σ₂ hρ₂ hσ₂
         α β hα hβ hα1 hβ1 hab)
     (hhigh :
       conditionalSandwichedRenyi σ₂ hσ₂ β hβ hβ1 ≤
         conditionalSandwichedRenyi σ₁ hσ₁ β hβ hβ1) :
     conditionalSandwichedRenyi ρ₂ hρ₂ α hα hα1 ≥
       conditionalSandwichedRenyi ρ₁ hρ₁ α hα hα1 := by
-  unfold conditionalSandwichedRenyi_duality_statement at hdual₁ hdual₂
+  unfold conditionalSandwichedRenyi_duality_pair_algebraic_statement at hdual₁ hdual₂
   linarith
 
 /-- Heterogeneous version of the conditional-duality handoff.
@@ -7953,11 +7953,11 @@ theorem conditionalSandwichedRenyi_low_monotonicity_of_duality_and_high_reverse_
     (hα1 : α ≠ 1) (hβ1 : β ≠ 1)
     (hab : 1 / α + 1 / β = 2)
     (hdual₁ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a₁) (b := b₁) (c := c₁) ρ₁ σ₁ hρ₁ hσ₁
         α β hα hβ hα1 hβ1 hab)
     (hdual₂ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a₂) (b := b₂) (c := c₂) ρ₂ σ₂ hρ₂ hσ₂
         α β hα hβ hα1 hβ1 hab)
     (hhigh :
@@ -7965,7 +7965,7 @@ theorem conditionalSandwichedRenyi_low_monotonicity_of_duality_and_high_reverse_
         conditionalSandwichedRenyi σ₁ hσ₁ β hβ hβ1) :
     conditionalSandwichedRenyi ρ₂ hρ₂ α hα hα1 ≥
       conditionalSandwichedRenyi ρ₁ hρ₁ α hα hα1 := by
-  unfold conditionalSandwichedRenyi_duality_statement at hdual₁ hdual₂
+  unfold conditionalSandwichedRenyi_duality_pair_algebraic_statement at hdual₁ hdual₂
   linarith
 
 /-- Conditional-duality handoff specialized to the strict low-`α` dual
@@ -7987,14 +7987,14 @@ theorem conditionalSandwichedRenyi_low_monotonicity_of_duality_and_high_reverse_
     (hσ₁ : σ₁.matrix.PosDef) (hσ₂ : σ₂.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdual₁ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a₁) (b := b₁) (c := c₁) ρ₁ σ₁ hρ₁ hσ₁
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdual₂ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a₂) (b := b₂) (c := c₂) ρ₂ σ₂ hρ₂ hσ₂
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
@@ -8305,14 +8305,14 @@ theorem conditionalSandwichedRenyi_low_monotonicity_of_duality_and_reverseChanne
     (hσ₁ : σ₁.matrix.PosDef) (hσ₂ : σ₂.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdual₁ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a₁) (b := b₁) (c := c₁) ρ₁ σ₁ hρ₁ hσ₁
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdual₂ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a₂) (b := b₂) (c := c₂) ρ₂ σ₂ hρ₂ hσ₂
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
@@ -8385,14 +8385,14 @@ theorem conditionalSandwichedRenyi_low_monotonicity_of_duality_and_reverseChanne
     (hσ₁ : σ₁.matrix.PosDef) (hσ₂ : σ₂.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdual₁ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a₁) (b := b₁) (c := c₁) ρ₁ σ₁ hρ₁ hσ₁
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdual₂ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a₂) (b := b₂) (c := c₂) ρ₂ σ₂ hρ₂ hσ₂
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
@@ -8456,14 +8456,14 @@ theorem conditionalSandwichedRenyi_low_monotonicity_of_duality_and_reverseChanne
     (hσ₁ : σ₁.matrix.PosDef) (hσ₂ : σ₂.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdual₁ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a₁) (b := b₁) (c := c₁) ρ₁ σ₁ hρ₁ hσ₁
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdual₂ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a₂) (b := b₂) (c := c₂) ρ₂ σ₂ hρ₂ hσ₂
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
@@ -8528,14 +8528,14 @@ theorem conditionalSandwichedRenyi_low_monotonicity_of_duality_and_reverseChanne
     (hσ₁ : σ₁.matrix.PosDef) (hσ₂ : σ₂.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdual₁ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := b₁) (c := c₁) ρ₁ σ₁ hρ₁ hσ₁
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdual₂ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := b₂) (c := c₂) ρ₂ σ₂ hρ₂ hσ₂
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
@@ -8580,7 +8580,7 @@ theorem conditionalSandwichedRenyi_low_monotonicity_of_swappedDuality_and_revers
     (hσ₁ : σ₁.matrix.PosDef) (hσ₂ : σ₂.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdual₁ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := c₁) (c := b₁) σ₁ ρ₁ hσ₁ hρ₁
         (renyiDualParameter α) α
         (renyiDualParameter_half_le hα_half hα_lt_one) (le_of_lt hα_half)
@@ -8589,7 +8589,7 @@ theorem conditionalSandwichedRenyi_low_monotonicity_of_swappedDuality_and_revers
           simpa [add_comm] using
             renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdual₂ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := c₂) (c := b₂) σ₂ ρ₂ hσ₂ hρ₂
         (renyiDualParameter α) α
         (renyiDualParameter_half_le hα_half hα_lt_one) (le_of_lt hα_half)
@@ -8617,9 +8617,9 @@ theorem conditionalSandwichedRenyi_low_monotonicity_of_swappedDuality_and_revers
     conditionalSandwichedRenyi_low_monotonicity_of_duality_and_reverseChannel_lift_sameLeft_of_one_lt
       ρ₁ ρ₂ σ₁ σ₂ hρ₁ hρ₂ hσ₁ hσ₂
       α hα_half hα_lt_one
-      (conditionalSandwichedRenyi_duality_statement.symm_swappedDualParameter
+      (conditionalSandwichedRenyi_duality_pair_algebraic_statement.symm_swappedDualParameter
         ρ₁ σ₁ hρ₁ hσ₁ α hα_half hα_lt_one hdual₁)
-      (conditionalSandwichedRenyi_duality_statement.symm_swappedDualParameter
+      (conditionalSandwichedRenyi_duality_pair_algebraic_statement.symm_swappedDualParameter
         ρ₂ σ₂ hρ₂ hσ₂ α hα_half hα_lt_one hdual₂)
       η₁ hη₁ hreverse
 
@@ -8638,14 +8638,14 @@ theorem conditionalSandwichedRenyi_low_monotonicity_of_duality_and_reverseChanne
     (hσ₁ : σ₁.matrix.PosDef) (hσ₂ : σ₂.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdual₁ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a₁) (b := b₁) (c := c₁) ρ₁ σ₁ hρ₁ hσ₁
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdual₂ :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a₂) (b := b₂) (c := c₂) ρ₂ σ₂ hρ₂ hσ₂
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
@@ -8739,19 +8739,19 @@ statement follows without any further analytic work. -/
 theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_duality_and_high_reverse
     {d e : Type*} [Fintype d] [DecidableEq d] [Fintype e] [DecidableEq e]
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
-    (M : POVM c a) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
+    (M : POVM c a) (hMUnit : measurementMapDoesNotEnlargeUnit M) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
     (σIn : State (Prod a d)) (σOut : State (Prod c e))
     (hσIn : σIn.matrix.PosDef) (hσOut : σOut.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdualIn :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := b) (c := d) ρ σIn hρ hσIn
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdualOut :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := c) (b := b) (c := e) (measureSubsystemState M ρ) σOut
         hρM hσOut
         α (renyiDualParameter α) (le_of_lt hα_half)
@@ -8765,7 +8765,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_
         conditionalSandwichedRenyi σIn hσIn (renyiDualParameter α)
           (renyiDualParameter_half_le hα_half hα_lt_one)
           (renyiDualParameter_ne_one hα_half hα_lt_one)) :
-    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hρM
+    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hMUnit hρM
       α (le_of_lt hα_half) (ne_of_lt hα_lt_one) := by
   unfold measurementMap_conditionalRenyi_monotonicity_statement
   exact
@@ -8782,19 +8782,19 @@ candidate of the complementary output state. -/
 theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_duality_and_high_candidate_bound
     {d e : Type*} [Fintype d] [DecidableEq d] [Fintype e] [DecidableEq e]
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
-    (M : POVM c a) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
+    (M : POVM c a) (hMUnit : measurementMapDoesNotEnlargeUnit M) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
     (σIn : State (Prod a d)) (σOut : State (Prod c e))
     (hσIn : σIn.matrix.PosDef) (hσOut : σOut.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdualIn :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := b) (c := d) ρ σIn hρ hσIn
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdualOut :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := c) (b := b) (c := e) (measureSubsystemState M ρ) σOut
         hρM hσOut
         α (renyiDualParameter α) (le_of_lt hα_half)
@@ -8811,7 +8811,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_
           σIn.conditionalSandwichedRenyi hσIn (renyiDualParameter α)
             (renyiDualParameter_half_le hα_half hα_lt_one)
             (renyiDualParameter_ne_one hα_half hα_lt_one)) :
-    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hρM
+    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hMUnit hρM
       α (le_of_lt hα_half) (ne_of_lt hα_lt_one) := by
   have hhigh :
       σOut.conditionalSandwichedRenyi hσOut (renyiDualParameter α)
@@ -8828,7 +8828,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_
       hcand
   exact
     measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_duality_and_high_reverse
-      ρ hρ M hρM σIn σOut hσIn hσOut α hα_half hα_lt_one
+      ρ hρ M hMUnit hρM σIn σOut hσIn hσOut α hα_half hα_lt_one
       hdualIn hdualOut hhigh
 
 /-- Strict low-`α` measurement monotonicity from conditional duality, a fixed
@@ -8841,19 +8841,19 @@ candidate bound rather than an order-theoretic value-set boundedness proof. -/
 theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_duality_and_candidate_lift_of_input_bound
     {d e : Type*} [Fintype d] [DecidableEq d] [Fintype e] [DecidableEq e]
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
-    (M : POVM c a) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
+    (M : POVM c a) (hMUnit : measurementMapDoesNotEnlargeUnit M) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
     (σIn : State (Prod a d)) (σOut : State (Prod c e))
     (hσIn : σIn.matrix.PosDef) (hσOut : σOut.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdualIn :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := b) (c := d) ρ σIn hρ hσIn
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdualOut :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := c) (b := b) (c := e) (measureSubsystemState M ρ) σOut
         hρM hσOut
         α (renyiDualParameter α) (le_of_lt hα_half)
@@ -8881,7 +8881,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_
               have hβ := renyiDualParameter_half_le hα_half hα_lt_one
               linarith)
             (renyiDualParameter_ne_one hα_half hα_lt_one)) :
-    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hρM
+    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hMUnit hρM
       α (le_of_lt hα_half) (ne_of_lt hα_lt_one) := by
   have hhigh :
       σOut.conditionalSandwichedRenyi hσOut (renyiDualParameter α)
@@ -8898,7 +8898,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_
       hinputBound ηIn hηIn hlift
   exact
     measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_duality_and_high_reverse
-      ρ hρ M hρM σIn σOut hσIn hσOut α hα_half hα_lt_one
+      ρ hρ M hMUnit hρM σIn σOut hσIn hσOut α hα_half hα_lt_one
       hdualIn hdualOut hhigh
 
 /-- Strict low-`α` measurement monotonicity from conditional duality and a
@@ -8913,19 +8913,19 @@ boundedness witness, and the reverse channel family on complementary systems. -/
 theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_duality_and_reverseChannel_lift_of_input_bound
     {d e : Type*} [Fintype d] [DecidableEq d] [Fintype e] [DecidableEq e]
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
-    (M : POVM c a) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
+    (M : POVM c a) (hMUnit : measurementMapDoesNotEnlargeUnit M) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
     (σIn : State (Prod a d)) (σOut : State (Prod c e))
     (hσIn : σIn.matrix.PosDef) (hσOut : σOut.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdualIn :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := b) (c := d) ρ σIn hρ hσIn
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdualOut :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := c) (b := b) (c := e) (measureSubsystemState M ρ) σOut
         hρM hσOut
         α (renyiDualParameter α) (le_of_lt hα_half)
@@ -8953,7 +8953,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_
               ((@maximallyMixed a _ _ (by
                 rcases σIn.nonempty with ⟨x⟩
                 exact ⟨x.1⟩)).prod ηIn)) :
-    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hρM
+    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hMUnit hρM
       α (le_of_lt hα_half) (ne_of_lt hα_lt_one) := by
   unfold measurementMap_conditionalRenyi_monotonicity_statement
   exact
@@ -8974,19 +8974,19 @@ provide an arbitrary uniform candidate bound. -/
 theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_duality_and_reverseChannel_lift_of_input_nonneg
     {d e : Type*} [Fintype d] [DecidableEq d] [Fintype e] [DecidableEq e]
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
-    (M : POVM c a) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
+    (M : POVM c a) (hMUnit : measurementMapDoesNotEnlargeUnit M) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
     (σIn : State (Prod a d)) (σOut : State (Prod c e))
     (hσIn : σIn.matrix.PosDef) (hσOut : σOut.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdualIn :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := b) (c := d) ρ σIn hρ hσIn
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdualOut :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := c) (b := b) (c := e) (measureSubsystemState M ρ) σOut
         hρM hσOut
         α (renyiDualParameter α) (le_of_lt hα_half)
@@ -9018,7 +9018,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_
               ((@maximallyMixed a _ _ (by
                 rcases σIn.nonempty with ⟨x⟩
                 exact ⟨x.1⟩)).prod ηIn)) :
-    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hρM
+    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hMUnit hρM
       α (le_of_lt hα_half) (ne_of_lt hα_lt_one) := by
   unfold measurementMap_conditionalRenyi_monotonicity_statement
   exact
@@ -9035,19 +9035,19 @@ ordinary sandwiched Renyi nonnegativity in the `β > 1` range. -/
 theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_duality_and_reverseChannel_lift_of_one_lt
     {d e : Type*} [Fintype d] [DecidableEq d] [Fintype e] [DecidableEq e]
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
-    (M : POVM c a) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
+    (M : POVM c a) (hMUnit : measurementMapDoesNotEnlargeUnit M) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
     (σIn : State (Prod a d)) (σOut : State (Prod c e))
     (hσIn : σIn.matrix.PosDef) (hσOut : σOut.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdualIn :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := b) (c := d) ρ σIn hρ hσIn
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdualOut :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := c) (b := b) (c := e) (measureSubsystemState M ρ) σOut
         hρM hσOut
         α (renyiDualParameter α) (le_of_lt hα_half)
@@ -9067,7 +9067,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_
               ((@maximallyMixed a _ _ (by
                 rcases σIn.nonempty with ⟨x⟩
                 exact ⟨x.1⟩)).prod ηIn)) :
-    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hρM
+    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hMUnit hρM
       α (le_of_lt hα_half) (ne_of_lt hα_lt_one) := by
   unfold measurementMap_conditionalRenyi_monotonicity_statement
   exact
@@ -9086,19 +9086,19 @@ measurement theorem is discharged by reflexivity. -/
 theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_duality_and_reverseChannel_lift_sameLeft_of_one_lt
     {d e : Type*} [Fintype d] [DecidableEq d] [Fintype e] [DecidableEq e]
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
-    (M : POVM a a) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
+    (M : POVM a a) (hMUnit : measurementMapDoesNotEnlargeUnit M) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
     (σIn : State (Prod a d)) (σOut : State (Prod a e))
     (hσIn : σIn.matrix.PosDef) (hσOut : σOut.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdualIn :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := b) (c := d) ρ σIn hρ hσIn
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdualOut :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := b) (c := e) (measureSubsystemState M ρ) σOut
         hρM hσOut
         α (renyiDualParameter α) (le_of_lt hα_half)
@@ -9117,7 +9117,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_
               ((@maximallyMixed a _ _ (by
                 rcases σIn.nonempty with ⟨x⟩
                 exact ⟨x.1⟩)).prod ηIn)) :
-    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hρM
+    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hMUnit hρM
       α (le_of_lt hα_half) (ne_of_lt hα_lt_one) := by
   unfold measurementMap_conditionalRenyi_monotonicity_statement
   exact
@@ -9137,12 +9137,12 @@ entropy first. -/
 theorem measurementMap_conditionalRenyi_monotonicity_statement_of_swappedDuality_and_reverseChannel_lift_sameLeft_of_one_lt
     {d e : Type*} [Fintype d] [DecidableEq d] [Fintype e] [DecidableEq e]
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
-    (M : POVM a a) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
+    (M : POVM a a) (hMUnit : measurementMapDoesNotEnlargeUnit M) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
     (σIn : State (Prod a d)) (σOut : State (Prod a e))
     (hσIn : σIn.matrix.PosDef) (hσOut : σOut.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdualIn :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := d) (c := b) σIn ρ hσIn hρ
         (renyiDualParameter α) α
         (renyiDualParameter_half_le hα_half hα_lt_one) (le_of_lt hα_half)
@@ -9151,7 +9151,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_swappedDuality
           simpa [add_comm] using
             renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdualOut :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := e) (c := b) σOut (measureSubsystemState M ρ) hσOut hρM
         (renyiDualParameter α) α
         (renyiDualParameter_half_le hα_half hα_lt_one) (le_of_lt hα_half)
@@ -9171,7 +9171,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_swappedDuality
               ((@maximallyMixed a _ _ (by
                 rcases σIn.nonempty with ⟨x⟩
                 exact ⟨x.1⟩)).prod ηIn)) :
-    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hρM
+    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hMUnit hρM
       α (le_of_lt hα_half) (ne_of_lt hα_lt_one) := by
   unfold measurementMap_conditionalRenyi_monotonicity_statement
   exact
@@ -9186,19 +9186,19 @@ boundedness witness for the input complementary candidate value set. -/
 theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_duality_and_reverseChannel_lift
     {d e : Type*} [Fintype d] [DecidableEq d] [Fintype e] [DecidableEq e]
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
-    (M : POVM c a) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
+    (M : POVM c a) (hMUnit : measurementMapDoesNotEnlargeUnit M) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
     (σIn : State (Prod a d)) (σOut : State (Prod c e))
     (hσIn : σIn.matrix.PosDef) (hσOut : σOut.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdualIn :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := b) (c := d) ρ σIn hρ hσIn
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdualOut :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := c) (b := b) (c := e) (measureSubsystemState M ρ) σOut
         hρM hσOut
         α (renyiDualParameter α) (le_of_lt hα_half)
@@ -9223,7 +9223,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_
               ((@maximallyMixed a _ _ (by
                 rcases σIn.nonempty with ⟨x⟩
                 exact ⟨x.1⟩)).prod ηIn)) :
-    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hρM
+    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hMUnit hρM
       α (le_of_lt hα_half) (ne_of_lt hα_lt_one) := by
   unfold measurementMap_conditionalRenyi_monotonicity_statement
   exact
@@ -9240,19 +9240,19 @@ side-information candidate. -/
 theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_duality_and_candidate_lift
     {d e : Type*} [Fintype d] [DecidableEq d] [Fintype e] [DecidableEq e]
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)
-    (M : POVM c a) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
+    (M : POVM c a) (hMUnit : measurementMapDoesNotEnlargeUnit M) (hρM : (measureSubsystemState M ρ).matrix.PosDef)
     (σIn : State (Prod a d)) (σOut : State (Prod c e))
     (hσIn : σIn.matrix.PosDef) (hσOut : σOut.matrix.PosDef)
     (α : ℝ) (hα_half : 1 / 2 < α) (hα_lt_one : α < 1)
     (hdualIn :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := a) (b := b) (c := d) ρ σIn hρ hσIn
         α (renyiDualParameter α) (le_of_lt hα_half)
         (renyiDualParameter_half_le hα_half hα_lt_one)
         (ne_of_lt hα_lt_one) (renyiDualParameter_ne_one hα_half hα_lt_one)
         (renyiDualParameter_inv_add_inv_eq_two_of_half_lt hα_half hα_lt_one))
     (hdualOut :
-      conditionalSandwichedRenyi_duality_statement
+      conditionalSandwichedRenyi_duality_pair_algebraic_statement
         (a := c) (b := b) (c := e) (measureSubsystemState M ρ) σOut
         hρM hσOut
         α (renyiDualParameter α) (le_of_lt hα_half)
@@ -9277,7 +9277,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_
               have hβ := renyiDualParameter_half_le hα_half hα_lt_one
               linarith)
             (renyiDualParameter_ne_one hα_half hα_lt_one)) :
-    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hρM
+    measurementMap_conditionalRenyi_monotonicity_statement ρ hρ M hMUnit hρM
       α (le_of_lt hα_half) (ne_of_lt hα_lt_one) := by
   have hhigh :
       σOut.conditionalSandwichedRenyi hσOut (renyiDualParameter α)
@@ -9294,7 +9294,7 @@ theorem measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_
       ηIn hηIn hbddIn hlift
   exact
     measurementMap_conditionalRenyi_monotonicity_statement_of_dualParameter_duality_and_high_reverse
-      ρ hρ M hρM σIn σOut hσIn hσOut α hα_half hα_lt_one
+      ρ hρ M hMUnit hρM σIn σOut hσIn hσOut α hα_half hα_lt_one
       hdualIn hdualOut hhigh
 
 end State

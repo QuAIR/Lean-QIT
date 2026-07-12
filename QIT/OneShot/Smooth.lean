@@ -56,6 +56,14 @@ namespace State
 
 /-! ## Purified distance and smoothing balls -/
 
+/-- A normalized state satisfies the canonical subnormalized smoothing-radius
+condition exactly when the radius is below one. -/
+theorem epsilon_lt_sqrt_toSubnormalized_trace (rho : State a) {epsilon : ℝ}
+    (hepsilon : epsilon < 1) :
+    epsilon < Real.sqrt rho.toSubnormalized.matrix.trace.re := by
+  rw [State.toSubnormalized_trace]
+  simpa using hepsilon
+
 /-- Purified distance between normalized finite-dimensional states,
 `P(ρ,σ) = sqrt(1 - F(ρ,σ)^2)`, using the local squared-fidelity convention. -/
 def purifiedDistance (ρ σ : State a) : ℝ :=
@@ -1596,7 +1604,8 @@ theorem conditionalMaxEntropy_eq (ρ : State (Prod a b)) :
 
 /-! ## Smooth conditional min/max entropy -/
 
-/-- Candidate values for smooth conditional min-entropy at smoothing radius `ε`. -/
+/-- Normalized-state candidate values for the explicit normalized-candidate
+smooth min-entropy variant at smoothing radius `ε`. -/
 def SmoothConditionalMinEntropyCandidate (ρ : State (Prod a b)) (ε h : ℝ) : Prop :=
   ∃ ρ' : State (Prod a b), ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropy
 
@@ -1607,7 +1616,8 @@ theorem SmoothConditionalMinEntropyCandidate_eq (ρ : State (Prod a b)) (ε h : 
         h = ρ'.conditionalMinEntropy :=
   Iff.rfl
 
-/-- Candidate values for smooth conditional max-entropy at smoothing radius `ε`. -/
+/-- Normalized-state candidate values for the explicit normalized-candidate
+smooth max-entropy variant at smoothing radius `ε`. -/
 def SmoothConditionalMaxEntropyCandidate (ρ : State (Prod a b)) (ε h : ℝ) : Prop :=
   ∃ ρ' : State (Prod a b), ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropy
 
@@ -1634,47 +1644,55 @@ theorem SmoothConditionalMaxEntropyCandidate_mono {ρ : State (Prod a b)} {ε δ
   rintro ⟨ρ', hball, hh⟩
   exact ⟨ρ', purifiedBall_mono hεδ hball, hh⟩
 
-/-- Smooth conditional min-entropy as the supremum of min-entropy over the
-purified-distance epsilon ball. -/
-def smoothConditionalMinEntropy (ρ : State (Prod a b)) (ε : ℝ) : ℝ :=
+/-- Normalized-candidate variant of smooth conditional min-entropy. Unlike the
+Tomamichel source convention, this supremum ranges only over normalized states. -/
+def smoothConditionalMinEntropyNormalizedCandidates
+    (ρ : State (Prod a b)) (ε : ℝ) : ℝ :=
   sSup {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h}
 
-theorem smoothConditionalMinEntropy_eq_sSup_candidates (ρ : State (Prod a b)) (ε : ℝ) :
-    ρ.smoothConditionalMinEntropy ε =
+theorem smoothConditionalMinEntropyNormalizedCandidates_eq_sSup_candidates
+    (ρ : State (Prod a b)) (ε : ℝ) :
+    ρ.smoothConditionalMinEntropyNormalizedCandidates ε =
       sSup {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h} :=
   rfl
 
 @[simp]
-theorem smoothConditionalMinEntropy_eq (ρ : State (Prod a b)) (ε : ℝ) :
-    ρ.smoothConditionalMinEntropy ε =
+theorem smoothConditionalMinEntropyNormalizedCandidates_eq
+    (ρ : State (Prod a b)) (ε : ℝ) :
+    ρ.smoothConditionalMinEntropyNormalizedCandidates ε =
       sSup {h : ℝ |
         ∃ ρ' : State (Prod a b), ρ.purifiedBall ε ρ' ∧
           h = ρ'.conditionalMinEntropy} :=
   rfl
 
-/-- Smooth conditional max-entropy as the infimum of max-entropy over the
-purified-distance epsilon ball. -/
-def smoothConditionalMaxEntropy (ρ : State (Prod a b)) (ε : ℝ) : ℝ :=
+/-- Normalized-candidate variant of smooth conditional max-entropy. Unlike the
+Tomamichel source convention, this infimum ranges only over normalized states. -/
+def smoothConditionalMaxEntropyNormalizedCandidates
+    (ρ : State (Prod a b)) (ε : ℝ) : ℝ :=
   sInf {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρ ε h}
 
-theorem smoothConditionalMaxEntropy_eq_sInf_candidates (ρ : State (Prod a b)) (ε : ℝ) :
-    ρ.smoothConditionalMaxEntropy ε =
+theorem smoothConditionalMaxEntropyNormalizedCandidates_eq_sInf_candidates
+    (ρ : State (Prod a b)) (ε : ℝ) :
+    ρ.smoothConditionalMaxEntropyNormalizedCandidates ε =
       sInf {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρ ε h} :=
   rfl
 
 @[simp]
-theorem smoothConditionalMaxEntropy_eq (ρ : State (Prod a b)) (ε : ℝ) :
-    ρ.smoothConditionalMaxEntropy ε =
+theorem smoothConditionalMaxEntropyNormalizedCandidates_eq
+    (ρ : State (Prod a b)) (ε : ℝ) :
+    ρ.smoothConditionalMaxEntropyNormalizedCandidates ε =
       sInf {h : ℝ |
         ∃ ρ' : State (Prod a b), ρ.purifiedBall ε ρ' ∧
           h = ρ'.conditionalMaxEntropy} :=
   rfl
 
-/-- Zero-radius smooth conditional min-entropy is the unsmoothed conditional
-min-entropy [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
-theorem smoothConditionalMinEntropy_zero (ρ : State (Prod a b)) :
-    ρ.smoothConditionalMinEntropy 0 = ρ.conditionalMinEntropy := by
-  rw [State.smoothConditionalMinEntropy_eq]
+/-- The normalized-candidate smooth conditional min-entropy agrees with the
+unsmoothed quantity at radius zero. -/
+theorem smoothConditionalMinEntropyNormalizedCandidates_zero
+    (ρ : State (Prod a b)) :
+    ρ.smoothConditionalMinEntropyNormalizedCandidates 0 =
+      ρ.conditionalMinEntropy := by
+  rw [State.smoothConditionalMinEntropyNormalizedCandidates_eq]
   have hset :
       {h : ℝ | ∃ ρ' : State (Prod a b),
         ρ.purifiedBall 0 ρ' ∧ h = ρ'.conditionalMinEntropy} =
@@ -1692,11 +1710,13 @@ theorem smoothConditionalMinEntropy_zero (ρ : State (Prod a b)) :
   rw [hset]
   exact csSup_singleton ρ.conditionalMinEntropy
 
-/-- Zero-radius smooth conditional max-entropy is the unsmoothed conditional
-max-entropy [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
-theorem smoothConditionalMaxEntropy_zero (ρ : State (Prod a b)) :
-    ρ.smoothConditionalMaxEntropy 0 = ρ.conditionalMaxEntropy := by
-  rw [State.smoothConditionalMaxEntropy_eq]
+/-- The normalized-candidate smooth conditional max-entropy agrees with the
+unsmoothed quantity at radius zero. -/
+theorem smoothConditionalMaxEntropyNormalizedCandidates_zero
+    (ρ : State (Prod a b)) :
+    ρ.smoothConditionalMaxEntropyNormalizedCandidates 0 =
+      ρ.conditionalMaxEntropy := by
+  rw [State.smoothConditionalMaxEntropyNormalizedCandidates_eq]
   have hset :
       {h : ℝ | ∃ ρ' : State (Prod a b),
         ρ.purifiedBall 0 ρ' ∧ h = ρ'.conditionalMaxEntropy} =
@@ -1984,41 +2004,121 @@ theorem SmoothConditionalMaxEntropyCandidate_mono
   rintro ⟨ρ', hball, hh⟩
   exact ⟨ρ', purifiedBall_mono hεδ hball, hh⟩
 
-/-- Subnormalized smooth conditional min-entropy as the supremum of
-min-entropy over the subnormalized purified-distance epsilon ball. -/
-def smoothConditionalMinEntropy (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) : ℝ :=
+/-- Unrestricted real-valued supremum helper for subnormalized smooth
+conditional min-entropy.
+
+This totalized `sSup` surface is intended for internal order-theoretic proofs.
+Outside `0 ≤ ε < sqrt (Tr ρ)` it is not the canonical finite-resource entropy
+of [Tomamichel2015FiniteResources, calculus.tex:386-396] and
+[Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
+def smoothConditionalMinEntropyRaw
+    (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) : ℝ :=
   sSup {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h}
 
-theorem smoothConditionalMinEntropy_eq_sSup_candidates
+/-- Canonical finite-domain subnormalized smooth conditional min-entropy.
+
+The explicit radius hypotheses are the source convention from
+[Tomamichel2015FiniteResources, calculus.tex:386-396], while the entropy
+optimization is [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
+def smoothConditionalMinEntropy
+    (ρ : SubnormalizedState (Prod a b)) (ε : ℝ)
+    (_hε_nonneg : 0 ≤ ε)
+    (_hε_lt : ε < Real.sqrt ρ.matrix.trace.re) : ℝ :=
+  ρ.smoothConditionalMinEntropyRaw ε
+
+@[simp]
+theorem smoothConditionalMinEntropy_eq_raw
+    (ρ : SubnormalizedState (Prod a b)) (ε : ℝ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt : ε < Real.sqrt ρ.matrix.trace.re) :
+    ρ.smoothConditionalMinEntropy ε hε_nonneg hε_lt =
+      ρ.smoothConditionalMinEntropyRaw ε :=
+  rfl
+
+theorem smoothConditionalMinEntropyRaw_eq_sSup_candidates
     (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) :
-    ρ.smoothConditionalMinEntropy ε =
+    ρ.smoothConditionalMinEntropyRaw ε =
       sSup {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h} :=
   rfl
 
 @[simp]
-theorem smoothConditionalMinEntropy_eq
+theorem smoothConditionalMinEntropyRaw_eq
     (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) :
-    ρ.smoothConditionalMinEntropy ε =
+    ρ.smoothConditionalMinEntropyRaw ε =
       sSup {h : ℝ |
         ∃ ρ' : SubnormalizedState (Prod a b),
           ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropy} :=
   rfl
 
-/-- Subnormalized smooth conditional max-entropy as the infimum of
-max-entropy over the subnormalized purified-distance epsilon ball. -/
-def smoothConditionalMaxEntropy (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) : ℝ :=
+theorem smoothConditionalMinEntropy_eq_sSup_candidates
+    (ρ : SubnormalizedState (Prod a b)) (ε : ℝ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt : ε < Real.sqrt ρ.matrix.trace.re) :
+    ρ.smoothConditionalMinEntropy ε hε_nonneg hε_lt =
+      sSup {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h} :=
+  rfl
+
+@[simp]
+theorem smoothConditionalMinEntropy_eq
+    (ρ : SubnormalizedState (Prod a b)) (ε : ℝ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt : ε < Real.sqrt ρ.matrix.trace.re) :
+    ρ.smoothConditionalMinEntropy ε hε_nonneg hε_lt =
+      sSup {h : ℝ |
+        ∃ ρ' : SubnormalizedState (Prod a b),
+          ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropy} :=
+  rfl
+
+/-- Unrestricted real-valued infimum helper for subnormalized smooth
+conditional max-entropy.
+
+This totalized `sInf` surface is internal. Source-facing uses must call
+`smoothConditionalMaxEntropy` with the finite-domain hypotheses from
+[Tomamichel2015FiniteResources, calculus.tex:386-396] and
+[Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
+def smoothConditionalMaxEntropyRaw
+    (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) : ℝ :=
   sInf {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρ ε h}
 
-theorem smoothConditionalMaxEntropy_eq_sInf_candidates
+/-- Canonical finite-domain subnormalized smooth conditional max-entropy. -/
+def smoothConditionalMaxEntropy
+    (ρ : SubnormalizedState (Prod a b)) (ε : ℝ)
+    (_hε_nonneg : 0 ≤ ε)
+    (_hε_lt : ε < Real.sqrt ρ.matrix.trace.re) : ℝ :=
+  ρ.smoothConditionalMaxEntropyRaw ε
+
+@[simp]
+theorem smoothConditionalMaxEntropy_eq_raw
+    (ρ : SubnormalizedState (Prod a b)) (ε : ℝ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt : ε < Real.sqrt ρ.matrix.trace.re) :
+    ρ.smoothConditionalMaxEntropy ε hε_nonneg hε_lt =
+      ρ.smoothConditionalMaxEntropyRaw ε :=
+  rfl
+
+theorem smoothConditionalMaxEntropyRaw_eq_sInf_candidates
     (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) :
-    ρ.smoothConditionalMaxEntropy ε =
+    ρ.smoothConditionalMaxEntropyRaw ε =
+      sInf {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρ ε h} :=
+  rfl
+
+@[simp]
+theorem smoothConditionalMaxEntropyRaw_eq
+    (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) :
+    ρ.smoothConditionalMaxEntropyRaw ε =
+      sInf {h : ℝ |
+        ∃ ρ' : SubnormalizedState (Prod a b),
+          ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropy} :=
+  rfl
+
+theorem smoothConditionalMaxEntropy_eq_sInf_candidates
+    (ρ : SubnormalizedState (Prod a b)) (ε : ℝ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt : ε < Real.sqrt ρ.matrix.trace.re) :
+    ρ.smoothConditionalMaxEntropy ε hε_nonneg hε_lt =
       sInf {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρ ε h} :=
   rfl
 
 @[simp]
 theorem smoothConditionalMaxEntropy_eq
-    (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) :
-    ρ.smoothConditionalMaxEntropy ε =
+    (ρ : SubnormalizedState (Prod a b)) (ε : ℝ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt : ε < Real.sqrt ρ.matrix.trace.re) :
+    ρ.smoothConditionalMaxEntropy ε hε_nonneg hε_lt =
       sInf {h : ℝ |
         ∃ ρ' : SubnormalizedState (Prod a b),
           ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropy} :=
@@ -2026,9 +2126,9 @@ theorem smoothConditionalMaxEntropy_eq
 
 /-- Zero-radius subnormalized smooth conditional min-entropy is the unsmoothed
 conditional min-entropy [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
-theorem smoothConditionalMinEntropy_zero (ρ : SubnormalizedState (Prod a b)) :
-    ρ.smoothConditionalMinEntropy 0 = ρ.conditionalMinEntropy := by
-  rw [SubnormalizedState.smoothConditionalMinEntropy_eq]
+theorem smoothConditionalMinEntropyRaw_zero (ρ : SubnormalizedState (Prod a b)) :
+    ρ.smoothConditionalMinEntropyRaw 0 = ρ.conditionalMinEntropy := by
+  rw [SubnormalizedState.smoothConditionalMinEntropyRaw_eq]
   have hset :
       {h : ℝ | ∃ ρ' : SubnormalizedState (Prod a b),
         ρ.purifiedBall 0 ρ' ∧ h = ρ'.conditionalMinEntropy} =
@@ -2047,11 +2147,19 @@ theorem smoothConditionalMinEntropy_zero (ρ : SubnormalizedState (Prod a b)) :
   rw [hset]
   exact csSup_singleton ρ.conditionalMinEntropy
 
+/-- Zero-radius canonical smooth conditional min-entropy on its finite domain. -/
+theorem smoothConditionalMinEntropy_zero
+    (ρ : SubnormalizedState (Prod a b))
+    (htrace : 0 < Real.sqrt ρ.matrix.trace.re) :
+    ρ.smoothConditionalMinEntropy 0 (le_refl 0) htrace =
+      ρ.conditionalMinEntropy :=
+  ρ.smoothConditionalMinEntropyRaw_zero
+
 /-- Zero-radius subnormalized smooth conditional max-entropy is the unsmoothed
 conditional max-entropy [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
-theorem smoothConditionalMaxEntropy_zero (ρ : SubnormalizedState (Prod a b)) :
-    ρ.smoothConditionalMaxEntropy 0 = ρ.conditionalMaxEntropy := by
-  rw [SubnormalizedState.smoothConditionalMaxEntropy_eq]
+theorem smoothConditionalMaxEntropyRaw_zero (ρ : SubnormalizedState (Prod a b)) :
+    ρ.smoothConditionalMaxEntropyRaw 0 = ρ.conditionalMaxEntropy := by
+  rw [SubnormalizedState.smoothConditionalMaxEntropyRaw_eq]
   have hset :
       {h : ℝ | ∃ ρ' : SubnormalizedState (Prod a b),
         ρ.purifiedBall 0 ρ' ∧ h = ρ'.conditionalMaxEntropy} =
@@ -2069,6 +2177,14 @@ theorem smoothConditionalMaxEntropy_zero (ρ : SubnormalizedState (Prod a b)) :
       exact ⟨ρ, SubnormalizedState.purifiedBall_self_of_nonneg ρ (le_refl (0 : ℝ)), hh⟩
   rw [hset]
   exact csInf_singleton ρ.conditionalMaxEntropy
+
+/-- Zero-radius canonical smooth conditional max-entropy on its finite domain. -/
+theorem smoothConditionalMaxEntropy_zero
+    (ρ : SubnormalizedState (Prod a b))
+    (htrace : 0 < Real.sqrt ρ.matrix.trace.re) :
+    ρ.smoothConditionalMaxEntropy 0 (le_refl 0) htrace =
+      ρ.conditionalMaxEntropy :=
+  ρ.smoothConditionalMaxEntropyRaw_zero
 
 /-! ## Subnormalized pure-marginal pairing and smooth-duality bridges -/
 
@@ -3399,10 +3515,11 @@ Once the max-candidate set for `ρAB` is exactly the pointwise negation of the
 min-candidate set for `ρAC`, the smooth max entropy is the negative smooth min
 entropy. This is the `sInf`/`sSup` handoff; purification-ball transport and
 unsmoothed endpoint duality supply the candidate relation separately. -/
-theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_candidate_duality
+theorem smoothConditionalMaxEntropyRaw_eq_neg_smoothConditionalMinEntropyRaw_of_candidate_duality
     {ρAB : SubnormalizedState (Prod a b)} {ρAC : SubnormalizedState (Prod a c)} {ε : ℝ}
     (hdual : SmoothConditionalMinMaxCandidateDuality (a := a) ρAB ρAC ε) :
-    ρAB.smoothConditionalMaxEntropy ε = -ρAC.smoothConditionalMinEntropy ε := by
+    ρAB.smoothConditionalMaxEntropyRaw ε =
+      -ρAC.smoothConditionalMinEntropyRaw ε := by
   let maxSet : Set ℝ :=
     {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h}
   let minSet : Set ℝ :=
@@ -3412,24 +3529,25 @@ theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_candid
     simp only [maxSet, minSet, Set.mem_setOf_eq, Set.mem_neg]
     exact hdual h
   calc
-    ρAB.smoothConditionalMaxEntropy ε = sInf maxSet := rfl
+    ρAB.smoothConditionalMaxEntropyRaw ε = sInf maxSet := rfl
     _ = sInf (-minSet) := by rw [hset]
     _ = -sSup minSet := Real.sInf_neg minSet
-    _ = -ρAC.smoothConditionalMinEntropy ε := rfl
+    _ = -ρAC.smoothConditionalMinEntropyRaw ε := rfl
 
 /-- Composed subnormalized smooth min/max duality bridge from witness-level
 smoothing duality. -/
-theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_witness_duality
+theorem smoothConditionalMaxEntropyRaw_eq_neg_smoothConditionalMinEntropyRaw_of_witness_duality
     {ρAB : SubnormalizedState (Prod a b)} {ρAC : SubnormalizedState (Prod a c)} {ε : ℝ}
     (hwit : SmoothConditionalMinMaxWitnessDuality (a := a) ρAB ρAC ε) :
-    ρAB.smoothConditionalMaxEntropy ε = -ρAC.smoothConditionalMinEntropy ε :=
-  smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_candidate_duality
+    ρAB.smoothConditionalMaxEntropyRaw ε =
+      -ρAC.smoothConditionalMinEntropyRaw ε :=
+  smoothConditionalMaxEntropyRaw_eq_neg_smoothConditionalMinEntropyRaw_of_candidate_duality
     (SmoothConditionalMinMaxCandidateDuality.of_witness_duality hwit)
 
 /-- Order-theoretic subnormalized smooth min/max bridge for the one-sided
 candidate inequalities produced by enlarged-reference transport followed by
 compression. -/
-theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_candidate_bounds
+theorem smoothConditionalMaxEntropyRaw_eq_neg_smoothConditionalMinEntropyRaw_of_candidate_bounds
     {ρAB : SubnormalizedState (Prod a b)} {ρAC : SubnormalizedState (Prod a c)} {ε : ℝ}
     (hmaxNonempty :
       ({h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h}).Nonempty)
@@ -3445,7 +3563,8 @@ theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_candid
     (hreverse :
       ∀ m : ℝ, SmoothConditionalMinEntropyCandidate (a := a) ρAC ε m →
         ∃ h : ℝ, SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h ∧ h ≤ -m) :
-    ρAB.smoothConditionalMaxEntropy ε = -ρAC.smoothConditionalMinEntropy ε := by
+    ρAB.smoothConditionalMaxEntropyRaw ε =
+      -ρAC.smoothConditionalMinEntropyRaw ε := by
   let maxSet : Set ℝ :=
     {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h}
   let minSet : Set ℝ :=
@@ -3468,18 +3587,73 @@ theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_candid
 
 /-- Subnormalized smooth min/max duality from a relation-parametric
 fixed-register pairing and unsmoothed pairwise duality. -/
-theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_pairing
+theorem smoothConditionalMaxEntropyRaw_eq_neg_smoothConditionalMinEntropyRaw_of_pairing
     {ρAB : SubnormalizedState (Prod a b)} {ρAC : SubnormalizedState (Prod a c)} {ε : ℝ}
     {Rel : SubnormalizedState (Prod a b) → SubnormalizedState (Prod a c) → Prop}
     (hpair : SmoothConditionalMinMaxPairing (a := a) ρAB ρAC ε Rel)
     (hdual : ConditionalMinMaxEntropyDualOn (a := a) Rel) :
-    ρAB.smoothConditionalMaxEntropy ε = -ρAC.smoothConditionalMinEntropy ε :=
-  smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_witness_duality
+    ρAB.smoothConditionalMaxEntropyRaw ε =
+      -ρAC.smoothConditionalMinEntropyRaw ε :=
+  smoothConditionalMaxEntropyRaw_eq_neg_smoothConditionalMinEntropyRaw_of_witness_duality
     (SmoothConditionalMinMaxWitnessDuality.of_pairing_of_entropy_duality hpair hdual)
 
 end SubnormalizedState
 
 namespace State
+
+/-! ## Source-facing normalized-center smooth entropies -/
+
+/-- Source-facing smooth conditional min-entropy for a normalized center.
+Candidates remain subnormalized, as in Tomamichel's finite-resource convention. -/
+def smoothConditionalMinEntropy
+    (ρ : State (Prod a b)) (ε : ℝ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt : ε < 1) : ℝ :=
+  ρ.toSubnormalized.smoothConditionalMinEntropy ε hε_nonneg
+    (ρ.epsilon_lt_sqrt_toSubnormalized_trace hε_lt)
+
+@[simp]
+theorem smoothConditionalMinEntropy_eq_toSubnormalized
+    (ρ : State (Prod a b)) (ε : ℝ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt : ε < 1) :
+    ρ.smoothConditionalMinEntropy ε hε_nonneg hε_lt =
+      ρ.toSubnormalized.smoothConditionalMinEntropy ε hε_nonneg
+        (ρ.epsilon_lt_sqrt_toSubnormalized_trace hε_lt) :=
+  rfl
+
+/-- Source-facing smooth conditional max-entropy for a normalized center.
+Candidates remain subnormalized, as in Tomamichel's finite-resource convention. -/
+def smoothConditionalMaxEntropy
+    (ρ : State (Prod a b)) (ε : ℝ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt : ε < 1) : ℝ :=
+  ρ.toSubnormalized.smoothConditionalMaxEntropy ε hε_nonneg
+    (ρ.epsilon_lt_sqrt_toSubnormalized_trace hε_lt)
+
+@[simp]
+theorem smoothConditionalMaxEntropy_eq_toSubnormalized
+    (ρ : State (Prod a b)) (ε : ℝ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt : ε < 1) :
+    ρ.smoothConditionalMaxEntropy ε hε_nonneg hε_lt =
+      ρ.toSubnormalized.smoothConditionalMaxEntropy ε hε_nonneg
+        (ρ.epsilon_lt_sqrt_toSubnormalized_trace hε_lt) :=
+  rfl
+
+/-- At radius zero, the normalized-center wrapper reduces to the unsmoothed
+subnormalized entropy of the embedded center. -/
+theorem smoothConditionalMinEntropy_zero_eq_toSubnormalized
+    (ρ : State (Prod a b)) :
+    ρ.smoothConditionalMinEntropy 0 (le_refl 0) (by norm_num) =
+      ρ.toSubnormalized.conditionalMinEntropy :=
+  SubnormalizedState.smoothConditionalMinEntropy_zero
+    ρ.toSubnormalized (by rw [State.toSubnormalized_trace]; norm_num)
+
+/-- At radius zero, the normalized-center wrapper reduces to the unsmoothed
+subnormalized entropy of the embedded center. -/
+theorem smoothConditionalMaxEntropy_zero_eq_toSubnormalized
+    (ρ : State (Prod a b)) :
+    ρ.smoothConditionalMaxEntropy 0 (le_refl 0) (by norm_num) =
+      ρ.toSubnormalized.conditionalMaxEntropy :=
+  SubnormalizedState.smoothConditionalMaxEntropy_zero
+    ρ.toSubnormalized (by rw [State.toSubnormalized_trace]; norm_num)
 
 /-! ## Normalized/subnormalized entropy-definition bridges -/
 
@@ -3661,16 +3835,18 @@ theorem SmoothConditionalMinMaxCandidateDuality.of_witness_duality
     refine ⟨ρAB', hballAB, ?_⟩
     rw [hentropy, ← hh, neg_neg]
 
-/-- Order-theoretic smooth min/max duality bridge.
+/-- Order-theoretic smooth min/max duality bridge for the normalized-candidate
+variants.
 
 Once the max-candidate set for `ρAB` is exactly the pointwise negation of the
 min-candidate set for `ρAC`, the smooth max entropy is the negative smooth min
 entropy. This proves the `sInf`/`sSup` part of the purified-smoothing duality
 route; the source-level purification theorem supplies the candidate relation. -/
-theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_candidate_duality
+theorem smoothConditionalMaxEntropyNormalizedCandidates_eq_neg_smoothConditionalMinEntropyNormalizedCandidates_of_candidate_duality
     {ρAB : State (Prod a b)} {ρAC : State (Prod a c)} {ε : ℝ}
     (hdual : SmoothConditionalMinMaxCandidateDuality (a := a) ρAB ρAC ε) :
-    ρAB.smoothConditionalMaxEntropy ε = -ρAC.smoothConditionalMinEntropy ε := by
+    ρAB.smoothConditionalMaxEntropyNormalizedCandidates ε =
+      -ρAC.smoothConditionalMinEntropyNormalizedCandidates ε := by
   let maxSet : Set ℝ := {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h}
   let minSet : Set ℝ := {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρAC ε h}
   have hset : maxSet = -minSet := by
@@ -3678,30 +3854,32 @@ theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_candid
     simp only [maxSet, minSet, Set.mem_setOf_eq, Set.mem_neg]
     exact hdual h
   calc
-    ρAB.smoothConditionalMaxEntropy ε = sInf maxSet := rfl
+    ρAB.smoothConditionalMaxEntropyNormalizedCandidates ε = sInf maxSet := rfl
     _ = sInf (-minSet) := by rw [hset]
     _ = -sSup minSet := Real.sInf_neg minSet
-    _ = -ρAC.smoothConditionalMinEntropy ε := rfl
+    _ = -ρAC.smoothConditionalMinEntropyNormalizedCandidates ε := rfl
 
 /-- Composed smooth min/max duality bridge from witness-level smoothing
 duality. This is the exact handoff point for purification-ball lifting and
 unsmoothed min/max duality. -/
-theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_witness_duality
+theorem smoothConditionalMaxEntropyNormalizedCandidates_eq_neg_smoothConditionalMinEntropyNormalizedCandidates_of_witness_duality
     {ρAB : State (Prod a b)} {ρAC : State (Prod a c)} {ε : ℝ}
     (hwit : SmoothConditionalMinMaxWitnessDuality (a := a) ρAB ρAC ε) :
-    ρAB.smoothConditionalMaxEntropy ε = -ρAC.smoothConditionalMinEntropy ε :=
-  smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_candidate_duality
+    ρAB.smoothConditionalMaxEntropyNormalizedCandidates ε =
+      -ρAC.smoothConditionalMinEntropyNormalizedCandidates ε :=
+  smoothConditionalMaxEntropyNormalizedCandidates_eq_neg_smoothConditionalMinEntropyNormalizedCandidates_of_candidate_duality
     (SmoothConditionalMinMaxCandidateDuality.of_witness_duality hwit)
 
 /-- Smooth min/max duality from a relation-parametric pairing and unsmoothed
 pairwise duality. -/
-theorem smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_pairing
+theorem smoothConditionalMaxEntropyNormalizedCandidates_eq_neg_smoothConditionalMinEntropyNormalizedCandidates_of_pairing
     {ρAB : State (Prod a b)} {ρAC : State (Prod a c)} {ε : ℝ}
     {Rel : State (Prod a b) → State (Prod a c) → Prop}
     (hpair : SmoothConditionalMinMaxPairing (a := a) ρAB ρAC ε Rel)
     (hdual : ConditionalMinMaxEntropyDualOn (a := a) Rel) :
-    ρAB.smoothConditionalMaxEntropy ε = -ρAC.smoothConditionalMinEntropy ε :=
-  smoothConditionalMaxEntropy_eq_neg_smoothConditionalMinEntropy_of_witness_duality
+    ρAB.smoothConditionalMaxEntropyNormalizedCandidates ε =
+      -ρAC.smoothConditionalMinEntropyNormalizedCandidates ε :=
+  smoothConditionalMaxEntropyNormalizedCandidates_eq_neg_smoothConditionalMinEntropyNormalizedCandidates_of_witness_duality
     (SmoothConditionalMinMaxWitnessDuality.of_pairing_of_entropy_duality hpair hdual)
 
 end State

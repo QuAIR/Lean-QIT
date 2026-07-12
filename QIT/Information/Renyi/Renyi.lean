@@ -452,18 +452,105 @@ def petzRenyi (ρ σ : State a) (_hρ : ρ.matrix.PosDef) (_hσ : σ.matrix.PosD
 For this order range no inverse power of the second state is needed.  This
 definition is the source-faithful kernel for Khatri--Wilde's
 `D_α(ρ ‖ σ)` comparison with a merely positive semidefinite `σ`. -/
-def petzRenyiPSD (ρ σ : State a)
+def petzRenyiPSDFinite (ρ σ : State a)
     (α : ℝ) (_hα_pos : 0 < α) (_hα_ne_one : α ≠ 1) : ℝ :=
   let r := 1 / (α - 1)
   let A := CFC.rpow ρ.matrix α
   let B := CFC.rpow σ.matrix (1 - α)
   r * log2 ((A * B).trace.re)
 
-theorem petzRenyiPSD_eq_petzRenyi
+/-- Petz trace coefficient in the PSD order range. -/
+def petzRenyiPSDTraceCoeff (ρ σ : State a) (α : ℝ) : ℝ :=
+  ((CFC.rpow ρ.matrix α * CFC.rpow σ.matrix (1 - α)).trace).re
+
+/-- The Petz trace coefficient is nonnegative for density operators. -/
+theorem petzRenyiPSDTraceCoeff_nonneg
+    (ρ σ : State a) (α : ℝ) :
+    0 ≤ ρ.petzRenyiPSDTraceCoeff σ α := by
+  exact trace_mul_posSemidef_re_nonneg
+    (renyi_cMatrix_rpow_posSemidef ρ.matrix α)
+    (renyi_cMatrix_rpow_posSemidef σ.matrix (1 - α))
+
+/-- Powered support inclusion makes the PSD Petz trace coefficient positive. -/
+theorem petzRenyiPSDTraceCoeff_pos_of_support
+    (ρ σ : State a) {α : ℝ}
+    (hSupport : Matrix.Supports (CFC.rpow ρ.matrix α) σ.matrix) :
+    0 < ρ.petzRenyiPSDTraceCoeff σ α := by
+  have hMne : CFC.rpow ρ.matrix α ≠ 0 := by
+    have hρne : ρ.matrix ≠ 0 := by
+      intro hzero
+      have htrace := ρ.trace_eq_one
+      rw [hzero] at htrace
+      simp at htrace
+    have hpow_pos := psdTracePower_pos_of_ne_zero ρ.matrix ρ.pos (p := α) hρne
+    intro hzero
+    have hpow_zero : psdTracePower ρ.matrix ρ.pos α = 0 := by
+      change (CFC.rpow ρ.matrix α).trace.re = 0
+      rw [hzero]
+      simp
+    linarith
+  exact trace_mul_cMatrix_rpow_pos_of_support
+    (M := CFC.rpow ρ.matrix α) (N := σ.matrix)
+    (cMatrix_rpow_posSemidef (A := ρ.matrix) (s := α) ρ.pos) σ.pos
+    hMne hSupport (1 - α)
+
+/-- Canonical extended-real Petz divergence for PSD states and `0 < α < 1`.
+
+If the Petz trace coefficient vanishes, the negative prefactor multiplies the
+logarithmic singularity to `+∞`.  Otherwise this agrees with the finite real
+formula. -/
+noncomputable def petzRenyiPSD (ρ σ : State a)
+    (α : ℝ) (hα_pos : 0 < α) (hα_lt_one : α < 1) : EReal :=
+  if ρ.petzRenyiPSDTraceCoeff σ α = 0 then
+    ⊤
+  else
+    (ρ.petzRenyiPSDFinite σ α hα_pos (ne_of_lt hα_lt_one) : EReal)
+
+theorem petzRenyiPSD_eq_top_of_traceCoeff_eq_zero
+    (ρ σ : State a) (α : ℝ) (hα_pos : 0 < α) (hα_lt_one : α < 1)
+    (hzero : ρ.petzRenyiPSDTraceCoeff σ α = 0) :
+    ρ.petzRenyiPSD σ α hα_pos hα_lt_one = (⊤ : EReal) := by
+  simp [petzRenyiPSD, hzero]
+
+theorem petzRenyiPSD_eq_coe_finite_of_traceCoeff_ne_zero
+    (ρ σ : State a) (α : ℝ) (hα_pos : 0 < α) (hα_lt_one : α < 1)
+    (hne : ρ.petzRenyiPSDTraceCoeff σ α ≠ 0) :
+    ρ.petzRenyiPSD σ α hα_pos hα_lt_one =
+      (ρ.petzRenyiPSDFinite σ α hα_pos (ne_of_lt hα_lt_one) : EReal) := by
+  simp [petzRenyiPSD, hne]
+
+/-- A positive Petz trace coefficient selects the finite branch of the
+canonical PSD divergence. -/
+theorem petzRenyiPSD_eq_coe_finite_of_traceCoeff_pos
+    (ρ σ : State a) (α : ℝ) (hα_pos : 0 < α) (hα_lt_one : α < 1)
+    (hpos : 0 < ρ.petzRenyiPSDTraceCoeff σ α) :
+    ρ.petzRenyiPSD σ α hα_pos hα_lt_one =
+      (ρ.petzRenyiPSDFinite σ α hα_pos (ne_of_lt hα_lt_one) : EReal) :=
+  ρ.petzRenyiPSD_eq_coe_finite_of_traceCoeff_ne_zero
+    σ α hα_pos hα_lt_one (ne_of_gt hpos)
+
+theorem petzRenyiPSDFinite_eq_petzRenyi
     (ρ σ : State a) (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
     (α : ℝ) (hα_pos : 0 < α) (hα_ne_one : α ≠ 1) :
-    ρ.petzRenyiPSD σ α hα_pos hα_ne_one =
+    ρ.petzRenyiPSDFinite σ α hα_pos hα_ne_one =
       ρ.petzRenyi σ hρ hσ α hα_pos hα_ne_one := rfl
+
+/-- On positive-definite states, the canonical PSD API is the coercion of the
+ordinary finite Petz divergence. -/
+theorem petzRenyiPSD_eq_coe_petzRenyi_of_posDef
+    (ρ σ : State a) (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
+    (α : ℝ) (hα_pos : 0 < α) (hα_lt_one : α < 1) :
+    ρ.petzRenyiPSD σ α hα_pos hα_lt_one =
+      (ρ.petzRenyi σ hρ hσ α hα_pos (ne_of_lt hα_lt_one) : EReal) := by
+  haveI : Nonempty a := ρ.nonempty
+  have hcoeff_pos : 0 < ρ.petzRenyiPSDTraceCoeff σ α := by
+    exact trace_mul_posDef_re_pos
+      (cMatrix_rpow_posDef_of_posDef hρ α)
+      (cMatrix_rpow_posDef_of_posDef hσ (1 - α))
+  rw [ρ.petzRenyiPSD_eq_coe_finite_of_traceCoeff_ne_zero
+    σ α hα_pos hα_lt_one (ne_of_gt hcoeff_pos)]
+  rw [ρ.petzRenyiPSDFinite_eq_petzRenyi
+    σ hρ hσ α hα_pos (ne_of_lt hα_lt_one)]
 
 /-- Sandwiched quantum Renyi divergence D̃_α(ρ‖σ).
 

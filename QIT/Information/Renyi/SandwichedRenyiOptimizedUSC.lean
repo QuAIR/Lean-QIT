@@ -582,7 +582,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_tendsto_of_tendsto_posDef
           rho (rho.marginalA.prod sigmaB).matrix
           (rho.marginalA.prod sigmaB).pos alpha := by
     rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-    rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+    rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
   have hcongr :
       (fun x : X => (rhoF x).sandwichedRenyiMutualInformationCandidateE sigmaB alpha)
         =ᶠ[l]
@@ -592,7 +592,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_tendsto_of_tendsto_posDef
           ((rhoF x).marginalA.prod sigmaB).pos alpha) := by
     filter_upwards with x
     rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-    rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+    rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
   simpa [htarget] using hhigh.congr' hcongr.symm
 
 /-- Full-rank fixed-side candidates are continuous at states whose left
@@ -641,7 +641,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_eq_top_of_not_supports
       ¬ Matrix.Supports rhoAB.matrix (rhoAB.marginalA.prod sigmaB).matrix) :
     rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha = ⊤ := by
   rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-  rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+  rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
   exact sandwichedRenyiPSDReferenceHighAlphaE_eq_top_of_not_supports
     rhoAB (rhoAB.marginalA.prod sigmaB).pos alpha hSupport
 
@@ -2481,7 +2481,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_fullRankApprox_tendsto_of_hig
           (rhoAB.marginalA.prod sigmaB).matrix
           (rhoAB.marginalA.prod sigmaB).pos alpha : EReal) := by
     rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-    rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+    rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
     rw [sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports
       rhoAB (rhoAB.marginalA.prod sigmaB).pos alpha hSupport]
   have hpath :
@@ -2504,7 +2504,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_fullRankApprox_tendsto_of_hig
       supports_fullRankApproxMaximallyMixedProductReference_of_supports
         rhoAB rhoAB.marginalA sigmaB hdelta hSupport
     rw [State.sandwichedRenyiMutualInformationCandidateE_eq]
-    rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+    rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
     rw [sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports
       rhoAB
       (rhoAB.marginalA.prod
@@ -3827,7 +3827,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_upperSemicontinuousOn
           (rho'.marginalA.prod sigmaB).matrix (rho'.marginalA.prod sigmaB).pos alpha : EReal) := by
     intro rho'
     rw [sandwichedRenyiMutualInformationCandidateE_eq,
-      sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha)),
+      sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha,
       sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports _ _ _ (hsupports rho')]
   -- (9) Assemble candidate tendsto via EReal coe and congruence.
   have hfiniteE_tendsto :

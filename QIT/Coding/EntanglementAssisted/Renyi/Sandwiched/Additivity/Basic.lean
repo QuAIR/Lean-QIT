@@ -14,6 +14,7 @@ public import QIT.Information.Renyi.SandwichedRenyiOptimizedUSC
 public import QIT.HypothesisTesting.DPI
 public import QIT.Information.Renyi.RenyiDPI
 public import QIT.States.Purification.Canonical
+public import QIT.Util.Order.EReal
 
 /-!
 # Basic support and order lemmas for sandwiched EA additivity
@@ -853,44 +854,6 @@ theorem real_sSup_range_prod_add_eq_add_sSup_range
       ⟨xg, ⟨j, rfl⟩, hj⟩
     refine ⟨f i + g j, ⟨(i, j), rfl⟩, ?_⟩
     linarith
-
-/-- Coercion from real-valued bounded-above objectives to `EReal` preserves
-the supremum.  This is the scalar bridge used when the KW alternate expression
-is optimized over full-rank purifying side states. -/
-theorem ereal_sSup_range_coe_eq_coe_real_sSup
-    {ι : Type*} [Nonempty ι] (f : ι → ℝ)
-    (hf : BddAbove (Set.range f)) :
-    sSup (Set.range fun i : ι => (f i : EReal)) =
-      ((sSup (Set.range f) : ℝ) : EReal) := by
-  let S : Set (WithTop ℝ) := Set.range fun i : ι => ((f i : ℝ) : WithTop ℝ)
-  have hS_nonempty : S.Nonempty := Set.range_nonempty _
-  have hS_bdd : BddAbove S := ⟨⊤, by intro y _hy; exact le_top⟩
-  have htop : sSup S = ((sSup (Set.range f) : ℝ) : WithTop ℝ) := by
-    have h := WithTop.coe_sSup' (s := Set.range f) hf
-    have himage : ((fun a : ℝ => (a : WithTop ℝ)) '' Set.range f) = S := by
-      ext y
-      constructor
-      · rintro ⟨_, ⟨i, rfl⟩, rfl⟩
-        exact ⟨i, rfl⟩
-      · rintro ⟨i, rfl⟩
-        exact ⟨f i, ⟨i, rfl⟩, rfl⟩
-    rw [himage] at h
-    exact h.symm
-  have hbot := WithBot.coe_sSup' (s := S) hS_nonempty hS_bdd
-  have hrange : (Set.range fun i : ι => (f i : EReal)) =
-      ((fun a : WithTop ℝ => (a : WithBot (WithTop ℝ))) '' S) := by
-    ext y
-    constructor
-    · rintro ⟨i, rfl⟩
-      exact ⟨(f i : WithTop ℝ), ⟨i, rfl⟩, rfl⟩
-    · rintro ⟨_, ⟨i, rfl⟩, rfl⟩
-      exact ⟨i, rfl⟩
-  rw [hrange]
-  calc
-    sSup ((fun a : WithTop ℝ => (a : WithBot (WithTop ℝ))) '' S) =
-        ((sSup S : WithTop ℝ) : WithBot (WithTop ℝ)) := hbot.symm
-    _ = (((sSup (Set.range f) : ℝ) : WithTop ℝ) : WithBot (WithTop ℝ)) := by
-      rw [htop]
 
 /-- On a nonempty positive bounded-above real set, `log2` sends the supremum
 to the supremum of the image.  This is the local logarithm-transport step used

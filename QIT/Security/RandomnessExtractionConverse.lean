@@ -1729,8 +1729,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
         ∃ τ : SubnormalizedState (Prod (Prod Z S) e),
           (E.deterministicGraphCqState g).toSubnormalized.purifiedBall ε τ ∧
           ρSE'.conditionalMinEntropy ≤ τ.conditionalMinEntropy) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      (E.deterministicGraphCqState g).toSubnormalized.smoothConditionalMinEntropy ε := by
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      (E.deterministicGraphCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicGraphCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   have hgraph_prod : Nonempty (Prod (Prod Z S) e) :=
     (E.deterministicGraphCqState g).nonempty
@@ -1745,7 +1747,7 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
     rw [htrace]
     simpa using hε1
   exact
-    SubnormalizedState.smoothConditionalMinEntropy_le_of_witness_lift_of_lt_sqrt_trace
+    SubnormalizedState.smoothConditionalMinEntropyRaw_le_of_witness_lift_of_lt_sqrt_trace
       (a := S) (source := Prod Z S)
       (E.deterministicPostprocessCqState g).toSubnormalized
       (E.deterministicGraphCqState g).toSubnormalized
@@ -1764,8 +1766,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicGraphCqState_le_cq
         ∃ h',
           SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := Z)
             E.cqState.toSubnormalized ε h' ∧ h ≤ h') :
-    (E.deterministicGraphCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (E.deterministicGraphCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicGraphCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   have hsource_prod : Nonempty (Prod Z e) := E.cqState.nonempty
   letI : Nonempty Z := ⟨(Classical.choice hsource_prod).1⟩
@@ -1778,7 +1782,7 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicGraphCqState_le_cq
     rw [htrace]
     simpa using hε1
   exact
-    SubnormalizedState.smoothConditionalMinEntropy_le_of_candidate_lift_of_lt_sqrt_trace
+    SubnormalizedState.smoothConditionalMinEntropyRaw_le_of_candidate_lift_of_lt_sqrt_trace
       (a := Prod Z S) (source := Z)
       (E.deterministicGraphCqState g).toSubnormalized E.cqState.toSubnormalized
       hε0 hεsource hlift
@@ -1821,8 +1825,10 @@ min-entropy of the source cq center. -/
 theorem subnormalizedSmoothConditionalMinEntropy_deterministicGraphCqState_eq_cqState
     (E : Ensemble Z e) (g : Z → S) {ε : ℝ}
     (hε0 : 0 ≤ ε) (hε1 : ε < 1) :
-    (E.deterministicGraphCqState g).toSubnormalized.smoothConditionalMinEntropy ε =
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (E.deterministicGraphCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicGraphCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) =
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   have hsource_prod : Nonempty (Prod Z e) := E.cqState.nonempty
   letI : Nonempty Z := ⟨(Classical.choice hsource_prod).1⟩
@@ -1835,6 +1841,9 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicGraphCqState_eq_cq
       norm_num
     rw [htrace]
     simpa using hε1
+  change
+    (E.deterministicGraphCqState g).toSubnormalized.smoothConditionalMinEntropyRaw ε =
+      E.cqState.toSubnormalized.smoothConditionalMinEntropyRaw ε
   rw [← E.deterministicGraphCqState_toSubnormalized_eq_sourceIsometryApply g]
   exact
     E.cqState.toSubnormalized.smoothConditionalMinEntropy_sourceIsometryApply
@@ -1845,8 +1854,10 @@ proof's graph embedding isometry `z ↦ (z, g z)`. -/
 theorem subnormalizedSmoothConditionalMinEntropy_deterministicGraphCqState_le_cqState
     (E : Ensemble Z e) (g : Z → S) {ε : ℝ}
     (hε0 : 0 ≤ ε) (hε1 : ε < 1) :
-    (E.deterministicGraphCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε :=
+    (E.deterministicGraphCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicGraphCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) :=
   le_of_eq
     (E.subnormalizedSmoothConditionalMinEntropy_deterministicGraphCqState_eq_cqState
       g hε0 hε1)
@@ -1868,8 +1879,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
         ∃ h',
           SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := Z)
             E.cqState.toSubnormalized ε h' ∧ h ≤ h') :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε :=
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) :=
   (E.subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState_le_deterministicGraphCqState_of_witness_lift
     g hε0 hε1 hgraph).trans
     (E.subnormalizedSmoothConditionalMinEntropy_deterministicGraphCqState_le_cqState_of_candidate_lift
@@ -1921,8 +1934,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
         ∃ h',
           SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := Z)
             E.cqState.toSubnormalized ε h' ∧ h ≤ h') :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   have hsource_prod : Nonempty (Prod Z e) := E.cqState.nonempty
   letI : Nonempty Z := ⟨(Classical.choice hsource_prod).1⟩
@@ -1935,7 +1950,7 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
     rw [htrace]
     simpa using hε1
   exact
-    SubnormalizedState.smoothConditionalMinEntropy_le_of_candidate_lift_of_lt_sqrt_trace
+    SubnormalizedState.smoothConditionalMinEntropyRaw_le_of_candidate_lift_of_lt_sqrt_trace
       (a := S) (source := Z)
       (E.deterministicPostprocessCqState g).toSubnormalized E.cqState.toSubnormalized
       hε0 hεsource hlift
@@ -1951,8 +1966,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
         ∃ ρZE',
           E.cqState.toSubnormalized.purifiedBall ε ρZE' ∧
           ρSE'.conditionalMinEntropy ≤ ρZE'.conditionalMinEntropy) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   have hsource_prod : Nonempty (Prod Z e) := E.cqState.nonempty
   letI : Nonempty Z := ⟨(Classical.choice hsource_prod).1⟩
@@ -1965,7 +1982,7 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
     rw [htrace]
     simpa using hε1
   exact
-    SubnormalizedState.smoothConditionalMinEntropy_le_of_witness_lift_of_lt_sqrt_trace
+    SubnormalizedState.smoothConditionalMinEntropyRaw_le_of_witness_lift_of_lt_sqrt_trace
       (a := S) (source := Z)
       (E.deterministicPostprocessCqState g).toSubnormalized E.cqState.toSubnormalized
       hε0 hεsource hlift
@@ -1984,8 +2001,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
           E.cqState.toSubnormalized.purifiedBall ε ρZE' ∧
           ρSE'.sourceCoordinatePinch.conditionalMinEntropy ≤
             ρZE'.conditionalMinEntropy) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   have hpost_prod : Nonempty (Prod S e) :=
     (E.deterministicPostprocessCqState g).nonempty
@@ -2035,8 +2054,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
           E.cqState.toSubnormalized.purifiedBall ε ρZE' ∧
           ρZE'.sourceDeterministicPostprocess g =
             ρSE'.sourceCoordinatePinch) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   have hsource_prod : Nonempty (Prod Z e) := E.cqState.nonempty
   letI : Nonempty Z := ⟨(Classical.choice hsource_prod).1⟩
@@ -2092,8 +2113,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
           ρZE'.sourceDeterministicPostprocess g =
             ρSE'.sourceCoordinatePinch.sourceBlockFilter
               (fun s : S => ∃ z : Z, g z = s)) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   have hsource_prod : Nonempty (Prod Z e) := E.cqState.nonempty
   letI : Nonempty Z := ⟨(Classical.choice hsource_prod).1⟩
@@ -2208,8 +2231,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
           ρZE'.sourceDeterministicPostprocess g =
             ρSE'.sourceCoordinatePinch.sourceBlockFilter
               (fun s : S => ∃ z : Z, g z = s)) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   refine
     E.subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState_le_of_sourceImageFilter_exact_source_witness_lift
@@ -2257,8 +2282,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
                 if g z = s then
                   traceNorm (psdSqrt (E.cqBlock z) * psdSqrt (blocks z))
                 else 0) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   refine
     E.subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState_le_of_sourceImageFilter_exact_source_fidelity_lift
@@ -2276,8 +2303,10 @@ the blockwise fidelity lift above. -/
 theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState_le
     (E : Ensemble Z e) (g : Z → S) {ε : ℝ}
     (hε0 : 0 ≤ ε) (hε1 : ε < 1) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   refine
     E.subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState_le_of_sourceImageFilter_block_bounds
@@ -2489,8 +2518,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
             (deterministicGraphSourceMarginalEquiv Z S e)).toSubnormalized.purifiedBall ε τ ∧
           ρSE'.sourceCoordinatePinch.conditionalMinEntropy ≤
             τ.marginalB.conditionalMinEntropy) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε :=
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) :=
   E.subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState_le_of_sourceCoordinatePinch_witness_lift
     g hε0 hε1 fun ρSE' hρSE' => by
       rcases hlift ρSE' hρSE' with ⟨τ, hτball, hle⟩
@@ -2515,8 +2546,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
           τ.marginalB.sourceDeterministicPostprocess g =
             ρSE'.sourceCoordinatePinch ∧
           τ.marginalB.sourceCoordinatePinch = τ.marginalB) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   have hsource_prod : Nonempty (Prod Z e) := E.cqState.nonempty
   letI : Nonempty Z := ⟨(Classical.choice hsource_prod).1⟩
@@ -2569,8 +2602,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
           ((E.deterministicGraphCqState g).reindex
             (deterministicGraphSourceMarginalEquiv Z S e)).toSubnormalized.purifiedBall ε τ ∧
           ρSE'.conditionalMinEntropy ≤ τ.marginalB.conditionalMinEntropy) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε :=
+    (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) :=
   E.subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState_le_of_witness_lift
     g hε0 hε1 fun ρSE' hρSE' => by
       rcases hlift ρSE' hρSE' with ⟨τ, hτball, hle⟩
@@ -2581,7 +2616,8 @@ end Ensemble
 
 namespace Security
 
-private theorem sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one {ε : ℝ}
+/-- The trace-distance converse radius stays inside the normalized smoothing domain. -/
+theorem sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one {ε : ℝ}
     (hε0 : 0 ≤ ε) (hε1 : ε < 1) :
     Real.sqrt (2 * ε - ε ^ 2) < 1 := by
   have hinside_nonneg : 0 ≤ 2 * ε - ε ^ 2 := by
@@ -3370,8 +3406,10 @@ min-entropy after embedding the normalized cq states. -/
 theorem seededSourceEnsemble_toSubnormalized_smoothConditionalMinEntropy_le_source
     (H : QIT.Security.HashFamily F Z S) (E : Ensemble Z e) {ε : ℝ}
     (hε0 : 0 ≤ ε) (hε1 : ε < 1) :
-    (H.seededSourceEnsemble E).cqState.toSubnormalized.smoothConditionalMinEntropy ε ≤
-      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (H.seededSourceEnsemble E).cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((H.seededSourceEnsemble E).cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   classical
   have hsource_prod : Nonempty (Prod Z e) := E.cqState.nonempty
   letI : Nonempty Z := ⟨(Classical.choice hsource_prod).1⟩
@@ -3394,7 +3432,7 @@ theorem seededSourceEnsemble_toSubnormalized_smoothConditionalMinEntropy_le_sour
     rw [htrace]
     simpa using hε1
   exact
-    SubnormalizedState.smoothConditionalMinEntropy_le_of_witness_lift_diff_side_of_lt_sqrt_trace
+    SubnormalizedState.smoothConditionalMinEntropyRaw_le_of_witness_lift_diff_side_of_lt_sqrt_trace
       (a := Prod Z F) (b := Prod F e) (source := Z) (c := e)
       center source hε0 hεsource
       (fun τ hτball => by
@@ -3449,8 +3487,10 @@ representation of a public-seed extractor output. -/
 theorem extractorOutputState_toSubnormalized_smoothConditionalMinEntropy_le_seededSource
     (H : QIT.Security.HashFamily F Z S) (E : Ensemble Z e) {ε : ℝ}
     (hε0 : 0 ≤ ε) (hε1 : ε < 1) :
-    (QIT.Security.extractorOutputState H E).toSubnormalized.smoothConditionalMinEntropy ε ≤
-      (H.seededSourceEnsemble E).cqState.toSubnormalized.smoothConditionalMinEntropy ε := by
+    (QIT.Security.extractorOutputState H E).toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((QIT.Security.extractorOutputState H E).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
+      (H.seededSourceEnsemble E).cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
+        ((H.seededSourceEnsemble E).cqState.epsilon_lt_sqrt_toSubnormalized_trace hε1) := by
   rw [H.extractorOutputState_eq_seededSourceEnsemble_deterministicPostprocessCqState E]
   exact (H.seededSourceEnsemble E)
     |>.subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState_le
@@ -3487,7 +3527,9 @@ theorem log2_outputLength_le_toSubnormalized_smoothConditionalMinEntropy_of_isEp
     (hε0 : 0 ≤ ε) (hε1 : ε < 1) (hsecret : H.IsEpsilonSecretExtractor ε E) :
     log2 (H.outputLength : ℝ) ≤
       (QIT.Security.extractorOutputState H E).toSubnormalized.smoothConditionalMinEntropy
-        (Real.sqrt (2 * ε - ε ^ 2)) := by
+        (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+        ((QIT.Security.extractorOutputState H E).epsilon_lt_sqrt_toSubnormalized_trace
+          (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)) := by
   classical
   let ρout : State (Prod S (Prod F e)) := QIT.Security.extractorOutputState H E
   let ρideal : State (Prod S (Prod F e)) := QIT.Security.idealExtractorOutputState ρout
@@ -3533,9 +3575,10 @@ theorem log2_outputLength_le_toSubnormalized_smoothConditionalMinEntropy_of_isEp
   have hle :
       log2 (Fintype.card S : ℝ) ≤
         ρout.toSubnormalized.smoothConditionalMinEntropy
-          (Real.sqrt (2 * ε - ε ^ 2)) :=
+          (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _) hdelta_lt_trace :=
     SubnormalizedState.le_smoothConditionalMinEntropy_of_candidate_of_lt_sqrt_trace
-      (a := S) (ρ := ρout.toSubnormalized) hdelta_lt_trace hsubcand
+      (a := S) (ρ := ρout.toSubnormalized) (Real.sqrt_nonneg _)
+      hdelta_lt_trace hsubcand
   simpa [ρout, QIT.Security.HashFamily.outputLength_eq_card H] using hle
 
 /-- Per-extractor seeded-source endpoint: secrecy bounds the output length by
@@ -3546,11 +3589,15 @@ theorem log2_outputLength_le_seededSource_toSubnormalized_smoothConditionalMinEn
     (hε0 : 0 ≤ ε) (hε1 : ε < 1) (hsecret : H.IsEpsilonSecretExtractor ε E) :
     log2 (H.outputLength : ℝ) ≤
       (H.seededSourceEnsemble E).cqState.toSubnormalized.smoothConditionalMinEntropy
-        (Real.sqrt (2 * ε - ε ^ 2)) := by
+        (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+        ((H.seededSourceEnsemble E).cqState.epsilon_lt_sqrt_toSubnormalized_trace
+          (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)) := by
   have houtput :
       log2 (H.outputLength : ℝ) ≤
         (QIT.Security.extractorOutputState H E).toSubnormalized.smoothConditionalMinEntropy
-          (Real.sqrt (2 * ε - ε ^ 2)) :=
+          (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+          ((QIT.Security.extractorOutputState H E).epsilon_lt_sqrt_toSubnormalized_trace
+            (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)) :=
     H.log2_outputLength_le_toSubnormalized_smoothConditionalMinEntropy_of_isEpsilonSecretExtractor
       E hε0 hε1 hsecret
   have hdelta0 : 0 ≤ Real.sqrt (2 * ε - ε ^ 2) :=
@@ -3569,11 +3616,15 @@ theorem log2_outputLength_le_source_toSubnormalized_smoothConditionalMinEntropy_
     (hε0 : 0 ≤ ε) (hε1 : ε < 1) (hsecret : H.IsEpsilonSecretExtractor ε E) :
     log2 (H.outputLength : ℝ) ≤
       E.cqState.toSubnormalized.smoothConditionalMinEntropy
-        (Real.sqrt (2 * ε - ε ^ 2)) := by
+        (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+          (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)) := by
   have hseed :
       log2 (H.outputLength : ℝ) ≤
         (H.seededSourceEnsemble E).cqState.toSubnormalized.smoothConditionalMinEntropy
-          (Real.sqrt (2 * ε - ε ^ 2)) :=
+          (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+          ((H.seededSourceEnsemble E).cqState.epsilon_lt_sqrt_toSubnormalized_trace
+            (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)) :=
     H.log2_outputLength_le_seededSource_toSubnormalized_smoothConditionalMinEntropy_of_isEpsilonSecretExtractor
       E hε0 hε1 hsecret
   have hdelta0 : 0 ≤ Real.sqrt (2 * ε - ε ^ 2) :=
@@ -3586,11 +3637,11 @@ theorem log2_outputLength_le_source_toSubnormalized_smoothConditionalMinEntropy_
 
 /-- Per-extractor converse endpoint: an `ε`-secret extractor's output length is
 bounded by the smooth conditional min-entropy of its actual output state. -/
-theorem log2_outputLength_le_smoothConditionalMinEntropy_of_isEpsilonSecretExtractor
+theorem log2_outputLength_le_smoothConditionalMinEntropyNormalizedCandidates_of_isEpsilonSecretExtractor
     (H : QIT.Security.HashFamily F Z S) (E : Ensemble Z e) {ε : ℝ}
     (hε1 : ε ≤ 1) (hsecret : H.IsEpsilonSecretExtractor ε E) :
     log2 (H.outputLength : ℝ) ≤
-      (QIT.Security.extractorOutputState H E).smoothConditionalMinEntropy
+      (QIT.Security.extractorOutputState H E).smoothConditionalMinEntropyNormalizedCandidates
         (Real.sqrt (2 * ε - ε ^ 2)) := by
   have hcand :
       State.SmoothConditionalMinEntropyCandidate (a := S)
@@ -3601,9 +3652,9 @@ theorem log2_outputLength_le_smoothConditionalMinEntropy_of_isEpsilonSecretExtra
       E hε1 hsecret
   have hle :
       log2 (Fintype.card S : ℝ) ≤
-        (QIT.Security.extractorOutputState H E).smoothConditionalMinEntropy
+        (QIT.Security.extractorOutputState H E).smoothConditionalMinEntropyNormalizedCandidates
           (Real.sqrt (2 * ε - ε ^ 2)) :=
-    State.le_smoothConditionalMinEntropy_of_candidate (a := S) hcand
+    State.le_smoothConditionalMinEntropyNormalizedCandidates_of_candidate (a := S) hcand
   simpa [QIT.Security.HashFamily.outputLength_eq_card H] using hle
 
 end HashFamily
@@ -3616,7 +3667,9 @@ theorem extractableRandomnessLogValueSet_le_source_toSubnormalized_smoothConditi
     (hr : r ∈ ExtractableRandomnessLogValueSet.{uF, uZ, uS, ue} E ε) :
     r ≤
       E.cqState.toSubnormalized.smoothConditionalMinEntropy
-        (Real.sqrt (2 * ε - ε ^ 2)) := by
+        (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+          (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)) := by
   rcases hr with ⟨ell, hach, rfl⟩
   rcases hach with
     ⟨S', instS, decS, nonS, hcard, F', instF, decF, nonF, H, hsecret⟩
@@ -3629,7 +3682,9 @@ theorem extractableRandomnessLogValueSet_le_source_toSubnormalized_smoothConditi
   have hle :
       log2 (H.outputLength : ℝ) ≤
         E.cqState.toSubnormalized.smoothConditionalMinEntropy
-          (Real.sqrt (2 * ε - ε ^ 2)) :=
+          (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+          (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+            (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)) :=
     H.log2_outputLength_le_source_toSubnormalized_smoothConditionalMinEntropy_of_isEpsilonSecretExtractor
       E hε0 hε1 hsecret
   simpa [QIT.Security.HashFamily.outputLength_eq_card H, hcard] using hle
@@ -3645,7 +3700,9 @@ theorem extractableRandomnessLogValueSet_member_le_extractableRandomnessLog
   refine le_csSup ?_ hr
   refine
     ⟨E.cqState.toSubnormalized.smoothConditionalMinEntropy
-        (Real.sqrt (2 * ε - ε ^ 2)), ?_⟩
+        (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+          (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)), ?_⟩
   intro x hx
   exact
     extractableRandomnessLogValueSet_le_source_toSubnormalized_smoothConditionalMinEntropy
@@ -3658,7 +3715,9 @@ theorem extractableRandomnessLog_le_source_toSubnormalized_smoothConditionalMinE
     (hne : (ExtractableRandomnessLogValueSet.{uF, uZ, uS, ue} E ε).Nonempty) :
     extractableRandomnessLog.{uF, uZ, uS, ue} E ε ≤
       E.cqState.toSubnormalized.smoothConditionalMinEntropy
-        (Real.sqrt (2 * ε - ε ^ 2)) := by
+        (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+          (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)) := by
   rw [extractableRandomnessLog]
   refine csSup_le hne ?_
   intro r hr
@@ -3672,7 +3731,9 @@ theorem extractableRandomnessLog_le_source_toSubnormalized_smoothConditionalMinE
     (E : Ensemble Z e) {ε : ℝ} (hε0 : 0 ≤ ε) (hε1 : ε < 1) :
     extractableRandomnessLog.{uF, uZ, uS, ue} E ε ≤
       E.cqState.toSubnormalized.smoothConditionalMinEntropy
-        (Real.sqrt (2 * ε - ε ^ 2)) :=
+        (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+        (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+          (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)) :=
   extractableRandomnessLog_le_source_toSubnormalized_smoothConditionalMinEntropy_of_valueSet_nonempty
     (E := E) hε0 hε1 (extractableRandomnessLogValueSet_nonempty_of_nonneg E hε0)
 
@@ -3743,10 +3804,14 @@ private theorem extractorOutputLengthAchievable_le_extractableRandomnessLengthBo
       Nat.ceil
         (Real.rpow 2
           (E.cqState.toSubnormalized.smoothConditionalMinEntropy
-            (Real.sqrt (2 * ε - ε ^ 2)))) := by
+            (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+            (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+              (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)))) := by
   let M :=
     E.cqState.toSubnormalized.smoothConditionalMinEntropy
-      (Real.sqrt (2 * ε - ε ^ 2))
+      (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+      (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+        (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1))
   have hlog :
       log2 (ell : ℝ) ≤ M :=
     extractableRandomnessLogValueSet_le_source_toSubnormalized_smoothConditionalMinEntropy
@@ -3764,7 +3829,9 @@ private theorem extractorOutputLengthAchievable_le_extractableRandomnessLengthBo
         (Nat.ceil
           (Real.rpow 2
             (E.cqState.toSubnormalized.smoothConditionalMinEntropy
-              (Real.sqrt (2 * ε - ε ^ 2))) : ℝ) : ℝ) := by
+              (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+              (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+                (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1))) : ℝ) : ℝ) := by
     simpa [M] using
       hreal.trans (Nat.le_ceil (Real.rpow 2 M))
   exact_mod_cast hceil
@@ -3780,7 +3847,9 @@ noncomputable def extractableRandomnessLength
       (Nat.ceil
         (Real.rpow 2
           (E.cqState.toSubnormalized.smoothConditionalMinEntropy
-            (Real.sqrt (2 * ε - ε ^ 2)))))
+            (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+            (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+              (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one _hε0 _hε1)))))
 
 /-- The Nat-valued extractable-randomness length is itself achievable. -/
 theorem extractableRandomnessLength_achievable
@@ -3797,7 +3866,9 @@ theorem extractableRandomnessLength_achievable
         Nat.ceil
           (Real.rpow 2
             (E.cqState.toSubnormalized.smoothConditionalMinEntropy
-              (Real.sqrt (2 * ε - ε ^ 2)))) :=
+              (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+              (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+                (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)))) :=
     extractorOutputLengthAchievable_le_extractableRandomnessLengthBound
       (E := E) hε0 hε1 hone
   exact Nat.findGreatest_spec hone_bound hone
@@ -3834,7 +3905,9 @@ theorem extractableRandomnessLog_eq_log2_extractableRandomnessLength
         (extractableRandomnessLength.{uF, uZ, uS, ue} E ε hε0 hε1 : ℝ) := by
   let M :=
     E.cqState.toSubnormalized.smoothConditionalMinEntropy
-      (Real.sqrt (2 * ε - ε ^ 2))
+      (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+      (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+        (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1))
   have hne :
       (ExtractableRandomnessLogValueSet.{uF, uZ, uS, ue} E ε).Nonempty :=
     extractableRandomnessLogValueSet_nonempty_of_nonneg E hε0
@@ -3906,7 +3979,10 @@ theorem extractableRandomnessLog_tomamichel_rounded_source_theorem
         extractableRandomnessLog.{uZ, uZ, 0, ue} E ε)
       (extractableRandomnessLog.{uZ, uZ, 0, ue} E ε ≤
         E.cqState.toSubnormalized.smoothConditionalMinEntropy
-          (Real.sqrt (2 * ε - ε ^ 2))) := by
+          (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+          (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+            (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one
+              (le_of_lt (hδ0.trans hδε)) hε1))) := by
   dsimp only
   let l : Real := h - 2 * log2 (1 / δ)
   have hε0 : 0 ≤ ε := le_of_lt (hδ0.trans hδε)
@@ -3974,11 +4050,15 @@ theorem extractableRandomnessLog_source_bounds_of_cqSmoothConditionalMinEntropyC
         extractableRandomnessLog.{uZ, uZ, 0, ue} E (2 * ε₁ + ε₂) ∧
       extractableRandomnessLog.{uZ, uZ, 0, ue} E ε ≤
         E.cqState.toSubnormalized.smoothConditionalMinEntropy
-          (Real.sqrt (2 * ε - ε ^ 2)) ∧
+          (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+          (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+            (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1)) ∧
       (H.IsEpsilonSecretExtractor ε E →
         log2 (H.outputLength : ℝ) ≤
           E.cqState.toSubnormalized.smoothConditionalMinEntropy
-            (Real.sqrt (2 * ε - ε ^ 2))) := by
+            (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+            (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+              (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one hε0 hε1))) := by
   constructor
   · exact
       finFullFunctionHashFamily_extractableRandomnessLogValue_mem_of_cqSmoothConditionalMinEntropyCandidate_log_le
@@ -4021,11 +4101,17 @@ theorem extractableRandomnessLog_tomamichel_source_bounds_of_cqSmoothConditional
         extractableRandomnessLog.{uZ, uZ, 0, ue} E ε ∧
       extractableRandomnessLog.{uZ, uZ, 0, ue} E ε ≤
         E.cqState.toSubnormalized.smoothConditionalMinEntropy
-          (Real.sqrt (2 * ε - ε ^ 2)) ∧
+          (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+          (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+            (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one
+              (le_of_lt (hδ0.trans hδε)) hε1)) ∧
       (H.IsEpsilonSecretExtractor ε E →
         log2 (H.outputLength : ℝ) ≤
           E.cqState.toSubnormalized.smoothConditionalMinEntropy
-            (Real.sqrt (2 * ε - ε ^ 2))) := by
+            (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+            (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+              (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one
+                (le_of_lt (hδ0.trans hδε)) hε1))) := by
   have hε0 : 0 ≤ ε := le_of_lt (hδ0.trans hδε)
   have hsplit : 2 * ((ε - δ) / 2) + δ = ε := by ring
   have hεdir0 : 0 ≤ 2 * ((ε - δ) / 2) + δ := by

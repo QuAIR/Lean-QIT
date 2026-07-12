@@ -53,65 +53,96 @@ theorem tensorPowerConditionalEntropy_eq (ρ : State (Prod a b)) (n : ℕ) :
       (ρ.tensorPowerBipartite n).conditionalEntropy :=
   rfl
 
-/-- Smooth conditional min-entropy of the IID bipartite state, read as
-`A^n|B^n`. -/
-def tensorPowerSmoothConditionalMinEntropy
+/-- Normalized-candidate smooth conditional min-entropy variant for the IID
+bipartite state, read as `A^n|B^n`. -/
+def tensorPowerSmoothConditionalMinEntropyNormalizedCandidates
     (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) : ℝ :=
-  (ρ.tensorPowerBipartite n).smoothConditionalMinEntropy ε
+  (ρ.tensorPowerBipartite n).smoothConditionalMinEntropyNormalizedCandidates ε
 
 @[simp]
-theorem tensorPowerSmoothConditionalMinEntropy_eq
+theorem tensorPowerSmoothConditionalMinEntropyNormalizedCandidates_eq
     (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) :
-    ρ.tensorPowerSmoothConditionalMinEntropy ε n =
-      (ρ.tensorPowerBipartite n).smoothConditionalMinEntropy ε :=
+    ρ.tensorPowerSmoothConditionalMinEntropyNormalizedCandidates ε n =
+      (ρ.tensorPowerBipartite n).smoothConditionalMinEntropyNormalizedCandidates ε :=
   rfl
 
-/-- Subnormalized smooth conditional min-entropy of the IID bipartite state,
-read as `A^n|B^n`.
+/-- Unrestricted totalized smooth conditional min-entropy helper for the IID
+bipartite state, read as `A^n|B^n`.
 
-This is the source-aligned smoothing surface for the finite fully quantum AEP:
-TCR 2008 defines the `ε`-ball around a normalized center using subnormalized
-nearby states. -/
-def tensorPowerSubnormalizedSmoothConditionalMinEntropy
+Source-facing finite-AEP statements use the canonical finite-domain wrapper
+below, which makes the normalized-center conditions `0 ≤ ε < 1` explicit. -/
+def tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw
     (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) : ℝ :=
+  (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropyRaw ε
+
+@[simp]
+theorem tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_eq
+    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) :
+    ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw ε n =
+      (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropyRaw ε :=
+  rfl
+
+/-- Canonical finite-domain tensor-power subnormalized smooth min-entropy. -/
+def tensorPowerSubnormalizedSmoothConditionalMinEntropy
+    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1) : ℝ :=
   (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε
+    hε_nonneg (by rw [State.toSubnormalized_trace]; simpa using hε_lt_one)
 
 @[simp]
 theorem tensorPowerSubnormalizedSmoothConditionalMinEntropy_eq
-    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) :
-    ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n =
-      (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε :=
+    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1) :
+    ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_nonneg hε_lt_one =
+      (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMinEntropy ε
+        hε_nonneg (by rw [State.toSubnormalized_trace]; simpa using hε_lt_one) :=
   rfl
 
-/-- Smooth conditional max-entropy of the IID bipartite state, read as
-`A^n|B^n`. -/
-def tensorPowerSmoothConditionalMaxEntropy
+/-- Normalized-candidate smooth conditional max-entropy variant for the IID
+bipartite state, read as `A^n|B^n`. -/
+def tensorPowerSmoothConditionalMaxEntropyNormalizedCandidates
     (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) : ℝ :=
-  (ρ.tensorPowerBipartite n).smoothConditionalMaxEntropy ε
+  (ρ.tensorPowerBipartite n).smoothConditionalMaxEntropyNormalizedCandidates ε
 
 @[simp]
-theorem tensorPowerSmoothConditionalMaxEntropy_eq
+theorem tensorPowerSmoothConditionalMaxEntropyNormalizedCandidates_eq
     (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) :
-    ρ.tensorPowerSmoothConditionalMaxEntropy ε n =
-      (ρ.tensorPowerBipartite n).smoothConditionalMaxEntropy ε :=
+    ρ.tensorPowerSmoothConditionalMaxEntropyNormalizedCandidates ε n =
+      (ρ.tensorPowerBipartite n).smoothConditionalMaxEntropyNormalizedCandidates ε :=
   rfl
 
 /-- Subnormalized smooth conditional max-entropy of the IID bipartite state,
 read as `A^n|B^n`.
 
 This is the max-entropy analogue of
-`tensorPowerSubnormalizedSmoothConditionalMinEntropy`: the smoothing ball is
+`tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw`: the smoothing ball is
 formed by subnormalized nearby states, matching the source convention used in
 TCR 2008. -/
-def tensorPowerSubnormalizedSmoothConditionalMaxEntropy
+def tensorPowerSubnormalizedSmoothConditionalMaxEntropyRaw
     (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) : ℝ :=
+  (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMaxEntropyRaw ε
+
+@[simp]
+theorem tensorPowerSubnormalizedSmoothConditionalMaxEntropyRaw_eq
+    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) :
+    ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRaw ε n =
+      (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMaxEntropyRaw ε :=
+  rfl
+
+/-- Canonical finite-domain tensor-power subnormalized smooth max-entropy. -/
+def tensorPowerSubnormalizedSmoothConditionalMaxEntropy
+    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1) : ℝ :=
   (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMaxEntropy ε
+    hε_nonneg (by rw [State.toSubnormalized_trace]; simpa using hε_lt_one)
 
 @[simp]
 theorem tensorPowerSubnormalizedSmoothConditionalMaxEntropy_eq
-    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) :
-    ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropy ε n =
-      (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMaxEntropy ε :=
+    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1) :
+    ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropy ε n hε_nonneg hε_lt_one =
+      (ρ.tensorPowerBipartite n).toSubnormalized.smoothConditionalMaxEntropy ε
+        hε_nonneg (by rw [State.toSubnormalized_trace]; simpa using hε_lt_one) :=
   rfl
 
 /-- Positive-definiteness is preserved by the grouped IID bipartite tensor
@@ -453,6 +484,46 @@ theorem AEPDoubleLimit.of_eventually_abs_error {rate error : ℝ → ℕ → ℝ
   filter_upwards [herror, hbound] with ε hε hε_bound
   exact tendsto_of_eventually_abs_error hε hε_bound
 
+/-- Literal iterated-limit statement for smooth-entropy rates on their
+mathematical domain `0 < ε < 1`.
+
+The proof arguments keep calls to the canonical finite-domain smoothing API
+explicit. The inner limit is taken at each fixed admissible smoothing radius,
+and the outer limit approaches zero through the same admissible domain. -/
+def FiniteDomainAEPDoubleLimit
+    (rate : (ε : ℝ) → 0 ≤ ε → ε < 1 → ℕ → ℝ)
+    (innerLimit : ℝ → ℝ) (limit : ℝ) : Prop :=
+  (∀ᶠ ε in nhdsWithin 0 (Set.Ioo 0 1),
+      ∀ (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1),
+        Tendsto (fun n : ℕ => rate ε hε_nonneg hε_lt_one n)
+          atTop (nhds (innerLimit ε))) ∧
+    Tendsto innerLimit (nhdsWithin 0 (Set.Ioo 0 1)) (nhds limit)
+
+@[simp]
+theorem FiniteDomainAEPDoubleLimit_eq
+    (rate : (ε : ℝ) → 0 ≤ ε → ε < 1 → ℕ → ℝ)
+    (innerLimit : ℝ → ℝ) (limit : ℝ) :
+    FiniteDomainAEPDoubleLimit rate innerLimit limit ↔
+      (∀ᶠ ε in nhdsWithin 0 (Set.Ioo 0 1),
+          ∀ (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1),
+            Tendsto (fun n : ℕ => rate ε hε_nonneg hε_lt_one n)
+              atTop (nhds (innerLimit ε))) ∧
+        Tendsto innerLimit (nhdsWithin 0 (Set.Ioo 0 1)) (nhds limit) :=
+  Iff.rfl
+
+/-- Package fixed-smoothing inner limits and their outer limit as a
+finite-domain literal iterated limit. -/
+theorem FiniteDomainAEPDoubleLimit.of_inner_outer
+    {rate : (ε : ℝ) → 0 ≤ ε → ε < 1 → ℕ → ℝ}
+    {innerLimit : ℝ → ℝ} {limit : ℝ}
+    (hinner : ∀ᶠ ε in nhdsWithin 0 (Set.Ioo 0 1),
+      ∀ (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1),
+        Tendsto (fun n : ℕ => rate ε hε_nonneg hε_lt_one n)
+          atTop (nhds (innerLimit ε)))
+    (houter : Tendsto innerLimit (nhdsWithin 0 (Set.Ioo 0 1)) (nhds limit)) :
+    FiniteDomainAEPDoubleLimit rate innerLimit limit :=
+  ⟨hinner, houter⟩
+
 /-- A constant divided by `sqrt n` tends to zero. -/
 theorem tendsto_const_div_sqrt_nat (C : ℝ) :
     Tendsto (fun n : ℕ => C / Real.sqrt (n : ℝ)) atTop (nhds 0) := by
@@ -485,6 +556,39 @@ theorem SourceTwoStageLimitTo_eq (rate : ℝ → ℕ → ℝ) (limit : ℝ) :
         ∀ᶠ ε in nhdsWithin 0 (Set.Ioi 0),
           ∀ᶠ n in atTop, |rate ε n - limit| < γ :=
   Iff.rfl
+
+/-- Source-shaped nested limit for a smoothing rate whose mathematical domain
+is `0 ≤ ε < 1`.
+
+The proof arguments are explicit so source-facing statements cannot silently
+apply a totalized smooth-entropy helper outside the finite-resource domain. -/
+def SourceFiniteDomainTwoStageLimitTo
+    (rate : (ε : ℝ) → 0 ≤ ε → ε < 1 → ℕ → ℝ) (limit : ℝ) : Prop :=
+  ∀ δ : ℝ, 0 < δ →
+    ∀ᶠ ε in nhdsWithin 0 (Set.Ioi 0),
+      ∀ (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1),
+        ∀ᶠ n in atTop, |rate ε hε_nonneg hε_lt_one n - limit| < δ
+
+/-- Finite-domain version of the source-shaped squeeze principle. -/
+theorem SourceFiniteDomainTwoStageLimitTo.of_eventually_squeeze
+    {rate : (ε : ℝ) → 0 ≤ ε → ε < 1 → ℕ → ℝ} {limit : ℝ}
+    (hlower : ∀ δ : ℝ, 0 < δ →
+      ∀ᶠ ε in nhdsWithin 0 (Set.Ioi 0),
+        ∀ (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1),
+          ∀ᶠ n in atTop, limit - δ ≤ rate ε hε_nonneg hε_lt_one n)
+    (hupper : ∀ δ : ℝ, 0 < δ →
+      ∀ᶠ ε in nhdsWithin 0 (Set.Ioi 0),
+        ∀ (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1),
+          ∀ᶠ n in atTop, rate ε hε_nonneg hε_lt_one n ≤ limit + δ) :
+    SourceFiniteDomainTwoStageLimitTo rate limit := by
+  intro δ hδ
+  have hhalf : 0 < δ / 2 := half_pos hδ
+  filter_upwards [hlower (δ / 2) hhalf, hupper (δ / 2) hhalf] with ε hε_lower hε_upper
+  intro hε_nonneg hε_lt_one
+  filter_upwards [hε_lower hε_nonneg hε_lt_one, hε_upper hε_nonneg hε_lt_one]
+    with n hn_lower hn_upper
+  rw [abs_lt]
+  constructor <;> linarith
 
 /-- Source-shaped squeeze principle for the nested AEP limit.
 
@@ -526,38 +630,71 @@ The parameter `eta` is the source convergence parameter
 surface to avoid importing the heavier positive-definite proof layer back into
 `AEP.lean`. -/
 def finiteNAEP_statement
-    (ρ : State (Prod a b)) (ε η : ℝ) (n : ℕ) : Prop :=
+    (ρ : State (Prod a b)) (ε η : ℝ) (n : ℕ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1) : Prop :=
   0 < ε →
     (8 / 5 : ℝ) * log2 (2 / ε ^ 2) ≤ (n : ℝ) →
-      (1 / (n : ℝ)) * ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n ≥
+      (1 / (n : ℝ)) *
+          ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy
+            ε n hε_nonneg hε_lt_one ≥
         ρ.conditionalEntropy - finiteAEPDelta ε η / Real.sqrt (n : ℝ)
 
 namespace State
 
-/-- Normalized smooth-min rate used in the source statement of the asymptotic
-fully quantum AEP. -/
-def tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+/-- Unrestricted normalized smooth-min rate helper for internal limit proofs. -/
+def tensorPowerSubnormalizedSmoothConditionalMinEntropyRateRaw
     (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) : ℝ :=
-  (1 / (n : ℝ)) * ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n
+  (1 / (n : ℝ)) * ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw ε n
+
+@[simp]
+theorem tensorPowerSubnormalizedSmoothConditionalMinEntropyRateRaw_eq
+    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) :
+    ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRateRaw ε n =
+      (1 / (n : ℝ)) * ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw ε n :=
+  rfl
+
+/-- Canonical finite-domain normalized tensor-power smooth-min rate. -/
+def tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1) : ℝ :=
+  (1 / (n : ℝ)) *
+    ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_nonneg hε_lt_one
 
 @[simp]
 theorem tensorPowerSubnormalizedSmoothConditionalMinEntropyRate_eq
-    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) :
-    ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n =
-      (1 / (n : ℝ)) * ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n :=
+    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1) :
+    ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n hε_nonneg hε_lt_one =
+      (1 / (n : ℝ)) *
+        ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropy ε n hε_nonneg hε_lt_one :=
   rfl
 
-/-- Normalized smooth-max rate used in the source statement of the asymptotic
-fully quantum AEP. -/
-def tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate
+/-- Unrestricted normalized smooth-max rate helper for internal limit proofs. -/
+def tensorPowerSubnormalizedSmoothConditionalMaxEntropyRateRaw
     (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) : ℝ :=
-  (1 / (n : ℝ)) * ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropy ε n
+  (1 / (n : ℝ)) * ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRaw ε n
+
+@[simp]
+theorem tensorPowerSubnormalizedSmoothConditionalMaxEntropyRateRaw_eq
+    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) :
+    ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRateRaw ε n =
+      (1 / (n : ℝ)) * ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRaw ε n :=
+  rfl
+
+/-- Canonical finite-domain normalized tensor-power smooth-max rate. -/
+def tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate
+    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1) : ℝ :=
+  (1 / (n : ℝ)) *
+    ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropy ε n hε_nonneg hε_lt_one
 
 @[simp]
 theorem tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate_eq
-    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ) :
-    ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate ε n =
-      (1 / (n : ℝ)) * ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropy ε n :=
+    (ρ : State (Prod a b)) (ε : ℝ) (n : ℕ)
+    (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1) :
+    ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate ε n hε_nonneg hε_lt_one =
+      (1 / (n : ℝ)) *
+        ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropy ε n hε_nonneg hε_lt_one :=
   rfl
 
 end State
@@ -720,13 +857,13 @@ private theorem ofStateScale_one_eq_toSubnormalized
 and the actual complementary `A^nC^n` marginal of the grouped pure tensor
 power.  Identifying the latter with `(ψ_AC)^{⊗ n}` is the remaining tensor-word
 reindexing step. -/
-theorem tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate_marginalAB_eq_neg_grouped_marginalAC
+theorem tensorPowerSubnormalizedSmoothConditionalMaxEntropyRateRaw_marginalAB_eq_neg_grouped_marginalAC
     [Nonempty a] [Nonempty b] [Nonempty c]
     (Ψ : PureVector (Prod (Prod a b) c)) {ε : ℝ}
     (hε0 : 0 ≤ ε) (hε : ε < 1) (n : ℕ) :
-    Ψ.state.marginalAB.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate ε n =
+    Ψ.state.marginalAB.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRateRaw ε n =
       -((1 / (n : ℝ)) *
-        SubnormalizedState.smoothConditionalMinEntropy
+        SubnormalizedState.smoothConditionalMinEntropyRaw
           (Ψ.tensorPowerTripartiteGrouped n).state.marginalAC.toSubnormalized ε) := by
   let Ω := Ψ.tensorPowerTripartiteGrouped n
   have hdual :=
@@ -734,6 +871,13 @@ theorem tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate_marginalAB_eq_ne
       (a := TensorPower a n) (b := TensorPower b n) (c := TensorPower c n)
       Ω (t := 1) (by norm_num : (0 : ℝ) < 1) (by norm_num : (1 : ℝ) ≤ 1)
       hε0 (by simpa using hε)
+  change
+    (SubnormalizedState.abMarginalFromScaledTripartitePure
+        (a := TensorPower a n) (b := TensorPower b n) (c := TensorPower c n)
+        Ω 1 (by norm_num) (by norm_num)).smoothConditionalMaxEntropyRaw ε =
+      -(SubnormalizedState.acMarginalFromScaledTripartitePure
+        (a := TensorPower a n) (b := TensorPower b n) (c := TensorPower c n)
+        Ω 1 (by norm_num) (by norm_num)).smoothConditionalMinEntropyRaw ε at hdual
   have hABsub :
       SubnormalizedState.abMarginalFromScaledTripartitePure
           (a := TensorPower a n) (b := TensorPower b n) (c := TensorPower c n)
@@ -750,30 +894,45 @@ theorem tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate_marginalAB_eq_ne
     rw [SubnormalizedState.acMarginalFromScaledTripartitePure]
     rw [ofStateScale_one_eq_toSubnormalized]
   rw [hABsub, hACsub] at hdual
-  rw [State.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate_eq,
-    State.tensorPowerSubnormalizedSmoothConditionalMaxEntropy_eq]
+  rw [State.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRateRaw_eq,
+    State.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRaw_eq]
   rw [hdual]
   ring
 
 /-- Pointwise tensor-power smooth min/max duality for complementary marginals
 of a pure tripartite state, grouped as `A^nB^n` and `A^nC^n`. -/
-theorem tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate_marginalAB_eq_neg_min_marginalAC
+theorem tensorPowerSubnormalizedSmoothConditionalMaxEntropyRateRaw_marginalAB_eq_neg_min_marginalAC
     [Nonempty a] [Nonempty b] [Nonempty c]
     (Ψ : PureVector (Prod (Prod a b) c)) {ε : ℝ}
     (hε0 : 0 ≤ ε) (hε : ε < 1) (n : ℕ) :
-    Ψ.state.marginalAB.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate ε n =
-      -Ψ.state.marginalAC.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n := by
+    Ψ.state.marginalAB.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRateRaw ε n =
+      -Ψ.state.marginalAC.tensorPowerSubnormalizedSmoothConditionalMinEntropyRateRaw ε n := by
   have hgroup :=
-    tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate_marginalAB_eq_neg_grouped_marginalAC
+    tensorPowerSubnormalizedSmoothConditionalMaxEntropyRateRaw_marginalAB_eq_neg_grouped_marginalAC
       (a := a) (b := b) (c := c) Ψ hε0 hε n
   have hAC :
       (Ψ.tensorPowerTripartiteGrouped n).state.marginalAC =
         Ψ.state.marginalAC.tensorPowerBipartite n :=
     tensorPowerTripartiteGrouped_marginalAC (a := a) (b := b) (c := c) Ψ n
   rw [hgroup]
-  rw [State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate_eq,
-    State.tensorPowerSubnormalizedSmoothConditionalMinEntropy_eq]
+  rw [State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRateRaw_eq,
+    State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_eq]
   rw [hAC]
+
+/-- Canonical finite-domain pointwise tensor-power smooth min/max duality. -/
+theorem tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate_marginalAB_eq_neg_min_marginalAC
+    [Nonempty a] [Nonempty b] [Nonempty c]
+    (Ψ : PureVector (Prod (Prod a b) c)) {ε : ℝ}
+    (hε0 : 0 ≤ ε) (hε : ε < 1) (n : ℕ) :
+    Ψ.state.marginalAB.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate
+        ε n hε0 hε =
+      -Ψ.state.marginalAC.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+        ε n hε0 hε := by
+  change
+    Ψ.state.marginalAB.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRateRaw ε n =
+      -Ψ.state.marginalAC.tensorPowerSubnormalizedSmoothConditionalMinEntropyRateRaw ε n
+  exact tensorPowerSubnormalizedSmoothConditionalMaxEntropyRateRaw_marginalAB_eq_neg_min_marginalAC
+    (a := a) (b := b) (c := c) Ψ hε0 hε n
 
 end PureVector
 
@@ -788,9 +947,11 @@ sufficiently large blocklengths place the smooth-min rate above
 def SmoothMinRateLowerFromFiniteNAEP (ρ : State (Prod a b)) : Prop :=
   ∀ γ : ℝ, 0 < γ →
     ∀ᶠ ε in nhdsWithin 0 (Set.Ioi 0),
-      ∀ᶠ n in atTop,
-        ρ.conditionalEntropy - γ ≤
-          ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n
+      ∀ (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1),
+        ∀ᶠ n in atTop,
+          ρ.conditionalEntropy - γ ≤
+            ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+              ε n hε_nonneg hε_lt_one
 
 /-- Upper-rate handoff supplied by the ordering lemma and AFW/Fannes
 continuity in TCR's proof of `thm:qaep`.
@@ -800,9 +961,11 @@ eventual `n` layer corresponds to the tensor-power rate normalization. -/
 def SmoothMinRateUpperFromContinuity (ρ : State (Prod a b)) : Prop :=
   ∀ γ : ℝ, 0 < γ →
     ∀ᶠ ε in nhdsWithin 0 (Set.Ioi 0),
-      ∀ᶠ n in atTop,
-        ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n ≤
-          ρ.conditionalEntropy + γ
+      ∀ (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1),
+        ∀ᶠ n in atTop,
+          ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+              ε n hε_nonneg hε_lt_one ≤
+            ρ.conditionalEntropy + γ
 
 /-- Quantitative continuity profile behind the source's `O(ε)` upper bound.
 
@@ -812,9 +975,11 @@ def SmoothMinRateContinuityUpperProfile
     (ρ : State (Prod a b)) (modulus : ℝ → ℝ) : Prop :=
   Tendsto modulus (nhdsWithin 0 (Set.Ioi 0)) (nhds 0) ∧
     ∀ᶠ ε in nhdsWithin 0 (Set.Ioi 0),
-      ∀ᶠ n in atTop,
-        ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n ≤
-          ρ.conditionalEntropy + modulus ε
+      ∀ (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1),
+        ∀ᶠ n in atTop,
+          ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+              ε n hε_nonneg hε_lt_one ≤
+            ρ.conditionalEntropy + modulus ε
 
 /-- A vanishing AFW/Fannes continuity modulus gives the upper half of the
 source min-entropy squeeze. -/
@@ -828,7 +993,8 @@ theorem SmoothMinRateUpperFromContinuity.of_profile
       ∀ᶠ ε in nhdsWithin 0 (Set.Ioi 0), modulus ε < γ :=
     hmod_tend.eventually (Iio_mem_nhds hγ)
   filter_upwards [hupper, hmod_small] with ε hε_upper hε_small
-  filter_upwards [hε_upper] with n hn_upper
+  intro hε_nonneg hε_lt_one
+  filter_upwards [hε_upper hε_nonneg hε_lt_one] with n hn_upper
   linarith
 
 /-- Tensor-power cardinalities turn the AFW dimension term into an exactly
@@ -930,6 +1096,7 @@ theorem SmoothMinRateUpperFromContinuity.afw_of_tensorPower_ordering
       ∀ᶠ ε : ℝ in nhdsWithin (0 : ℝ) (Set.Ioi 0), ε < 1 :=
     nhdsWithin_le_nhds (Iio_mem_nhds (by norm_num : (0 : ℝ) < 1))
   filter_upwards [hlin_small, hε_pos, hε_lt_one] with ε hlin hε0 hε1
+  intro _hε_nonneg _hε_lt_one
   have hεle : ε ≤ 1 := le_of_lt hε1
   let δ : ℝ := (1 - ε) ^ 2
   have hδpos : 0 < δ := by
@@ -1027,11 +1194,11 @@ theorem SmoothMinRateUpperFromContinuity.afw_of_tensorPower_ordering
     dsimp [B, τhat] at *
     linarith
   have hsmooth_le :
-      center.smoothConditionalMinEntropy ε ≤ B := by
-    rw [SubnormalizedState.smoothConditionalMinEntropy_eq_sSup_candidates]
+      center.smoothConditionalMinEntropyRaw ε ≤ B := by
+    rw [SubnormalizedState.smoothConditionalMinEntropyRaw_eq_sSup_candidates]
     exact csSup_le hne hcand_le
   have hrate_le :
-      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n ≤
+      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRateRaw ε n ≤
         ρ.conditionalEntropy +
           afwContinuityModulus (Fintype.card (TensorPower a n)) ε / (n : ℝ) +
           (-log2 δ) / (n : ℝ) := by
@@ -1041,12 +1208,12 @@ theorem SmoothMinRateUpperFromContinuity.afw_of_tensorPower_ordering
     have hentropy : ρn.conditionalEntropy = (n : ℝ) * ρ.conditionalEntropy := by
       dsimp [ρn]
       exact ρ.tensorPowerBipartite_conditionalEntropy n
-    rw [State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate_eq,
-      State.tensorPowerSubnormalizedSmoothConditionalMinEntropy_eq]
-    change (1 / (n : ℝ)) * center.smoothConditionalMinEntropy ε ≤ _ at hmul
-    change (1 / (n : ℝ)) * center.smoothConditionalMinEntropy ε ≤ _
+    rw [State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRateRaw_eq,
+      State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_eq]
+    change (1 / (n : ℝ)) * center.smoothConditionalMinEntropyRaw ε ≤ _ at hmul
+    change (1 / (n : ℝ)) * center.smoothConditionalMinEntropyRaw ε ≤ _
     calc
-      (1 / (n : ℝ)) * center.smoothConditionalMinEntropy ε
+      (1 / (n : ℝ)) * center.smoothConditionalMinEntropyRaw ε
           ≤ (1 / (n : ℝ)) * B := hmul
       _ = (1 / (n : ℝ)) *
             (ρn.conditionalEntropy +
@@ -1059,9 +1226,11 @@ theorem SmoothMinRateUpperFromContinuity.afw_of_tensorPower_ordering
           field_simp [hnR.ne']
           ring_nf
           exact le_rfl
+  change ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRateRaw ε n ≤
+    ρ.conditionalEntropy + γ
   exact le_of_lt <| by
     calc
-      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n
+      ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRateRaw ε n
           ≤ ρ.conditionalEntropy +
             afwContinuityModulus (Fintype.card (TensorPower a n)) ε / (n : ℝ) +
             (-log2 δ) / (n : ℝ) := hrate_le
@@ -1074,8 +1243,10 @@ theorem SmoothMinRateUpperFromContinuity.afw_of_tensorPower_ordering
 /-- Max-rate handoff supplied by smooth min/max duality and von Neumann
 conditional-entropy duality in the source proof. -/
 def SmoothMaxRateFromMinDuality (ρ : State (Prod a b)) : Prop :=
-  SourceTwoStageLimitTo
-    (fun ε n => ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate ε n)
+  SourceFiniteDomainTwoStageLimitTo
+    (fun ε hε_nonneg hε_lt_one n =>
+      ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate
+        ε n hε_nonneg hε_lt_one)
     ρ.conditionalEntropy
 
 /-- Pointwise duality profile behind the source's max-entropy half.
@@ -1085,26 +1256,36 @@ system, while `dualEntropy` is its conditional von Neumann entropy.  The two
 equalities are the smooth min/max duality and conditional-entropy duality used
 in TCR 2008 after the min half is proved. -/
 def SmoothMaxRateDualityProfile
-    (ρ : State (Prod a b)) (dualMinRate : ℝ → ℕ → ℝ) (dualEntropy : ℝ) : Prop :=
-  SourceTwoStageLimitTo dualMinRate dualEntropy ∧
+    (ρ : State (Prod a b))
+    (dualMinRate : (ε : ℝ) → 0 ≤ ε → ε < 1 → ℕ → ℝ)
+    (dualEntropy : ℝ) : Prop :=
+  SourceFiniteDomainTwoStageLimitTo dualMinRate dualEntropy ∧
     (∀ᶠ ε in nhdsWithin 0 (Set.Ioi 0),
-      ∀ᶠ n in atTop,
-        ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate ε n =
-          -dualMinRate ε n) ∧
+      ∀ (hε_nonneg : 0 ≤ ε) (hε_lt_one : ε < 1),
+        ∀ᶠ n in atTop,
+          ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate
+              ε n hε_nonneg hε_lt_one =
+            -dualMinRate ε hε_nonneg hε_lt_one n) ∧
     ρ.conditionalEntropy = -dualEntropy
 
 /-- Source max half obtained from the min half on a complementary system plus
 the two dualities stated in `SmoothMaxRateDualityProfile`. -/
 theorem SmoothMaxRateFromMinDuality.of_profile
-    (ρ : State (Prod a b)) {dualMinRate : ℝ → ℕ → ℝ} {dualEntropy : ℝ}
+    (ρ : State (Prod a b))
+    {dualMinRate : (ε : ℝ) → 0 ≤ ε → ε < 1 → ℕ → ℝ}
+    {dualEntropy : ℝ}
     (hprofile : ρ.SmoothMaxRateDualityProfile dualMinRate dualEntropy) :
     ρ.SmoothMaxRateFromMinDuality := by
   rcases hprofile with ⟨hdual_limit, hrate_dual, hentropy_dual⟩
   intro γ hγ
   filter_upwards [hdual_limit γ hγ, hrate_dual] with ε hε hεrate
-  filter_upwards [hε, hεrate] with n hn hnrate
+  intro hε_nonneg hε_lt_one
+  filter_upwards [hε hε_nonneg hε_lt_one, hεrate hε_nonneg hε_lt_one]
+    with n hn hnrate
   rw [hnrate, hentropy_dual]
-  have hdiff : -dualMinRate ε n - -dualEntropy = -(dualMinRate ε n - dualEntropy) := by
+  have hdiff :
+      -dualMinRate ε hε_nonneg hε_lt_one n - -dualEntropy =
+        -(dualMinRate ε hε_nonneg hε_lt_one n - dualEntropy) := by
     ring
   rw [hdiff]
   simpa only [abs_neg] using hn
@@ -1117,23 +1298,21 @@ theorem SmoothMaxRateFromMinDuality.of_pure_min_complement
     [Nonempty a] [Nonempty b] [Nonempty c]
     (Ψ : PureVector (Prod (Prod a b) c))
     (hminAC :
-      SourceTwoStageLimitTo
-        (fun ε n => Ψ.state.marginalAC.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n)
+      SourceFiniteDomainTwoStageLimitTo
+        (fun ε hε_nonneg hε_lt_one n =>
+          Ψ.state.marginalAC.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+            ε n hε_nonneg hε_lt_one)
         Ψ.state.marginalAC.conditionalEntropy) :
     State.SmoothMaxRateFromMinDuality Ψ.state.marginalAB := by
   refine State.SmoothMaxRateFromMinDuality.of_profile Ψ.state.marginalAB
     (dualMinRate :=
-      fun ε n => Ψ.state.marginalAC.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n)
+      fun ε hε_nonneg hε_lt_one n =>
+        Ψ.state.marginalAC.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+          ε n hε_nonneg hε_lt_one)
     (dualEntropy := Ψ.state.marginalAC.conditionalEntropy) ?_
   refine ⟨hminAC, ?_, ?_⟩
-  · have hε0 :
-        ∀ᶠ ε : ℝ in nhdsWithin (0 : ℝ) (Set.Ioi 0), 0 ≤ ε := by
-      filter_upwards [self_mem_nhdsWithin] with ε hε
-      exact le_of_lt hε
-    have hε1 :
-        ∀ᶠ ε : ℝ in nhdsWithin (0 : ℝ) (Set.Ioi 0), ε < 1 := by
-      exact nhdsWithin_le_nhds (Iio_mem_nhds (by norm_num : (0 : ℝ) < 1))
-    filter_upwards [hε0, hε1] with ε hε0 hε1
+  · filter_upwards [] with ε
+    intro hε0 hε1
     filter_upwards [] with n
     exact
       PureVector.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate_marginalAB_eq_neg_min_marginalAC
@@ -1155,8 +1334,10 @@ theorem SmoothMaxRateFromMinDuality.of_all_min
     (hminAll :
       ∀ {c : Type (max u v)} [Fintype c] [DecidableEq c] [Nonempty c],
         ∀ σ : State (Prod a c),
-          SourceTwoStageLimitTo
-            (fun ε n => σ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n)
+          SourceFiniteDomainTwoStageLimitTo
+            (fun ε hε_nonneg hε_lt_one n =>
+              σ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+                ε n hε_nonneg hε_lt_one)
             σ.conditionalEntropy) :
     ρ.SmoothMaxRateFromMinDuality := by
   let Ω : PureVector (Prod (Prod a b) (Prod a b)) :=
@@ -1184,14 +1365,36 @@ This declaration records the source-shaped statement.  The min half follows
 from the finite-N AEP lower bound plus the ordering/AFW continuity upper
 bound; the max half is transported by smooth min/max duality and conditional
 von Neumann entropy duality. -/
+def asymptoticAEPTwoStage_statement
+    (ρ : State (Prod a b)) : Prop :=
+  SourceFiniteDomainTwoStageLimitTo
+      (fun ε hε_nonneg hε_lt_one n =>
+        ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+          ε n hε_nonneg hε_lt_one)
+      ρ.conditionalEntropy ∧
+    SourceFiniteDomainTwoStageLimitTo
+      (fun ε hε_nonneg hε_lt_one n =>
+        ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate
+          ε n hε_nonneg hε_lt_one)
+      ρ.conditionalEntropy
+
+/-- Literal finite-domain iterated-limit statement of the fully quantum AEP.
+
+For every fixed `ε ∈ (0,1)`, the inner blocklength limit exists and equals
+`H(A|B)_ρ`; the outer limit is therefore the limit of the constant inner-limit
+function as `ε → 0` within the source domain. -/
 def asymptoticAEP_statement
     (ρ : State (Prod a b)) : Prop :=
-  SourceTwoStageLimitTo
-      (fun ε n => ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n)
-      ρ.conditionalEntropy ∧
-    SourceTwoStageLimitTo
-      (fun ε n => ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate ε n)
-      ρ.conditionalEntropy
+  FiniteDomainAEPDoubleLimit
+      (fun ε hε_nonneg hε_lt_one n =>
+        ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+          ε n hε_nonneg hε_lt_one)
+      (fun _ => ρ.conditionalEntropy) ρ.conditionalEntropy ∧
+    FiniteDomainAEPDoubleLimit
+      (fun ε hε_nonneg hε_lt_one n =>
+        ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate
+          ε n hε_nonneg hε_lt_one)
+      (fun _ => ρ.conditionalEntropy) ρ.conditionalEntropy
 
 namespace State
 
@@ -1203,25 +1406,59 @@ theorem asymptoticAEPMin_statement_of_finiteNAEP_and_continuity
     (ρ : State (Prod a b))
     (hlower : ρ.SmoothMinRateLowerFromFiniteNAEP)
     (hupper : ρ.SmoothMinRateUpperFromContinuity) :
-    SourceTwoStageLimitTo
-      (fun ε n => ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n)
+    SourceFiniteDomainTwoStageLimitTo
+      (fun ε hε_nonneg hε_lt_one n =>
+        ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+          ε n hε_nonneg hε_lt_one)
       ρ.conditionalEntropy :=
-  SourceTwoStageLimitTo.of_eventually_squeeze hlower hupper
+  SourceFiniteDomainTwoStageLimitTo.of_eventually_squeeze hlower hupper
 
 /-- Source-aligned assembly of the full asymptotic fully quantum AEP.
 
 The max-entropy half is deliberately exposed as a duality handoff: in TCR 2008
 it is obtained from the min-entropy half by smooth min/max duality and
 conditional von Neumann entropy duality, not by a separate finite-N max bound. -/
-theorem asymptoticAEP_statement_of_min_and_max_duality
+theorem asymptoticAEPTwoStage_statement_of_min_and_max_duality
     (ρ : State (Prod a b))
     (hmin :
-      SourceTwoStageLimitTo
-        (fun ε n => ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate ε n)
+      SourceFiniteDomainTwoStageLimitTo
+        (fun ε hε_nonneg hε_lt_one n =>
+          ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+            ε n hε_nonneg hε_lt_one)
         ρ.conditionalEntropy)
     (hmax : ρ.SmoothMaxRateFromMinDuality) :
-    QIT.asymptoticAEP_statement ρ :=
+    QIT.asymptoticAEPTwoStage_statement ρ :=
   ⟨hmin, hmax⟩
+
+/-- Assemble the literal AEP statement from fixed-smoothing inner limits.
+
+This is the analysis bridge absent from the earlier two-stage formulation:
+the hypotheses assert an actual `n → ∞` limit for each admissible smoothing
+radius, not merely a jointly eventual squeeze as `ε → 0`. -/
+theorem asymptoticAEP_statement_of_fixed_epsilon_limits
+    (ρ : State (Prod a b))
+    (hmin : ∀ (ε : ℝ) (hε_pos : 0 < ε) (hε_lt_one : ε < 1),
+      Tendsto
+        (fun n : ℕ =>
+          ρ.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
+            ε n (le_of_lt hε_pos) hε_lt_one)
+        atTop (nhds ρ.conditionalEntropy))
+    (hmax : ∀ (ε : ℝ) (hε_pos : 0 < ε) (hε_lt_one : ε < 1),
+      Tendsto
+        (fun n : ℕ =>
+          ρ.tensorPowerSubnormalizedSmoothConditionalMaxEntropyRate
+            ε n (le_of_lt hε_pos) hε_lt_one)
+        atTop (nhds ρ.conditionalEntropy)) :
+    QIT.asymptoticAEP_statement ρ := by
+  constructor
+  · refine FiniteDomainAEPDoubleLimit.of_inner_outer ?_ tendsto_const_nhds
+    filter_upwards [self_mem_nhdsWithin] with ε hε
+    intro hε_nonneg hε_lt_one
+    simpa only using hmin ε hε.1 hε.2
+  · refine FiniteDomainAEPDoubleLimit.of_inner_outer ?_ tendsto_const_nhds
+    filter_upwards [self_mem_nhdsWithin] with ε hε
+    intro hε_nonneg hε_lt_one
+    simpa only using hmax ε hε.1 hε.2
 
 end State
 

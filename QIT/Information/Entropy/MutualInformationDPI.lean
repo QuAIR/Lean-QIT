@@ -152,10 +152,10 @@ reference preserves its von Neumann entropy. -/
 theorem vonNeumann_psdSupportCompressedState_eq
     (ρ : State a) {σ : CMatrix a} (hσ : σ.PosSemidef)
     (hSupport : Matrix.Supports ρ.matrix σ) :
-    (psdSupportCompressedState ρ hσ hSupport).vonNeumann = ρ.vonNeumann := by
+    (_root_.QIT.psdSupportCompressedState ρ hσ hSupport).vonNeumann = ρ.vonNeumann := by
   classical
   let ρc : State (psdSupportIndex σ hσ) :=
-    psdSupportCompressedState ρ hσ hSupport
+    _root_.QIT.psdSupportCompressedState ρ hσ hSupport
   let V : Matrix a (psdSupportIndex σ hσ) ℂ := psdSupportIsometry σ hσ
   have hV : Matrix.conjTranspose V * V = (1 : CMatrix (psdSupportIndex σ hσ)) := by
     simpa [V] using psdSupportIsometry_isometry σ hσ
@@ -423,7 +423,7 @@ noncomputable def prodMarginalsSupportTraceLogTerm
   let hSupport : Matrix.Supports ρ.matrix τ.matrix :=
     ρ.matrix_supports_prod_marginals
   let ρc : State (psdSupportIndex τ.matrix τ.pos) :=
-    psdSupportCompressedState ρ τ.pos hSupport
+    _root_.QIT.psdSupportCompressedState ρ τ.pos hSupport
   let σc : CMatrix (psdSupportIndex τ.matrix τ.pos) :=
     psdSupportCompress τ.matrix τ.pos τ.matrix
   have hσc : σc.PosDef := by
@@ -449,7 +449,7 @@ theorem relativeEntropyPSDReferenceTraceLogE_prod_marginals_eq_mutualInformation
   rw [relativeEntropyPSDReferenceTraceLogE_eq_coe_of_supports ρ τ.pos hSupport]
   congr 1
   have hEntropy :
-      (psdSupportCompressedState ρ τ.pos hSupport).vonNeumann =
+      (_root_.QIT.psdSupportCompressedState ρ τ.pos hSupport).vonNeumann =
         ρ.vonNeumann :=
     State.vonNeumann_psdSupportCompressedState_eq ρ τ.pos hSupport
   have hTrace' :
@@ -460,8 +460,9 @@ theorem relativeEntropyPSDReferenceTraceLogE_prod_marginals_eq_mutualInformation
           (Real.log 2)⁻¹) =
         -(ρ.marginalA.vonNeumann + ρ.marginalB.vonNeumann) := by
     simpa [prodMarginalsSupportTraceLogTerm, τ, div_eq_mul_inv] using hTrace
-  simp [relativeEntropyPSDReferenceTraceLogFinite, τ, hEntropy,
-    hTrace', mutualInformation, div_eq_mul_inv]
+  simp [relativeEntropyPSDReferenceTraceLogFinite, τ, hTrace',
+    mutualInformation, div_eq_mul_inv]
+  rw [hEntropy]
   ring_nf
 
 /-- The product-reference trace-log term is the negative sum of the two

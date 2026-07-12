@@ -167,7 +167,7 @@ private theorem relativeEntropyPSDReferenceTraceLogFinite_eq_entropy_traceLog
           cfc (fun x : ℝ => if x = 0 then 0 else Real.log x) sigma).trace).re /
             Real.log 2) := by
   have hEntropy :
-      (psdSupportCompressedState rho hsigma hSupport).vonNeumann =
+      (_root_.QIT.psdSupportCompressedState rho hsigma hSupport).vonNeumann =
         rho.vonNeumann :=
     State.vonNeumann_psdSupportCompressedState_eq rho hsigma hSupport
   have hTrace :
@@ -318,7 +318,7 @@ This is the local formal surface for the source comparison
 `I_H^ε(A;B)_ρ <= (I(A;B)_ρ + h₂(ε)) / (1 - ε)`. -/
 def HypothesisTestingMutualInformationWeakConverseBound
     (rhoAB : State (Prod a b)) (ε : ℝ) : Prop :=
-  rhoAB.hypothesisTestingMutualInformationE ε ≤
+  rhoAB.hypothesisTestingMutualInformation ε ≤
     ((mutualInformation rhoAB +
         EntanglementAssistedWeakConverse.binaryEntropy ε) / (1 - ε) : EReal)
 
@@ -333,7 +333,7 @@ comparison of
 relative entropy with `I(A;B)_ρ`. -/
 def HypothesisTestingRelativeEntropyMarginalsWeakConverseBound
     (rhoAB : State (Prod a b)) (ε : ℝ) : Prop :=
-  rhoAB.hypothesisTestingRelativeEntropyE
+  rhoAB.hypothesisTestingRelativeEntropy
       (rhoAB.marginalA.prod rhoAB.marginalB) ε ≤
     ((mutualInformation rhoAB +
         EntanglementAssistedWeakConverse.binaryEntropy ε) / (1 - ε) : EReal)
@@ -431,12 +431,12 @@ theorem hypothesisTestingRelativeEntropyMarginalsWeakConverseBound
 
 /-- Optimizing hypothesis-testing mutual information over Bob-side states is
 bounded by the barred choice `σ_B = ρ_B`. -/
-theorem hypothesisTestingMutualInformationE_le_relativeEntropyE_marginals
+theorem hypothesisTestingMutualInformation_le_relativeEntropy_marginals
     (rhoAB : State (Prod a b)) (ε : ℝ) :
-    rhoAB.hypothesisTestingMutualInformationE ε ≤
-      rhoAB.hypothesisTestingRelativeEntropyE
+    rhoAB.hypothesisTestingMutualInformation ε ≤
+      rhoAB.hypothesisTestingRelativeEntropy
         (rhoAB.marginalA.prod rhoAB.marginalB) ε := by
-  rw [hypothesisTestingMutualInformationE_eq_sInf]
+  rw [hypothesisTestingMutualInformation_eq_sInf]
   exact sInf_le ⟨rhoAB.marginalB, rfl⟩
 
 /-- Reduce the state-level weak-converse comparison to the barred
@@ -445,7 +445,7 @@ theorem hypothesisTestingMutualInformationWeakConverseBound_of_relativeEntropy_m
     (rhoAB : State (Prod a b)) {ε : ℝ}
     (hrel : rhoAB.HypothesisTestingRelativeEntropyMarginalsWeakConverseBound ε) :
     rhoAB.HypothesisTestingMutualInformationWeakConverseBound ε :=
-  (rhoAB.hypothesisTestingMutualInformationE_le_relativeEntropyE_marginals ε).trans
+  (rhoAB.hypothesisTestingMutualInformation_le_relativeEntropy_marginals ε).trans
     hrel
 
 /-- State-level weak-converse comparison from optimized hypothesis-testing
@@ -478,7 +478,7 @@ hypothesis-testing mutual information is bounded by the ordinary
 entanglement-assisted mutual-information objective plus the binary-entropy
 penalty. -/
 def HypothesisTestingMutualInformationWeakConverseBound (ε : ℝ) : Prop :=
-  N.hypothesisTestingMutualInformationE ε ≤
+  N.hypothesisTestingMutualInformation ε ≤
     (N.entanglementAssistedWeakConverseBound ε : EReal)
 
 /-- Lift the state-level weak-converse comparison for every pure
@@ -491,7 +491,7 @@ theorem hypothesisTestingMutualInformationWeakConverseBound_of_state
           (N.hypothesisTestingOutputState ψ) ε) :
     N.HypothesisTestingMutualInformationWeakConverseBound ε := by
   rw [HypothesisTestingMutualInformationWeakConverseBound,
-    hypothesisTestingMutualInformationE_eq_sSup]
+    hypothesisTestingMutualInformation_eq_sSup]
   refine sSup_le ?_
   intro value hvalue
   rcases hvalue with ⟨ψ, rfl⟩
@@ -538,7 +538,7 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_le_weakConverseBound_of_co
     (hcmp : N.HypothesisTestingMutualInformationWeakConverseBound ε) :
     N.oneShotEntanglementAssistedClassicalCapacityE ε ≤
       (N.entanglementAssistedWeakConverseBound ε : EReal) :=
-  (N.oneShotEntanglementAssistedClassicalCapacityE_le_hypothesisTestingMutualInformationE
+  (N.oneShotEntanglementAssistedClassicalCapacityE_le_hypothesisTestingMutualInformation
     hε_nonneg).trans hcmp
 
 /-- One-shot entanglement-assisted weak converse upper bound in capacity form.
@@ -573,7 +573,7 @@ theorem log_card_le_channel_entanglementAssistedWeakConverseBoundE_of_comparison
     (hcmp : N.HypothesisTestingMutualInformationWeakConverseBound ε) :
     (log2 (Fintype.card M : ℝ) : EReal) ≤
       (N.entanglementAssistedWeakConverseBound ε : EReal) :=
-  (C.log_card_le_channel_hypothesisTestingMutualInformationE hε_nonneg hC).trans
+  (C.log_card_le_channel_hypothesisTestingMutualInformation hε_nonneg hC).trans
     hcmp
 
 /-- Real-valued per-code assembly form of the weak-converse upper bound,

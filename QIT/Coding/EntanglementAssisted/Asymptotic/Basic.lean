@@ -456,14 +456,14 @@ theorem mutualInformation_tensorPowerBipartite (ρ : State (Prod a b)) (n : ℕ)
 
 /-- PSD-domain Petz--Renyi divergence is invariant under simultaneous finite
 basis relabeling in the source range `0 <= alpha <= 1`. -/
-theorem petzRenyiPSD_reindex {α : Type u} {β : Type v}
+theorem petzRenyiPSDFinite_reindex {α : Type u} {β : Type v}
     [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
     (ρ σ : State α) (e : α ≃ β)
     (alphaR : ℝ) (halpha_pos : 0 < alphaR) (halpha_lt_one : alphaR < 1) :
-    (ρ.reindex e).petzRenyiPSD (σ.reindex e)
+    (ρ.reindex e).petzRenyiPSDFinite (σ.reindex e)
         alphaR halpha_pos (ne_of_lt halpha_lt_one) =
-      ρ.petzRenyiPSD σ alphaR halpha_pos (ne_of_lt halpha_lt_one) := by
-  unfold State.petzRenyiPSD
+      ρ.petzRenyiPSDFinite σ alphaR halpha_pos (ne_of_lt halpha_lt_one) := by
+  unfold State.petzRenyiPSDFinite
   have halpha_nonneg : 0 ≤ alphaR := le_of_lt halpha_pos
   have hone_sub_nonneg : 0 ≤ 1 - alphaR := sub_nonneg.mpr (le_of_lt halpha_lt_one)
   rw [State.reindex_matrix, State.reindex_matrix]
@@ -526,14 +526,14 @@ theorem petzRenyiCoefficient_productMarginal_pos
 
 /-- PSD-domain Petz--Renyi divergence is additive on IID tensor powers when
 the base coefficient is positive. -/
-theorem petzRenyiPSD_tensorPower
+theorem petzRenyiPSDFinite_tensorPower
     {α : Type u} [Fintype α] [DecidableEq α] (ρ σ : State α)
     {alphaR : ℝ} (halpha_pos : 0 < alphaR) (halpha_lt_one : alphaR < 1)
     (hcoeff : 0 < ρ.petzRenyiCoefficient σ alphaR) (n : ℕ) :
-    (ρ.tensorPower n).petzRenyiPSD (σ.tensorPower n)
+    (ρ.tensorPower n).petzRenyiPSDFinite (σ.tensorPower n)
         alphaR halpha_pos (ne_of_lt halpha_lt_one) =
-      (n : ℝ) * ρ.petzRenyiPSD σ alphaR halpha_pos (ne_of_lt halpha_lt_one) := by
-  unfold State.petzRenyiPSD
+      (n : ℝ) * ρ.petzRenyiPSDFinite σ alphaR halpha_pos (ne_of_lt halpha_lt_one) := by
+  unfold State.petzRenyiPSDFinite
   have halpha_nonneg : 0 ≤ alphaR := le_of_lt halpha_pos
   have halpha_le_one : alphaR ≤ 1 := le_of_lt halpha_lt_one
   have htrace_tensor :
@@ -577,13 +577,13 @@ theorem petzRenyiPSD_tensorPower
 
 /-- PSD-domain barred Petz--Renyi mutual information is additive on IID
 bipartite tensor powers. -/
-theorem barPetzRenyiMutualInformationPSD_tensorPowerBipartite
+theorem barPetzRenyiMutualInformationPSDFinite_tensorPowerBipartite
     (ρ : State (Prod a b)) {alphaR : ℝ}
     (halpha_pos : 0 < alphaR) (halpha_lt_one : alphaR < 1) (n : ℕ) :
-    (ρ.tensorPowerBipartite n).barPetzRenyiMutualInformationPSD
+    (ρ.tensorPowerBipartite n).barPetzRenyiMutualInformationPSDFinite
         alphaR halpha_pos (ne_of_lt halpha_lt_one) =
       (n : ℝ) *
-        ρ.barPetzRenyiMutualInformationPSD
+        ρ.barPetzRenyiMutualInformationPSDFinite
           alphaR halpha_pos (ne_of_lt halpha_lt_one) := by
   have hcomp :
       (ρ.tensorPowerBipartite n).marginalA.prod
@@ -598,35 +598,35 @@ theorem barPetzRenyiMutualInformationPSD_tensorPowerBipartite
             ρ.tensorPowerBipartite_marginalB n]
       _ = (ρ.marginalA.prod ρ.marginalB).tensorPowerBipartite n :=
           (State.prod_tensorPowerBipartite ρ.marginalA ρ.marginalB n).symm
-  unfold State.barPetzRenyiMutualInformationPSD
+  unfold State.barPetzRenyiMutualInformationPSDFinite
   calc
-    (ρ.tensorPowerBipartite n).petzRenyiPSD
+    (ρ.tensorPowerBipartite n).petzRenyiPSDFinite
         ((ρ.tensorPowerBipartite n).marginalA.prod
           (ρ.tensorPowerBipartite n).marginalB)
         alphaR halpha_pos (ne_of_lt halpha_lt_one) =
-      (ρ.tensorPowerBipartite n).petzRenyiPSD
+      (ρ.tensorPowerBipartite n).petzRenyiPSDFinite
         ((ρ.marginalA.prod ρ.marginalB).tensorPowerBipartite n)
         alphaR halpha_pos (ne_of_lt halpha_lt_one) := by
-        unfold State.petzRenyiPSD
+        unfold State.petzRenyiPSDFinite
         rw [congrArg State.matrix hcomp]
     _ =
       (n : ℝ) *
-        ρ.petzRenyiPSD (ρ.marginalA.prod ρ.marginalB)
+        ρ.petzRenyiPSDFinite (ρ.marginalA.prod ρ.marginalB)
           alphaR halpha_pos (ne_of_lt halpha_lt_one) := by
         change
-          ((ρ.tensorPower n).reindex (tensorPowerProdEquiv a b n)).petzRenyiPSD
+          ((ρ.tensorPower n).reindex (tensorPowerProdEquiv a b n)).petzRenyiPSDFinite
             (((ρ.marginalA.prod ρ.marginalB).tensorPower n).reindex
               (tensorPowerProdEquiv a b n))
             alphaR halpha_pos (ne_of_lt halpha_lt_one) =
           (n : ℝ) *
-            ρ.petzRenyiPSD (ρ.marginalA.prod ρ.marginalB)
+            ρ.petzRenyiPSDFinite (ρ.marginalA.prod ρ.marginalB)
               alphaR halpha_pos (ne_of_lt halpha_lt_one)
-        rw [State.petzRenyiPSD_reindex
+        rw [State.petzRenyiPSDFinite_reindex
           (ρ.tensorPower n)
           ((ρ.marginalA.prod ρ.marginalB).tensorPower n)
           (tensorPowerProdEquiv a b n)
           alphaR halpha_pos halpha_lt_one]
-        exact State.petzRenyiPSD_tensorPower ρ
+        exact State.petzRenyiPSDFinite_tensorPower ρ
           (ρ.marginalA.prod ρ.marginalB)
           halpha_pos halpha_lt_one
           (State.petzRenyiCoefficient_productMarginal_pos

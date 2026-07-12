@@ -7,7 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Renyi.Renyi
-public import QIT.HypothesisTesting.Asymptotic
+public import QIT.HypothesisTesting.ChernoffSupport
 
 /-!
 # Petz--Renyi endpoint helpers
@@ -571,10 +571,10 @@ variable {a : Type u} [Fintype a] [DecidableEq a]
 /-- In the PSD branch `0 < alpha < 1`, the Petz--Renyi divergence is the
 classical Nussbaum--Szkola log-partition with the repository's base-2
 normalization. -/
-theorem petzRenyiPSD_eq_nussbaumSzkola_chernoffLog2
+theorem petzRenyiPSDFinite_eq_nussbaumSzkola_chernoffLog2
     (rho sigma : State a) {alpha : ℝ} (halpha0 : 0 < alpha)
     (halpha1 : alpha < 1) :
-    rho.petzRenyiPSD sigma alpha halpha0 (ne_of_lt halpha1) =
+    rho.petzRenyiPSDFinite sigma alpha halpha0 (ne_of_lt halpha1) =
       (1 / (alpha - 1)) *
         log2 ((BinaryHypothesisTest.nussbaumSzkolaModel rho sigma).chernoffPartition alpha) := by
   classical
@@ -609,7 +609,7 @@ theorem petzRenyiPSD_eq_nussbaumSzkola_chernoffLog2
       (BinaryHypothesisTest.nussbaumSzkolaModel rho sigma).chernoffPartition alpha =
         (rho.petzRenyiCoefficient sigma alpha : ℝ) := by
     simpa [M] using hpart
-  unfold petzRenyiPSD
+  unfold petzRenyiPSDFinite
   change
     (1 / (alpha - 1)) *
         log2 ((CFC.rpow rho.matrix alpha *
@@ -618,16 +618,32 @@ theorem petzRenyiPSD_eq_nussbaumSzkola_chernoffLog2
         log2 ((BinaryHypothesisTest.nussbaumSzkolaModel rho sigma).chernoffPartition alpha)
   rw [htrace, ← hpart']
 
+/-- Canonical extended-real Petz divergence equals the finite
+Nussbaum--Szkola log-partition whenever `rho` is supported on `sigma`. -/
+theorem petzRenyiPSD_eq_nussbaumSzkola_chernoffLog2
+    (rho sigma : State a) (hSupport : Matrix.Supports rho.matrix sigma.matrix)
+    {alpha : ℝ} (halpha0 : 0 < alpha) (halpha1 : alpha < 1) :
+    rho.petzRenyiPSD sigma alpha halpha0 halpha1 =
+      (((1 / (alpha - 1)) *
+        log2 ((BinaryHypothesisTest.nussbaumSzkolaModel rho sigma).chernoffPartition alpha) :
+          ℝ) : EReal) := by
+  rw [rho.petzRenyiPSD_eq_coe_finite_of_traceCoeff_pos]
+  · exact_mod_cast
+      petzRenyiPSDFinite_eq_nussbaumSzkola_chernoffLog2
+        rho sigma halpha0 halpha1
+  · exact rho.petzRenyiPSDTraceCoeff_pos_of_support sigma
+      ((cMatrix_rpow_supports_self rho.pos halpha0).trans hSupport)
+
 /-- The PSD Petz--Renyi divergence has the expected left endpoint limit when
 the first state is supported on the second.  The endpoint is expressed through
 the Nussbaum--Szkola classical relative entropy; later channel-level bridges
 specialize this to entropy-form mutual information. -/
-theorem petzRenyiPSD_tendsto_nussbaumSzkola_relativeEntropyReal_left
+theorem petzRenyiPSDFinite_tendsto_nussbaumSzkola_relativeEntropyReal_left
     (rho sigma : State a)
     (hSupport : Matrix.Supports rho.matrix sigma.matrix) :
     Tendsto
       (fun alpha : PetzRenyiAlpha =>
-        rho.petzRenyiPSD sigma alpha.1 alpha.2.1 (ne_of_lt alpha.2.2))
+        rho.petzRenyiPSDFinite sigma alpha.1 alpha.2.1 (ne_of_lt alpha.2.2))
       PetzRenyiAlpha.leftToOne
       (nhds
         (BinaryHypothesisTest.relativeEntropyReal
@@ -654,9 +670,32 @@ theorem petzRenyiPSD_tendsto_nussbaumSzkola_relativeEntropyReal_left
   filter_upwards with alpha
   exact (by
     simpa [M] using
-    (petzRenyiPSD_eq_nussbaumSzkola_chernoffLog2
+    (petzRenyiPSDFinite_eq_nussbaumSzkola_chernoffLog2
       (rho := rho) (sigma := sigma)
       (alpha := alpha.1) alpha.2.1 alpha.2.2).symm)
+
+/-- Canonical extended-real PSD Petz divergence converges from the left to
+the finite Umegaki endpoint under support inclusion. -/
+theorem petzRenyiPSD_tendsto_nussbaumSzkola_relativeEntropyReal_left
+    (rho sigma : State a)
+    (hSupport : Matrix.Supports rho.matrix sigma.matrix) :
+    Tendsto
+      (fun alpha : PetzRenyiAlpha =>
+        rho.petzRenyiPSD sigma alpha.1 alpha.2.1 alpha.2.2)
+      PetzRenyiAlpha.leftToOne
+      (nhds
+        ((BinaryHypothesisTest.relativeEntropyReal
+          (BinaryHypothesisTest.nussbaumSzkolaModel rho sigma).pDistribution
+          (BinaryHypothesisTest.nussbaumSzkolaModel rho sigma).qDistribution /
+            Real.log 2 : ℝ) : EReal)) := by
+  refine (EReal.tendsto_coe.mpr
+    (petzRenyiPSDFinite_tendsto_nussbaumSzkola_relativeEntropyReal_left
+      rho sigma hSupport)).congr' ?_
+  filter_upwards with alpha
+  exact (rho.petzRenyiPSD_eq_coe_finite_of_traceCoeff_pos
+    sigma alpha.1 alpha.2.1 alpha.2.2
+      (rho.petzRenyiPSDTraceCoeff_pos_of_support sigma
+        ((cMatrix_rpow_supports_self rho.pos alpha.2.1).trans hSupport))).symm
 
 end State
 

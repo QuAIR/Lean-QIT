@@ -11,6 +11,7 @@ public import QIT.Asymptotic.ClassicalTypicality
 public import QIT.Asymptotic.ConditionalTypicality
 public import QIT.Asymptotic.AEP
 public import QIT.Asymptotic.FixedSmoothMinEntropy
+public import QIT.Asymptotic.FixedEpsilonAEP
 
 /-!
 # Asymptotic information

@@ -107,7 +107,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_eq_coe_reference_posDef
         hrho (State.prod_posDef hA hsigma)
         alpha (lt_trans zero_lt_one halpha) (ne_of_gt halpha) : EReal) := by
   rw [sandwichedRenyiMutualInformationCandidateE_eq]
-  rw [sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha))]
+  rw [sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha]
   exact sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_reference_posDef
     rhoAB hrho (State.prod_posDef hA hsigma)
     alpha (lt_trans zero_lt_one halpha) (ne_of_gt halpha)
@@ -150,11 +150,11 @@ comparison penalty.
 
 This lifts `prop:sandwich-to-htre` from relative entropy candidates to the
 state mutual-information infimum over side-information states. -/
-theorem hypothesisTestingMutualInformationE_le_sandwichedRenyiMutualInformationE_add
+theorem hypothesisTestingMutualInformation_le_sandwichedRenyiMutualInformationE_add
     (rhoAB : State (Prod a b)) {epsilon alpha : ℝ}
     (hepsilon_nonneg : 0 ≤ epsilon) (hepsilon_lt_one : epsilon < 1)
     (halpha : 1 < alpha) :
-    rhoAB.hypothesisTestingMutualInformationE epsilon ≤
+    rhoAB.hypothesisTestingMutualInformation epsilon ≤
       rhoAB.sandwichedRenyiMutualInformationE alpha +
         ((alpha / (alpha - 1) * log2 (1 / (1 - epsilon)) : ℝ) : EReal) := by
   classical
@@ -164,16 +164,16 @@ theorem hypothesisTestingMutualInformationE_le_sandwichedRenyiMutualInformationE
     rcases rhoAB.nonempty with ⟨x⟩
     exact ⟨x.2⟩
   have hsub :
-      rhoAB.hypothesisTestingMutualInformationE epsilon - penaltyE ≤
+      rhoAB.hypothesisTestingMutualInformation epsilon - penaltyE ≤
         rhoAB.sandwichedRenyiMutualInformationE alpha := by
     rw [State.sandwichedRenyiMutualInformationE_eq_sInf]
     refine le_csInf (rhoAB.sandwichedRenyiMutualInformationEValueSet_nonempty alpha) ?_
     intro y hy
     rcases hy with ⟨sigmaB, rfl⟩
     have hHTcand :
-        rhoAB.hypothesisTestingMutualInformationE epsilon ≤
-          rhoAB.hypothesisTestingRelativeEntropyE (rhoAB.marginalA.prod sigmaB) epsilon := by
-      rw [State.hypothesisTestingMutualInformationE_eq_sInf]
+        rhoAB.hypothesisTestingMutualInformation epsilon ≤
+          rhoAB.hypothesisTestingRelativeEntropy (rhoAB.marginalA.prod sigmaB) epsilon := by
+      rw [State.hypothesisTestingMutualInformation_eq_sInf]
       exact sInf_le ⟨sigmaB, rfl⟩
     have hcmpPSD :
         rhoAB.hypothesisTestingRelativeEntropyPSDE
@@ -190,7 +190,7 @@ theorem hypothesisTestingMutualInformationE_le_sandwichedRenyiMutualInformationE
           (epsilon := epsilon) (alpha := alpha)
           hepsilon_nonneg hepsilon_lt_one halpha)
     have hcmp :
-        rhoAB.hypothesisTestingRelativeEntropyE (rhoAB.marginalA.prod sigmaB) epsilon ≤
+        rhoAB.hypothesisTestingRelativeEntropy (rhoAB.marginalA.prod sigmaB) epsilon ≤
           rhoAB.sandwichedRenyiMutualInformationCandidateE sigmaB alpha + penaltyE := by
       rw [← State.hypothesisTestingRelativeEntropyPSDE_eq_state
         (rho := rhoAB) (epsilon := epsilon)
@@ -198,7 +198,7 @@ theorem hypothesisTestingMutualInformationE_le_sandwichedRenyiMutualInformationE
       simpa [State.sandwichedRenyiMutualInformationCandidateE_eq] using hcmpPSD
     exact EReal.sub_le_of_le_add (hHTcand.trans hcmp)
   have hmain :
-      rhoAB.hypothesisTestingMutualInformationE epsilon ≤
+      rhoAB.hypothesisTestingMutualInformation epsilon ≤
         rhoAB.sandwichedRenyiMutualInformationE alpha + penaltyE :=
     (EReal.sub_le_iff_le_add
       (.inl (EReal.coe_ne_bot penalty))
@@ -268,11 +268,11 @@ penalty.
 
 This is the optimized channel lift of `prop:sandwich-to-htre` used by the
 one-shot entanglement-assisted strong-converse route. -/
-theorem hypothesisTestingMutualInformationE_le_sandwichedRenyiMutualInformationE_add
+theorem hypothesisTestingMutualInformation_le_sandwichedRenyiMutualInformationE_add
     [Nonempty a] {epsilon alpha : ℝ}
     (hepsilon_nonneg : 0 ≤ epsilon) (hepsilon_lt_one : epsilon < 1)
     (halpha : 1 < alpha) :
-    N.hypothesisTestingMutualInformationE epsilon ≤
+    N.hypothesisTestingMutualInformation epsilon ≤
       N.sandwichedRenyiMutualInformationE alpha +
         ((alpha / (alpha - 1) * log2 (1 / (1 - epsilon)) : ℝ) : EReal) := by
   classical
@@ -282,22 +282,22 @@ theorem hypothesisTestingMutualInformationE_le_sandwichedRenyiMutualInformationE
     ⟨PureVector.basisPureVector⟩
   rw [← EReal.ge_of_forall_gt_iff_ge]
   intro z hz
-  rw [N.hypothesisTestingMutualInformationE_eq_sSup] at hz
+  rw [N.hypothesisTestingMutualInformation_eq_sSup] at hz
   obtain ⟨value, hvalue, hzvalue⟩ :=
     exists_lt_of_lt_csSup
       (Set.range_nonempty
         (fun psi : PureVector (Prod a a) =>
-          N.inputHypothesisTestingMutualInformationE psi epsilon))
+          N.inputHypothesisTestingMutualInformation psi epsilon))
       hz
   rcases hvalue with ⟨psi, rfl⟩
   have hstate :=
-    State.hypothesisTestingMutualInformationE_le_sandwichedRenyiMutualInformationE_add
+    State.hypothesisTestingMutualInformation_le_sandwichedRenyiMutualInformationE_add
       (rhoAB := N.hypothesisTestingOutputState psi)
       hepsilon_nonneg hepsilon_lt_one halpha
   have hinput :
-      N.inputHypothesisTestingMutualInformationE psi epsilon ≤
+      N.inputHypothesisTestingMutualInformation psi epsilon ≤
         N.inputSandwichedRenyiMutualInformationE psi alpha + penaltyE := by
-    simpa [Channel.inputHypothesisTestingMutualInformationE,
+    simpa [Channel.inputHypothesisTestingMutualInformation,
       Channel.inputSandwichedRenyiMutualInformationE, penalty, penaltyE] using hstate
   have hchannel :
       N.inputSandwichedRenyiMutualInformationE psi alpha + penaltyE ≤

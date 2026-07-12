@@ -120,7 +120,7 @@ private theorem sandwichedRenyiMutualInformationE_punit_punit_eq_zero
     have hcandidate :
         ρ.sandwichedRenyiMutualInformationCandidateE ρ.marginalB alpha = 0 := by
       rw [State.sandwichedRenyiMutualInformationCandidateE_eq,
-        State.sandwichedRenyiPSDReferenceE, if_neg (not_lt_of_ge (le_of_lt halpha)),
+        State.sandwichedRenyiPSDReferenceE_eq_highAlphaE_of_one_lt _ _ halpha,
         State.sandwichedRenyiPSDReferenceHighAlphaE_eq_coe_of_supports ρ
           (ρ.marginalA.prod ρ.marginalB).pos alpha hSupports]
       rw [hfinite]

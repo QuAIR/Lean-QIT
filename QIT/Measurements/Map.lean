@@ -43,6 +43,12 @@ def measureSubsystemState (M : POVM x a) (ρ : State (Prod a b)) :
     State (Prod x b) :=
   (Channel.prod (Channel.measure M) (Channel.idChannel b)).applyState ρ
 
+/-- Local source-side condition for measurement monotonicity: the quantum-classical
+measurement map does not enlarge the unit effect.  This is the finite-dimensional
+sub-unital condition needed for the conditional-Renyi monotonicity surface. -/
+def measurementMapDoesNotEnlargeUnit (M : POVM x a) : Prop :=
+  (Channel.measure M).map (1 : CMatrix a) ≤ (1 : CMatrix x)
+
 end
 
 end QIT

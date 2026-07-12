@@ -189,16 +189,16 @@ hypothesis-testing relative entropy.
 The positivity hypothesis is essential for the current real-valued encoding of
 `D_H`; an extended-real API is needed to cover the source's `β = 0` case
 without extra assumptions. -/
-theorem neg_log2_le_hypothesisTestingRelativeEntropy_of_beta_le
+theorem neg_log2_le_hypothesisTestingRelativeEntropyFinite_of_beta_le
     {t : ℝ} (hβpos : 0 < ρ.hypothesisTestingBeta σ ε)
     (hle : ρ.hypothesisTestingBeta σ ε ≤ t) :
-    -log2 t ≤ ρ.hypothesisTestingRelativeEntropy σ ε := by
+    -log2 t ≤ ρ.hypothesisTestingRelativeEntropyFinite σ ε := by
   have hlog :
       log2 (ρ.hypothesisTestingBeta σ ε) ≤ log2 t := by
     unfold log2
     exact div_le_div_of_nonneg_right
       (Real.log_le_log hβpos hle) (le_of_lt (Real.log_pos one_lt_two))
-  rw [hypothesisTestingRelativeEntropy_eq]
+  rw [hypothesisTestingRelativeEntropyFinite_eq]
   exact neg_le_neg hlog
 
 end State
@@ -240,13 +240,51 @@ This is the source comparator argument except for the `β = 0` branch, which
 mathematically corresponds to an infinite hypothesis-testing relative entropy;
 the extended-real theorem below records that convention without the positivity
 side condition. -/
-theorem comparator_hypothesisTestingMutualInformation_lower_bound_of_beta_pos
+theorem comparator_hypothesisTestingMutualInformationFinite_lower_bound_of_beta_pos
     [Nonempty M] (ω : State (Prod M M)) (ε : ℝ)
     (hMarginalUniform : ω.marginalA = uniformMessageState (M := M))
     (hComparator : 1 - ε ≤ effectAcceptProbability ω (comparatorEffect (M := M)))
     (hBetaPos : ∀ σ : State M,
       0 < ω.hypothesisTestingBeta (ω.marginalA.prod σ) ε) :
     log2 (Fintype.card M : ℝ) ≤
+      ω.hypothesisTestingMutualInformationFinite ε := by
+  rw [State.hypothesisTestingMutualInformationFinite_eq_sInf]
+  refine le_csInf ?hne ?hlower
+  · refine ⟨ω.hypothesisTestingRelativeEntropyFinite
+      (ω.marginalA.prod (uniformMessageState (M := M))) ε, ?_⟩
+    exact ⟨uniformMessageState (M := M), rfl⟩
+  · intro value hvalue
+    rcases hvalue with ⟨σ, rfl⟩
+    let Λ := comparatorHypothesisTestingEffect (M := M) ω ε hComparator
+    have htype :
+        Λ.typeIIError (ω.marginalA.prod σ) = ((Fintype.card M : ℝ)⁻¹) := by
+      subst Λ
+      rw [hMarginalUniform]
+      exact comparatorHypothesisTestingEffect_typeIIError (M := M) ω ε hComparator σ
+    have hβle :
+        ω.hypothesisTestingBeta (ω.marginalA.prod σ) ε ≤
+          ((Fintype.card M : ℝ)⁻¹) := by
+      have hle := ω.hypothesisTestingBeta_le_of_effect (ω.marginalA.prod σ) ε Λ
+      rw [htype] at hle
+      exact hle
+    have hrel :
+        -log2 ((Fintype.card M : ℝ)⁻¹) ≤
+          ω.hypothesisTestingRelativeEntropyFinite (ω.marginalA.prod σ) ε :=
+      ω.neg_log2_le_hypothesisTestingRelativeEntropyFinite_of_beta_le
+        (ω.marginalA.prod σ) ε (hBetaPos σ) hβle
+    simpa [neg_log2_inv_card (M := M)] using hrel
+
+/-- Extended-real comparator-test lower bound for hypothesis-testing mutual
+information, with no full-rank or positive-beta side condition.
+
+This is the source-shaped comparator lemma needed for the one-shot
+entanglement-assisted meta-converse.  The `β = 0` case is handled by the
+extended-real convention `D_H = ⊤`. -/
+theorem comparator_hypothesisTestingMutualInformation_lower_bound
+    [Nonempty M] (ω : State (Prod M M)) (ε : ℝ)
+    (hMarginalUniform : ω.marginalA = uniformMessageState (M := M))
+    (hComparator : 1 - ε ≤ effectAcceptProbability ω (comparatorEffect (M := M))) :
+    (log2 (Fintype.card M : ℝ) : EReal) ≤
       ω.hypothesisTestingMutualInformation ε := by
   rw [State.hypothesisTestingMutualInformation_eq_sInf]
   refine le_csInf ?hne ?hlower
@@ -267,47 +305,9 @@ theorem comparator_hypothesisTestingMutualInformation_lower_bound_of_beta_pos
       have hle := ω.hypothesisTestingBeta_le_of_effect (ω.marginalA.prod σ) ε Λ
       rw [htype] at hle
       exact hle
-    have hrel :
-        -log2 ((Fintype.card M : ℝ)⁻¹) ≤
-          ω.hypothesisTestingRelativeEntropy (ω.marginalA.prod σ) ε :=
-      ω.neg_log2_le_hypothesisTestingRelativeEntropy_of_beta_le
-        (ω.marginalA.prod σ) ε (hBetaPos σ) hβle
-    simpa [neg_log2_inv_card (M := M)] using hrel
-
-/-- Extended-real comparator-test lower bound for hypothesis-testing mutual
-information, with no full-rank or positive-beta side condition.
-
-This is the source-shaped comparator lemma needed for the one-shot
-entanglement-assisted meta-converse.  The `β = 0` case is handled by the
-extended-real convention `D_H = ⊤`. -/
-theorem comparator_hypothesisTestingMutualInformationE_lower_bound
-    [Nonempty M] (ω : State (Prod M M)) (ε : ℝ)
-    (hMarginalUniform : ω.marginalA = uniformMessageState (M := M))
-    (hComparator : 1 - ε ≤ effectAcceptProbability ω (comparatorEffect (M := M))) :
-    (log2 (Fintype.card M : ℝ) : EReal) ≤
-      ω.hypothesisTestingMutualInformationE ε := by
-  rw [State.hypothesisTestingMutualInformationE_eq_sInf]
-  refine le_csInf ?hne ?hlower
-  · refine ⟨ω.hypothesisTestingRelativeEntropyE
-      (ω.marginalA.prod (uniformMessageState (M := M))) ε, ?_⟩
-    exact ⟨uniformMessageState (M := M), rfl⟩
-  · intro value hvalue
-    rcases hvalue with ⟨σ, rfl⟩
-    let Λ := comparatorHypothesisTestingEffect (M := M) ω ε hComparator
-    have htype :
-        Λ.typeIIError (ω.marginalA.prod σ) = ((Fintype.card M : ℝ)⁻¹) := by
-      subst Λ
-      rw [hMarginalUniform]
-      exact comparatorHypothesisTestingEffect_typeIIError (M := M) ω ε hComparator σ
-    have hβle :
-        ω.hypothesisTestingBeta (ω.marginalA.prod σ) ε ≤
-          ((Fintype.card M : ℝ)⁻¹) := by
-      have hle := ω.hypothesisTestingBeta_le_of_effect (ω.marginalA.prod σ) ε Λ
-      rw [htype] at hle
-      exact hle
     by_cases hβzero :
         ω.hypothesisTestingBeta (ω.marginalA.prod σ) ε = 0
-    · simp [State.hypothesisTestingRelativeEntropyE, hβzero]
+    · simp [State.hypothesisTestingRelativeEntropy, hβzero]
     · have hβnonneg :
           0 ≤ ω.hypothesisTestingBeta (ω.marginalA.prod σ) ε := by
         rw [State.hypothesisTestingBeta_eq_sInf]
@@ -320,19 +320,19 @@ theorem comparator_hypothesisTestingMutualInformationE_lower_bound
         lt_of_le_of_ne' hβnonneg hβzero
       have hrel :
           -log2 ((Fintype.card M : ℝ)⁻¹) ≤
-            ω.hypothesisTestingRelativeEntropy (ω.marginalA.prod σ) ε :=
-        ω.neg_log2_le_hypothesisTestingRelativeEntropy_of_beta_le
+            ω.hypothesisTestingRelativeEntropyFinite (ω.marginalA.prod σ) ε :=
+        ω.neg_log2_le_hypothesisTestingRelativeEntropyFinite_of_beta_le
           (ω.marginalA.prod σ) ε hβpos hβle
       have hrel' :
           log2 (Fintype.card M : ℝ) ≤
-            ω.hypothesisTestingRelativeEntropy (ω.marginalA.prod σ) ε := by
+            ω.hypothesisTestingRelativeEntropyFinite (ω.marginalA.prod σ) ε := by
         simpa [neg_log2_inv_card (M := M)] using hrel
       have hrelE :
           (log2 (Fintype.card M : ℝ) : EReal) ≤
-            (ω.hypothesisTestingRelativeEntropy
+            (ω.hypothesisTestingRelativeEntropyFinite
               (ω.marginalA.prod σ) ε : EReal) := by
         exact_mod_cast hrel'
-      simpa [State.hypothesisTestingRelativeEntropyE, hβzero] using hrelE
+      simpa [State.hypothesisTestingRelativeEntropy, hβzero] using hrelE
 
 end
 

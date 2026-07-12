@@ -9,12 +9,11 @@ module
 public import QIT.OneShot.Decoupling
 public import QIT.Protocols.StateMerging
 public import QIT.Protocols.FQSW
-public import QIT.Protocols.Recovery
 
 /-!
 # Protocols
 
-Top-level import facade for decoupling, state merging, and recovery surfaces.
+Top-level import facade for decoupling, state merging, and FQSW surfaces.
 -/
 
 @[expose] public section

@@ -835,10 +835,11 @@ private theorem matrix_le_one (ρ : State a) :
     exact sub_nonneg.mpr (heig_le_one i)
   exact_mod_cast hnonneg
 
-/-- The normalized Reynolds/symmetric-subspace reference state.
+/-- The normalized symmetric-subspace projection state.
 
-This is the finite-dimensional post-selection reference supported on the
-symmetric tensor-power subspace: its matrix is `P_sym / Tr(P_sym)`. -/
+Its matrix is the symmetric projection `P_sym` divided by its trace.  This is
+basic symmetric-subspace infrastructure, not the CKR mixed reference state from
+the source theorem. -/
 def symmetricProjectionReferenceState [Nonempty a] (n : ℕ) :
     State (TensorPower a n) where
   matrix := ((Fintype.card (TensorPowerProfile a n) : ℝ)⁻¹) •
@@ -889,58 +890,6 @@ theorem symmetricProjectionReferenceState_supportedOnSymmetricSubspace
   convert (symmetricProjectionMatrix_posSemidef (a := a) n).smul hscale using 1
   ext x y
   simp [sub_smul, Matrix.smul_apply]
-
-/-- CKR de Finetti reference state for the finite-dimensional post-selection
-route.
-
-The source writes this state as `τ_{H^n}` and identifies it with the
-finite-dimensional de Finetti input used by the post-selection theorem.  In
-this library it is represented by the already-proved normalized Reynolds
-projection `P_sym / Tr(P_sym)`.  This is the source-facing name; it does not
-claim the Haar-integral representation as a separate theorem. -/
-abbrev deFinettiReferenceState [Nonempty a] (n : ℕ) :
-    State (TensorPower a n) :=
-  symmetricProjectionReferenceState (a := a) n
-
-@[simp]
-theorem deFinettiReferenceState_eq_symmetricProjectionReferenceState
-    [Nonempty a] (n : ℕ) :
-    deFinettiReferenceState (a := a) n =
-      symmetricProjectionReferenceState (a := a) n :=
-  rfl
-
-@[simp]
-theorem deFinettiReferenceState_matrix [Nonempty a] (n : ℕ) :
-    (deFinettiReferenceState (a := a) n).matrix =
-      ((Fintype.card (TensorPowerProfile a n) : ℝ)⁻¹) •
-        symmetricProjectionMatrix (a := a) n :=
-  rfl
-
-theorem deFinettiReferenceState_supportedOnSymmetricSubspace
-    [Nonempty a] (n : ℕ) :
-    (deFinettiReferenceState (a := a) n).SupportedOnSymmetricSubspace
-      (a := a) :=
-  symmetricProjectionReferenceState_supportedOnSymmetricSubspace (a := a) n
-
-theorem deFinettiReferenceState_trace_eq_one [Nonempty a] (n : ℕ) :
-    (deFinettiReferenceState (a := a) n).matrix.trace = 1 :=
-  (deFinettiReferenceState (a := a) n).trace_eq_one
-
-theorem deFinettiReferenceState_trace_re_eq_one [Nonempty a] (n : ℕ) :
-    ((deFinettiReferenceState (a := a) n).matrix.trace).re = 1 := by
-  rw [deFinettiReferenceState_trace_eq_one]
-  norm_num
-
-theorem deFinettiReferenceState_profile_count_factor [Nonempty a] (n : ℕ) :
-    ((Fintype.card (TensorPowerProfile a n) : ℝ) : ℂ) •
-        (deFinettiReferenceState (a := a) n).matrix =
-      symmetricProjectionMatrix (a := a) n := by
-  change (Fintype.card (TensorPowerProfile a n) : ℂ) •
-      ((Fintype.card (TensorPowerProfile a n) : ℝ)⁻¹ •
-        symmetricProjectionMatrix (a := a) n) =
-    symmetricProjectionMatrix (a := a) n
-  ext x y
-  simp [Matrix.smul_apply, smul_eq_mul, TensorPowerProfile.card_ne_zero (a := a) n]
 
 /-- Matrix domination of states in the positive-semidefinite order.
 
@@ -1010,25 +959,6 @@ theorem matrixDominatedBy_symmetricProjectionReferenceState_pow_succ_of_supporte
     (matrixDominatedBy_symmetricProjectionReferenceState_of_supported
       (a := a) hρ)
     (by exact_mod_cast tensorPowerProfile_card_le_pow_succ (a := a) n)
-
-/-- CKR de Finetti reference domination with the exact profile-count factor. -/
-theorem matrixDominatedBy_deFinettiReferenceState_profile_count_of_supported
-    [Nonempty a] {ρ : State (TensorPower a n)}
-    (hρ : ρ.SupportedOnSymmetricSubspace (a := a)) :
-    ρ.MatrixDominatedBy (Fintype.card (TensorPowerProfile a n) : ℝ)
-      (deFinettiReferenceState (a := a) n) :=
-  matrixDominatedBy_symmetricProjectionReferenceState_of_supported
-    (a := a) hρ
-
-/-- CKR de Finetti reference domination with the polynomial profile-count
-bound `(n+1)^|a|`. -/
-theorem matrixDominatedBy_deFinettiReferenceState_pow_succ_of_supported
-    [Nonempty a] {ρ : State (TensorPower a n)}
-    (hρ : ρ.SupportedOnSymmetricSubspace (a := a)) :
-    ρ.MatrixDominatedBy ((n + 1) ^ Fintype.card a : ℝ)
-      (deFinettiReferenceState (a := a) n) :=
-  matrixDominatedBy_symmetricProjectionReferenceState_pow_succ_of_supported
-    (a := a) hρ
 
 @[simp]
 theorem symmetricProjectionReferenceState_matrixDominatedBy_profile_count
@@ -1253,31 +1183,6 @@ theorem matrixDominatedBy_applyChannel_symmetricProjectionReferenceState_pow_suc
     (matrixDominatedBy_symmetricProjectionReferenceState_pow_succ_of_supported
       (a := a) hρ)
 
-/-- Channel-output CKR de Finetti reference domination with the exact
-profile-count factor. -/
-theorem matrixDominatedBy_applyChannel_deFinettiReferenceState_profile_count_of_supported
-    {b : Type w} [Fintype b] [DecidableEq b] [Nonempty a]
-    {ρ : State (TensorPower a n)} (Φ : Channel (TensorPower a n) b)
-    (hρ : ρ.SupportedOnSymmetricSubspace (a := a)) :
-    (Φ.applyState ρ).MatrixDominatedBy
-      (Fintype.card (TensorPowerProfile a n) : ℝ)
-      (Φ.applyState (deFinettiReferenceState (a := a) n)) :=
-  matrixDominatedBy_applyChannel Φ
-    (matrixDominatedBy_deFinettiReferenceState_profile_count_of_supported
-      (a := a) hρ)
-
-/-- Channel-output CKR de Finetti reference domination with the polynomial
-profile-count bound. -/
-theorem matrixDominatedBy_applyChannel_deFinettiReferenceState_pow_succ_of_supported
-    {b : Type w} [Fintype b] [DecidableEq b] [Nonempty a]
-    {ρ : State (TensorPower a n)} (Φ : Channel (TensorPower a n) b)
-    (hρ : ρ.SupportedOnSymmetricSubspace (a := a)) :
-    (Φ.applyState ρ).MatrixDominatedBy ((n + 1) ^ Fintype.card a : ℝ)
-      (Φ.applyState (deFinettiReferenceState (a := a) n)) :=
-  matrixDominatedBy_applyChannel Φ
-    (matrixDominatedBy_deFinettiReferenceState_pow_succ_of_supported
-      (a := a) hρ)
-
 /-- Polynomial-factor trace-distance form of the state-level post-selection
 bound for a supported symmetric input. -/
 theorem stateLevelPostSelectionTraceDistanceBound_of_supported
@@ -1291,19 +1196,6 @@ theorem stateLevelPostSelectionTraceDistanceBound_of_supported
     (matrixDominatedBy_symmetricProjectionReferenceState_pow_succ_of_supported
       (a := a) hρ)
 
-/-- Polynomial-factor trace-distance form of the state-level post-selection
-bound, using the source-facing CKR de Finetti reference state. -/
-theorem stateLevelPostSelectionTraceDistanceBound_deFinettiReferenceState_of_supported
-    {b : Type w} [Fintype b] [DecidableEq b] [Nonempty a]
-    {ρ : State (TensorPower a n)} (Φ : Channel (TensorPower a n) b)
-    (hρ : ρ.SupportedOnSymmetricSubspace (a := a)) :
-    ChannelOutputTraceDistanceBound Φ ρ
-      (deFinettiReferenceState (a := a) n)
-      (((n + 1) ^ Fintype.card a : ℝ) - 1) :=
-  channelOutputTraceDistanceBound_of_matrixDominatedBy Φ
-    (matrixDominatedBy_deFinettiReferenceState_pow_succ_of_supported
-      (a := a) hρ)
-
 /-- Exact profile-count trace-distance form of the state-level post-selection
 bound for a supported symmetric input. -/
 theorem stateLevelPostSelectionTraceDistanceBound_profile_count_of_supported
@@ -1315,19 +1207,6 @@ theorem stateLevelPostSelectionTraceDistanceBound_profile_count_of_supported
       ((Fintype.card (TensorPowerProfile a n) : ℝ) - 1) :=
   channelOutputTraceDistanceBound_of_matrixDominatedBy Φ
     (matrixDominatedBy_symmetricProjectionReferenceState_of_supported
-      (a := a) hρ)
-
-/-- Exact profile-count trace-distance form of the state-level post-selection
-bound, using the source-facing CKR de Finetti reference state. -/
-theorem stateLevelPostSelectionTraceDistanceBound_deFinettiReferenceState_profile_count_of_supported
-    {b : Type w} [Fintype b] [DecidableEq b] [Nonempty a]
-    {ρ : State (TensorPower a n)} (Φ : Channel (TensorPower a n) b)
-    (hρ : ρ.SupportedOnSymmetricSubspace (a := a)) :
-    ChannelOutputTraceDistanceBound Φ ρ
-      (deFinettiReferenceState (a := a) n)
-      ((Fintype.card (TensorPowerProfile a n) : ℝ) - 1) :=
-  channelOutputTraceDistanceBound_of_matrixDominatedBy Φ
-    (matrixDominatedBy_deFinettiReferenceState_profile_count_of_supported
       (a := a) hρ)
 
 @[simp]
@@ -1745,36 +1624,47 @@ theorem tensorPower_isDominatedBy_onePoint_mono_factor (ρ : State a) (n : ℕ)
 
 end State
 
-export State (deFinettiReferenceState
-  deFinettiReferenceState_eq_symmetricProjectionReferenceState
-  deFinettiReferenceState_matrix
-  deFinettiReferenceState_supportedOnSymmetricSubspace
-  deFinettiReferenceState_trace_eq_one
-  deFinettiReferenceState_trace_re_eq_one
-  deFinettiReferenceState_profile_count_factor)
-
 /-- CKR post-selection reference state on `H^n × H^n`.
 
 The source theorem evaluates `Δ ⊗ id` on a purification/reference extension of
-`τ_{H^n}`.  This finite-dimensional source-facing input is represented as the
-de Finetti reference state on `(H × H)^n`, transported across the standard
-identification `(H × H)^n ≃ H^n × H^n`. -/
+`τ_{H^n}`.  The library source-facing input is the enlarged symmetric reference
+on `(H × H)^n`, transported across the standard identification
+`(H × H)^n ≃ H^n × H^n`.  This name intentionally avoids presenting the bare
+normalized symmetric projection on `H^n` as the full CKR mixed reference. -/
+abbrev ckrPostSelectionReferenceState [Nonempty a] (n : ℕ) :
+    State (Prod (TensorPower a n) (TensorPower a n)) :=
+  (State.symmetricProjectionReferenceState (a := Prod a a) n).reindex
+    (tensorPowerProdEquiv a a n)
+
+@[simp]
+theorem ckrPostSelectionReferenceState_matrix [Nonempty a] (n : ℕ) :
+    (ckrPostSelectionReferenceState (a := a) n).matrix =
+      (State.symmetricProjectionReferenceState (a := Prod a a) n).matrix.submatrix
+        (tensorPowerProdEquiv a a n).symm
+        (tensorPowerProdEquiv a a n).symm :=
+  rfl
+
+theorem ckrPostSelectionReferenceState_trace_eq_one [Nonempty a] (n : ℕ) :
+    (ckrPostSelectionReferenceState (a := a) n).matrix.trace = 1 :=
+  (ckrPostSelectionReferenceState (a := a) n).trace_eq_one
+
+/-- Compatibility bridge for the older local post-selection reference name.
+Source-facing statements should prefer `ckrPostSelectionReferenceState`. -/
 abbrev postSelectionReferenceState [Nonempty a] (n : ℕ) :
     State (Prod (TensorPower a n) (TensorPower a n)) :=
-  (deFinettiReferenceState (a := Prod a a) n).reindex
-    (tensorPowerProdEquiv a a n)
+  ckrPostSelectionReferenceState (a := a) n
 
 @[simp]
 theorem postSelectionReferenceState_matrix [Nonempty a] (n : ℕ) :
     (postSelectionReferenceState (a := a) n).matrix =
-      (deFinettiReferenceState (a := Prod a a) n).matrix.submatrix
+      (State.symmetricProjectionReferenceState (a := Prod a a) n).matrix.submatrix
         (tensorPowerProdEquiv a a n).symm
         (tensorPowerProdEquiv a a n).symm :=
   rfl
 
 theorem postSelectionReferenceState_trace_eq_one [Nonempty a] (n : ℕ) :
     (postSelectionReferenceState (a := a) n).matrix.trace = 1 :=
-  (postSelectionReferenceState (a := a) n).trace_eq_one
+  ckrPostSelectionReferenceState_trace_eq_one (a := a) n
 
 /-- Entrywise action of a tensor-factor permutation on the left input register,
 with the reference register left unchanged. -/
@@ -5227,7 +5117,8 @@ def ckrPurifiedReferenceVector [Nonempty a] (n : ℕ) :
             rw [Finset.sum_const, nsmul_eq_mul]
             simpa [g] using mul_inv_cancel₀ hg_ne
 
-/-- CKR purified de-Finetti reference state. -/
+/-- Purified CKR post-selection reference state before the `H^n × H^n`
+reindexing. -/
 def ckrPurifiedReferenceState [Nonempty a] (n : ℕ) :
     State (Prod (TensorPower (Prod a a) n) (ckrPurifyingRegister a n)) :=
   (ckrPurifiedReferenceVector (a := a) n).state
@@ -5283,10 +5174,10 @@ theorem ckrProfileIsometryMatrix_conjTranspose_mul [Nonempty a] (n : ℕ) :
             simp
           · simp [hpq]
 
-theorem ckrPurifiedReference_marginal_eq_deFinettiReferenceState
+theorem ckrPurifiedReference_marginal_eq_symmetricProjectionReferenceState
     [Nonempty a] (n : ℕ) :
     (ckrPurifiedReferenceState (a := a) n).marginalA =
-      deFinettiReferenceState (a := Prod a a) n := by
+      State.symmetricProjectionReferenceState (a := Prod a a) n := by
   classical
   ext x y
   let g : ℂ := (Fintype.card (ckrPurifyingRegister a n) : ℂ)
@@ -5328,35 +5219,55 @@ theorem ckrPurifiedReference_marginal_eq_deFinettiReferenceState
           rw [← Matrix.sum_apply,
             ← symmetricProjectionMatrix_eq_sum_rankOne_profileUnitVector (a := Prod a a)]
           rfl
-    _ = (deFinettiReferenceState (a := Prod a a) n).matrix x y := by
+    _ = (State.symmetricProjectionReferenceState (a := Prod a a) n).matrix x y := by
           simp [Matrix.smul_apply]
 
 /-- CKR purified post-selection reference state, reindexed as
 `(H^n × H^n) × N`.  Its first marginal is the source-shaped
-`postSelectionReferenceState`. -/
-def postSelectionPurifiedReferenceStatePair [Nonempty a] (n : ℕ) :
+`ckrPostSelectionReferenceState`. -/
+def ckrPostSelectionPurifiedReferenceStatePair [Nonempty a] (n : ℕ) :
     State (Prod (Prod (TensorPower a n) (TensorPower a n))
       (ckrPurifyingRegister a n)) :=
   (ckrPurifiedReferenceState (a := a) n).reindex
     (Equiv.prodCongr (tensorPowerProdEquiv a a n)
       (Equiv.refl (ckrPurifyingRegister a n)))
 
-theorem postSelectionPurifiedReferenceStatePair_marginalA [Nonempty a] (n : ℕ) :
-    (postSelectionPurifiedReferenceStatePair (a := a) n).marginalA =
-      postSelectionReferenceState (a := a) n := by
-  rw [postSelectionPurifiedReferenceStatePair]
+theorem ckrPostSelectionPurifiedReferenceStatePair_marginalA [Nonempty a] (n : ℕ) :
+    (ckrPostSelectionPurifiedReferenceStatePair (a := a) n).marginalA =
+      ckrPostSelectionReferenceState (a := a) n := by
+  rw [ckrPostSelectionPurifiedReferenceStatePair]
   rw [State.marginalA_reindex_prodCongr]
-  rw [ckrPurifiedReference_marginal_eq_deFinettiReferenceState]
+  rw [ckrPurifiedReference_marginal_eq_symmetricProjectionReferenceState]
 
 /-- CKR purified post-selection reference state, reindexed as
 `H^n × (H^n × N)`, so a channel can act on the first/input factor while the
 ordinary reference and the profile purifying register are kept as one joint
 ancilla. -/
-def postSelectionPurifiedReferenceState [Nonempty a] (n : ℕ) :
+def ckrPostSelectionPurifiedReferenceState [Nonempty a] (n : ℕ) :
     State (Prod (TensorPower a n)
       (Prod (QIT.TensorPower a n) (ckrPurifyingRegister a n))) :=
-  (postSelectionPurifiedReferenceStatePair (a := a) n).reindex
+  (ckrPostSelectionPurifiedReferenceStatePair (a := a) n).reindex
     (Equiv.prodAssoc (TensorPower a n) (TensorPower a n) (ckrPurifyingRegister a n))
+
+/-- Compatibility bridge for the older pair-shaped purified reference name.
+Source-facing statements should prefer `ckrPostSelectionPurifiedReferenceStatePair`. -/
+abbrev postSelectionPurifiedReferenceStatePair [Nonempty a] (n : ℕ) :
+    State (Prod (Prod (TensorPower a n) (TensorPower a n))
+      (ckrPurifyingRegister a n)) :=
+  ckrPostSelectionPurifiedReferenceStatePair (a := a) n
+
+theorem postSelectionPurifiedReferenceStatePair_marginalA [Nonempty a] (n : ℕ) :
+    (postSelectionPurifiedReferenceStatePair (a := a) n).marginalA =
+      postSelectionReferenceState (a := a) n := by
+  simpa [postSelectionPurifiedReferenceStatePair, postSelectionReferenceState] using
+    ckrPostSelectionPurifiedReferenceStatePair_marginalA (a := a) n
+
+/-- Compatibility bridge for the older channel-input-shaped purified reference
+name. Source-facing statements should prefer `ckrPostSelectionPurifiedReferenceState`. -/
+abbrev postSelectionPurifiedReferenceState [Nonempty a] (n : ℕ) :
+    State (Prod (TensorPower a n)
+      (Prod (QIT.TensorPower a n) (ckrPurifyingRegister a n))) :=
+  ckrPostSelectionPurifiedReferenceState (a := a) n
 
 /-- Drop a terminal unit register from a matrix. -/
 def dropRightUnitMatrix {α : Type u} [Fintype α] [DecidableEq α]
@@ -5563,7 +5474,7 @@ private theorem dropRightUnitMatrix_action_traceEffectToUnit_commute
         (assocRightMatrix
           ((MatrixMap.kron Δ
               (Channel.idChannel (Prod (QIT.TensorPower a n) (ckrPurifyingRegister a n))).map)
-            (postSelectionPurifiedReferenceState (a := a) n).matrix))) =
+            (ckrPostSelectionPurifiedReferenceState (a := a) n).matrix))) =
     MatrixMap.kron Δ (Channel.idChannel (TensorPower a n)).map
       ((dropRightUnitMatrix
           ((MatrixMap.kron
@@ -5572,9 +5483,8 @@ private theorem dropRightUnitMatrix_action_traceEffectToUnit_commute
             (ckrPurifiedReferenceState (a := a) n).matrix)).submatrix
         (tensorPowerProdEquiv a a n).symm (tensorPowerProdEquiv a a n).symm) := by
   ext br br'
-  simp [assocRightMatrix, dropRightUnitMatrix, postSelectionPurifiedReferenceState,
-    postSelectionPurifiedReferenceStatePair, State.reindex,
-    MatrixMap.kron_idChannel_apply_slice, MatrixMap.kron_idChannel_left_apply_slice,
+  simp [assocRightMatrix, dropRightUnitMatrix, MatrixMap.kron_idChannel_apply_slice,
+    MatrixMap.kron_idChannel_left_apply_slice,
     MatrixMap.traceEffectToUnit_apply_of_posSemidef hE]
   exact matrixMap_trace_weight_commute Δ
     (fun j j' => fun i i' =>
@@ -6452,7 +6362,7 @@ private theorem postSelection_supportedInputReferenceAction_le_profile_count_pur
         (ρ.reindex (tensorPowerProdEquiv a a n)) ≤
       (Fintype.card (TensorPowerProfile (Prod a a) n) : ℝ) *
         (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction
-          (postSelectionPurifiedReferenceState (a := a) n) := by
+          (ckrPostSelectionPurifiedReferenceState (a := a) n) := by
   classical
   let Δ : MatrixMap (QIT.TensorPower a n) b := MatrixMap.channelDifference Φ Ψ
   let gR : ℝ := Fintype.card (TensorPowerProfile (Prod a a) n)
@@ -6463,7 +6373,7 @@ private theorem postSelection_supportedInputReferenceAction_le_profile_count_pur
   let H0 : CMatrix (Prod b (Prod (QIT.TensorPower a n) (ckrPurifyingRegister a n))) :=
     (MatrixMap.kron Δ
       (Channel.idChannel (Prod (QIT.TensorPower a n) (ckrPurifyingRegister a n))).map)
-      (postSelectionPurifiedReferenceState (a := a) n).matrix
+      (ckrPostSelectionPurifiedReferenceState (a := a) n).matrix
   let H : CMatrix (Prod (Prod b (QIT.TensorPower a n)) (ckrPurifyingRegister a n)) :=
     assocRightMatrix H0
   have hEpos : E.PosSemidef := by
@@ -6502,13 +6412,13 @@ private theorem postSelection_supportedInputReferenceAction_le_profile_count_pur
       MatrixMap.channelDifference_kron_id_apply_isHermitian
         (a := QIT.TensorPower a n) (b := b)
         (r := Prod (QIT.TensorPower a n) (ckrPurifyingRegister a n))
-        Φ Ψ (postSelectionPurifiedReferenceState (a := a) n)
+        Φ Ψ (ckrPostSelectionPurifiedReferenceState (a := a) n)
   have hH0tr : H0.trace = 0 := by
     simpa [H0, Δ] using
       MatrixMap.channelDifference_kron_id_apply_trace_eq_zero
         (a := QIT.TensorPower a n) (b := b)
         (r := Prod (QIT.TensorPower a n) (ckrPurifyingRegister a n))
-        Φ Ψ (postSelectionPurifiedReferenceState (a := a) n)
+        Φ Ψ (ckrPostSelectionPurifiedReferenceState (a := a) n)
   have hHHerm : H.IsHermitian := by
     simpa [H] using assocRightMatrix_isHermitian hH0Herm
   have hHtr : H.trace = 0 := by
@@ -6559,7 +6469,7 @@ theorem postSelection_pureInputReferenceAction_le_profile_count_of_marginalA_inv
     (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction Ω.state ≤
       (Fintype.card (TensorPowerProfile (Prod a a) n) : ℝ) *
         (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction
-          (postSelectionPurifiedReferenceState (a := a) n) := by
+          (ckrPostSelectionPurifiedReferenceState (a := a) n) := by
   have hcanon :=
     Ω.channelDifference_normalizedAction_le_canonicalOfMarginalA Φ Ψ
   have hsup :=
@@ -6576,7 +6486,7 @@ theorem postSelection_pureInputReferenceAction_le_profile_count_of_marginalA_inv
           hcanon
     _ ≤ (Fintype.card (TensorPowerProfile (Prod a a) n) : ℝ) *
         (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction
-          (postSelectionPurifiedReferenceState (a := a) n) := by
+          (ckrPostSelectionPurifiedReferenceState (a := a) n) := by
           simpa [State.inputCanonicalTensorPowerPurificationState_reindex_tensorPowerProdEquiv]
             using hsup
 
@@ -6588,7 +6498,7 @@ private theorem inputReferenceAction_le_profile_count_of_invariantMarginal
     (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction ω ≤
       (Fintype.card (TensorPowerProfile (Prod a a) n) : ℝ) *
         (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction
-          (postSelectionPurifiedReferenceState (a := a) n) := by
+          (ckrPostSelectionPurifiedReferenceState (a := a) n) := by
   classical
   let Ω : PureVector
       (Prod (QIT.TensorPower a n)
@@ -6640,7 +6550,7 @@ private theorem postSelection_labelExtensionAction_le_profile_count
     (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction ω ≤
       (Fintype.card (TensorPowerProfile (Prod a a) n) : ℝ) *
         (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction
-          (postSelectionPurifiedReferenceState (a := a) n) := by
+          (ckrPostSelectionPurifiedReferenceState (a := a) n) := by
   have hlabel :=
     postSelectionCovariantDifference_labelExtension_action_eq
       (a := a) (n := n) (b := b) (r := r) Φ Ψ hcov ω
@@ -6663,7 +6573,7 @@ theorem postSelection_inputReferenceAction_le_profile_count
     (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction ω ≤
       (Fintype.card (TensorPowerProfile (Prod a a) n) : ℝ) *
         (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction
-          (postSelectionPurifiedReferenceState (a := a) n) := by
+          (ckrPostSelectionPurifiedReferenceState (a := a) n) := by
   classical
   letI : Nonempty (QIT.TensorPower a n) := QIT.TensorPower.nonempty (a := a) n
   exact postSelection_labelExtensionAction_le_profile_count
@@ -6678,13 +6588,13 @@ theorem postSelection_diamondTraceDistance_le_profile_count
     Φ.diamondTraceDistance Ψ ≤
       (Fintype.card (TensorPowerProfile (Prod a a) n) : ℝ) *
         (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction
-          (postSelectionPurifiedReferenceState (a := a) n) := by
+          (ckrPostSelectionPurifiedReferenceState (a := a) n) := by
   classical
   refine Channel.diamondTraceDistance_le_of_inputReferenceBound
     (a := QIT.TensorPower a n) (b := b) (Φ := Φ) (Ψ := Ψ)
     (ε := (Fintype.card (TensorPowerProfile (Prod a a) n) : ℝ) *
       (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction
-        (postSelectionPurifiedReferenceState (a := a) n)) ?_
+        (ckrPostSelectionPurifiedReferenceState (a := a) n)) ?_
   intro ω
   rw [Channel.ancillaChannelTraceDistance_eq_channelDifferenceAction]
   exact postSelection_inputReferenceAction_le_profile_count
@@ -6698,7 +6608,7 @@ theorem postSelection_diamondTraceDistance_le_choose
     Φ.diamondTraceDistance Ψ ≤
       (Nat.choose (n + Fintype.card (Prod a a) - 1) n : ℝ) *
         (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction
-          (postSelectionPurifiedReferenceState (a := a) n) := by
+          (ckrPostSelectionPurifiedReferenceState (a := a) n) := by
   simpa [tensorPowerProfile_card_eq_choose (a := Prod a a) n] using
     postSelection_diamondTraceDistance_le_profile_count
       (a := a) (n := n) (b := b) Φ Ψ hcov

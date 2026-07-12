@@ -8,6 +8,7 @@ module
 
 public import QIT.Information.Entropy.Entropy
 public import QIT.Information.Entropy.EntropyTensorPower
+public import QIT.Information.Entropy.RelativeEntropyTraceLog
 public import QIT.Information.Entropy.RelativeEntropyDPI
 public import QIT.Information.Entropy.MutualInformationDPI
 public import QIT.Information.Entropy.StrongSubadditivity

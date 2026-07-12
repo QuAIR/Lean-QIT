@@ -8,6 +8,7 @@ module
 
 public import QIT.States.PosSqrt
 public import QIT.States.TraceNorm.Distance
+public import QIT.States.Topology
 public import Mathlib.Analysis.Matrix.PosDef
 public import Mathlib.Analysis.CStarAlgebra.Classes
 public import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Basic
@@ -61,21 +62,12 @@ def log2 (x : ℝ) : ℝ := Real.log x / Real.log 2
 /-- x log_2 x with the 0 log 0 := 0 convention. -/
 def xlog2 (x : ℝ) : ℝ := if x = 0 then 0 else x * log2 x
 
-/-- States carry the topology induced by their density matrices. -/
-instance State.instTopologicalSpace {a : Type u} [Fintype a] [DecidableEq a] :
-    TopologicalSpace (State a) :=
-  TopologicalSpace.induced State.matrix inferInstance
-
 namespace State
 
 /-- Von Neumann entropy S(ρ) = -Σ λᵢ log₂ λᵢ over the eigenvalues of ρ,
 with 0 log 0 := 0. -/
 def vonNeumann (ρ : State a) : ℝ :=
   -(Finset.univ.sum fun i => xlog2 ((ρ.pos.isHermitian).eigenvalues i))
-
-@[fun_prop]
-theorem continuous_matrix : Continuous (fun ρ : State a => ρ.matrix) :=
-  continuous_induced_dom
 
 private noncomputable def entropyCfcScalar (x : ℝ) : ℝ :=
   -(x * Real.log x / Real.log 2)
@@ -257,36 +249,6 @@ def conditionalEntropy (ρ : State (Prod a b)) : ℝ :=
 @[simp]
 theorem conditionalEntropy_eq (ρ : State (Prod a b)) :
     ρ.conditionalEntropy = vonNeumann ρ - vonNeumann ρ.marginalB := rfl
-
-theorem marginalA_continuous :
-    Continuous (fun ρ : State (Prod a b) => ρ.marginalA) := by
-  rw [continuous_induced_rng]
-  change Continuous fun ρ : State (Prod a b) =>
-    partialTraceB (a := a) (b := b) ρ.matrix
-  refine continuous_pi ?_
-  intro i
-  refine continuous_pi ?_
-  intro i'
-  simp only [partialTraceB]
-  refine continuous_finsetSum Finset.univ ?_
-  intro j _
-  exact (continuous_apply (i', j)).comp
-    ((continuous_apply (i, j)).comp State.continuous_matrix)
-
-theorem marginalB_continuous :
-    Continuous (fun ρ : State (Prod a b) => ρ.marginalB) := by
-  rw [continuous_induced_rng]
-  change Continuous fun ρ : State (Prod a b) =>
-    partialTraceA (a := a) (b := b) ρ.matrix
-  refine continuous_pi ?_
-  intro j
-  refine continuous_pi ?_
-  intro j'
-  simp only [partialTraceA]
-  refine continuous_finsetSum Finset.univ ?_
-  intro i _
-  exact (continuous_apply (i, j')).comp
-    ((continuous_apply (i, j)).comp State.continuous_matrix)
 
 /-- Conditional entropy is continuous on finite-dimensional bipartite states. -/
 theorem conditionalEntropy_continuous :

@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Core.Channel
+public import QIT.Measurements.Map
 public import QIT.States.Schatten
 public import QIT.States.TraceNorm.Distance
 
@@ -94,6 +94,41 @@ theorem toPOVM_effects (outcome : y) :
 theorem toPOVM_sum_effects :
     ∑ outcome, P.toPOVM.effects outcome = 1 := by
   simp [toPOVM]
+
+/-- For trace-one projective effects, the associated measurement channel sends
+the identity to the identity. This is the rank-one/projective case from
+Tomamichel's measurement-map source route. -/
+theorem toPOVM_measureMap_one_eq_one_of_traceOne
+    [DecidableEq y]
+    (htrace : ∀ outcome, (P.effects outcome).trace = 1) :
+    (Channel.measure P.toPOVM).map (1 : CMatrix a) = (1 : CMatrix y) := by
+  rw [Channel.measure_map]
+  ext i j
+  rw [Matrix.sum_apply]
+  by_cases hij : i = j
+  · subst j
+    rw [Finset.sum_eq_single i]
+    · simp [htrace i]
+    · intro outcome _ houtcome
+      simp [houtcome]
+    · intro hi
+      simp at hi
+  · rw [Matrix.one_apply, if_neg hij]
+    refine Finset.sum_eq_zero fun outcome _ => ?_
+    rw [Matrix.smul_apply, Matrix.single_apply]
+    have hnot : ¬ (outcome = i ∧ outcome = j) := by
+      intro h
+      exact hij (h.1.symm.trans h.2)
+    simp [hnot]
+
+/-- Trace-one projective measurements satisfy the local unit-effect condition
+required by the source-facing measurement monotonicity statement. -/
+theorem toPOVM_measurementMapDoesNotEnlargeUnit_of_traceOne
+    [DecidableEq y]
+    (htrace : ∀ outcome, (P.effects outcome).trace = 1) :
+    measurementMapDoesNotEnlargeUnit P.toPOVM := by
+  rw [measurementMapDoesNotEnlargeUnit]
+  rw [P.toPOVM_measureMap_one_eq_one_of_traceOne htrace]
 
 /-- The pinching map associated with a projective measurement.
 

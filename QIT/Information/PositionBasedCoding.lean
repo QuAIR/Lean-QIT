@@ -254,8 +254,8 @@ def oneShotEntanglementAssistedClassicalRateSet (ε : ℝ) : Set ℝ :=
           ∃ C : EntanglementAssistedClassicalCode N 1 M EA EB,
             C.maxErrorAtMost ε ∧ R = C.rate}
 
-theorem oneShotEntanglementAssistedClassicalCapacity_eq_sSup (ε : ℝ) :
-    N.oneShotEntanglementAssistedClassicalCapacity ε =
+theorem oneShotEntanglementAssistedClassicalCapacityFinite_eq_sSup (ε : ℝ) :
+    N.oneShotEntanglementAssistedClassicalCapacityFinite ε =
       sSup (N.oneShotEntanglementAssistedClassicalRateSet ε) :=
   rfl
 
@@ -571,12 +571,12 @@ theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacityE
 /-- Real-valued one-shot capacity lower bridge, assuming the real rate set has
 an upper bound.  In the source proof this boundedness is supplied by the
 one-shot converse; the extended-real bridge above is unconditional. -/
-theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacity_of_bddAbove
+theorem lowerBound_le_oneShotEntanglementAssistedClassicalCapacityFinite_of_bddAbove
     {ε lowerBound : ℝ}
     (W : EntanglementAssistedOneShotAchievabilityWitness N ε lowerBound M EA EB)
     (hbdd : BddAbove (N.oneShotEntanglementAssistedClassicalRateSet ε)) :
-    lowerBound ≤ N.oneShotEntanglementAssistedClassicalCapacity ε := by
-  rw [N.oneShotEntanglementAssistedClassicalCapacity_eq_sSup]
+    lowerBound ≤ N.oneShotEntanglementAssistedClassicalCapacityFinite ε := by
+  rw [N.oneShotEntanglementAssistedClassicalCapacityFinite_eq_sSup]
   exact W.lowerBound_le_rate.trans
     (le_csSup hbdd W.rate_mem_oneShotEntanglementAssistedClassicalRateSet)
 
