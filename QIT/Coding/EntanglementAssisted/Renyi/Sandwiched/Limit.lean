@@ -542,22 +542,9 @@ This is the fixed-side-state endpoint used inside the source proof of the
 sandwiched channel mutual-information `alpha -> 1+` limit. -/
 theorem sandwichedRenyiMutualInformationProductMarginalEndpoint_eq_mutualInformation
     (rhoAB : State (Prod a b)) :
-    relativeEntropyPSDReferenceE rhoAB
-        (rhoAB.marginalA.prod rhoAB.marginalB).matrix
-        (rhoAB.marginalA.prod rhoAB.marginalB).pos =
+    rhoAB.relativeEntropy (rhoAB.marginalA.prod rhoAB.marginalB) =
       (mutualInformation rhoAB : EReal) := by
-  calc
-    relativeEntropyPSDReferenceE rhoAB
-        (rhoAB.marginalA.prod rhoAB.marginalB).matrix
-        (rhoAB.marginalA.prod rhoAB.marginalB).pos =
-        relativeEntropyPSDReferenceTraceLogE rhoAB
-          (rhoAB.marginalA.prod rhoAB.marginalB).matrix
-          (rhoAB.marginalA.prod rhoAB.marginalB).pos := by
-          exact relativeEntropyPSDReferenceE_eq_traceLogE rhoAB
-            (hSigma := (rhoAB.marginalA.prod rhoAB.marginalB).pos)
-    _ = (mutualInformation rhoAB : EReal) := by
-          exact relativeEntropyPSDReferenceTraceLogE_prod_marginals_eq_mutualInformation
-            rhoAB
+  exact State.relativeEntropy_prod_marginals_eq_mutualInformation rhoAB
 
 /-- Every fixed side-information candidate has the correct PSD-reference
 right-endpoint.
@@ -652,8 +639,16 @@ theorem sandwichedRenyiMutualInformationCandidateE_marginalB_tendsto_mutualInfor
       relativeEntropyPSDReferenceE rhoAB
           (rhoAB.marginalA.prod rhoAB.marginalB).matrix
           (rhoAB.marginalA.prod rhoAB.marginalB).pos =
-        (mutualInformation rhoAB : EReal) :=
-    rhoAB.sandwichedRenyiMutualInformationProductMarginalEndpoint_eq_mutualInformation
+        (mutualInformation rhoAB : EReal) := by
+    calc
+      relativeEntropyPSDReferenceE rhoAB
+          (rhoAB.marginalA.prod rhoAB.marginalB).matrix
+          (rhoAB.marginalA.prod rhoAB.marginalB).pos =
+          rhoAB.relativeEntropy (rhoAB.marginalA.prod rhoAB.marginalB) := by
+            rw [relativeEntropyPSDReferenceE_eq_traceLogE]
+            rfl
+      _ = (mutualInformation rhoAB : EReal) :=
+            rhoAB.sandwichedRenyiMutualInformationProductMarginalEndpoint_eq_mutualInformation
   simpa [hendpoint] using hlim
 
 /-- Order-theoretic handoff from the missing source lower bound to the
@@ -923,24 +918,22 @@ private theorem relativeEntropyPSDReferenceTraceLogE_unit_one_eq_zero :
 This singular-reference version follows from trace-log data processing to the
 terminal one-outcome channel, so it keeps the source support convention rather
 than imposing full-rank hypotheses. -/
-theorem relativeEntropyPSDReferenceTraceLogE_nonneg
+theorem relativeEntropy_nonneg
     (rho sigma : State a) :
     (0 : EReal) ≤
-      relativeEntropyPSDReferenceTraceLogE rho sigma.matrix sigma.pos := by
+      rho.relativeEntropy sigma := by
   let Phi : Channel a PUnit.{1} := terminalMeasureChannel a
   have hDPI :=
-    relativeEntropyPSDReferenceTraceLogE_dataProcessing_channel_ge
-      rho (sigma := sigma.matrix) sigma.pos Phi
+    relativeEntropy_dataProcessing_channel_ge rho sigma Phi
   have hOutState : Phi.applyState rho = State.unit := by
     simpa [Phi] using terminalMeasureChannel_applyState rho
-  have hOutRef :
-      Phi.map sigma.matrix = (1 : CMatrix PUnit.{1}) := by
-    simpa [Phi] using terminalMeasureChannel_map_state_matrix_for_sandwichedLimit sigma
+  have hOutSigma : Phi.applyState sigma = State.unit := by
+    simpa [Phi] using terminalMeasureChannel_applyState sigma
   have hOut :
-      relativeEntropyPSDReferenceTraceLogE
-          (Phi.applyState rho) (Phi.map sigma.matrix) (Phi.mapsPositive sigma.matrix sigma.pos) =
+      (Phi.applyState rho).relativeEntropy (Phi.applyState sigma) =
         (0 : EReal) := by
-    simpa [hOutState, hOutRef] using relativeEntropyPSDReferenceTraceLogE_unit_one_eq_zero
+    simpa [State.relativeEntropy, hOutState, hOutSigma] using
+      relativeEntropyPSDReferenceTraceLogE_unit_one_eq_zero
   simpa [hOut] using hDPI
 
 /-- Support of `rho_AB` under `rho_A tensor sigma_B` descends to support of the
@@ -975,9 +968,8 @@ theorem relativeEntropyPSDReferenceTraceLogFinite_marginalB_nonneg_of_supports
         (rhoAB.marginalB_supports_of_supports_prod_left_side sigmaB hSupport) := by
   let hSupportB : Matrix.Supports rhoAB.marginalB.matrix sigmaB.matrix :=
     rhoAB.marginalB_supports_of_supports_prod_left_side sigmaB hSupport
-  have hE := relativeEntropyPSDReferenceTraceLogE_nonneg rhoAB.marginalB sigmaB
-  rw [relativeEntropyPSDReferenceTraceLogE_eq_coe_of_supports
-    rhoAB.marginalB sigmaB.pos hSupportB] at hE
+  have hE := relativeEntropy_nonneg rhoAB.marginalB sigmaB
+  rw [relativeEntropy_eq_coe_of_supports rhoAB.marginalB sigmaB hSupportB] at hE
   simpa [hSupportB] using EReal.coe_le_coe_iff.mp hE
 
 /-- If a matrix is supported on a nonnegative diagonal reference, every zero
@@ -1532,8 +1524,21 @@ theorem relativeEntropyPSDReferenceE_prod_leftReference_iInf_eq_mutualInformatio
             relativeEntropyPSDReferenceE rhoAB
               (rhoAB.marginalA.prod sigmaB).matrix
               (rhoAB.marginalA.prod sigmaB).pos) rhoAB.marginalB) ?_
-    exact
-      (rhoAB.sandwichedRenyiMutualInformationProductMarginalEndpoint_eq_mutualInformation).le
+    have hEndpoint :
+        relativeEntropyPSDReferenceE rhoAB
+            (rhoAB.marginalA.prod rhoAB.marginalB).matrix
+            (rhoAB.marginalA.prod rhoAB.marginalB).pos =
+          (mutualInformation rhoAB : EReal) := by
+      calc
+        relativeEntropyPSDReferenceE rhoAB
+            (rhoAB.marginalA.prod rhoAB.marginalB).matrix
+            (rhoAB.marginalA.prod rhoAB.marginalB).pos =
+            rhoAB.relativeEntropy (rhoAB.marginalA.prod rhoAB.marginalB) := by
+              rw [relativeEntropyPSDReferenceE_eq_traceLogE]
+              rfl
+        _ = (mutualInformation rhoAB : EReal) :=
+              rhoAB.sandwichedRenyiMutualInformationProductMarginalEndpoint_eq_mutualInformation
+    exact hEndpoint.le
   · refine le_iInf fun sigmaB => ?_
     exact
       rhoAB.relativeEntropyPSDReferenceE_prod_leftReference_lower_mutualInformation
@@ -2168,6 +2173,12 @@ theorem inputSandwichedRenyiProductMarginalEndpoint_eq_entanglementAssistedMutua
           (N.hypothesisTestingOutputState psi).marginalB).matrix
         ((N.hypothesisTestingOutputState psi).marginalA.prod
           (N.hypothesisTestingOutputState psi).marginalB).pos =
+        (N.hypothesisTestingOutputState psi).relativeEntropy
+        ((N.hypothesisTestingOutputState psi).marginalA.prod
+          (N.hypothesisTestingOutputState psi).marginalB) := by
+          rw [State.relativeEntropyPSDReferenceE_eq_traceLogE]
+          rfl
+    _ =
         (mutualInformation (N.hypothesisTestingOutputState psi) : EReal) := by
           exact
             State.sandwichedRenyiMutualInformationProductMarginalEndpoint_eq_mutualInformation

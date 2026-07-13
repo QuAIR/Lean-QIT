@@ -59,12 +59,6 @@ variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 
 /-! ## Eigenvalue multisets of Hermitian matrices -/
 
-/-- The eigenvalues of a Hermitian matrix, packaged as a real multiset
-(indexed by the underlying finite label type, multiplicities included). -/
-def eigenvalueMultiset {n : Type u} [Fintype n] [DecidableEq n]
-    {M : CMatrix n} (hM : M.IsHermitian) : Multiset ℝ :=
-  Multiset.map hM.eigenvalues Finset.univ.val
-
 /-- The eigenvalue multiset is invariant under a propositional matrix equality
 and under the choice of `IsHermitian` proof (the latter by proof irrelevance,
 since `Matrix.IsHermitian` is a `Prop`). This transports a spectral statement
@@ -437,14 +431,6 @@ lemma multiset_sum_add_distrib {α : Type*} {R : Type*} [AddCommMonoid R]
 namespace State
 
 /-! ### Bridges between `vonNeumann` and the eigenvalue multiset -/
-
-/-- The von Neumann entropy, rewritten as a multiset sum over the
-eigenvalue multiset: `S(ρ) = -∑_{λ ∈ spec(ρ)} xlog2 λ`. -/
-lemma vonNeumann_eq_neg_sum_eigenvalueMultiset (ρ : State a) :
-    vonNeumann ρ = -((eigenvalueMultiset ρ.pos.isHermitian).map xlog2).sum := by
-  show -(Finset.univ.sum fun i => xlog2 (ρ.pos.isHermitian.eigenvalues i)) = _
-  rw [eigenvalueMultiset, Finset.sum_eq_multiset_sum, Multiset.map_map]
-  rfl
 
 /-- Von Neumann entropy is invariant under a finite basis relabeling. -/
 theorem vonNeumann_reindex {β : Type v} [Fintype β] [DecidableEq β]

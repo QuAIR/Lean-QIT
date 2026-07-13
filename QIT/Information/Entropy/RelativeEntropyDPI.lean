@@ -1850,6 +1850,16 @@ theorem relativeEntropyPSDReferenceTraceLogE_dataProcessing_channel_ge
       (relativeEntropyPSDReferenceE_eq_traceLogE
         (Phi.applyState rho) (Phi.mapsPositive sigma hSigma))
 
+/-- Quantum relative entropy data processing for the canonical state-state
+relative entropy API. -/
+theorem relativeEntropy_dataProcessing_channel_ge
+    {b : Type v} [Fintype b] [DecidableEq b]
+    (rho sigma : State a) (Phi : Channel a b) :
+    rho.relativeEntropy sigma >=
+      (Phi.applyState rho).relativeEntropy (Phi.applyState sigma) := by
+  simpa [relativeEntropy, Channel.applyState] using
+    relativeEntropyPSDReferenceTraceLogE_dataProcessing_channel_ge rho sigma.pos Phi
+
 end State
 
 end

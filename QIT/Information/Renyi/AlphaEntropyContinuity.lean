@@ -1189,7 +1189,7 @@ private theorem marginalB_posDef_of_posDef
 /-- Positive-definite quantum relative entropy is nonnegative. -/
 theorem relativeEntropy_nonneg_of_posDef
     (ρ σ : State a) (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef) :
-    0 ≤ ρ.relativeEntropy σ hρ hσ := by
+    0 ≤ ρ.relativeEntropyPosDefFinite σ hρ hσ := by
   have hlim :=
     sandwichedRenyiPSDReferenceHighAlphaFinite_tendsto_posDef_traceLog
       (rho := ρ) (sigma := σ.matrix) hσ
@@ -1198,9 +1198,9 @@ theorem relativeEntropy_nonneg_of_posDef
         (fun alpha : {alpha : Real // 1 < alpha} =>
           ρ.sandwichedRenyiPSDReferenceHighAlphaFinite σ.matrix hσ.posSemidef alpha.1)
         relativeEntropyHighAlphaRightToOne
-        (nhds (ρ.relativeEntropy σ hρ hσ)) := by
+        (nhds (ρ.relativeEntropyPosDefFinite σ hρ hσ)) := by
     convert hlim using 1
-    rw [relativeEntropy, vonNeumann_eq_neg_trace_mul_psdLog_div_log_two ρ hρ]
+    rw [relativeEntropyPosDefFinite, vonNeumann_eq_neg_trace_mul_psdLog_div_log_two ρ hρ]
     ring_nf
   haveI : Filter.NeBot relativeEntropyHighAlphaRightToOne :=
     relativeEntropyHighAlphaRightToOne_neBot
@@ -1241,13 +1241,13 @@ theorem conditionalEntropyRelative_le_conditionalEntropy
         rw [Matrix.trace_mul_comm]
   have hrel :
       ρ.conditionalEntropyRelative hρ σ hσ =
-        ρ.conditionalEntropy - ρ.marginalB.relativeEntropy σ hρB hσ := by
-    rw [conditionalEntropyRelative_eq, conditionalEntropy_eq, relativeEntropy,
+        ρ.conditionalEntropy - ρ.marginalB.relativeEntropyPosDefFinite σ hρB hσ := by
+    rw [conditionalEntropyRelative_eq, conditionalEntropy_eq, relativeEntropyPosDefFinite,
       vonNeumann_eq_neg_trace_mul_psdLog_div_log_two ρ hρ,
       vonNeumann_eq_neg_trace_mul_psdLog_div_log_two ρ.marginalB hρB,
       hrefσ]
     ring
-  have hD : 0 ≤ ρ.marginalB.relativeEntropy σ hρB hσ :=
+  have hD : 0 ≤ ρ.marginalB.relativeEntropyPosDefFinite σ hρB hσ :=
     relativeEntropy_nonneg_of_posDef ρ.marginalB σ hρB hσ
   rw [hrel]
   linarith

@@ -358,10 +358,10 @@ theorem hypothesisTestingRelativeEntropyMarginalsWeakConverseBound
   have hSupport : Matrix.Supports rhoAB.matrix sigma.matrix := by
     simpa [sigma] using rhoAB.matrix_supports_prod_marginals
   have hRelEq :
-      relativeEntropyPSDReferenceTraceLogE rhoAB sigma.matrix sigma.pos =
+      rhoAB.relativeEntropy sigma =
         (mutualInformation rhoAB : EReal) := by
     simpa [sigma] using
-      State.relativeEntropyPSDReferenceTraceLogE_prod_marginals_eq_mutualInformation rhoAB
+      State.relativeEntropy_prod_marginals_eq_mutualInformation rhoAB
   have hlower :
       ∀ Lambda : HypothesisTestingEffect rhoAB ε,
         Real.rpow 2 (-C) ≤ Lambda.typeIIErrorPSD sigma.matrix := by
@@ -391,10 +391,11 @@ theorem hypothesisTestingRelativeEntropyMarginalsWeakConverseBound
             ((Channel.measure Lambda'.toBinaryHypothesisTest).map sigma.matrix)
             ((Channel.measure Lambda'.toBinaryHypothesisTest).mapsPositive
               sigma.matrix sigma.pos) ≤
-          relativeEntropyPSDReferenceTraceLogE rhoAB sigma.matrix sigma.pos := by
-      exact
-        State.relativeEntropyPSDReferenceTraceLogE_dataProcessing_channel_ge
-          rhoAB sigma.pos (Channel.measure Lambda'.toBinaryHypothesisTest)
+          rhoAB.relativeEntropy sigma := by
+      have hDPI :=
+        State.relativeEntropy_dataProcessing_channel_ge
+          rhoAB sigma (Channel.measure Lambda'.toBinaryHypothesisTest)
+      simpa [State.relativeEntropy, Channel.applyState] using hDPI
     have hE :
         (((1 - ε) * (-log2 q) -
             EntanglementAssistedWeakConverse.binaryEntropy ε : ℝ) : EReal) ≤

@@ -465,6 +465,19 @@ theorem relativeEntropyPSDReferenceTraceLogE_prod_marginals_eq_mutualInformation
   rw [hEntropy]
   ring_nf
 
+/-- State-state trace-log relative entropy against the product of the marginals
+is mutual information, assuming the product-reference trace term identity. -/
+theorem relativeEntropy_prod_marginals_eq_mutualInformation_of_trace_term
+    (ρ : State (Prod a b))
+    (hTrace :
+      ρ.prodMarginalsSupportTraceLogTerm =
+        -(ρ.marginalA.vonNeumann + ρ.marginalB.vonNeumann)) :
+    ρ.relativeEntropy (ρ.marginalA.prod ρ.marginalB) =
+      (mutualInformation ρ : EReal) := by
+  simpa [relativeEntropy] using
+    relativeEntropyPSDReferenceTraceLogE_prod_marginals_eq_mutualInformation_of_trace_term
+      ρ hTrace
+
 /-- The product-reference trace-log term is the negative sum of the two
 marginal entropies. -/
 theorem prodMarginalsSupportTraceLogTerm_eq_neg_marginal_vonNeumann_sum
@@ -501,6 +514,15 @@ theorem relativeEntropyPSDReferenceTraceLogE_prod_marginals_eq_mutualInformation
         (ρ.marginalA.prod ρ.marginalB).pos =
       (mutualInformation ρ : EReal) :=
   relativeEntropyPSDReferenceTraceLogE_prod_marginals_eq_mutualInformation_of_trace_term
+    ρ (prodMarginalsSupportTraceLogTerm_eq_neg_marginal_vonNeumann_sum ρ)
+
+/-- State-state relative entropy against the product of the marginals is mutual
+information. -/
+theorem relativeEntropy_prod_marginals_eq_mutualInformation
+    (ρ : State (Prod a b)) :
+    ρ.relativeEntropy (ρ.marginalA.prod ρ.marginalB) =
+      (mutualInformation ρ : EReal) :=
+  relativeEntropy_prod_marginals_eq_mutualInformation_of_trace_term
     ρ (prodMarginalsSupportTraceLogTerm_eq_neg_marginal_vonNeumann_sum ρ)
 
 /-- A two-sided product channel maps the left marginal by the left channel. -/
@@ -610,38 +632,29 @@ theorem mutualInformation_dataProcessing_local_channels_ge_of_traceLog_bridge
     [Fintype c] [DecidableEq c] [Fintype d] [DecidableEq d]
     (ρ : State (Prod a b)) (Φ : Channel a c) (Ψ : Channel b d)
     (hIn :
-      State.relativeEntropyPSDReferenceTraceLogE ρ
-          (ρ.marginalA.prod ρ.marginalB).matrix
-          (ρ.marginalA.prod ρ.marginalB).pos =
+      ρ.relativeEntropy (ρ.marginalA.prod ρ.marginalB) =
         (mutualInformation ρ : EReal))
     (hOut :
-      State.relativeEntropyPSDReferenceTraceLogE ((Φ.prod Ψ).applyState ρ)
+      ((Φ.prod Ψ).applyState ρ).relativeEntropy
           ((((Φ.prod Ψ).applyState ρ).marginalA).prod
-            (((Φ.prod Ψ).applyState ρ).marginalB)).matrix
-          ((((Φ.prod Ψ).applyState ρ).marginalA).prod
-            (((Φ.prod Ψ).applyState ρ).marginalB)).pos =
+            (((Φ.prod Ψ).applyState ρ).marginalB)) =
         (mutualInformation ((Φ.prod Ψ).applyState ρ) : EReal)) :
     mutualInformation ρ ≥ mutualInformation ((Φ.prod Ψ).applyState ρ) := by
   classical
   let τ : State (Prod a b) := ρ.marginalA.prod ρ.marginalB
   let ω : State (Prod c d) := (Φ.prod Ψ).applyState ρ
-  have hτmap :
-      (Φ.prod Ψ).map τ.matrix =
-        (ω.marginalA.prod ω.marginalB).matrix := by
+  have hτstate :
+      (Φ.prod Ψ).applyState τ = ω.marginalA.prod ω.marginalB := by
     simpa [τ, ω] using
-      congrArg State.matrix (State.applyState_prod_marginals ρ Φ Ψ)
+      State.applyState_prod_marginals ρ Φ Ψ
   have hOut' :
-      State.relativeEntropyPSDReferenceTraceLogE ω
-          ((Φ.prod Ψ).map τ.matrix)
-          ((Φ.prod Ψ).mapsPositive τ.matrix τ.pos) =
+      ω.relativeEntropy ((Φ.prod Ψ).applyState τ) =
         (mutualInformation ω : EReal) := by
-    simpa [τ, ω, hτmap] using hOut
+    simpa [τ, ω, hτstate] using hOut
   have hDPI :
-      State.relativeEntropyPSDReferenceTraceLogE ω
-          ((Φ.prod Ψ).map τ.matrix)
-          ((Φ.prod Ψ).mapsPositive τ.matrix τ.pos) ≤
-        State.relativeEntropyPSDReferenceTraceLogE ρ τ.matrix τ.pos := by
-    exact State.relativeEntropyPSDReferenceTraceLogE_dataProcessing_channel_ge ρ τ.pos (Φ.prod Ψ)
+      ω.relativeEntropy ((Φ.prod Ψ).applyState τ) ≤
+        ρ.relativeEntropy τ := by
+    exact State.relativeEntropy_dataProcessing_channel_ge ρ τ (Φ.prod Ψ)
   have hE :
       (mutualInformation ω : EReal) ≤ (mutualInformation ρ : EReal) := by
     simpa [τ, hIn, hOut'] using hDPI
@@ -657,8 +670,8 @@ theorem mutualInformation_dataProcessing_local_channels_ge
     mutualInformation ρ ≥ mutualInformation ((Φ.prod Ψ).applyState ρ) := by
   exact
     mutualInformation_dataProcessing_local_channels_ge_of_traceLog_bridge ρ Φ Ψ
-      (State.relativeEntropyPSDReferenceTraceLogE_prod_marginals_eq_mutualInformation ρ)
-      (State.relativeEntropyPSDReferenceTraceLogE_prod_marginals_eq_mutualInformation
+      (State.relativeEntropy_prod_marginals_eq_mutualInformation ρ)
+      (State.relativeEntropy_prod_marginals_eq_mutualInformation
         ((Φ.prod Ψ).applyState ρ))
 
 end

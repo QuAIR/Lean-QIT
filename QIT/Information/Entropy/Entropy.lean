@@ -62,12 +62,26 @@ def log2 (x : ℝ) : ℝ := Real.log x / Real.log 2
 /-- x log_2 x with the 0 log 0 := 0 convention. -/
 def xlog2 (x : ℝ) : ℝ := if x = 0 then 0 else x * log2 x
 
+/-- The eigenvalues of a Hermitian matrix, packaged as a real multiset
+(indexed by the underlying finite label type, multiplicities included). -/
+def eigenvalueMultiset {n : Type u} [Fintype n] [DecidableEq n]
+    {M : CMatrix n} (hM : M.IsHermitian) : Multiset ℝ :=
+  Multiset.map hM.eigenvalues Finset.univ.val
+
 namespace State
 
 /-- Von Neumann entropy S(ρ) = -Σ λᵢ log₂ λᵢ over the eigenvalues of ρ,
 with 0 log 0 := 0. -/
 def vonNeumann (ρ : State a) : ℝ :=
   -(Finset.univ.sum fun i => xlog2 ((ρ.pos.isHermitian).eigenvalues i))
+
+/-- The von Neumann entropy, rewritten as a multiset sum over the
+eigenvalue multiset: `S(ρ) = -∑_{λ ∈ spec(ρ)} xlog2 λ`. -/
+lemma vonNeumann_eq_neg_sum_eigenvalueMultiset (ρ : State a) :
+    vonNeumann ρ = -((eigenvalueMultiset ρ.pos.isHermitian).map xlog2).sum := by
+  show -(Finset.univ.sum fun i => xlog2 (ρ.pos.isHermitian.eigenvalues i)) = _
+  rw [eigenvalueMultiset, Finset.sum_eq_multiset_sum, Multiset.map_map]
+  rfl
 
 private noncomputable def entropyCfcScalar (x : ℝ) : ℝ :=
   -(x * Real.log x / Real.log 2)
@@ -167,12 +181,13 @@ calculus. Requires `PosDef` (invertible, strictly positive spectrum) so that
 def psdLog (M : CMatrix a) (_hM : M.PosDef) : CMatrix a :=
   cfc Real.log M
 
-/-- Quantum relative entropy D(ρ‖σ) in bits.
+/-- Positive-definite finite compatibility API for quantum relative entropy
+D(ρ‖σ) in bits.
 
 Both states must be positive-definite (full-rank) for CFC.log to apply. The
 CFC logarithm is the natural logarithm, so the trace expression is divided by
 `Real.log 2` to match the base-2 entropy convention. -/
-def relativeEntropy (ρ σ : State a)
+def relativeEntropyPosDefFinite (ρ σ : State a)
     (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef) : ℝ :=
   ((ρ.matrix * psdLog ρ.matrix hρ).trace.re
     - (ρ.matrix * psdLog σ.matrix hσ).trace.re) / Real.log 2

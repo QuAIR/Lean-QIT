@@ -9,11 +9,14 @@ module
 public import QIT.OneShot.Decoupling
 public import QIT.Protocols.StateMerging
 public import QIT.Protocols.FQSW
+public import QIT.Protocols.CoherentStateTransfer
+public import QIT.Protocols.Teleportation
 
 /-!
 # Protocols
 
-Top-level import facade for decoupling, state merging, and FQSW surfaces.
+Top-level import facade for decoupling, state merging, coherent state transfer,
+FQSW, and teleportation surfaces.
 -/
 
 @[expose] public section
