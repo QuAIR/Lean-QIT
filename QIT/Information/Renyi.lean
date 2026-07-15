@@ -15,6 +15,10 @@ public import QIT.Information.Renyi.ConditionalRenyiSource
 public import QIT.Information.Renyi.ConditionalPetzRenyiAlternative
 public import QIT.Information.Renyi.ConditionalRenyiTraceBridge
 public import QIT.Information.Renyi.ConditionalRenyiMinimax
+public import QIT.Information.Renyi.ConditionalRenyiMinimaxBoundary
+public import QIT.Information.Renyi.ConditionalPetzRenyiDuality
+public import QIT.Information.Renyi.ConditionalSandwichedRenyiDuality
+public import QIT.Information.Renyi.ConditionalSandwichedRenyiAdditivity
 public import QIT.Information.Renyi.FrankLieb
 public import QIT.Information.Renyi.AlphaEntropyContinuity
 public import QIT.Information.Renyi.RpowOperatorConvex

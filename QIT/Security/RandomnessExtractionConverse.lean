@@ -666,28 +666,6 @@ theorem deterministicPostprocessCqState_toSubnormalized_sourceCoordinatePinch
   rw [map_smul]
   rw [SubnormalizedState.sourceCoordinatePinchChannel_map_singleTensor]
 
-/-- The original cq center is already diagonal in its source coordinate, hence
-source-coordinate pinching fixes it. -/
-theorem cqState_toSubnormalized_sourceCoordinatePinch
-    (E : Ensemble Z e) :
-    E.cqState.toSubnormalized.sourceCoordinatePinch =
-      E.cqState.toSubnormalized := by
-  apply SubnormalizedState.ext
-  rw [SubnormalizedState.sourceCoordinatePinch_matrix, State.toSubnormalized_matrix]
-  change (SubnormalizedState.sourceCoordinatePinchChannel (a := Z) (b := e)).map
-      E.cqState.matrix =
-    E.cqState.matrix
-  rw [Ensemble.cqState_matrix]
-  simp only [map_sum]
-  refine Finset.sum_congr rfl fun z _ => ?_
-  change (SubnormalizedState.sourceCoordinatePinchChannel (a := Z) (b := e)).map
-      ((E.probs z : ℂ) •
-        Matrix.kronecker (Matrix.single z z (1 : ℂ)) (E.states z).matrix) =
-    (E.probs z : ℂ) •
-      Matrix.kronecker (Matrix.single z z (1 : ℂ)) (E.states z).matrix
-  rw [map_smul]
-  rw [SubnormalizedState.sourceCoordinatePinchChannel_map_singleTensor]
-
 /-- The cq graph state that remembers both the original classical label `z`
 and the deterministic image `g z`. -/
 def deterministicGraphCqState (E : Ensemble Z e) (g : Z → S) : State (Prod (Prod Z S) e) :=
@@ -3497,6 +3475,7 @@ theorem extractorOutputState_toSubnormalized_smoothConditionalMinEntropy_le_seed
       (fun zf : Prod Z F => H.hash zf.2 zf.1)
       hε0 hε1
 
+omit [DecidableEq Z] [Nonempty F] in
 /-- If an extractor is `ε`-secret, the ideal uniform output is a smooth
 min-entropy candidate at the converse smoothing radius `sqrt (2ε - ε^2)`. -/
 theorem idealExtractorOutputState_smoothConditionalMinEntropyCandidate_of_isEpsilonSecretExtractor
@@ -3519,6 +3498,7 @@ theorem idealExtractorOutputState_smoothConditionalMinEntropyCandidate_of_isEpsi
   · exact (idealExtractorOutputState_conditionalMinEntropy
       (ρ := QIT.Security.extractorOutputState H E)).symm
 
+omit [DecidableEq Z] [Nonempty F] in
 /-- Per-extractor subnormalized output endpoint: an `ε`-secret extractor's
 output length is bounded by the subnormalized smooth conditional min-entropy of
 its actual output state at the converse smoothing radius. -/
@@ -3581,6 +3561,7 @@ theorem log2_outputLength_le_toSubnormalized_smoothConditionalMinEntropy_of_isEp
       hdelta_lt_trace hsubcand
   simpa [ρout, QIT.Security.HashFamily.outputLength_eq_card H] using hle
 
+omit [Nonempty F] in
 /-- Per-extractor seeded-source endpoint: secrecy bounds the output length by
 the smooth conditional min-entropy of the source-shaped ensemble that includes
 the public seed in both the source label and side information. -/
@@ -3635,6 +3616,7 @@ theorem log2_outputLength_le_source_toSubnormalized_smoothConditionalMinEntropy_
     (H.seededSourceEnsemble_toSubnormalized_smoothConditionalMinEntropy_le_source
       E hdelta0 hdelta1)
 
+omit [DecidableEq Z] [Nonempty F] in
 /-- Per-extractor converse endpoint: an `ε`-secret extractor's output length is
 bounded by the smooth conditional min-entropy of its actual output state. -/
 theorem log2_outputLength_le_smoothConditionalMinEntropyNormalizedCandidates_of_isEpsilonSecretExtractor
@@ -3969,7 +3951,7 @@ real lower endpoint `L` by `log₂ max(1, floor(2^L))`.
 
 [Tomamichel2015FiniteResources, apps.tex:404-449]
 -/
-theorem extractableRandomnessLog_tomamichel_rounded_source_theorem
+theorem extractableRandomnessLog_tomamichel_rounded_source_theorem_of_cqSmoothConditionalMinEntropyCandidate
     (E : Ensemble Z e) {ε δ h : Real}
     (hδ0 : 0 < δ) (hδε : δ < ε) (hε1 : ε < 1)
     (hcq : E.CqSmoothConditionalMinEntropyCandidate ((ε - δ) / 2) h) :
@@ -4021,6 +4003,40 @@ theorem extractableRandomnessLog_tomamichel_rounded_source_theorem
   · exact
       extractableRandomnessLog_le_source_toSubnormalized_smoothConditionalMinEntropy
         (E := E) hε0 hε1
+
+omit [Fintype F] [DecidableEq F] [Fintype S] [DecidableEq S] [Nonempty S] in
+/--
+Rounded finite-alphabet normalized-cq wrapper for Tomamichel's
+randomness-extraction theorem.
+
+This public entrypoint uses the normalized finite cq ensemble surface available
+in the library.  The supporting candidate theorem remains available separately
+as `extractableRandomnessLog_tomamichel_rounded_source_theorem_of_cqSmoothConditionalMinEntropyCandidate`.
+
+[Tomamichel2015FiniteResources, apps.tex:404-449]
+-/
+theorem extractableRandomnessLog_tomamichel_rounded_source_theorem
+    (E : Ensemble Z e) {ε δ : Real}
+    (hδ0 : 0 < δ) (hδε : δ < ε) (hε1 : ε < 1) :
+    let l :=
+      E.cqState.smoothConditionalMinEntropyNormalizedCandidates ((ε - δ) / 2) -
+        2 * log2 (1 / δ)
+    And
+      (log2 (roundedOutputLengthLower l : Real) ≤
+        extractableRandomnessLog.{uZ, uZ, 0, ue} E ε)
+      (extractableRandomnessLog.{uZ, uZ, 0, ue} E ε ≤
+        E.cqState.toSubnormalized.smoothConditionalMinEntropy
+          (Real.sqrt (2 * ε - ε ^ 2)) (Real.sqrt_nonneg _)
+          (E.cqState.epsilon_lt_sqrt_toSubnormalized_trace
+            (sqrt_two_mul_sub_sq_lt_one_of_nonneg_lt_one
+              (le_of_lt (hδ0.trans hδε)) hε1))) := by
+  have hεsmooth_nonneg : 0 ≤ (ε - δ) / 2 := by
+    linarith
+  exact
+    extractableRandomnessLog_tomamichel_rounded_source_theorem_of_cqSmoothConditionalMinEntropyCandidate
+      E hδ0 hδε hε1
+      (E.CqSmoothConditionalMinEntropyCandidate_of_smoothConditionalMinEntropyNormalizedCandidates
+        hεsmooth_nonneg)
 
 /--
 Registered source-strength randomness-extraction endpoint.

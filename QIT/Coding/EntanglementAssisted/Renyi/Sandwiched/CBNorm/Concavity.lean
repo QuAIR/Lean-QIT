@@ -7,7 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.CBNorm.Induced
-public import QIT.Information.Renyi.FrankLieb
+public import QIT.Information.Renyi.FrankLieb.Variational
 
 /-!
 # Concavity and reference twirl support for EA CB norms

@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Protocols.FQSW.Core
+public import QIT.Protocols.LOCC.Core
 public import QIT.States.Geometry.FuchsVdG
 
 /-!
@@ -33,82 +34,6 @@ namespace QIT
 universe u v w x y z p q u' v'
 
 noncomputable section
-
-/-- A finite quantum instrument.  Each outcome branch is completely positive
-and trace-nonincreasing, and the sum of all branches is a channel. -/
-structure FiniteInstrument
-    (input : Type u) (output : Type v) (outcome : Type w)
-    [Fintype input] [DecidableEq input]
-    [Fintype output] [DecidableEq output]
-    [Fintype outcome] where
-  branch : outcome → MatrixMap input output
-  branchTraceNonincreasingCP :
-    ∀ result, MatrixMap.TraceNonincreasingCP (branch result)
-  total : Channel input output
-  sum_branch_eq_total : (∑ result, branch result) = total.map
-
-namespace FiniteInstrument
-
-variable {input : Type u} {output : Type v} {outcome : Type w}
-variable [Fintype input] [DecidableEq input]
-variable [Fintype output] [DecidableEq output]
-variable [Fintype outcome]
-
-/-- The channel obtained by forgetting the classical outcome. -/
-def totalChannel (M : FiniteInstrument input output outcome) : Channel input output :=
-  M.total
-
-theorem branch_completelyPositive
-    (M : FiniteInstrument input output outcome) (result : outcome) :
-    MatrixMap.IsCompletelyPositive (M.branch result) :=
-  (M.branchTraceNonincreasingCP result).completelyPositive
-
-end FiniteInstrument
-
-/-- A finite one-way LOCC operation.  Alice applies an instrument, sends its
-classical result, and Bob applies the channel indexed by that result.  The
-realization is constrained exactly to the corresponding finite branch sum, so
-it is not an arbitrary replacement channel. -/
-structure OneWayLOCC
-    (aliceInput : Type u) (aliceOutput : Type v)
-    (bobInput : Type w) (bobOutput : Type x) (outcome : Type y)
-    [Fintype aliceInput] [DecidableEq aliceInput]
-    [Fintype aliceOutput] [DecidableEq aliceOutput]
-    [Fintype bobInput] [DecidableEq bobInput]
-    [Fintype bobOutput] [DecidableEq bobOutput]
-    [Fintype outcome] where
-  aliceInstrument : FiniteInstrument aliceInput aliceOutput outcome
-  bobChannel : outcome → Channel bobInput bobOutput
-  realization : Channel (Prod aliceInput bobInput) (Prod aliceOutput bobOutput)
-  realization_map :
-    realization.map =
-      ∑ result,
-        MatrixMap.kron (aliceInstrument.branch result) (bobChannel result).map
-
-namespace OneWayLOCC
-
-variable {aliceInput : Type u} {aliceOutput : Type v}
-variable {bobInput : Type w} {bobOutput : Type x} {outcome : Type y}
-variable [Fintype aliceInput] [DecidableEq aliceInput]
-variable [Fintype aliceOutput] [DecidableEq aliceOutput]
-variable [Fintype bobInput] [DecidableEq bobInput]
-variable [Fintype bobOutput] [DecidableEq bobOutput]
-variable [Fintype outcome]
-
-/-- The CPTP map computed by the one-way LOCC realization. -/
-def toChannel
-    (L : OneWayLOCC aliceInput aliceOutput bobInput bobOutput outcome) :
-    Channel (Prod aliceInput bobInput) (Prod aliceOutput bobOutput) :=
-  L.realization
-
-theorem toChannel_map
-    (L : OneWayLOCC aliceInput aliceOutput bobInput bobOutput outcome) :
-    L.toChannel.map =
-      ∑ result,
-        MatrixMap.kron (L.aliceInstrument.branch result) (L.bobChannel result).map :=
-  L.realization_map
-
-end OneWayLOCC
 
 /-- Regroup the block source and input entanglement as local Alice, local Bob,
 and inaccessible reference registers. -/
@@ -260,11 +185,14 @@ namespace PureVector
 
 /-- Achievable net entanglement rate for standard state merging.  Every
 positive rate slack and fidelity-error tolerance is met by concrete one-way
-LOCC block protocols at all sufficiently large blocklengths. -/
+LOCC block protocols at all sufficiently large blocklengths.  One exponent,
+uniform over both tolerances and all selected protocols, bounds the output
+ebit rank as required by the HOW converse. -/
 def IsAchievableStateMergingRate
     (psi : PureVector (Prod (Prod a b) r)) (R : ℝ) : Prop :=
+  ∃ outputEbitExponent : ℝ, 0 ≤ outputEbitExponent ∧
   ∀ delta : ℝ, 0 < delta → ∀ epsilon : ℝ, 0 < epsilon →
-    ∃ N : ℕ, ∀ n : ℕ, n ≥ N →
+    ∃ N : ℕ, 1 ≤ N ∧ ∀ n : ℕ, n ≥ N →
       ∃ (kA : Type x), ∃ (_ : Fintype kA), ∃ (_ : DecidableEq kA),
         ∃ (_ : Nonempty kA),
       ∃ (kB : Type y), ∃ (_ : Fintype kB), ∃ (_ : DecidableEq kB),
@@ -274,7 +202,9 @@ def IsAchievableStateMergingRate
       ∃ (outcome : Type q), ∃ (_ : Fintype outcome), ∃ (_ : DecidableEq outcome),
         ∃ (_ : Nonempty outcome),
       ∃ C : StateMergingBlockProtocol psi n kA kB lA lB outcome,
-        C.netEntanglementRate ≤ R + delta ∧ C.fidelityError ≤ epsilon
+        C.netEntanglementRate ≤ R + delta ∧
+        C.fidelityError ≤ epsilon ∧
+        log2 (Fintype.card lA : ℝ) ≤ outputEbitExponent * (n : ℝ)
 
 /-- Standard state-merging cost: the infimum of achievable net entanglement
 rates.  No sign restriction is imposed, so negative conditional-entropy

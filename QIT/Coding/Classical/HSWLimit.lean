@@ -25,12 +25,12 @@ open Filter
 
 namespace QIT
 
-universe u v w z
+universe uLabel uLabel2 uSystem uSystem2 uIn uOut uEnsemble uCode uAux
 
 noncomputable section
 
 /-- Product-probability averaging of a separated sum. -/
-private theorem sum_product_mul_add {ι κ : Type u} [Fintype ι] [Fintype κ]
+private theorem sum_product_mul_add {ι : Type uLabel} {κ : Type uLabel2} [Fintype ι] [Fintype κ]
     (p : ι → ℝ) (q : κ → ℝ) (s : ι → ℝ) (t : κ → ℝ)
     (hp : ∑ i, p i = 1) (hq : ∑ j, q j = 1) :
     (∑ x : Prod ι κ, p x.1 * q x.2 * (s x.1 + t x.2)) =
@@ -60,7 +60,8 @@ private theorem sum_product_mul_add {ι κ : Type u} [Fintype ι] [Fintype κ]
           ring
 
 /-- Product-probability averaging of a separated product over `ℂ`. -/
-private theorem sum_product_mul_mul_complex {ι κ : Type u} [Fintype ι] [Fintype κ]
+private theorem sum_product_mul_mul_complex {ι : Type uLabel} {κ : Type uLabel2}
+    [Fintype ι] [Fintype κ]
     (p : ι → ℂ) (q : κ → ℂ) (s : ι → ℂ) (t : κ → ℂ) :
     (∑ x : Prod ι κ, (p x.1 * q x.2) * (s x.1 * t x.2)) =
       (∑ i, p i * s i) * (∑ j, q j * t j) := by
@@ -82,7 +83,7 @@ private theorem sum_product_mul_mul_complex {ι κ : Type u} [Fintype ι] [Finty
 
 namespace Ensemble
 
-variable {ι κ a b : Type u}
+variable {ι : Type uLabel} {κ : Type uLabel2} {a : Type uSystem} {b : Type uSystem2}
 variable [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 
@@ -234,16 +235,16 @@ namespace Channel
 
 set_option maxHeartbeats 4000000
 
-variable {a b : Type u}
+variable {a : Type uIn} {b : Type uOut}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 
-private theorem tensorPower_nonempty_of_nonempty (α : Type u) [Nonempty α] :
+private theorem tensorPower_nonempty_of_nonempty (α : Type uAux) [Nonempty α] :
     (n : ℕ) → Nonempty (QIT.TensorPower α n)
   | 0 => ⟨PUnit.unit⟩
   | n + 1 => ⟨(Classical.choice (inferInstance : Nonempty α),
       Classical.choice (tensorPower_nonempty_of_nonempty α n))⟩
 
-private theorem tensorPower_card (α : Type u) [Fintype α] (n : ℕ) :
+private theorem tensorPower_card (α : Type uAux) [Fintype α] (n : ℕ) :
     Fintype.card (QIT.TensorPower α n) = (Fintype.card α) ^ n := by
   induction n with
   | zero =>
@@ -253,7 +254,7 @@ private theorem tensorPower_card (α : Type u) [Fintype α] (n : ℕ) :
       rw [Fintype.card_prod, ih, Nat.pow_succ]
       ring
 
-private theorem tensorPower_card_real (α : Type u) [Fintype α] (n : ℕ) :
+private theorem tensorPower_card_real (α : Type uAux) [Fintype α] (n : ℕ) :
     (Fintype.card (QIT.TensorPower α n) : ℝ) = (Fintype.card α : ℝ) ^ n := by
   exact_mod_cast tensorPower_card α n
 
@@ -263,7 +264,7 @@ private theorem log2_pow_nat (x : ℝ) (n : ℕ) :
   rw [Real.log_pow]
   ring
 
-private theorem log2_card_nonneg (α : Type u) [Fintype α] [Nonempty α] :
+private theorem log2_card_nonneg (α : Type uAux) [Fintype α] [Nonempty α] :
     0 ≤ log2 (Fintype.card α : ℝ) := by
   have hcard_pos_nat : 0 < Fintype.card α := Fintype.card_pos_iff.mpr inferInstance
   have hcard_one : (1 : ℝ) ≤ (Fintype.card α : ℝ) := by exact_mod_cast hcard_pos_nat
@@ -274,7 +275,7 @@ private theorem log2_card_nonneg (α : Type u) [Fintype α] [Nonempty α] :
 is the same output ensemble as applying each block channel separately and then appending the
 two output blocks. -/
 theorem outputEnsemble_append_prod_reindex (N : Channel a b) (m r : ℕ)
-    {ι κ : Type u} [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
+    {ι κ : Type uEnsemble} [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
     (E : Ensemble ι (QIT.TensorPower a m)) (F : Ensemble κ (QIT.TensorPower a r)) :
     (N.tensorPower (m + r)).outputEnsemble
         ((E.prod F).reindexStates (TensorPower.appendEquiv a m r)) =
@@ -290,7 +291,7 @@ theorem outputEnsemble_append_prod_reindex (N : Channel a b) (m r : ℕ)
 /-- Holevo information is superadditive under channel tensor powers at the level of concrete
 product block ensembles. -/
 theorem hswHolevoRate_append_prod_reindex (N : Channel a b) (m r : ℕ)
-    {ι κ : Type u} [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
+    {ι κ : Type uEnsemble} [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
     (E : Ensemble ι (QIT.TensorPower a m)) (F : Ensemble κ (QIT.TensorPower a r)) :
     (N.tensorPower (m + r)).hswHolevoRate
         ((E.prod F).reindexStates (TensorPower.appendEquiv a m r)) =
@@ -303,8 +304,8 @@ theorem hswHolevoRate_append_prod_reindex (N : Channel a b) (m r : ℕ)
 near-optimal ensembles for the two block channels and the product-ensemble append bridge, so it
 does not assume an optimizer exists. -/
 theorem blockHolevoInformation_superadditive [Nonempty a] (N : Channel a b) (m r : ℕ) :
-    N.blockHolevoInformation m + N.blockHolevoInformation r ≤
-      N.blockHolevoInformation (m + r) := by
+    (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) m + (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) r ≤
+      (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) (m + r) := by
   rw [le_iff_forall_pos_lt_add]
   intro η hη
   letI : Nonempty (QIT.TensorPower a m) := tensorPower_nonempty_of_nonempty a m
@@ -315,13 +316,13 @@ theorem blockHolevoInformation_superadditive [Nonempty a] (N : Channel a b) (m r
   obtain ⟨ι, hιF, hιD, E, hE⟩ :=
     (N.tensorPower m).exists_hswHolevoRate_gt_of_lt_holevoInformation
       (N.tensorPower m).holevoInformationValues_nonempty
-      (R := N.blockHolevoInformation m - η / 4) (by
+      (R := (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) m - η / 4) (by
         dsimp [Channel.blockHolevoInformation]
         linarith)
   obtain ⟨κ, hκF, hκD, F, hF⟩ :=
     (N.tensorPower r).exists_hswHolevoRate_gt_of_lt_holevoInformation
       (N.tensorPower r).holevoInformationValues_nonempty
-      (R := N.blockHolevoInformation r - η / 4) (by
+      (R := (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) r - η / 4) (by
         dsimp [Channel.blockHolevoInformation]
         linarith)
   letI : Fintype ι := hιF
@@ -332,11 +333,11 @@ theorem blockHolevoInformation_superadditive [Nonempty a] (N : Channel a b) (m r
     (E.prod F).reindexStates (TensorPower.appendEquiv a m r)
   have hGmem :
       (N.tensorPower (m + r)).hswHolevoRate G ∈
-        (N.tensorPower (m + r)).holevoInformationValues := by
+        (Channel.holevoInformationValues.{uIn, uOut, uEnsemble} (N.tensorPower (m + r))) := by
     refine ⟨Prod ι κ, inferInstance, inferInstance, G, rfl⟩
   have hGle :
       (N.tensorPower (m + r)).hswHolevoRate G ≤
-        N.blockHolevoInformation (m + r) := by
+        (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) (m + r) := by
     unfold blockHolevoInformation Channel.holevoInformation
     exact le_csSup (N.tensorPower (m + r)).holevoInformationValues_bddAbove hGmem
   have hG :
@@ -345,7 +346,8 @@ theorem blockHolevoInformation_superadditive [Nonempty a] (N : Channel a b) (m r
     dsimp [G]
     exact hswHolevoRate_append_prod_reindex N m r E F
   have happrox :
-      N.blockHolevoInformation m + N.blockHolevoInformation r - η / 2 <
+      (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) m +
+          (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) r - η / 2 <
         (N.tensorPower m).hswHolevoRate E + (N.tensorPower r).hswHolevoRate F := by
     linarith
   linarith
@@ -354,9 +356,10 @@ theorem blockHolevoInformation_superadditive [Nonempty a] (N : Channel a b) (m r
 nonnegativity, but it is self-contained and sufficient for the Fekete-limit remainder term. -/
 theorem neg_block_log_card_le_blockHolevoInformation [Nonempty a] [Nonempty b]
     (N : Channel a b) (n : ℕ) :
-    -((n : ℝ) * log2 (Fintype.card b : ℝ)) ≤ N.blockHolevoInformation n := by
+    -((n : ℝ) * log2 (Fintype.card b : ℝ)) ≤ (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n := by
   letI : Nonempty (QIT.TensorPower a n) := tensorPower_nonempty_of_nonempty a n
-  have hne : (N.tensorPower n).holevoInformationValues.Nonempty :=
+  have hne :
+      (Channel.holevoInformationValues.{uIn, uOut, uEnsemble} (N.tensorPower n)).Nonempty :=
     (N.tensorPower n).holevoInformationValues_nonempty
   obtain ⟨r, hr⟩ := hne
   have hr_lower : -log2 (Fintype.card (QIT.TensorPower b n) : ℝ) ≤ r := by
@@ -364,7 +367,7 @@ theorem neg_block_log_card_le_blockHolevoInformation [Nonempty a] [Nonempty b]
     letI : Fintype ι := hιF
     letI : DecidableEq ι := hιD
     exact Ensemble.neg_log_card_le_holevoInformation ((N.tensorPower n).outputEnsemble E)
-  have hr_le : r ≤ N.blockHolevoInformation n := by
+  have hr_le : r ≤ (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n := by
     unfold blockHolevoInformation Channel.holevoInformation
     exact le_csSup (N.tensorPower n).holevoInformationValues_bddAbove hr
   have hlog :
@@ -375,22 +378,25 @@ theorem neg_block_log_card_le_blockHolevoInformation [Nonempty a] [Nonempty b]
 
 private theorem nat_mul_blockHolevoInformation_le_block [Nonempty a] [Nonempty b]
     (N : Channel a b) (q k : ℕ) :
-    (q : ℝ) * N.blockHolevoInformation k ≤ N.blockHolevoInformation (q * k) := by
+    (q : ℝ) * (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k ≤
+      (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) (q * k) := by
   induction q with
   | zero =>
       have h0 := neg_block_log_card_le_blockHolevoInformation N 0
       simpa using h0
   | succ q ih =>
       calc
-        ((q + 1 : ℕ) : ℝ) * N.blockHolevoInformation k
-            = (q : ℝ) * N.blockHolevoInformation k + N.blockHolevoInformation k := by
+        ((q + 1 : ℕ) : ℝ) * (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k
+            = (q : ℝ) * (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k +
+              (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k := by
               norm_num [Nat.cast_add, Nat.cast_one]
               ring
-        _ ≤ N.blockHolevoInformation (q * k) + N.blockHolevoInformation k :=
+        _ ≤ (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) (q * k) +
+              (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k :=
               add_le_add ih le_rfl
-        _ ≤ N.blockHolevoInformation (q * k + k) :=
+        _ ≤ (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) (q * k + k) :=
               blockHolevoInformation_superadditive N (q * k) k
-        _ = N.blockHolevoInformation ((q + 1) * k) := by
+        _ = (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) ((q + 1) * k) := by
               rw [Nat.succ_mul]
 
 /-- Epsilon form of the source-style regularized Holevo limit.  This is the finite-dimensional
@@ -398,9 +404,10 @@ Fekete argument specialized to the HSW block-Holevo sequence. -/
 theorem regularizedHolevoInformation_limit [Nonempty a] [Nonempty b] (N : Channel a b) :
     ∀ ε : ℝ, 0 < ε →
       ∃ N0 : ℕ, ∀ n : ℕ, n ≥ N0 →
-        |N.blockHolevoInformation n / (n : ℝ) - N.regularizedHolevoInformation| < ε := by
+        |(Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n / (n : ℝ) -
+            (Channel.regularizedHolevoInformation.{uIn, uOut, uEnsemble} N)| < ε := by
   intro ε hε
-  let s : ℝ := N.regularizedHolevoInformation
+  let s : ℝ := (Channel.regularizedHolevoInformation.{uIn, uOut, uEnsemble} N)
   let B : ℝ := log2 (Fintype.card b : ℝ)
   have hB_nonneg : 0 ≤ B := by
     dsimp [B]
@@ -411,13 +418,14 @@ theorem regularizedHolevoInformation_limit [Nonempty a] [Nonempty b] (N : Channe
     exact csSup_le N.regularizedHolevoRateValues_nonempty
       (fun r hr => by
         rcases hr with ⟨n, hn, rfl⟩
-        exact blockHolevoRate_le_log_card N hn)
-  have hs_ne : N.regularizedHolevoRateValues.Nonempty :=
+        exact blockHolevoRate_le_log_card.{uIn, uOut, uEnsemble, uEnsemble} N hn)
+  have hs_ne : (Channel.regularizedHolevoRateValues.{uIn, uOut, uEnsemble} N).Nonempty :=
     N.regularizedHolevoRateValues_nonempty
-  have hs_bdd : BddAbove N.regularizedHolevoRateValues :=
+  have hs_bdd : BddAbove (Channel.regularizedHolevoRateValues.{uIn, uOut, uEnsemble} N) :=
     N.regularizedHolevoRateValues_bddAbove
   have hnear_lt_s : s - ε / 4 < s := by linarith
-  have hnear_lt_sSup : s - ε / 4 < sSup N.regularizedHolevoRateValues := by
+  have hnear_lt_sSup :
+      s - ε / 4 < sSup (Channel.regularizedHolevoRateValues.{uIn, uOut, uEnsemble} N) := by
     dsimp [s]
     unfold regularizedHolevoInformation
     linarith
@@ -457,18 +465,18 @@ theorem regularizedHolevoInformation_limit [Nonempty a] [Nonempty b] (N : Channe
     exact_mod_cast hdecomp_nat
   have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hkR_pos
   have hAk_near :
-      (s - ε / 4) * (k : ℝ) < N.blockHolevoInformation k := by
+      (s - ε / 4) * (k : ℝ) < (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k := by
     have hrate_near :
-        s - ε / 4 < N.blockHolevoInformation k / (k : ℝ) := by
+        s - ε / 4 < (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k / (k : ℝ) := by
       simpa [s] using hrk_gt
     have hmul := mul_lt_mul_of_pos_right hrate_near hkR_pos
-    have hdiv : (N.blockHolevoInformation k / (k : ℝ)) * (k : ℝ) =
-        N.blockHolevoInformation k := by
+    have hdiv : ((Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k / (k : ℝ)) * (k : ℝ) =
+        (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k := by
       field_simp [hk_ne]
     nlinarith
   have hqAk_near :
       (q : ℝ) * ((s - ε / 4) * (k : ℝ)) <
-        (q : ℝ) * N.blockHolevoInformation k :=
+        (q : ℝ) * (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k :=
     mul_lt_mul_of_pos_left hAk_near hqR_pos
   have hqk : (q : ℝ) * (k : ℝ) = (n : ℝ) - (t : ℝ) := by
     linarith
@@ -493,33 +501,36 @@ theorem regularizedHolevoInformation_limit [Nonempty a] [Nonempty b] (N : Channe
     lt_of_le_of_lt hloss_le hpenalty_lt
   have hmain_lower :
       (n : ℝ) * (s - ε) <
-        (q : ℝ) * N.blockHolevoInformation k - (t : ℝ) * B := by
+        (q : ℝ) * (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k - (t : ℝ) * B := by
     nlinarith [hqAk_near, hqk, hloss_lt, hnR_pos]
   have hq_block :
-      (q : ℝ) * N.blockHolevoInformation k ≤ N.blockHolevoInformation (q * k) :=
+      (q : ℝ) * (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k ≤
+        (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) (q * k) :=
     nat_mul_blockHolevoInformation_le_block N q k
   have ht_block :
-      -(t : ℝ) * B ≤ N.blockHolevoInformation t := by
+      -(t : ℝ) * B ≤ (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) t := by
     simpa [B] using neg_block_log_card_le_blockHolevoInformation N t
   have hblock_lower :
-      (q : ℝ) * N.blockHolevoInformation k - (t : ℝ) * B ≤
-        N.blockHolevoInformation n := by
+      (q : ℝ) * (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k - (t : ℝ) * B ≤
+        (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n := by
     calc
-      (q : ℝ) * N.blockHolevoInformation k - (t : ℝ) * B
-          ≤ N.blockHolevoInformation (q * k) + N.blockHolevoInformation t := by
+      (q : ℝ) * (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) k - (t : ℝ) * B
+          ≤ (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) (q * k) +
+            (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) t := by
             linarith
-      _ ≤ N.blockHolevoInformation (q * k + t) :=
+      _ ≤ (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) (q * k + t) :=
             blockHolevoInformation_superadditive N (q * k) t
-      _ = N.blockHolevoInformation n := by rw [hdecomp_nat]
+      _ = (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n := by rw [hdecomp_nat]
   have hrate_lower :
-      s - ε < N.blockHolevoInformation n / (n : ℝ) := by
-    have hnmain : (n : ℝ) * (s - ε) < N.blockHolevoInformation n :=
+      s - ε < (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n / (n : ℝ) := by
+    have hnmain : (n : ℝ) * (s - ε) < (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n :=
       lt_of_lt_of_le hmain_lower hblock_lower
     exact (lt_div_iff₀ hnR_pos).2 (by simpa [mul_comm] using hnmain)
   have hrate_upper :
-      N.blockHolevoInformation n / (n : ℝ) ≤ s := by
+      (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n / (n : ℝ) ≤ s := by
     dsimp [s]
-    exact blockHolevoRate_le_regularizedHolevoInformation N hn_pos_nat
+    exact blockHolevoRate_le_regularizedHolevoInformation.{
+      uIn, uOut, uEnsemble, uEnsemble} N hn_pos_nat
   rw [abs_sub_lt_iff]
   constructor <;> linarith
 
@@ -527,28 +538,34 @@ theorem regularizedHolevoInformation_limit [Nonempty a] [Nonempty b] (N : Channe
 regularized-Holevo interface. -/
 theorem classicalCapacity_eq_regularizedHolevoInformation [Nonempty a] [Nonempty b]
     (N : Channel a b) :
-    N.classicalCapacity = N.regularizedHolevoInformation := by
-  have hconv : N.IsClassicalRateUpperBound N.regularizedHolevoInformation :=
-    hsw_regularizedHolevoInformation_converse N
+    (Channel.classicalCapacity.{uIn, uOut, uCode} N) = (Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uCode} N) := by
+  have hconv :
+      (Channel.IsClassicalRateUpperBound.{uIn, uOut, uCode} N)
+        (Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uCode} N) :=
+    hsw_regularizedHolevoInformation_converse.{uIn, uOut, uEnsemble, uCode} N
   have hdirect :
-      ∀ R : ℝ, R < N.regularizedHolevoInformation → N.IsAchievableClassicalRate R :=
-    hsw_regularizedHolevoInformation_direct N
+      ∀ R : ℝ, R < (Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uCode} N) →
+        (Channel.IsAchievableClassicalRate.{uIn, uOut, uCode} N) R :=
+    hsw_regularizedHolevoInformation_direct.{
+      uIn, uOut, max uEnsemble uCode, uCode} N
   have hnonempty :
-      ({R : ℝ | N.IsAchievableClassicalRate R} : Set ℝ).Nonempty := by
-    refine ⟨N.regularizedHolevoInformation - 1, ?_⟩
-    exact hdirect (N.regularizedHolevoInformation - 1) (by linarith)
-  have hbounded : BddAbove {R : ℝ | N.IsAchievableClassicalRate R} := by
-    exact ⟨N.regularizedHolevoInformation, fun R hR => hconv R hR⟩
+      ({R : ℝ | (Channel.IsAchievableClassicalRate.{uIn, uOut, uCode} N) R} : Set ℝ).Nonempty := by
+    refine ⟨(Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uCode} N) - 1, ?_⟩
+    exact hdirect ((Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uCode} N) - 1) (by linarith)
+  have hbounded : BddAbove {R : ℝ | (Channel.IsAchievableClassicalRate.{uIn, uOut, uCode} N) R} := by
+    exact ⟨(Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uCode} N), fun R hR => hconv R hR⟩
   apply le_antisymm
   · unfold classicalCapacity
     exact csSup_le hnonempty fun R hR => hconv R hR
   · rw [le_iff_forall_pos_lt_add]
     intro η hη
     have hAch :
-        N.IsAchievableClassicalRate (N.regularizedHolevoInformation - η / 2) :=
-      hdirect (N.regularizedHolevoInformation - η / 2) (by linarith)
+        (Channel.IsAchievableClassicalRate.{uIn, uOut, uCode} N)
+          ((Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uCode} N) - η / 2) :=
+      hdirect ((Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uCode} N) - η / 2) (by linarith)
     have hle :
-        N.regularizedHolevoInformation - η / 2 ≤ N.classicalCapacity := by
+        (Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uCode} N) - η / 2 ≤
+          (Channel.classicalCapacity.{uIn, uOut, uCode} N) := by
       unfold classicalCapacity
       exact le_csSup hbounded hAch
     linarith
@@ -556,20 +573,20 @@ theorem classicalCapacity_eq_regularizedHolevoInformation [Nonempty a] [Nonempty
 /-- The named HSW capacity proposition is now proved. -/
 theorem hswCapacityFormula_proved [Nonempty a] [Nonempty b]
     (N : Channel a b) :
-    N.hswCapacityFormula := by
+    (Channel.hswCapacityFormula.{uIn, uOut, uEnsemble, uCode} N) := by
   exact classicalCapacity_eq_regularizedHolevoInformation N
 
 /-- Full source-shaped HSW theorem in the repository's operational/supremum interface plus
 the proved epsilon-limit form of the regularized Holevo expression. -/
 theorem hswClassicalCapacityTheorem_proved [Nonempty a] [Nonempty b]
     (N : Channel a b) :
-    N.classicalCapacity = N.regularizedHolevoInformation ∧
+    (Channel.classicalCapacity.{uIn, uOut, uCode} N) = (Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uCode} N) ∧
       (∀ ε : ℝ, 0 < ε →
         ∃ N0 : ℕ, ∀ n : ℕ, n ≥ N0 →
-          |N.blockHolevoInformation n / (n : ℝ) -
-            N.regularizedHolevoInformation| < ε) := by
+          |(Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uCode} N) n / (n : ℝ) -
+            (Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uCode} N)| < ε) := by
   exact ⟨classicalCapacity_eq_regularizedHolevoInformation N,
-    regularizedHolevoInformation_limit N⟩
+    regularizedHolevoInformation_limit.{uIn, uOut, max uEnsemble uCode} N⟩
 
 end Channel
 

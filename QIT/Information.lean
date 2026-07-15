@@ -11,6 +11,7 @@ public import QIT.OneShot
 public import QIT.Information.Entropy
 public import QIT.Information.Renyi
 public import QIT.Information.AlickiFannesWinter
+public import QIT.Information.Fannes
 public import QIT.Information.PositionBasedCoding
 public import QIT.Information.SequentialDecoding
 public import QIT.Information.PositionNaimarkTrace
@@ -21,7 +22,7 @@ public import QIT.Information.Basic
 /-!
 # Information quantities
 
-Information-quantity import surface for entropy, coding, recovery, and one-shot APIs.
+Information-quantity import surface for entropy, Renyi, coding, one-shot, and comparison APIs.
 -/
 
 @[expose] public section

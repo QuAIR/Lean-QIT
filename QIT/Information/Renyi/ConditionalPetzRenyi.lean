@@ -455,7 +455,8 @@ theorem identityTensorStateMatrix_prod_grouping
       Matrix.kroneckerMap_apply, conditionalPetzRenyiProductGroupingEquiv,
       hi]
 
-private theorem trace_mul_submatrix_equiv {ι κ : Type*} [Fintype ι] [Fintype κ]
+/-- Trace pairings are invariant under simultaneous finite basis relabeling. -/
+theorem trace_mul_submatrix_equiv {ι κ : Type*} [Fintype ι] [Fintype κ]
     (e : ι ≃ κ) (M U : CMatrix κ) :
     ((M.submatrix e e) * (U.submatrix e e)).trace = (M * U).trace := by
   rw [Matrix.trace]
@@ -470,6 +471,13 @@ private theorem trace_mul_submatrix_equiv {ι κ : Type*} [Fintype ι] [Fintype 
     (fun y : κ => M (e x) y * U y (e x))
     (by intro z; rfl)
 
+/-- Matrix trace is invariant under simultaneous finite basis relabeling. -/
+theorem trace_submatrix_equiv {ι κ : Type*} [Fintype ι] [Fintype κ]
+    [DecidableEq ι] [DecidableEq κ] (e : ι ≃ κ) (M : CMatrix κ) :
+    (M.submatrix e e).trace = M.trace := by
+  simpa [Matrix.submatrix_one_equiv] using
+    (trace_mul_submatrix_equiv e M (1 : CMatrix κ))
+
 private def conditionalPetzRenyiCMatrixReindexStarAlgEquiv
     {ι κ : Type*} [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
     (e : ι ≃ κ) : CMatrix κ ≃⋆ₐ[ℂ] CMatrix ι where
@@ -481,7 +489,9 @@ private def conditionalPetzRenyiCMatrixReindexStarAlgEquiv
     ext i j
     simp [Matrix.reindex_apply]
 
-private theorem cMatrix_rpow_submatrix_equiv_nonneg
+/-- Nonnegative real powers commute with finite basis relabeling for positive
+semidefinite complex matrices. -/
+theorem cMatrix_rpow_submatrix_equiv_nonneg
     {ι κ : Type*} [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
     (M : CMatrix κ) (hM : M.PosSemidef) (e : ι ≃ κ)
     {s : ℝ} (hs0 : 0 ≤ s) :

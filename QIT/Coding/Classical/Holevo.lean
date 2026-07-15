@@ -29,7 +29,7 @@ open Matrix
 
 namespace QIT
 
-universe u v
+universe u v w
 
 noncomputable section
 
@@ -55,6 +55,15 @@ theorem holevoInformation_def (E : Ensemble ι a) :
       State.vonNeumann E.averageState
         - ∑ i, (E.probs i).toReal * State.vonNeumann (E.states i) := by
   rfl
+
+/-- Relabeling the finite classical index leaves Holevo information unchanged. -/
+@[simp]
+theorem relabelIndex_holevoInformation {κ : Type w} [Fintype κ]
+    (E : Ensemble ι a) (e : κ ≃ ι) :
+    (E.relabelIndex e).holevoInformation = E.holevoInformation := by
+  rw [holevoInformation_def, holevoInformation_def, relabelIndex_averageState]
+  congr 1
+  exact Fintype.sum_equiv e _ _ (fun _ => rfl)
 
 /-- Nonnegativity of Holevo information is equivalent to the entropy-concavity
 inequality for a finite ensemble. -/

@@ -137,6 +137,7 @@ def adhwFQSWSigmaA2RStateOfIsometry
   ((adhwFQSWPostAliceStateOfIsometry ψ U).reindex
     (fqswAliceOutputToA2REquiv q e b r)).marginalB
 
+omit [Nonempty e] in
 /-- The regrouped post-Alice pure vector purifies the ADHW decoupling marginal
 `σ^{A₂R}(U)`. -/
 theorem adhwFQSWPostAliceA2RPurificationOfIsometry_purifies
@@ -208,6 +209,7 @@ theorem adhwFQSWSigmaRState_eq_source_marginalB
   simp [adhwFQSWSigmaRState, adhwFQSWARState, State.marginalB,
     State.coherentTransferReferenceState, partialTraceA, Fintype.sum_prod_type]
 
+omit [Nonempty e] in
 /-- Regrouping Alice's post-isometry state into `A₁B × A₂R` and then tracing
 down to `R` is the same as tracing the original post-isometry state down to
 `BR` and then to `R`.  This is the register-bookkeeping part of the ADHW
@@ -248,6 +250,7 @@ theorem adhwFQSW_sourceInput_marginalB_marginalB
     partialTraceA]
   rw [Finset.sum_comm]
 
+omit [Nonempty e] in
 /-- Tracing Bob's register after Alice's isometry is the same as applying the
 Alice isometry directly to the source `AR` marginal.  This is the register
 bridge that lets the ADHW Schur/HS calculation work on `ψ^{AR}` while the
@@ -276,6 +279,7 @@ theorem adhwFQSWPostAliceStateOfIsometry_coherentTransferReference_matrix
   intro bb _
   ring
 
+omit [Nonempty e] in
 /-- The decoupling marginal `σ^{A₂R}(U)` can be obtained from the post-Alice
 `(A₁A₂)R` marginal by regrouping it as `A₁ × (A₂R)` and tracing out `A₁`.
 This is the bookkeeping form used by the ADHW one-shot decoupling proof. -/
@@ -293,6 +297,7 @@ theorem adhwFQSWSigmaA2RStateOfIsometry_eq_postAliceAR_marginalB
     fqswSourceToAliceInputEquiv, fqswQERToA2REquiv, partialTraceA,
     Fintype.sum_prod_type]
 
+omit [Nonempty e] in
 /-- Matrix form of the ADHW decoupling marginal: `σ^{A₂R}(U)` is the
 `A₂R` marginal of the source `AR` state after Alice's split isometry.  This is
 the exact bridge from the operational full-source protocol state to the
@@ -313,6 +318,7 @@ theorem adhwFQSWSigmaA2RStateOfIsometry_matrix_eq_partialTraceA_applyMatrix_AR
           (fqswQERToA2REquiv q e r).symm) = _
   rw [adhwFQSWPostAliceStateOfIsometry_coherentTransferReference_matrix]
 
+omit [Nonempty e] in
 /-- The reference marginal `σ^R` in the ADHW one-shot proof is independent of
 Alice's isometry.  This is the formal source-route bridge that justifies using
 a fixed `σ^R` in the product term
@@ -341,82 +347,6 @@ theorem adhwFQSWSigmaA2RStateOfIsometry_marginalB_eq_sigmaR
           rw [hpost]
     _ = adhwFQSWSigmaRState ψ := by
           exact adhwFQSW_sourceInput_marginalB_marginalB ψ
-
-/-- Local maximally mixed state constructor used by the FQSW source route. -/
-def adhwFQSWMaximallyMixedState (α : Type*) [Fintype α] [DecidableEq α] [Nonempty α] :
-    State α where
-  matrix := (((Fintype.card α : ℝ)⁻¹ : ℝ) : ℂ) • (1 : CMatrix α)
-  pos := by
-    have hscalar : (0 : ℂ) ≤ (((Fintype.card α : ℝ)⁻¹ : ℝ) : ℂ) := by
-      exact_mod_cast inv_nonneg.mpr (Nat.cast_nonneg (Fintype.card α : ℕ))
-    exact Matrix.PosSemidef.smul Matrix.PosSemidef.one hscalar
-  trace_eq_one := by
-    rw [Matrix.trace_smul, Matrix.trace_one]
-    have hcard : (Fintype.card α : ℂ) ≠ 0 := by
-      exact_mod_cast (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)
-    norm_num [hcard]
-
-/-- On a one-point finite system, every state is the local maximally mixed
-state. -/
-theorem state_matrix_eq_maximallyMixed_of_subsingleton
-    {α : Type u} [Fintype α] [DecidableEq α] [Nonempty α] [Subsingleton α]
-    (ρ : State α) :
-    ρ.matrix = (adhwFQSWMaximallyMixedState α).matrix := by
-  ext x y
-  have hxy : x = y := Subsingleton.elim _ _
-  subst y
-  have hdiag : ρ.matrix x x = 1 := by
-    have htrace := ρ.trace_eq_one
-    rw [Matrix.trace] at htrace
-    have hsum :
-        (∑ z : α, ρ.matrix z z) = ρ.matrix x x := by
-      apply Finset.sum_eq_single x
-      · intro z _ hz
-        exact False.elim (hz (Subsingleton.elim z x))
-      · intro h
-        exact False.elim (h (Finset.mem_univ x))
-    have hsum_diag :
-        (∑ z : α, Matrix.diag ρ.matrix z) = ρ.matrix x x := by
-      simpa [Matrix.diag] using hsum
-    rw [hsum_diag] at htrace
-    exact htrace
-  have hcard : (Fintype.card α : ℝ) = 1 := by
-    exact_mod_cast
-      (Fintype.card_eq_one_iff.mpr ⟨x, fun y => Subsingleton.elim y x⟩)
-  simp [adhwFQSWMaximallyMixedState, hdiag, hcard]
-
-/-- The `A₂` marginal of the canonical maximally entangled vector is maximally
-mixed. -/
-theorem maximallyEntangledPureVector_marginalA (pairing : e ≃ et) :
-    (maximallyEntangledPureVector pairing).state.marginalA =
-      adhwFQSWMaximallyMixedState e := by
-  apply State.ext
-  ext x y
-  have hcard_pos : 0 < (Fintype.card e : ℝ) := by
-    exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
-  have hsqrt_ne : (Real.sqrt (Fintype.card e : ℝ) : ℂ) ≠ 0 := by
-    exact_mod_cast (ne_of_gt (Real.sqrt_pos.2 hcard_pos))
-  have hcoef :
-      ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹ *
-          star ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹)) =
-        (((Fintype.card e : ℝ)⁻¹ : ℝ) : ℂ) := by
-    rw [star_inv₀]
-    simp
-    field_simp [hsqrt_ne]
-    rw [← Complex.ofReal_natCast, ← Complex.ofReal_pow]
-    exact congrArg Complex.ofReal (Real.sq_sqrt hcard_pos.le).symm
-  have hcoef' :
-      ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹ *
-          ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹)) =
-        (((Fintype.card e : ℝ)⁻¹ : ℝ) : ℂ) := by
-    simpa using hcoef
-  by_cases hxy : x = y
-  · subst y
-    simp [State.marginalA, partialTraceB,
-      maximallyEntangledPureVector, adhwFQSWMaximallyMixedState, hcoef']
-  · have hyx : ¬ y = x := fun h => hxy h.symm
-    simp [State.marginalA, partialTraceB,
-      maximallyEntangledPureVector, adhwFQSWMaximallyMixedState, hxy, hyx]
 
 /-- The maximally mixed `I^{A₂}/d_{A₂}` state appearing in the ADHW decoupling
 target of fqsw.tex lines 580-841. -/
@@ -623,14 +553,14 @@ theorem referenceIsometry_ofEquiv_applyMatrix_eq_submatrix
     · intro z _ hz
       have hxz : x.1 ≠ E z := by
         intro hxz
-        exact hz (by simpa [hxz])
+        exact hz (by simp [hxz])
       simp [hxz]
     · intro hz
       exact False.elim (hz (Finset.mem_univ _))
   · intro z _ hz
     have hyz : y.1 ≠ E z := by
       intro hyz
-      exact hz (by simpa [hyz])
+      exact hz (by simp [hyz])
     simp [hyz]
   · intro hz
     exact False.elim (hz (Finset.mem_univ _))
@@ -652,13 +582,13 @@ theorem referenceIsometry_ofEquiv_mul_conjTranspose
     · intro x _ hx
       have hne : i ≠ E x := by
         intro h
-        exact hx (by simpa [h])
+        exact hx (by simp [h])
       simp [ReferenceIsometry.ofEquiv, Matrix.conjTranspose, hne]
     · intro h
       exact False.elim (h (Finset.mem_univ (E.symm i)))
   · rw [Matrix.mul_apply]
     rw [Finset.sum_eq_zero]
-    · simp [Matrix.one_apply, hij]
+    · simp [hij]
     · intro x _
       by_cases hi : i = E x
       · have hj : j ≠ E x := by
@@ -723,7 +653,7 @@ theorem referenceIsometry_applyMatrix_eq_kronecker_one_conj
   simp [ReferenceIsometry.applyMatrix, ReferenceIsometry.targetBlock,
     Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
     Matrix.conjTranspose_kronecker, Matrix.conjTranspose_one, Matrix.one_apply,
-    Finset.sum_mul, Finset.mul_sum, mul_assoc]
+    Finset.sum_mul, mul_assoc]
   rw [fqsw_sum_prod_right_eq_pair' (b0 := y.2)]
   apply Finset.sum_congr rfl
   intro i _
@@ -740,7 +670,7 @@ theorem fqsw_partialTraceB_partialTraceA_qer_reindex
       partialTraceA (a := q) (b := e)
         (partialTraceB (a := Prod q e) (b := r) M) := by
   ext i j
-  simp [partialTraceA, partialTraceB, fqswQERToA2REquiv, Fintype.sum_prod_type]
+  simp [partialTraceA, partialTraceB, fqswQERToA2REquiv]
   rw [Finset.sum_comm]
 
 /-- Tracing out `q` after regrouping `(q × e) × r` as `q × (e × r)`
@@ -858,7 +788,7 @@ theorem fqsw_hilbertSchmidtSq_submatrix_equiv
     hilbertSchmidtSq (M.submatrix E.symm E.symm) = hilbertSchmidtSq M := by
   unfold hilbertSchmidtSq
   congr 1
-  simp only [Matrix.trace, Matrix.mul_apply, Matrix.star_apply, Matrix.submatrix_apply]
+  simp only [Matrix.trace]
   calc
     (∑ i : β, ∑ k : β, star (M (E.symm k) (E.symm i)) * M (E.symm k) (E.symm i)) =
         ∑ i : α, ∑ k : β, star (M (E.symm k) i) * M (E.symm k) i := by
@@ -894,6 +824,7 @@ theorem fqsw_unitaryTensorPowerMatrix_two_eq_tensorPowerKroneckerTwo
   rw [unitaryTensorPowerMatrix_apply_eq_fin_prod]
   simp [tensorPowerKroneckerTwo]
 
+omit [Nonempty e] in
 /-- Operational/source bridge for the ADHW max-mixed calculation: the `A₂`
 marginal produced by the split-unitary FQSW definitions is the partial trace
 of the split source `A` marginal after conjugating by the Haar unitary. -/
@@ -971,6 +902,7 @@ theorem adhwFQSWSigmaA2StateOfSplitUnitary_matrix_eq_partialTraceA_applyMatrix_A
           simp
   exact hsplit
 
+omit [Nonempty e] in
 /-- Applying the split-unitary Alice isometry to the source `AR` matrix is the
 same as conjugating the split source matrix by `U ⊗ I_R`. -/
 theorem adhwFQSWAliceIsometryOfSplitUnitary_applyMatrix_AR_eq
@@ -993,6 +925,7 @@ theorem adhwFQSWAliceIsometryOfSplitUnitary_applyMatrix_AR_eq
   rw [referenceIsometry_applyMatrix_eq_kronecker_one_conj]
   simp [ReferenceUnitary.toReferenceIsometry, Matrix.star_eq_conjTranspose]
 
+omit [Nonempty e] in
 /-- Operational/source bridge for the ADHW product calculation: the `A₂R`
 marginal produced by a split-unitary Alice isometry is the `q` partial trace of
 the split source `AR` matrix after conjugating Alice's split register by the
@@ -1011,6 +944,7 @@ theorem adhwFQSWSigmaA2RStateOfSplitUnitary_matrix_eq_partialTraceA_applyMatrix_
   rw [adhwFQSWSigmaA2RStateOfIsometry_matrix_eq_partialTraceA_applyMatrix_AR]
   rw [adhwFQSWAliceIsometryOfSplitUnitary_applyMatrix_AR_eq]
 
+omit [Nonempty e] in
 /-- The product term `σ^{A₂}(U) ⊗ σ^R` is the same `q` partial trace applied
 to the conjugated split product matrix `ψ^A ⊗ ψ^R`. -/
 theorem adhwFQSWProductA2RStateOfSplitUnitary_matrix_eq_partialTraceA_applyMatrix_ARProduct
@@ -1513,6 +1447,7 @@ theorem unitaryGroup_entry_continuous
     Continuous fun U : Matrix.unitaryGroup α ℂ => (U : CMatrix α) i j :=
   (continuous_apply j).comp ((continuous_apply i).comp continuous_subtype_val)
 
+omit [Nonempty e] in
 /-- The ADHW decoupling marginal `σ^{A₂R}(U)` is continuous as a matrix-valued
 function of the Haar unitary. -/
 theorem adhwFQSWSigmaA2RStateOfSplitUnitary_matrix_continuous
@@ -1540,6 +1475,7 @@ theorem adhwFQSWSigmaA2RStateOfSplitUnitary_matrix_continuous
     Matrix.vecMulVec_apply, dotProduct]
   continuity
 
+omit [Nonempty e] in
 /-- The ADHW marginal `σ^{A₂}(U)` is continuous as a matrix-valued function of
 the Haar unitary. -/
 theorem adhwFQSWSigmaA2StateOfSplitUnitary_matrix_continuous
@@ -1583,6 +1519,7 @@ theorem adhwFQSWDecouplingTraceNormIntegrandOfSplitUnitary_sq_integrable
   ((adhwFQSWDecouplingTraceNormIntegrandOfSplitUnitary_continuous ψ split).pow 2).integrable_of_hasCompactSupport
     (HasCompactSupport.of_compactSpace _)
 
+omit [Nonempty e] in
 /-- The product-decoupling ADHW integrand is continuous in the Haar unitary. -/
 theorem adhwFQSWProductDecouplingTraceNormIntegrandOfSplitUnitary_continuous
     (ψ : PureVector (Prod (Prod a b) r)) (split : a ≃ Prod q e) :
@@ -1632,6 +1569,7 @@ theorem adhwFQSWMaxMixedA2TraceNormIntegrandOfSplitUnitary_sq_integrable
   ((adhwFQSWMaxMixedA2TraceNormIntegrandOfSplitUnitary_continuous ψ split).pow 2).integrable_of_hasCompactSupport
     (HasCompactSupport.of_compactSpace _)
 
+omit [Nonempty e] in
 /-- The product-decoupling Hilbert--Schmidt integrand is continuous in the
 Haar unitary. -/
 theorem adhwFQSWProductDecouplingHilbertSchmidtIntegrandOfSplitUnitary_continuous
@@ -1683,6 +1621,7 @@ theorem adhwFQSWMaxMixedA2HilbertSchmidtIntegrandOfSplitUnitary_integrable
   (adhwFQSWMaxMixedA2HilbertSchmidtIntegrandOfSplitUnitary_continuous ψ split).integrable_of_hasCompactSupport
     (HasCompactSupport.of_compactSpace _)
 
+omit [Nonempty e] in
 /-- ADHW fqsw.tex lines 751-754: pointwise Cauchy--Schwarz bridge from the
 product-decoupling trace norm to the Hilbert--Schmidt square on `A₂R`. -/
 theorem adhwFQSWProductDecouplingTraceNormSq_le_card_mul_hilbertSchmidt
@@ -2114,6 +2053,7 @@ theorem adhwFQSWARProductOverlap_nonneg
     (((adhwFQSWARState ψ).marginalA).prod
       ((adhwFQSWARState ψ).marginalB)).pos
 
+omit [DecidableEq q] [DecidableEq e] [Nonempty e] in
 /-- The split `A` marginal still has trace one. -/
 theorem adhwFQSWASplitMatrix_trace
     (ψ : PureVector (Prod (Prod a b) r)) (split : a ≃ Prod q e) :
@@ -2122,6 +2062,7 @@ theorem adhwFQSWASplitMatrix_trace
   rw [fqsw_trace_submatrix_equiv split.symm]
   exact (adhwFQSWARState ψ).marginalA.trace_eq_one
 
+omit [Nonempty e] in
 /-- The split `A` marginal has the same purity as the source `A` marginal. -/
 theorem adhwFQSWASplitMatrix_hilbertSchmidtSq
     (ψ : PureVector (Prod (Prod a b) r)) (split : a ≃ Prod q e) :
@@ -2129,6 +2070,7 @@ theorem adhwFQSWASplitMatrix_hilbertSchmidtSq
   unfold adhwFQSWASplitMatrix adhwFQSWAPurity
   rw [fqsw_hilbertSchmidtSq_submatrix_equiv split]
 
+omit [Nonempty e] in
 /-- The split `AR` matrix has the same purity as the source `AR` marginal. -/
 theorem adhwFQSWARSplitMatrix_hilbertSchmidtSq
     (ψ : PureVector (Prod (Prod a b) r)) (split : a ≃ Prod q e) :
@@ -2136,6 +2078,7 @@ theorem adhwFQSWARSplitMatrix_hilbertSchmidtSq
   unfold adhwFQSWARSplitMatrix adhwFQSWARPurity
   rw [fqsw_hilbertSchmidtSq_submatrix_equiv (fqswARSplitEquiv split)]
 
+omit [Fintype q] [DecidableEq q] [Fintype e] [DecidableEq e] [Nonempty e] in
 /-- The split product matrix is the source product state reindexed by the
 ADHW split on Alice's register. -/
 theorem adhwFQSWARProductSplitMatrix_eq_source_product_submatrix
@@ -2149,6 +2092,7 @@ theorem adhwFQSWARProductSplitMatrix_eq_source_product_submatrix
     adhwFQSWSigmaRState, State.prod, fqswARSplitEquiv, Matrix.kronecker,
     Matrix.kroneckerMap_apply]
 
+omit [Nonempty e] in
 /-- The split product matrix has Hilbert--Schmidt square
 `Tr[(ψ^A)^2] Tr[(ψ^R)^2]`. -/
 theorem adhwFQSWARProductSplitMatrix_hilbertSchmidtSq
@@ -2159,6 +2103,7 @@ theorem adhwFQSWARProductSplitMatrix_hilbertSchmidtSq
   rw [fqsw_hilbertSchmidtSq_kronecker]
   rw [adhwFQSWASplitMatrix_hilbertSchmidtSq]
 
+omit [DecidableEq q] [DecidableEq e] [Nonempty e] in
 /-- The split overlap is the source overlap
 `Tr[ψ^{AR}(ψ^A ⊗ ψ^R)]`. -/
 theorem adhwFQSWARProductSplitMatrix_overlap
@@ -2181,6 +2126,7 @@ theorem adhwFQSWARProductSplitMatrix_overlap
   rw [fqsw_mul_submatrix_equiv E]
   rw [fqsw_trace_submatrix_equiv E]
 
+omit [DecidableEq q] [DecidableEq e] [Nonempty e] in
 /-- Tracing the split `AR` source matrix over `A₁A₂` recovers the fixed
 reference marginal `σ^R`. -/
 theorem adhwFQSWARSplitMatrix_partialTraceA
@@ -2200,6 +2146,7 @@ theorem adhwFQSWARSplitMatrix_partialTraceA
     (fun y : a => (adhwFQSWARState ψ).matrix (y, i) (y, j))
     (fun _ => rfl)
 
+omit [Fintype q] [DecidableEq q] [Fintype e] [DecidableEq e] [Nonempty e] in
 /-- Tracing the split `AR` source matrix over `R` recovers the split
 `A₁A₂` source marginal. -/
 theorem adhwFQSWARSplitMatrix_partialTraceB
@@ -2212,6 +2159,7 @@ theorem adhwFQSWARSplitMatrix_partialTraceB
   rw [State.marginalA_matrix]
   rfl
 
+omit [DecidableEq q] [DecidableEq e] [Nonempty e] in
 /-- Tracing the split product matrix over `A₁A₂` also recovers the same
 reference marginal `σ^R`. -/
 theorem adhwFQSWARProductSplitMatrix_partialTraceA
@@ -2224,6 +2172,7 @@ theorem adhwFQSWARProductSplitMatrix_partialTraceA
   rw [adhwFQSWASplitMatrix_trace]
   exact matrixScale_one (adhwFQSWSigmaRState ψ).matrix
 
+omit [Nonempty e] in
 /-- If the split Alice system `A₁ × A₂` is a one-point system, the source
 correlation matrix `ψ^{AR} - ψ^A ⊗ ψ^R` is zero. -/
 theorem adhwFQSWARCorrelationSplitMatrix_eq_zero_of_subsingleton
@@ -2259,6 +2208,7 @@ theorem adhwFQSWARCorrelationSplitMatrix_eq_zero_of_subsingleton
       rw [← State.marginalA_matrix ρsplit, hAmatrix]
       rw [← State.marginalB_matrix ρsplit, hBmatrix]
 
+omit [Nonempty e] in
 /-- Source ADHW correlation matrix
 `ψ^{AR} - ψ^A ⊗ ψ^R`, reindexed by the split, has the source Hilbert--Schmidt
 expansion from fqsw.tex lines 682-747. -/
@@ -2423,6 +2373,7 @@ theorem adhwFQSWSchur_half_sub_eq_HS_prefactor
     ne_of_gt hden_pos, ne_of_gt hden_pos', hden_ne_norm]
   ring_nf
 
+omit [DecidableEq q] [DecidableEq e] [Nonempty e] in
 private theorem fqsw_twoCopySideOperator_trace
     (G : CMatrix (TensorPower q 2)) (H : CMatrix (TensorPower e 2)) :
     (twoCopySideOperator (a := q) (e := e) G H).trace = G.trace * H.trace := by
@@ -2482,6 +2433,7 @@ private theorem fqsw_tensorPowerSwapMatrix_two_trace
           (a := α) (1 : CMatrix α)
       simpa [Matrix.trace_one] using h
 
+omit [Nonempty e] in
 private theorem fqsw_splitObservable_trace :
     (twoCopySideOperator (a := q) (e := e)
       (1 : CMatrix (TensorPower q 2))
@@ -2492,6 +2444,7 @@ private theorem fqsw_splitObservable_trace :
   rw [tensorPower_card]
   rw [Nat.cast_pow]
 
+omit [Nonempty e] in
 private theorem fqsw_fullSwap_mul_splitObservable_trace [Nonempty q] :
     (tensorPowerSwapMatrix_two (a := Prod q e) *
       twoCopySideOperator (a := q) (e := e)
@@ -2865,7 +2818,7 @@ theorem fqsw_A2_square_trace_eq_twirl_inv_integrand
           congr 1
           simp [A, U₂, unitaryTwirlIntegrand,
             fqsw_unitaryTensorPowerMatrix_two_eq_tensorPowerKroneckerTwo,
-            fqsw_tensorPowerKroneckerTwo_star, Matrix.mul_assoc]
+            Matrix.mul_assoc]
     _ = (tensorPowerKroneckerTwo (a := Prod q e) ρ *
         unitaryTwirlIntegrand (a := Prod q e) 2
           (twoCopySideOperator (a := q) (e := e)
@@ -3122,7 +3075,7 @@ theorem fqsw_A2R_square_trace_eq_twirl_inv_integrand
         rw [fqsw_twoCopySideOperator_mul]
         simp [A, H, U₂, unitaryTwirlIntegrand,
           fqsw_unitaryTensorPowerMatrix_two_eq_tensorPowerKroneckerTwo,
-          fqsw_tensorPowerKroneckerTwo_star, Matrix.mul_assoc]
+          Matrix.mul_assoc]
     _ = (tensorPowerKroneckerTwo (a := Prod (Prod q e) r) ρ *
         twoCopySideOperator (a := Prod q e) (e := r)
           (unitaryTwirlIntegrand (a := Prod q e) 2
@@ -3214,14 +3167,13 @@ theorem fqsw_hilbertSchmidtSq_sub_maximallyMixedState
   have hcross :
       (ρ.matrix * (adhwFQSWMaximallyMixedState e).matrix).trace.re =
         1 / (Fintype.card e : ℝ) := by
-    simp [adhwFQSWMaximallyMixedState, Matrix.mul_smul, Matrix.trace_smul,
+    simp [adhwFQSWMaximallyMixedState, Matrix.trace_smul,
       ρ.trace_eq_one, one_div]
   have hmm :
       hilbertSchmidtSq (adhwFQSWMaximallyMixedState e).matrix =
         1 / (Fintype.card e : ℝ) := by
     unfold hilbertSchmidtSq adhwFQSWMaximallyMixedState
-    simp [Matrix.star_eq_conjTranspose, Matrix.conjTranspose_smul,
-      Matrix.trace_smul, Matrix.trace_one, one_div, hcard_ne]
+    simp [Matrix.trace_smul, Matrix.trace_one, one_div]
   rw [fqsw_hilbertSchmidtSq_sub_of_isHermitian
     ρ.matrix (adhwFQSWMaximallyMixedState e).matrix
     ρ.pos.isHermitian (adhwFQSWMaximallyMixedState e).pos.isHermitian]
@@ -3239,6 +3191,7 @@ def adhwFQSWHSOneShotExact
     (adhwFQSWARPurity ψ - 2 * adhwFQSWARProductOverlap ψ +
       adhwFQSWAPurity ψ * adhwFQSWRPurity ψ)
 
+omit [DecidableEq q] [DecidableEq e] in
 /-- In the one-point split case, the ADHW Hilbert--Schmidt prefactor is zero,
 so the exact one-shot expression is zero. -/
 theorem adhwFQSWHSOneShotExact_eq_zero_of_subsingleton
@@ -3481,6 +3434,7 @@ theorem adhwFQSWMaxMixedA2HilbertSchmidtAverage_le_of_nontrivial
         rw [hcard_a]
         field_simp [ne_of_gt hdq_pos]
 
+omit [Nonempty e] in
 /-- Pointwise source-route bridge for ADHW fqsw.tex lines 682-747: the
 product-decoupling Hilbert--Schmidt integrand is the `A₂R` marginal of the
 conjugated source correlation matrix
@@ -3699,7 +3653,7 @@ theorem adhwFQSWProductDecouplingHilbertSchmidtAverage_le
       change hilbertSchmidtSq M = 0
       have hM : M = 0 := by
         ext x y
-        simp [M, K, partialTraceA, Matrix.mul_apply]
+        simp [M, K, partialTraceA]
       rw [hM]
       simp [hilbertSchmidtSq]
     rw [hfun, MeasureTheory.integral_zero]
@@ -3892,6 +3846,7 @@ theorem adhwFQSWMaxMixedA2TraceNormAverageSq_le_of_hilbertSchmidtAverage
     (adhwFQSWMaxMixedA2TraceNormAverageSq_le_card_mul_hilbertSchmidtAverage
       ψ split).trans hHS
 
+omit [Fintype q] [DecidableEq q] [Fintype e] [DecidableEq e] [Nonempty e] in
 /-- ADHW fqsw.tex lines 747-760: after the Hilbert--Schmidt average has been
 evaluated, Cauchy--Schwarz and the Schur-prefactor estimate imply the
 trace-norm square bound.  This is the algebraic tail of the decoupling proof;
@@ -3951,7 +3906,8 @@ theorem adhwFQSW_traceNormSqBound_of_HSOneShotExact
     dsimp [de, dr]
     positivity
   have hscaled := mul_le_mul_of_nonneg_left hc_mul hscale_nonneg
-  convert hscaled using 1 <;> field_simp [ne_of_gt hdq_pos] <;> ring
+  convert hscaled using 1
+  field_simp [ne_of_gt hdq_pos]
 
 /-- Source-route Schur twirling record for ADHW fqsw.tex lines 642-678, the
 Schur step inside the decoupling proof of fqsw.tex lines 580-841. -/
@@ -4538,9 +4494,13 @@ protocol by delegating to its selected decoupling witness. -/
 noncomputable def toOneShotProtocol : FQSWOneShotProtocol ψ q e e :=
   ADHWFQSWSelectedDecouplingIsometry.toOneShotProtocol H.selectedDecoupling
 
+omit [Fintype q] [DecidableEq q] [Nonempty q] [Fintype e] [DecidableEq e] [Nonempty e] in
 /-- The computed protocol of an assembled ADHW one-shot bound satisfies the
 standard ADHW one-shot trace-norm error bound. -/
-theorem toOneShotProtocol_traceNormError_le :
+theorem toOneShotProtocol_traceNormError_le
+    [Fintype q] [DecidableEq q] [Nonempty q]
+    [Fintype e] [DecidableEq e] [Nonempty e]
+    (H : ADHWFQSWOneShotBound ψ q e split) :
     H.toOneShotProtocol.traceNormError ≤ adhwFQSWOneShotErrorBound ψ q :=
   ADHWFQSWSelectedDecouplingIsometry.toOneShotProtocol_traceNormError_le
     H.selectedDecoupling

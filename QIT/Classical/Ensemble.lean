@@ -26,7 +26,7 @@ open scoped ComplexOrder MatrixOrder NNReal
 
 namespace QIT
 
-universe u v
+universe u v w
 
 noncomputable section
 
@@ -45,6 +45,29 @@ structure Ensemble (ι : Type u) (a : Type v) [Fintype ι] [Fintype a] [Decidabl
 namespace Ensemble
 
 variable {E : Ensemble ι a}
+
+/-- Relabel a finite ensemble along an equivalence of its classical index type. -/
+def relabelIndex {κ : Type w} [Fintype κ]
+    (E : Ensemble ι a) (e : κ ≃ ι) : Ensemble κ a where
+  probs k := E.probs (e k)
+  weights_sum := by
+    calc
+      ∑ k, E.probs (e k) = ∑ i, E.probs i :=
+        Fintype.sum_equiv e _ _ (fun _ => rfl)
+      _ = 1 := E.weights_sum
+  states k := E.states (e k)
+
+@[simp]
+theorem relabelIndex_probs {κ : Type w} [Fintype κ]
+    (E : Ensemble ι a) (e : κ ≃ ι) (k : κ) :
+    (E.relabelIndex e).probs k = E.probs (e k) :=
+  rfl
+
+@[simp]
+theorem relabelIndex_states {κ : Type w} [Fintype κ]
+    (E : Ensemble ι a) (e : κ ≃ ι) (k : κ) :
+    (E.relabelIndex e).states k = E.states (e k) :=
+  rfl
 
 /-- Ensemble probabilities are nonnegative when read as real numbers. -/
 theorem prob_nonneg (E : Ensemble ι a) (i : ι) : 0 ≤ (E.probs i : ℝ) :=
@@ -79,6 +102,15 @@ def averageState (E : Ensemble ι a) : State a where
 theorem averageState_matrix (E : Ensemble ι a) :
     E.averageState.matrix = ∑ i, (E.probs i) • (E.states i).matrix := by
   rfl
+
+/-- Relabeling the classical index of an ensemble preserves its average state. -/
+@[simp]
+theorem relabelIndex_averageState {κ : Type w} [Fintype κ]
+    (E : Ensemble ι a) (e : κ ≃ ι) :
+    (E.relabelIndex e).averageState = E.averageState := by
+  apply State.ext
+  rw [averageState_matrix, averageState_matrix]
+  exact Fintype.sum_equiv e _ _ (fun _ => rfl)
 
 /-- If every member state equals `σ`, the average is `σ`. -/
 theorem averageState_of_constant (E : Ensemble ι a) (σ : State a)

@@ -571,6 +571,7 @@ theorem traceNorm_partialTraceA_le_matrix
               (U : CMatrix b)
     _ ≤ traceNorm X := traceNorm_variational_unitary_abs_trace_le X Ubig
 
+omit [DecidableEq a] in
 private theorem partialTraceB_mul_kronecker_one_left
     {b : Type v} [Fintype b] [DecidableEq b] (X : CMatrix (Prod a b)) (U : CMatrix a) :
     partialTraceB (a := a) (b := b) (X * Matrix.kronecker U (1 : CMatrix b)) =
@@ -580,6 +581,7 @@ private theorem partialTraceB_mul_kronecker_one_left
     Matrix.one_apply, Fintype.sum_prod_type, Finset.sum_mul]
   rw [Finset.sum_comm]
 
+omit [DecidableEq a] in
 private theorem partialTraceB_mul_trace_eq_trace_mul_kronecker_one_left
     {b : Type v} [Fintype b] [DecidableEq b] (X : CMatrix (Prod a b)) (U : CMatrix a) :
     ((partialTraceB (a := a) (b := b) X) * U).trace =
@@ -741,6 +743,7 @@ private theorem reindex_unitary_mem {b : Type v} [Fintype b] [DecidableEq b]
   rw [hsum]
   simpa [Matrix.one_apply] using happ
 
+omit [DecidableEq a] in
 private theorem trace_mul_submatrix_equiv {b : Type v} [Fintype b] [DecidableEq b]
     (e : a ≃ b) (M U : CMatrix b) :
     ((M.submatrix e e) * (U.submatrix e e)).trace = (M * U).trace := by

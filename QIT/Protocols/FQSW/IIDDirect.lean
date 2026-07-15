@@ -754,7 +754,17 @@ structure ADHWFQSWIidCompressedSourceWitness
     ADHWFQSWIidTypicalBobRegister ψ n δ ε T btyp
   typicalRefRegister :
     ADHWFQSWIidTypicalRefRegister ψ n δ ε T rtyp
+  unpaddedSource : PureVector (Prod (Prod atyp btyp) rtyp)
   source : PureVector (Prod (Prod (Prod q e) btyp) rtyp)
+  source_eq_padded :
+    source =
+      (paddedAtypEmbedding.isometry.prod
+        (ReferenceIsometry.ofEquiv (Equiv.refl btyp))).applyPureVector unpaddedSource
+  unpadded_lifted_state_eq_normalizedTypicalSource :
+    (let L := adhwFQSWIidTypicalSourceLiftMatrix
+       paddedAtypEmbedding typicalBobRegister typicalRefRegister
+     L * unpaddedSource.state.matrix * Matrix.conjTranspose L =
+       T.normalizedTypicalSource.matrix)
   source_a_purity_le :
     adhwFQSWAPurity source ≤
       (2 : ℝ) ^ (-((n : ℝ) * (adhwFQSWEntropyA ψ - δ)))
@@ -774,6 +784,569 @@ structure ADHWFQSWIidCompressedSourceWitness
        T.normalizedTypicalSource.matrix)
   source_traceNorm_le_original :
     traceDistance T.normalizedTypicalSource.matrix (adhwFQSWIidSourceState ψ n).matrix ≤ ε
+
+namespace ADHWFQSWIidCompressedSourceWitness
+
+variable {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δ ε : ℝ}
+variable {T : ADHWFQSWSimultaneousTypicalProjectors ψ n δ ε}
+variable {atyp : Type p} {btyp : Type u1} {rtyp : Type v1}
+variable {q : Type x} {e : Type y}
+variable [Fintype atyp] [DecidableEq atyp] [Nonempty atyp]
+variable [Fintype btyp] [DecidableEq btyp] [Nonempty btyp]
+variable [Fintype rtyp] [DecidableEq rtyp]
+variable [Fintype q] [DecidableEq q] [Nonempty q]
+variable [Fintype e] [DecidableEq e] [Nonempty e]
+
+/-- Isometric lift from all three finite typical registers to the original IID
+block registers. -/
+def sourceLiftIsometry
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e) :
+    ReferenceIsometry (Prod (Prod atyp btyp) rtyp)
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n)) :=
+  (W.paddedAtypEmbedding.supportIsometry.prod
+    W.typicalBobRegister.supportIsometry).prod
+      W.typicalRefRegister.supportIsometry
+
+/-- The finite-coordinate source decoded into the original IID systems. -/
+def decodedSourceState
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e) :
+    State (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n)) :=
+  (fqswChannelOfReferenceIsometry W.sourceLiftIsometry).applyState
+    W.unpaddedSource.state
+
+omit [Nonempty atyp] [Nonempty btyp] [Nonempty q] [Nonempty e] in
+/-- Decoding the constructed finite-coordinate source recovers exactly the
+normalized simultaneous-typical source. -/
+theorem decodedSourceState_eq_normalizedTypicalSource
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e) :
+    W.decodedSourceState = T.normalizedTypicalSource := by
+  apply State.ext
+  simpa [decodedSourceState, sourceLiftIsometry,
+    fqswChannelOfReferenceIsometry, Channel.applyState,
+    MatrixMap.ofReferenceIsometry_apply, PureVector.state,
+    ReferenceIsometry.prod, adhwFQSWIidTypicalSourceLiftMatrix] using
+      W.unpadded_lifted_state_eq_normalizedTypicalSource
+
+/-- Decode all three finite one-shot source registers into the original IID
+block registers using the physical Schumacher decoders. -/
+def sourceDecoder
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e) :
+    Channel (Prod (Prod (Prod q e) btyp) rtyp)
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n)) :=
+  (W.paddedAtypEmbedding.physicalDecoder.prod
+    W.typicalBobRegister.physicalDecoder).prod
+      W.typicalRefRegister.physicalDecoder
+
+/-- Embed the true finite typical registers into the padded one-shot source
+registers, leaving the finite reference register unchanged. -/
+def sourceEmbedding
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e) :
+    Channel (Prod (Prod atyp btyp) rtyp)
+      (Prod (Prod (Prod q e) btyp) rtyp) :=
+  (fqswChannelOfReferenceIsometry
+    (W.paddedAtypEmbedding.isometry.prod
+      (ReferenceIsometry.ofEquiv (Equiv.refl btyp)))).prod
+        (Channel.idChannel rtyp)
+
+omit [Nonempty atyp] [Nonempty btyp] [Nonempty q] [Nonempty e] in
+/-- The source embedding channel computes exactly the padded pure source stored
+by the IID witness. -/
+theorem sourceEmbedding_applyState_unpaddedSource
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e) :
+    W.sourceEmbedding.applyState W.unpaddedSource.state = W.source.state := by
+  unfold sourceEmbedding
+  rw [fqswChannelOfReferenceIsometry_prod_id_applyState_pure]
+  exact (congrArg PureVector.state W.source_eq_padded).symm
+
+omit [Nonempty btyp] [Nonempty q] [Nonempty e] in
+/-- Decoding immediately after the concrete padded source embedding is the
+three-register typical-support lift. -/
+theorem sourceDecoder_comp_sourceEmbedding
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e) :
+    W.sourceDecoder.comp W.sourceEmbedding =
+      fqswChannelOfReferenceIsometry W.sourceLiftIsometry := by
+  unfold sourceDecoder sourceEmbedding sourceLiftIsometry
+  rw [fqswChannelOfReferenceIsometry_prod,
+    fqswChannelOfReferenceIsometry_ofEquiv_refl]
+  rw [Channel.prod_comp_prod, Channel.prod_comp_prod]
+  rw [W.paddedAtypEmbedding.physicalDecoder_comp_isometry_eq_supportIsometryChannel]
+  rw [Channel.comp_idChannel, Channel.comp_idChannel]
+  rw [W.typicalBobRegister.physicalDecoder_eq_supportIsometryChannel,
+    W.typicalRefRegister.physicalDecoder_eq_supportIsometryChannel]
+  rw [← fqswChannelOfReferenceIsometry_prod,
+    ← fqswChannelOfReferenceIsometry_prod]
+
+omit [Nonempty btyp] [Nonempty q] [Nonempty e] in
+/-- The physical source decoder sends the padded one-shot source back to the
+same decoded source state used by the normalized-typical bridge. -/
+theorem sourceDecoder_applyState_source_eq_decodedSourceState
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e) :
+    W.sourceDecoder.applyState W.source.state = W.decodedSourceState := by
+  calc
+    W.sourceDecoder.applyState W.source.state =
+        W.sourceDecoder.applyState
+          (W.sourceEmbedding.applyState W.unpaddedSource.state) := by
+            rw [W.sourceEmbedding_applyState_unpaddedSource]
+    _ = (W.sourceDecoder.comp W.sourceEmbedding).applyState W.unpaddedSource.state := by
+          rw [Channel.applyState_comp]
+    _ = W.decodedSourceState := by
+          rw [W.sourceDecoder_comp_sourceEmbedding]
+          rfl
+
+/-- Decode the computed one-shot FQSW output back into the original IID source
+registers while leaving the distilled ebit registers unchanged. -/
+def decodedOneShotOutputState
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    State (Prod
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
+      (Prod e e)) :=
+  (W.sourceDecoder.prod
+    (Channel.idChannel (Prod e e))).applyState
+      H.toOneShotProtocol.outputState
+
+/-- Decode the source factor of the computed one-shot target while leaving its
+maximally entangled pair unchanged. -/
+def decodedOneShotTargetState
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    State (Prod
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
+      (Prod e e)) :=
+  (W.sourceDecoder.prod
+    (Channel.idChannel (Prod e e))).applyState
+      H.toOneShotProtocol.targetState
+
+/-- The source-shaped ideal target for the normalized simultaneous-typical
+state and the ebit pairing selected by the one-shot theorem. -/
+def normalizedTypicalTargetState
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    State (Prod
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
+      (Prod e e)) :=
+  T.normalizedTypicalSource.prod
+    (maximallyEntangledPureVector H.toOneShotProtocol.ebitPairing).state
+
+omit [Nonempty btyp] in
+/-- Decoding the one-shot ideal target produces the normalized simultaneous-
+typical source tensor the same canonical maximally entangled pair. -/
+theorem decodedOneShotTargetState_eq_normalizedTypicalTargetState
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    W.decodedOneShotTargetState H = W.normalizedTypicalTargetState H := by
+  have hid :
+      (Channel.idChannel (Prod e e)).applyState
+          (maximallyEntangledPureVector H.toOneShotProtocol.ebitPairing).state =
+        (maximallyEntangledPureVector H.toOneShotProtocol.ebitPairing).state := by
+    apply State.ext
+    change (Channel.idChannel (Prod e e)).map
+      (maximallyEntangledPureVector H.toOneShotProtocol.ebitPairing).state.matrix =
+        (maximallyEntangledPureVector H.toOneShotProtocol.ebitPairing).state.matrix
+    simp [Channel.idChannel, MatrixMap.ofKraus]
+  unfold decodedOneShotTargetState normalizedTypicalTargetState
+  rw [FQSWOneShotProtocol.targetState, Channel.applyState_prod]
+  rw [hid]
+  rw [W.sourceDecoder_applyState_source_eq_decodedSourceState,
+    W.decodedSourceState_eq_normalizedTypicalSource]
+
+/-- Alice's physical IID operation: Schumacher compression and padding,
+followed by the concrete one-shot decoupling isometry selected by ADHW. -/
+def physicalAliceOperation
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    Channel (TensorPower a n) (Prod q e) :=
+  (fqswChannelOfReferenceIsometry H.toOneShotProtocol.aliceIsometry).comp
+    W.paddedAtypEmbedding.physicalEncoder
+
+/-- Bob's physical IID operation: compress `B^n`, apply the concrete one-shot
+Uhlmann decoder, and decode both transferred typical systems back into the
+original `A^n B^n` registers. -/
+def physicalBobOperation
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    Channel (Prod q (TensorPower b n))
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) e) :=
+  let pre : Channel (Prod q (TensorPower b n)) (Prod q btyp) :=
+    (Channel.idChannel q).prod W.typicalBobRegister.physicalEncoder
+  let oneShot : Channel (Prod q btyp) (Prod (Prod (Prod q e) btyp) e) :=
+    fqswChannelOfReferenceIsometry H.toOneShotProtocol.bobIsometry
+  let post : Channel (Prod (Prod (Prod q e) btyp) e)
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) e) :=
+    (W.paddedAtypEmbedding.physicalDecoder.prod
+      W.typicalBobRegister.physicalDecoder).prod (Channel.idChannel e)
+  post.comp (oneShot.comp pre)
+
+/-- The source-route data determines an actual block protocol on the original
+IID registers; no preprocessing channel or semantic output field is supplied. -/
+def toFQSWBlockProtocol
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    FQSWBlockProtocol ψ n q e e where
+  aliceOperation := W.physicalAliceOperation H
+  bobOperation := W.physicalBobOperation H
+  ebitPairing := H.toOneShotProtocol.ebitPairing
+
+
+private theorem idChannel_prod
+    {alpha : Type u} {beta : Type v}
+    [Fintype alpha] [DecidableEq alpha] [Fintype beta] [DecidableEq beta] :
+    (Channel.idChannel alpha).prod (Channel.idChannel beta) =
+      Channel.idChannel (Prod alpha beta) := by
+  rw [Channel.mk.injEq]
+  apply LinearMap.ext
+  intro X
+  ext i j
+  change MatrixMap.kron (Channel.idChannel alpha).map
+      (Channel.idChannel beta).map X i j =
+    (Channel.idChannel (Prod alpha beta)).map X i j
+  rw [MatrixMap.kron_idChannel_apply_slice]
+  simp [Channel.idChannel, MatrixMap.ofKraus]
+
+/-- The channel pipeline computed by the finite-coordinate one-shot protocol. -/
+private def oneShotOutputChannel
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    Channel (Prod (Prod (Prod q e) btyp) rtyp)
+      (Prod (Prod (Prod (Prod q e) btyp) rtyp) (Prod e e)) :=
+  let sourceRegroup :=
+    Channel.reindex (fqswSourceToAliceInputEquiv (Prod q e) btyp rtyp)
+  let alice :=
+    (fqswChannelOfReferenceIsometry H.toOneShotProtocol.aliceIsometry).prod
+      (Channel.idChannel (Prod btyp rtyp))
+  let bobRegroup :=
+    Channel.reindex (fqswAliceOutputToBobInputEquiv q e btyp rtyp)
+  let bob :=
+    (fqswChannelOfReferenceIsometry H.toOneShotProtocol.bobIsometry).prod
+      (Channel.idChannel (Prod rtyp e))
+  let finalRegroup :=
+    Channel.reindex (fqswBobOutputToFinalEquiv (Prod q e) btyp e rtyp e)
+  finalRegroup.comp (bob.comp (bobRegroup.comp (alice.comp sourceRegroup)))
+
+/-- The channel pipeline computed by the concrete physical IID block. -/
+private def physicalOutputChannel
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    Channel (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
+      (Prod (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
+        (Prod e e)) :=
+  let sourceRegroup := Channel.reindex
+    (fqswSourceToAliceInputEquiv (TensorPower a n) (TensorPower b n) (TensorPower r n))
+  let alice := (W.physicalAliceOperation H).prod
+    (Channel.idChannel (Prod (TensorPower b n) (TensorPower r n)))
+  let bobRegroup := Channel.reindex
+    (fqswAliceOutputToBobInputEquiv q e (TensorPower b n) (TensorPower r n))
+  let bob := (W.physicalBobOperation H).prod
+    (Channel.idChannel (Prod (TensorPower r n) e))
+  let finalRegroup := Channel.reindex
+    (fqswBobOutputToFinalEquiv
+      (TensorPower a n) (TensorPower b n) e (TensorPower r n) e)
+  finalRegroup.comp (bob.comp (bobRegroup.comp (alice.comp sourceRegroup)))
+
+private theorem physicalOutputChannel_comp_sourceLift
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    (W.physicalOutputChannel H).comp
+        (fqswChannelOfReferenceIsometry W.sourceLiftIsometry) =
+      (W.sourceDecoder.prod (Channel.idChannel (Prod e e))).comp
+        ((W.oneShotOutputChannel H).comp W.sourceEmbedding) := by
+  let LA := fqswChannelOfReferenceIsometry W.paddedAtypEmbedding.supportIsometry
+  let LB := fqswChannelOfReferenceIsometry W.typicalBobRegister.supportIsometry
+  let LR := fqswChannelOfReferenceIsometry W.typicalRefRegister.supportIsometry
+  let P := fqswChannelOfReferenceIsometry W.paddedAtypEmbedding.isometry
+  let UA := fqswChannelOfReferenceIsometry H.toOneShotProtocol.aliceIsometry
+  let VB := fqswChannelOfReferenceIsometry H.toOneShotProtocol.bobIsometry
+  let IQ := Channel.idChannel q
+  let IE := Channel.idChannel e
+  let IB := Channel.idChannel btyp
+  let IR := Channel.idChannel rtyp
+  let Rsource0 := Channel.reindex (fqswSourceToAliceInputEquiv atyp btyp rtyp)
+  let Rsource1 := Channel.reindex (fqswSourceToAliceInputEquiv (Prod q e) btyp rtyp)
+  let RsourceN := Channel.reindex
+    (fqswSourceToAliceInputEquiv (TensorPower a n) (TensorPower b n) (TensorPower r n))
+  let Ralice0 := Channel.reindex (fqswAliceOutputToBobInputEquiv q e btyp rtyp)
+  let RaliceN := Channel.reindex
+    (fqswAliceOutputToBobInputEquiv q e (TensorPower b n) (TensorPower r n))
+  let Rfinal0 := Channel.reindex
+    (fqswBobOutputToFinalEquiv (Prod q e) btyp e rtyp e)
+  let RfinalN := Channel.reindex
+    (fqswBobOutputToFinalEquiv
+      (TensorPower a n) (TensorPower b n) e (TensorPower r n) e)
+  let DA := W.paddedAtypEmbedding.physicalDecoder
+  let DB := W.typicalBobRegister.physicalDecoder
+  let DR := W.typicalRefRegister.physicalDecoder
+  let sourceLift := (LA.prod LB).prod LR
+  let sourceEmbed := (P.prod IB).prod IR
+  let afterAlice := (Channel.idChannel (Prod q e)).prod (LB.prod LR)
+  let beforeBob := (IQ.prod LB).prod (LR.prod IE)
+  let afterBob := ((DA.prod DB).prod IE).prod (LR.prod IE)
+  have hSourceLiftChannel :
+      fqswChannelOfReferenceIsometry W.sourceLiftIsometry = sourceLift := by
+    unfold sourceLiftIsometry
+    rw [fqswChannelOfReferenceIsometry_prod,
+      fqswChannelOfReferenceIsometry_prod]
+  have hSourceDecoderChannel : W.sourceDecoder = (DA.prod DB).prod DR := by
+    rfl
+  have hSourceEmbeddingChannel : W.sourceEmbedding = sourceEmbed := by
+    unfold sourceEmbedding
+    rw [fqswChannelOfReferenceIsometry_prod,
+      fqswChannelOfReferenceIsometry_ofEquiv_refl]
+  have hSource : RsourceN.comp sourceLift = (LA.prod (LB.prod LR)).comp Rsource0 := by
+    exact (FQSWBlockProtocol.fqswSourceToAliceInput_naturality LA LB LR).symm
+  have hEmbed : Rsource1.comp sourceEmbed =
+      (P.prod (IB.prod IR)).comp Rsource0 := by
+    exact (FQSWBlockProtocol.fqswSourceToAliceInput_naturality P IB IR).symm
+  have hAliceLocal :
+      ((W.physicalAliceOperation H).prod
+          (Channel.idChannel (Prod (TensorPower b n) (TensorPower r n)))).comp
+          (LA.prod (LB.prod LR)) =
+        afterAlice.comp ((UA.prod (Channel.idChannel (Prod btyp rtyp))).comp
+          (P.prod (IB.prod IR))) := by
+    unfold physicalAliceOperation
+    rw [Channel.prod_comp_prod, fqswChannel_comp_assoc,
+      W.paddedAtypEmbedding.physicalEncoder_comp_supportIsometry]
+    rw [Channel.idChannel_comp]
+    rw [Channel.prod_comp_prod, Channel.idChannel_comp]
+    rw [Channel.prod_comp_prod, Channel.idChannel_comp]
+    rw [Channel.prod_comp_prod, Channel.comp_idChannel, Channel.comp_idChannel]
+  have hAliceRegroup : RaliceN.comp afterAlice = beforeBob.comp Ralice0 := by
+    dsimp only [RaliceN, afterAlice, beforeBob, Ralice0, IQ, IE]
+    rw [show Channel.idChannel (Prod q e) = IQ.prod IE by
+      exact idChannel_prod.symm]
+    exact (FQSWBlockProtocol.fqswAliceOutputToBobInput_naturality IQ IE LB LR).symm
+  have hBobLocal :
+      ((W.physicalBobOperation H).prod
+          (Channel.idChannel (Prod (TensorPower r n) e))).comp beforeBob =
+        afterBob.comp (VB.prod (Channel.idChannel (Prod rtyp e))) := by
+    unfold physicalBobOperation
+    dsimp only
+    rw [Channel.prod_comp_prod, Channel.idChannel_comp]
+    rw [fqswChannel_comp_assoc, fqswChannel_comp_assoc]
+    rw [Channel.prod_comp_prod, Channel.comp_idChannel,
+      W.typicalBobRegister.physicalEncoder_comp_supportIsometry]
+    rw [idChannel_prod, Channel.comp_idChannel]
+    rw [Channel.prod_comp_prod, Channel.comp_idChannel]
+  have hReferenceDecoder : DR = LR := by
+    dsimp only [DR, LR]
+    exact W.typicalRefRegister.physicalDecoder_eq_supportIsometryChannel
+  have hFinal : RfinalN.comp afterBob =
+      (((DA.prod DB).prod DR).prod (Channel.idChannel (Prod e e))).comp Rfinal0 := by
+    rw [hReferenceDecoder]
+    dsimp only [RfinalN, afterBob, DA, DB, LR, IE, Rfinal0]
+    rw [show Channel.idChannel (Prod e e) = IE.prod IE by
+      exact idChannel_prod.symm]
+    exact (FQSWBlockProtocol.fqswAliceOutputToBobInput_naturality
+      (q0 := Prod (Prod q e) btyp) (e0 := e) (b0 := rtyp) (r0 := e)
+      (q1 := Prod (TensorPower a n) (TensorPower b n))
+      (e1 := e) (b1 := TensorPower r n) (r1 := e)
+      (DA.prod DB) IE LR IE).symm
+  rw [hSourceLiftChannel, hSourceDecoderChannel, hSourceEmbeddingChannel]
+  unfold physicalOutputChannel oneShotOutputChannel
+  dsimp only
+  simp only [fqswChannel_comp_assoc]
+  rw [hSource]
+  rw [← fqswChannel_comp_assoc _ _ Rsource0, hAliceLocal]
+  simp only [fqswChannel_comp_assoc]
+  rw [← hEmbed]
+  rw [← fqswChannel_comp_assoc RaliceN afterAlice, hAliceRegroup]
+  simp only [fqswChannel_comp_assoc]
+  rw [← fqswChannel_comp_assoc
+      ((W.physicalBobOperation H).prod
+        (Channel.idChannel (Prod (TensorPower r n) e))) beforeBob,
+    hBobLocal]
+  simp only [fqswChannel_comp_assoc]
+  rw [← fqswChannel_comp_assoc RfinalN afterBob, hFinal]
+  simp only [fqswChannel_comp_assoc]
+  rfl
+
+/-- On the normalized simultaneous-typical source, the concrete physical IID
+pipeline is exactly the decoded finite-coordinate one-shot output. -/
+theorem physicalOutput_on_normalizedTypicalSource
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    (W.toFQSWBlockProtocol H).outputStateOfBlockState T.normalizedTypicalSource =
+      W.decodedOneShotOutputState H := by
+  rw [← W.decodedSourceState_eq_normalizedTypicalSource]
+  unfold FQSWBlockProtocol.outputStateOfBlockState decodedSourceState
+  dsimp only
+  rw [← Channel.reindex_applyState, ← Channel.reindex_applyState,
+    ← Channel.reindex_applyState]
+  rw [← Channel.applyState_comp, ← Channel.applyState_comp,
+    ← Channel.applyState_comp, ← Channel.applyState_comp]
+  change (W.physicalOutputChannel H).applyState
+      ((fqswChannelOfReferenceIsometry W.sourceLiftIsometry).applyState
+        W.unpaddedSource.state) = W.decodedOneShotOutputState H
+  rw [← Channel.applyState_comp, W.physicalOutputChannel_comp_sourceLift]
+  unfold decodedOneShotOutputState
+  rw [Channel.applyState_comp, Channel.applyState_comp]
+  rw [W.sourceEmbedding_applyState_unpaddedSource]
+  change (W.sourceDecoder.prod (Channel.idChannel (Prod e e))).applyState
+      ((W.oneShotOutputChannel H).applyState W.source.state) =
+    (W.sourceDecoder.prod (Channel.idChannel (Prod e e))).applyState
+      H.toOneShotProtocol.outputState
+  congr 1
+  rw [← H.toOneShotProtocol.outputStateOfState_source_eq_outputState]
+  unfold oneShotOutputChannel FQSWOneShotProtocol.outputStateOfState
+  dsimp only
+  rw [Channel.applyState_comp, Channel.applyState_comp, Channel.applyState_comp,
+    Channel.applyState_comp]
+  rw [Channel.reindex_applyState, Channel.reindex_applyState,
+    Channel.reindex_applyState]
+
+/-- The concrete physical IID pipeline is a channel, so it contracts the
+trace distance between arbitrary block-source states. -/
+private theorem physicalOutputChannel_applyState
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e)))
+    (ρ : State
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))) :
+    (W.physicalOutputChannel H).applyState ρ =
+      (W.toFQSWBlockProtocol H).outputStateOfBlockState ρ := by
+  unfold physicalOutputChannel FQSWBlockProtocol.outputStateOfBlockState
+  dsimp only
+  rw [Channel.applyState_comp, Channel.applyState_comp,
+    Channel.applyState_comp, Channel.applyState_comp]
+  rw [Channel.reindex_applyState, Channel.reindex_applyState,
+    Channel.reindex_applyState]
+  rfl
+
+theorem physicalOutput_traceDistance_le
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e)))
+    (ρ σ : State
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))) :
+    traceDistance
+        ((W.toFQSWBlockProtocol H).outputStateOfBlockState ρ).matrix
+        ((W.toFQSWBlockProtocol H).outputStateOfBlockState σ).matrix ≤
+      traceDistance ρ.matrix σ.matrix := by
+  have hρ :
+      (W.physicalOutputChannel H).applyState ρ =
+        (W.toFQSWBlockProtocol H).outputStateOfBlockState ρ := by
+    exact W.physicalOutputChannel_applyState H ρ
+  have hσ :
+      (W.physicalOutputChannel H).applyState σ =
+        (W.toFQSWBlockProtocol H).outputStateOfBlockState σ := by
+    exact W.physicalOutputChannel_applyState H σ
+  have h := Channel.normalizedTraceDistance_applyState_le
+    (W.physicalOutputChannel H) ρ σ
+  rw [hρ, hσ] at h
+  unfold State.normalizedTraceDistance normalizedTraceDistance at h
+  nlinarith
+
+omit [Nonempty btyp] in
+/-- Decoding the one-shot output and target back into the original IID
+registers cannot increase their trace-norm error. -/
+theorem decodedOneShot_traceNormError_le
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    traceDistance (W.decodedOneShotOutputState H).matrix
+        (W.normalizedTypicalTargetState H).matrix ≤
+      H.toOneShotProtocol.traceNormError := by
+  let Φ := W.sourceDecoder.prod (Channel.idChannel (Prod e e))
+  have h := Channel.normalizedTraceDistance_applyState_le Φ
+    H.toOneShotProtocol.outputState H.toOneShotProtocol.targetState
+  have hraw :
+      traceDistance (W.decodedOneShotOutputState H).matrix
+          (W.decodedOneShotTargetState H).matrix ≤
+        H.toOneShotProtocol.traceNormError := by
+    unfold decodedOneShotOutputState decodedOneShotTargetState
+    change traceDistance
+        (Φ.applyState H.toOneShotProtocol.outputState).matrix
+        (Φ.applyState H.toOneShotProtocol.targetState).matrix ≤
+      traceDistance H.toOneShotProtocol.outputState.matrix
+        H.toOneShotProtocol.targetState.matrix
+    unfold State.normalizedTraceDistance normalizedTraceDistance at h
+    nlinarith
+  rw [← W.decodedOneShotTargetState_eq_normalizedTypicalTargetState H]
+  exact hraw
+
+private theorem adhwFQSW_traceDistance_triangle
+    {α : Type*} [Fintype α] [DecidableEq α]
+    (ρ σ τ : State α) :
+    traceDistance ρ.matrix τ.matrix ≤
+      traceDistance ρ.matrix σ.matrix + traceDistance σ.matrix τ.matrix := by
+  have h := State.normalizedTraceDistance_triangle ρ σ τ
+  unfold State.normalizedTraceDistance normalizedTraceDistance at h
+  nlinarith
+
+omit [Nonempty q] in
+private theorem fqswBlock_outputState_eq_adhwIidSource
+    (C : FQSWBlockProtocol ψ n q e et) :
+    C.outputState = C.outputStateOfBlockState (adhwFQSWIidSourceState ψ n) := by
+  unfold FQSWBlockProtocol.outputState FQSWBlockProtocol.outputStateOfState
+    adhwFQSWIidSourceState adhwFQSWIidPureVector
+  rw [PureVector.reindex_state, PureVector.tensorPower_state]
+
+section
+
+set_option maxHeartbeats 800000
+
+/-- The actual physical block output obeys the ADHW double-triangle bound.
+Both perturbation terms are distances between the original IID source and the
+normalized simultaneous-typical source; the middle term is the computed
+one-shot protocol error transported through the physical decoders. -/
+theorem toFQSWBlockProtocol_output_traceDistance_le_sourceRoute
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    traceDistance
+        ((W.toFQSWBlockProtocol H).outputStateOfBlockState
+          (adhwFQSWIidSourceState ψ n)).matrix
+        (W.toFQSWBlockProtocol H).targetState.matrix ≤
+      2 * ε + H.toOneShotProtocol.traceNormError := by
+  let C := W.toFQSWBlockProtocol H
+  let source := adhwFQSWIidSourceState ψ n
+  let typical := T.normalizedTypicalSource
+  let ebit := (maximallyEntangledPureVector H.toOneShotProtocol.ebitPairing).state
+  have hsource : traceDistance source.matrix typical.matrix ≤ ε := by
+    rw [traceDistance_comm]
+    exact W.source_traceNorm_le_original
+  have htransport :
+      traceDistance (C.outputStateOfBlockState source).matrix
+          (C.outputStateOfBlockState typical).matrix ≤
+        traceDistance source.matrix typical.matrix := by
+    exact W.physicalOutput_traceDistance_le H source typical
+  have hmiddle :
+      traceDistance (C.outputStateOfBlockState typical).matrix
+          (typical.prod ebit).matrix ≤
+        H.toOneShotProtocol.traceNormError := by
+    rw [show C.outputStateOfBlockState typical = W.decodedOneShotOutputState H by
+      exact W.physicalOutput_on_normalizedTypicalSource H]
+    simpa [typical, ebit, normalizedTypicalTargetState] using
+      W.decodedOneShot_traceNormError_le H
+  have htarget :
+      traceDistance (typical.prod ebit).matrix C.targetState.matrix ≤ ε := by
+    change traceDistance (typical.prod ebit).matrix (source.prod ebit).matrix ≤ ε
+    exact (fqswProdRight_traceDistance_le typical source ebit).trans
+      W.source_traceNorm_le_original
+  calc
+    traceDistance (C.outputStateOfBlockState source).matrix C.targetState.matrix ≤
+        traceDistance (C.outputStateOfBlockState source).matrix
+            (C.outputStateOfBlockState typical).matrix +
+          traceDistance (C.outputStateOfBlockState typical).matrix
+            C.targetState.matrix :=
+      adhwFQSW_traceDistance_triangle _ _ _
+    _ ≤ traceDistance source.matrix typical.matrix +
+          (traceDistance (C.outputStateOfBlockState typical).matrix
+              (typical.prod ebit).matrix +
+            traceDistance (typical.prod ebit).matrix C.targetState.matrix) :=
+      add_le_add htransport (adhwFQSW_traceDistance_triangle _ _ _)
+    _ ≤ ε + (H.toOneShotProtocol.traceNormError + ε) :=
+      add_le_add hsource (add_le_add hmiddle htarget)
+    _ = 2 * ε + H.toOneShotProtocol.traceNormError := by ring
+
+/-- Computed-error form of the physical ADHW source-route estimate. -/
+theorem toFQSWBlockProtocol_traceNormError_le_sourceRoute
+    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
+    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
+    (W.toFQSWBlockProtocol H).traceNormError ≤
+      2 * ε + H.toOneShotProtocol.traceNormError := by
+  unfold FQSWBlockProtocol.traceNormError
+  rw [fqswBlock_outputState_eq_adhwIidSource]
+  exact W.toFQSWBlockProtocol_output_traceDistance_le_sourceRoute H
+
+end
+
+end ADHWFQSWIidCompressedSourceWitness
 
 /-- Construct the compressed pure source whose lift is the normalized
 simultaneously typical i.i.d. source. -/
@@ -955,7 +1528,10 @@ theorem exists_adhwFQSWIidCompressedSourceWitness
     ⟨{ paddedAtypEmbedding := P
        typicalBobRegister := B
        typicalRefRegister := R
+       unpaddedSource := source0
        source := source
+       source_eq_padded := rfl
+       unpadded_lifted_state_eq_normalizedTypicalSource := hsource0_lift
        source_a_purity_le := hsource_a_purity_le
        source_r_purity_le := hsource_r_purity_le
        source_b_purity_le := hsource_b_purity_le
@@ -983,47 +1559,46 @@ theorem exists_adhwFQSWIidCompressedSourceWitness
                   simp [Matrix.mul_assoc]
     _ = T.normalizedTypicalSource.matrix := hsource0_lift
 
-/-- Constant absorption used by the mixed source-route `skoro` estimate.  The
-`4 ≤ nδ` tail condition supplies one factor of two, while nonnegative mutual
-information supplies the remaining exponent slack. -/
-private theorem fqsw_two_mul_three_delta_pow_le_target_pow
+/-- Constant absorption used by the strengthened mixed source-route `skoro`
+estimate.  The `4 ≤ nδ` tail condition and nonnegative mutual information
+absorb the remaining factor of two. -/
+private theorem fqsw_two_mul_twentyOneEighth_delta_pow_le_target_pow
     (n : ℕ) (I δ : ℝ)
     (hI_nonneg : 0 ≤ I)
     (hn_large : 4 ≤ (n : ℝ) * δ) :
-    2 * (2 : ℝ) ^ ((n : ℝ) * (3 * δ)) ≤
-      (2 : ℝ) ^ ((n : ℝ) * (I + (7 / 2 : ℝ) * δ)) := by
+    2 * (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δ)) ≤
+      (2 : ℝ) ^ ((n : ℝ) * (I + 3 * δ)) := by
   have hn_nonneg : 0 ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le n
   have hconst_absorb :
-      (2 : ℝ) ≤ (2 : ℝ) ^ ((n : ℝ) * (I + (1 / 2 : ℝ) * δ)) := by
+      (2 : ℝ) ≤ (2 : ℝ) ^ ((n : ℝ) * (I + (3 / 8 : ℝ) * δ)) := by
     calc
       (2 : ℝ) = (2 : ℝ) ^ (1 : ℝ) := by norm_num
-      _ ≤ (2 : ℝ) ^ ((n : ℝ) * (I + (1 / 2 : ℝ) * δ)) := by
+      _ ≤ (2 : ℝ) ^ ((n : ℝ) * (I + (3 / 8 : ℝ) * δ)) := by
         refine Real.rpow_le_rpow_of_exponent_le
           (by norm_num : (1 : ℝ) ≤ 2) ?_
-        have hdelta_part : 1 ≤ (n : ℝ) * ((1 / 2 : ℝ) * δ) := by
+        have hdelta_part : 1 ≤ (n : ℝ) * ((3 / 8 : ℝ) * δ) := by
           calc
-            (1 : ℝ) ≤ 2 := by norm_num
-            _ ≤ (n : ℝ) * δ / 2 := by nlinarith
-            _ = (n : ℝ) * ((1 / 2 : ℝ) * δ) := by ring
+            (1 : ℝ) ≤ 3 / 2 := by norm_num
+            _ ≤ (3 / 8 : ℝ) * ((n : ℝ) * δ) := by nlinarith
+            _ = (n : ℝ) * ((3 / 8 : ℝ) * δ) := by ring
         have hIpart : 0 ≤ (n : ℝ) * I := mul_nonneg hn_nonneg hI_nonneg
         calc
-          (1 : ℝ) ≤ (n : ℝ) * ((1 / 2 : ℝ) * δ) := hdelta_part
-          _ ≤ (n : ℝ) * I + (n : ℝ) * ((1 / 2 : ℝ) * δ) :=
+          (1 : ℝ) ≤ (n : ℝ) * ((3 / 8 : ℝ) * δ) := hdelta_part
+          _ ≤ (n : ℝ) * I + (n : ℝ) * ((3 / 8 : ℝ) * δ) :=
                 le_add_of_nonneg_left hIpart
-          _ = (n : ℝ) * (I + (1 / 2 : ℝ) * δ) := by ring
-  have hpow_three_nonneg :
-      0 ≤ (2 : ℝ) ^ ((n : ℝ) * (3 * δ)) :=
+          _ = (n : ℝ) * (I + (3 / 8 : ℝ) * δ) := by ring
+  have hpow_nonneg :
+      0 ≤ (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δ)) :=
     Real.rpow_nonneg (by norm_num : (0 : ℝ) ≤ 2) _
-  have hmul :=
-    mul_le_mul_of_nonneg_right hconst_absorb hpow_three_nonneg
+  have hmul := mul_le_mul_of_nonneg_right hconst_absorb hpow_nonneg
   calc
-    2 * (2 : ℝ) ^ ((n : ℝ) * (3 * δ))
-        ≤ (2 : ℝ) ^ ((n : ℝ) * (I + (1 / 2 : ℝ) * δ)) *
-            (2 : ℝ) ^ ((n : ℝ) * (3 * δ)) := hmul
-    _ = (2 : ℝ) ^ ((n : ℝ) * (I + (7 / 2 : ℝ) * δ)) := by
-          rw [← Real.rpow_add (by norm_num : (0 : ℝ) < 2)]
-          congr 1
-          ring
+    2 * (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δ)) ≤
+        (2 : ℝ) ^ ((n : ℝ) * (I + (3 / 8 : ℝ) * δ)) *
+          (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δ)) := hmul
+    _ = (2 : ℝ) ^ ((n : ℝ) * (I + 3 * δ)) := by
+      rw [← Real.rpow_add (by norm_num : (0 : ℝ) < 2)]
+      congr 1
+      ring
 
 /-- Scalar `skoro` estimate for the mixed-slack padded source route.  The
 `AR` term uses the source `AR` purity, while the product term uses the separate
@@ -1035,9 +1610,9 @@ private theorem fqsw_mixed_source_fourthRootArgument_scalar_le_skoro
     (hbaseProd : (1 / 2 : ℝ) * I + EB - HA = 0)
     (hI_nonneg : 0 ≤ I)
     (hδrate_nonneg : 0 ≤ δrate)
-    (hδtyp_le_quarter : δtyp ≤ δrate / 4)
+    (hδtyp_le_eighth : δtyp ≤ δrate / 8)
     (hn_large : 4 ≤ (n : ℝ) * δrate)
-    (hQ_nonneg : 0 ≤ Q) (hE_nonneg : 0 ≤ E) (hRdim_nonneg : 0 ≤ Rdim)
+    (hE_nonneg : 0 ≤ E) (hRdim_nonneg : 0 ≤ Rdim)
     (hApu_nonneg : 0 ≤ Apu) (hRpu_nonneg : 0 ≤ Rpu) (hARpu_nonneg : 0 ≤ ARpu)
     (hQ_upper :
       Q ≤ (2 : ℝ) ^ ((n : ℝ) * ((1 / 2 : ℝ) * I + (9 / 4 : ℝ) * δrate)))
@@ -1052,7 +1627,7 @@ private theorem fqsw_mixed_source_fourthRootArgument_scalar_le_skoro
     (hARpu_upper :
       ARpu ≤ (2 : ℝ) ^ (-((n : ℝ) * (HB - δtyp)))) :
     (2 * Q * E * Rdim / (Q ^ 2)) * (ARpu + 2 * Apu * Rpu) ≤
-      4 * (2 : ℝ) ^ ((n : ℝ) * (I + (7 / 2 : ℝ) * δrate)) / (Q ^ 2) := by
+      4 * (2 : ℝ) ^ ((n : ℝ) * (I + 3 * δrate)) / (Q ^ 2) := by
   let qPow : ℝ :=
     (2 : ℝ) ^ ((n : ℝ) * ((1 / 2 : ℝ) * I + (9 / 4 : ℝ) * δrate))
   let ePow : ℝ := (2 : ℝ) ^ ((n : ℝ) * EB)
@@ -1060,7 +1635,7 @@ private theorem fqsw_mixed_source_fourthRootArgument_scalar_le_skoro
   let aPurPow : ℝ := (2 : ℝ) ^ (-((n : ℝ) * (HA - δtyp)))
   let rPurPow : ℝ := (2 : ℝ) ^ (-((n : ℝ) * (HR - δtyp)))
   let arPurPow : ℝ := (2 : ℝ) ^ (-((n : ℝ) * (HB - δtyp)))
-  let targetPow : ℝ := (2 : ℝ) ^ ((n : ℝ) * (I + (7 / 2 : ℝ) * δrate))
+  let targetPow : ℝ := (2 : ℝ) ^ ((n : ℝ) * (I + 3 * δrate))
   have hn_nonneg : 0 ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le n
   have hqPow_nonneg : 0 ≤ qPow := by
     dsimp [qPow]
@@ -1115,23 +1690,18 @@ private theorem fqsw_mixed_source_fourthRootArgument_scalar_le_skoro
             rw [hbaseAR]
   have hARexp_le :
       (n : ℝ) * (I + (9 / 4 : ℝ) * δrate + 2 * δtyp) ≤
-        (n : ℝ) * (I + (7 / 2 : ℝ) * δrate) := by
-    have htyp : 2 * δtyp ≤ (1 / 2 : ℝ) * δrate := by nlinarith
+        (n : ℝ) * (I + 3 * δrate) := by
+    have htyp : 2 * δtyp ≤ (1 / 4 : ℝ) * δrate := by nlinarith
     have hinner :
         I + (9 / 4 : ℝ) * δrate + 2 * δtyp ≤
-          I + (7 / 2 : ℝ) * δrate := by
+          I + 3 * δrate := by
       calc
         I + (9 / 4 : ℝ) * δrate + 2 * δtyp
-            ≤ I + (9 / 4 : ℝ) * δrate + (1 / 2 : ℝ) * δrate := by
+            ≤ I + (9 / 4 : ℝ) * δrate + (1 / 4 : ℝ) * δrate := by
               simpa [add_comm, add_left_comm, add_assoc] using
                 add_le_add_left htyp (I + (9 / 4 : ℝ) * δrate)
-        _ = I + (11 / 4 : ℝ) * δrate := by ring
-        _ ≤ I + (7 / 2 : ℝ) * δrate := by
-              have hslack :
-                  (11 / 4 : ℝ) * δrate ≤ (7 / 2 : ℝ) * δrate :=
-                mul_le_mul_of_nonneg_right (by norm_num : (11 / 4 : ℝ) ≤ 7 / 2)
-                  hδrate_nonneg
-              simpa [add_comm] using add_le_add_left hslack I
+        _ = I + (5 / 2 : ℝ) * δrate := by ring
+        _ ≤ I + 3 * δrate := by nlinarith
     exact mul_le_mul_of_nonneg_left hinner hn_nonneg
   have hARpow_le_target :
       (2 : ℝ) ^ ((n : ℝ) * (I + (9 / 4 : ℝ) * δrate + 2 * δtyp)) ≤
@@ -1177,28 +1747,29 @@ private theorem fqsw_mixed_source_fourthRootArgument_scalar_le_skoro
       _ = (n : ℝ) * ((9 / 4 : ℝ) * δrate + 3 * δtyp) := by
             rw [hbaseProd]
             ring
-  have hProdExp_le_three :
+  have hProdExp_le_twentyOneEighth :
       (n : ℝ) * ((9 / 4 : ℝ) * δrate + 3 * δtyp) ≤
-        (n : ℝ) * (3 * δrate) := by
-    have htyp : 3 * δtyp ≤ (3 / 4 : ℝ) * δrate := by nlinarith
+        (n : ℝ) * ((21 / 8 : ℝ) * δrate) := by
+    have htyp : 3 * δtyp ≤ (3 / 8 : ℝ) * δrate := by nlinarith
     have hinner :
-        (9 / 4 : ℝ) * δrate + 3 * δtyp ≤ 3 * δrate := by
+        (9 / 4 : ℝ) * δrate + 3 * δtyp ≤ (21 / 8 : ℝ) * δrate := by
       calc
         (9 / 4 : ℝ) * δrate + 3 * δtyp
-            ≤ (9 / 4 : ℝ) * δrate + (3 / 4 : ℝ) * δrate := by
+            ≤ (9 / 4 : ℝ) * δrate + (3 / 8 : ℝ) * δrate := by
               simpa [add_comm, add_left_comm, add_assoc] using
                 add_le_add_left htyp ((9 / 4 : ℝ) * δrate)
-        _ = 3 * δrate := by ring
+        _ = (21 / 8 : ℝ) * δrate := by ring
     exact mul_le_mul_of_nonneg_left hinner hn_nonneg
-  have hProdPow_le_three :
+  have hProdPow_le_twentyOneEighth :
       (2 : ℝ) ^ ((n : ℝ) * ((9 / 4 : ℝ) * δrate + 3 * δtyp)) ≤
-        (2 : ℝ) ^ ((n : ℝ) * (3 * δrate)) :=
+        (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δrate)) :=
     Real.rpow_le_rpow_of_exponent_le
-      (by norm_num : (1 : ℝ) ≤ 2) hProdExp_le_three
-  have htwo_three_le_target :
-      2 * (2 : ℝ) ^ ((n : ℝ) * (3 * δrate)) ≤ targetPow := by
+      (by norm_num : (1 : ℝ) ≤ 2) hProdExp_le_twentyOneEighth
+  have htwo_prod_le_target :
+      2 * (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δrate)) ≤ targetPow := by
     exact
-      fqsw_two_mul_three_delta_pow_le_target_pow n I δrate hI_nonneg hn_large
+      fqsw_two_mul_twentyOneEighth_delta_pow_le_target_pow
+        n I δrate hI_nonneg hn_large
   have hProdterm_le :
       4 * Q * E * Rdim * Apu * Rpu / (Q ^ 2) ≤
         2 * targetPow / (Q ^ 2) := by
@@ -1206,32 +1777,34 @@ private theorem fqsw_mixed_source_fourthRootArgument_scalar_le_skoro
         4 * Q * E * Rdim * Apu * Rpu ≤ 2 * targetPow := by
       have hcore :
           Q * E * Rdim * Apu * Rpu ≤
-            (2 : ℝ) ^ ((n : ℝ) * (3 * δrate)) := by
+            (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δrate)) := by
         calc
           Q * E * Rdim * Apu * Rpu ≤
               qPow * ePow * rPow * aPurPow * rPurPow := hQERARprod
           _ = (2 : ℝ) ^ ((n : ℝ) * ((9 / 4 : ℝ) * δrate + 3 * δtyp)) :=
                 hProdPow
-          _ ≤ (2 : ℝ) ^ ((n : ℝ) * (3 * δrate)) := hProdPow_le_three
+          _ ≤ (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δrate)) :=
+                hProdPow_le_twentyOneEighth
       have hscaled :
           4 * (Q * E * Rdim * Apu * Rpu) ≤
-            4 * (2 : ℝ) ^ ((n : ℝ) * (3 * δrate)) :=
+            4 * (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δrate)) :=
         mul_le_mul_of_nonneg_left hcore (by norm_num : (0 : ℝ) ≤ 4)
       have htarget_scaled :
-          4 * (2 : ℝ) ^ ((n : ℝ) * (3 * δrate)) ≤ 2 * targetPow := by
+          4 * (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δrate)) ≤
+            2 * targetPow := by
         calc
-          4 * (2 : ℝ) ^ ((n : ℝ) * (3 * δrate)) =
-              2 * (2 * (2 : ℝ) ^ ((n : ℝ) * (3 * δrate))) := by ring
+          4 * (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δrate)) =
+              2 * (2 * (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δrate))) := by ring
           _ ≤ 2 * targetPow :=
-              mul_le_mul_of_nonneg_left htwo_three_le_target
+              mul_le_mul_of_nonneg_left htwo_prod_le_target
                 (by norm_num : (0 : ℝ) ≤ 2)
       have hscaled' :
           4 * Q * E * Rdim * Apu * Rpu ≤
-            4 * (2 : ℝ) ^ ((n : ℝ) * (3 * δrate)) := by
+            4 * (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δrate)) := by
         calc
           4 * Q * E * Rdim * Apu * Rpu =
               4 * (Q * E * Rdim * Apu * Rpu) := by ring
-          _ ≤ 4 * (2 : ℝ) ^ ((n : ℝ) * (3 * δrate)) := hscaled
+          _ ≤ 4 * (2 : ℝ) ^ ((n : ℝ) * ((21 / 8 : ℝ) * δrate)) := hscaled
       exact hscaled'.trans htarget_scaled
     exact div_le_div_of_nonneg_right hnum (sq_nonneg Q)
   calc
@@ -1241,11 +1814,12 @@ private theorem fqsw_mixed_source_fourthRootArgument_scalar_le_skoro
     _ ≤ 2 * targetPow / (Q ^ 2) + 2 * targetPow / (Q ^ 2) :=
           add_le_add hARterm_le hProdterm_le
     _ = 4 * targetPow / (Q ^ 2) := by ring
-    _ = 4 * (2 : ℝ) ^ ((n : ℝ) * (I + (7 / 2 : ℝ) * δrate)) / (Q ^ 2) := by
+    _ = 4 * (2 : ℝ) ^ ((n : ℝ) * (I + 3 * δrate)) / (Q ^ 2) := by
           rfl
 
-/-- The padded compressed source satisfies the ADHW source-route `skoro`
-fourth-root argument bound with mixed typicality/rate slack. -/
+/-- The padded compressed source satisfies the strengthened ADHW source-route
+`skoro` fourth-root argument bound when the typicality slack is at most one
+eighth of the rate slack. -/
 theorem ADHWFQSWIidCompressedSourceWitness.fourthRootArgument_le_iid_skoro_mixed
     {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δtyp δrate ε : ℝ}
     {T : ADHWFQSWSimultaneousTypicalProjectors ψ n δtyp ε}
@@ -1259,12 +1833,11 @@ theorem ADHWFQSWIidCompressedSourceWitness.fourthRootArgument_le_iid_skoro_mixed
     (W : ADHWFQSWIidCompressedSourceWitness ψ n δtyp ε T atyp btyp rtyp q e)
     (balancedRateChoice : ADHWFQSWIidBalancedRateChoice ψ n δrate q e)
     (hδrate_nonneg : 0 ≤ δrate)
-    (hδtyp_le_quarter : δtyp ≤ δrate / 4)
+    (hδtyp_le_eighth : δtyp ≤ δrate / 8)
     (hn_large : 4 ≤ (n : ℝ) * δrate) :
     adhwFQSWOneShotFourthRootArgument W.source q ≤
       4 * (2 : ℝ) ^ ((n : ℝ) *
-        (mutualInformation ψ.state.coherentTransferReferenceState +
-          (7 / 2 : ℝ) * δrate)) /
+        (mutualInformation ψ.state.coherentTransferReferenceState + 3 * δrate)) /
         ((Fintype.card q : ℝ) ^ 2) := by
   let I : ℝ := mutualInformation ψ.state.coherentTransferReferenceState
   let EB : ℝ := ψ.fqswEbitYieldRate
@@ -1288,7 +1861,6 @@ theorem ADHWFQSWIidCompressedSourceWitness.fourthRootArgument_le_iid_skoro_mixed
     exact State.mutualInformation_nonneg ψ.state.coherentTransferReferenceState
   have hq_pos_nat : 0 < Fintype.card q := Fintype.card_pos_iff.mpr inferInstance
   have hq_pos : 0 < (Fintype.card q : ℝ) := by exact_mod_cast hq_pos_nat
-  have hq_nonneg : 0 ≤ (Fintype.card q : ℝ) := le_of_lt hq_pos
   have he_nonneg : 0 ≤ (Fintype.card e : ℝ) := Nat.cast_nonneg _
   have hrtyp_nonneg : 0 ≤ (Fintype.card rtyp : ℝ) := Nat.cast_nonneg _
   have hApu_nonneg : 0 ≤ adhwFQSWAPurity W.source := by
@@ -1325,8 +1897,8 @@ theorem ADHWFQSWIidCompressedSourceWitness.fourthRootArgument_le_iid_skoro_mixed
       (Fintype.card q : ℝ) (Fintype.card e : ℝ) (Fintype.card rtyp : ℝ)
       (adhwFQSWAPurity W.source) (adhwFQSWRPurity W.source)
       (adhwFQSWARPurity W.source)
-      hbaseAR hbaseProd hI_nonneg hδrate_nonneg hδtyp_le_quarter hn_large
-      hq_nonneg he_nonneg hrtyp_nonneg hApu_nonneg hRpu_nonneg hARpu_nonneg
+      hbaseAR hbaseProd hI_nonneg hδrate_nonneg hδtyp_le_eighth hn_large
+      he_nonneg hrtyp_nonneg hApu_nonneg hRpu_nonneg hARpu_nonneg
       hQ_upper hE_upper hRdim_upper
       (by simpa [HA] using W.source_a_purity_le)
       (by simpa [HR] using W.source_r_purity_le)
@@ -1350,98 +1922,27 @@ theorem ADHWFQSWIidCompressedSourceWitness.oneShotTail_le_mixed
     (W : ADHWFQSWIidCompressedSourceWitness ψ n δtyp ε T atyp btyp rtyp q e)
     (balancedRateChoice : ADHWFQSWIidBalancedRateChoice ψ n δrate q e)
     (hδrate_nonneg : 0 ≤ δrate)
-    (hδtyp_le_quarter : δtyp ≤ δrate / 4)
+    (hδtyp_le_eighth : δtyp ≤ δrate / 8)
     (hn_large : 4 ≤ (n : ℝ) * δrate) :
     adhwFQSWOneShotErrorBound W.source q ≤
-      Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δrate / 8)) := by
-  have hsource_a_purity_le := W.source_a_purity_le
-  have hsource_r_purity_le := W.source_r_purity_le
-  have hsource_b_purity_le := W.source_b_purity_le
-  have hsource_ar_purity_le := W.source_ar_purity_le
+      Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δrate / 4)) := by
   have hskoro :
       adhwFQSWOneShotFourthRootArgument W.source q ≤
         4 * (2 : ℝ) ^ ((n : ℝ) *
-          (mutualInformation ψ.state.coherentTransferReferenceState +
-            (7 / 2 : ℝ) * δrate)) /
+          (mutualInformation ψ.state.coherentTransferReferenceState + 3 * δrate)) /
           ((Fintype.card q : ℝ) ^ 2) :=
     W.fourthRootArgument_le_iid_skoro_mixed
-      balancedRateChoice hδrate_nonneg hδtyp_le_quarter hn_large
+      balancedRateChoice hδrate_nonneg hδtyp_le_eighth hn_large
   exact
-    adhwFQSWOneShotErrorBound_le_iid_entropy_exponent_of_slack_skoro_bound
-      ψ W.source q n δrate (7 / 2 : ℝ) hδrate_nonneg
-      (by norm_num) hskoro balancedRateChoice.rateChoice.communication_card_lower
-
-/-- Source-route scalar post-compression bridge for ADHW fqsw.tex lines
-1168-1175.  The two trace-distance perturbation terms are the Schumacher
-compressed source versus the normalized simultaneous-typical source, and the
-normalized simultaneous-typical source versus the original i.i.d. source.  The
-one-shot term is supplied by the ADHW one-shot protocol on `W.source`. -/
-theorem ADHWFQSWIidCompressedSourceWitness.postCompressionTraceNormBridge_le
-    {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δ ε : ℝ}
-    {T : ADHWFQSWSimultaneousTypicalProjectors ψ n δ ε}
-    {atyp : Type p} {btyp : Type u1} {rtyp : Type v1}
-    {q : Type x} {e : Type y}
-    [Fintype atyp] [DecidableEq atyp]
-    [Fintype btyp] [DecidableEq btyp]
-    [Fintype rtyp] [DecidableEq rtyp]
-    [Fintype q] [DecidableEq q] [Nonempty q]
-    [Fintype e] [DecidableEq e] [Nonempty e]
-    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
-    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e)))
-    (honeShot :
-      H.toOneShotProtocol.traceNormError ≤
-        Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δ / 8))) :
-    traceDistance T.compressedSource.matrix T.normalizedTypicalSource.matrix +
-        H.toOneShotProtocol.traceNormError +
-        traceDistance T.normalizedTypicalSource.matrix
-          (adhwFQSWIidSourceState ψ n).matrix ≤
-      adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ := by
-  have hcompressed :
-      traceDistance T.compressedSource.matrix T.normalizedTypicalSource.matrix ≤ ε :=
-    T.schumacher_traceNorm_le_normalizedTypical
-  have htypical :
-      traceDistance T.normalizedTypicalSource.matrix
-          (adhwFQSWIidSourceState ψ n).matrix ≤ ε :=
-    W.source_traceNorm_le_original
-  calc
-    traceDistance T.compressedSource.matrix T.normalizedTypicalSource.matrix +
-        H.toOneShotProtocol.traceNormError +
-        traceDistance T.normalizedTypicalSource.matrix
-          (adhwFQSWIidSourceState ψ n).matrix
-        ≤ ε + (Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δ / 8))) + ε := by
-          linarith
-    _ = 2 * ε + Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δ / 8)) := by
-          ring
-    _ = adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ := rfl
-
-/-- Convert an ADHW one-shot error-bound tail estimate into the concrete
-post-compression bridge used by the i.i.d. source route. -/
-theorem ADHWFQSWIidCompressedSourceWitness.postCompressionTraceNormBridge_le_of_oneShotBound
-    {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δ ε : ℝ}
-    {T : ADHWFQSWSimultaneousTypicalProjectors ψ n δ ε}
-    {atyp : Type p} {btyp : Type u1} {rtyp : Type v1}
-    {q : Type x} {e : Type y}
-    [Fintype atyp] [DecidableEq atyp]
-    [Fintype btyp] [DecidableEq btyp]
-    [Fintype rtyp] [DecidableEq rtyp]
-    [Fintype q] [DecidableEq q] [Nonempty q]
-    [Fintype e] [DecidableEq e] [Nonempty e]
-    (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
-    (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e)))
-    (honeShotBound :
-      adhwFQSWOneShotErrorBound W.source q ≤
-        Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δ / 8))) :
-    traceDistance T.compressedSource.matrix T.normalizedTypicalSource.matrix +
-        H.toOneShotProtocol.traceNormError +
-        traceDistance T.normalizedTypicalSource.matrix
-          (adhwFQSWIidSourceState ψ n).matrix ≤
-      adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ :=
-  W.postCompressionTraceNormBridge_le H
-    (H.toOneShotProtocol_traceNormError_le.trans honeShotBound)
+    adhwFQSWOneShotErrorBound_le_iid_entropy_exponent_of_skoro_bound
+      ψ W.source q n δrate hskoro
+      (by
+        simpa [adhwFQSWIidCommunicationLogTarget] using
+          balancedRateChoice.rateChoice.communication_card_lower)
 
 /-- Source-route witness for ADHW fqsw.tex lines 1168-1175.  It fixes the
-compressed source witness and one-shot bound used in the double triangle, and
-records the semantic trace-norm error for that fixed route. -/
+compressed source witness, one-shot bound, and proved one-shot tail used in the
+physical double-triangle argument. -/
 structure ADHWFQSWIidSourceRouteBlock
     (ψ : PureVector (Prod (Prod a b) r)) (n : ℕ) (δ ε : ℝ)
     (T : ADHWFQSWSimultaneousTypicalProjectors ψ n δ ε)
@@ -1461,13 +1962,6 @@ structure ADHWFQSWIidSourceRouteBlock
   oneShotTail_le :
     adhwFQSWOneShotErrorBound compressedSourceWitness.source q ≤
       Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δ / 8))
-  traceNormError : ℝ
-  traceNormError_le_sourceRoute :
-    traceNormError ≤
-      traceDistance T.compressedSource.matrix T.normalizedTypicalSource.matrix +
-        oneShotBound.toOneShotProtocol.traceNormError +
-        traceDistance T.normalizedTypicalSource.matrix
-          (adhwFQSWIidSourceState ψ n).matrix
 
 namespace ADHWFQSWIidSourceRouteBlock
 
@@ -1482,19 +1976,40 @@ variable [Fintype q] [DecidableEq q] [Nonempty q]
 variable [Fintype e] [DecidableEq e] [Nonempty e]
 variable (B : ADHWFQSWIidSourceRouteBlock ψ n δ ε T atyp btyp rtyp q e)
 
-/-- The source-route semantic trace-norm error is bounded by the rounded ADHW
-post-compression bound. -/
-theorem traceNormError_le_rounded :
-    B.traceNormError ≤ adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ :=
-  B.traceNormError_le_sourceRoute.trans
-    (B.compressedSourceWitness.postCompressionTraceNormBridge_le_of_oneShotBound
-      B.oneShotBound B.oneShotTail_le)
+/-- The physical full-source protocol fixed by this route witness. -/
+def physicalProtocol : FQSWBlockProtocol ψ n q e e := by
+  let sourceIndex :=
+    Classical.choice B.compressedSourceWitness.unpaddedSource.state.nonempty
+  letI : Nonempty atyp := ⟨sourceIndex.1.1⟩
+  letI : Nonempty btyp := ⟨sourceIndex.1.2⟩
+  exact B.compressedSourceWitness.toFQSWBlockProtocol B.oneShotBound
 
-/-- Normalized trace-distance form of the source-route rounded error bound. -/
-theorem normalizedError_le_rounded_half :
-    (1 / 2 : ℝ) * B.traceNormError ≤
+/-- The computed trace-norm error of the physical protocol is bounded by the
+rounded finite-register estimate. -/
+theorem physicalProtocol_traceNormError_le_rounded :
+    B.physicalProtocol.traceNormError ≤
+      adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ := by
+  let W := B.compressedSourceWitness
+  let H := B.oneShotBound
+  let sourceIndex := Classical.choice W.unpaddedSource.state.nonempty
+  letI : Nonempty atyp := ⟨sourceIndex.1.1⟩
+  letI : Nonempty btyp := ⟨sourceIndex.1.2⟩
+  change (W.toFQSWBlockProtocol H).traceNormError ≤
+    adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ
+  calc
+    (W.toFQSWBlockProtocol H).traceNormError ≤
+        2 * ε + H.toOneShotProtocol.traceNormError :=
+      W.toFQSWBlockProtocol_traceNormError_le_sourceRoute H
+    _ ≤ 2 * ε + Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δ / 8)) := by
+      linarith [H.toOneShotProtocol_traceNormError_le.trans B.oneShotTail_le]
+    _ = adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ := rfl
+
+/-- Normalized trace-distance form of the computed rounded error bound. -/
+theorem physicalProtocol_normalizedError_le_rounded_half :
+    B.physicalProtocol.normalizedError ≤
       (1 / 2 : ℝ) * adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ :=
-  mul_le_mul_of_nonneg_left B.traceNormError_le_rounded (by norm_num)
+  B.physicalProtocol.normalizedError_eq_half_traceNormError.trans_le
+    (mul_le_mul_of_nonneg_left B.physicalProtocol_traceNormError_le_rounded (by norm_num))
 
 end ADHWFQSWIidSourceRouteBlock
 
@@ -1519,14 +2034,7 @@ structure ADHWFQSWIidMixedSourceRouteBlock
       (Equiv.refl (Prod q e))
   oneShotTail_le_mixed :
     adhwFQSWOneShotErrorBound compressedSourceWitness.source q ≤
-      Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δrate / 8))
-  traceNormError : ℝ
-  traceNormError_le_sourceRoute :
-    traceNormError ≤
-      traceDistance T.compressedSource.matrix T.normalizedTypicalSource.matrix +
-        oneShotBound.toOneShotProtocol.traceNormError +
-        traceDistance T.normalizedTypicalSource.matrix
-          (adhwFQSWIidSourceState ψ n).matrix
+      Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δrate / 4))
 
 namespace ADHWFQSWIidMixedSourceRouteBlock
 
@@ -1541,39 +2049,45 @@ variable [Fintype q] [DecidableEq q] [Nonempty q]
 variable [Fintype e] [DecidableEq e] [Nonempty e]
 variable (B : ADHWFQSWIidMixedSourceRouteBlock ψ n δtyp δrate ε T atyp btyp rtyp q e)
 
-/-- The mixed source-route semantic trace-norm error is bounded by the rounded
-post-compression estimate at the rate slack `δrate`. -/
-theorem traceNormError_le_rounded_rate :
-    B.traceNormError ≤ adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δrate := by
-  have honeShot :
-      B.oneShotBound.toOneShotProtocol.traceNormError ≤
-        Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δrate / 8)) :=
-    B.oneShotBound.toOneShotProtocol_traceNormError_le.trans
-      B.oneShotTail_le_mixed
-  calc
-    B.traceNormError ≤
-        traceDistance T.compressedSource.matrix T.normalizedTypicalSource.matrix +
-          B.oneShotBound.toOneShotProtocol.traceNormError +
-          traceDistance T.normalizedTypicalSource.matrix
-            (adhwFQSWIidSourceState ψ n).matrix :=
-        B.traceNormError_le_sourceRoute
-    _ ≤ ε + Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δrate / 8)) + ε := by
-        linarith [T.schumacher_traceNorm_le_normalizedTypical, honeShot,
-          B.compressedSourceWitness.source_traceNorm_le_original]
-    _ = adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δrate := by
-        rw [adhwFQSWIidRoundedPostCompressionTraceErrorBound]
-        ring
+/-- The physical full-source protocol fixed by this mixed-slack route. -/
+def physicalProtocol : FQSWBlockProtocol ψ n q e e := by
+  let sourceIndex :=
+    Classical.choice B.compressedSourceWitness.unpaddedSource.state.nonempty
+  letI : Nonempty atyp := ⟨sourceIndex.1.1⟩
+  letI : Nonempty btyp := ⟨sourceIndex.1.2⟩
+  exact B.compressedSourceWitness.toFQSWBlockProtocol B.oneShotBound
 
-/-- Normalized trace-distance form of the mixed rounded error bound. -/
-theorem normalizedError_le_rounded_rate_half :
-    (1 / 2 : ℝ) * B.traceNormError ≤
-      (1 / 2 : ℝ) * adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δrate :=
-  mul_le_mul_of_nonneg_left B.traceNormError_le_rounded_rate (by norm_num)
+/-- The computed trace-norm error of the physical mixed-slack protocol obeys
+the exact ADHW source bound `2ε + √8 · 2^(-nδrate/4)`. -/
+theorem physicalProtocol_traceNormError_le :
+    B.physicalProtocol.traceNormError ≤
+      adhwFQSWIidPostCompressionTraceErrorBound ε n δrate := by
+  let W := B.compressedSourceWitness
+  let H := B.oneShotBound
+  let sourceIndex := Classical.choice W.unpaddedSource.state.nonempty
+  letI : Nonempty atyp := ⟨sourceIndex.1.1⟩
+  letI : Nonempty btyp := ⟨sourceIndex.1.2⟩
+  change (W.toFQSWBlockProtocol H).traceNormError ≤
+    adhwFQSWIidPostCompressionTraceErrorBound ε n δrate
+  calc
+    (W.toFQSWBlockProtocol H).traceNormError ≤
+        2 * ε + H.toOneShotProtocol.traceNormError :=
+      W.toFQSWBlockProtocol_traceNormError_le_sourceRoute H
+    _ ≤ 2 * ε + Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δrate / 4)) := by
+      linarith [H.toOneShotProtocol_traceNormError_le.trans B.oneShotTail_le_mixed]
+    _ = adhwFQSWIidPostCompressionTraceErrorBound ε n δrate := rfl
+
+/-- Normalized trace-distance form of the exact physical source bound. -/
+theorem physicalProtocol_normalizedError_le :
+    B.physicalProtocol.normalizedError ≤
+      (1 / 2 : ℝ) * adhwFQSWIidPostCompressionTraceErrorBound ε n δrate :=
+  B.physicalProtocol.normalizedError_eq_half_traceNormError.trans_le
+    (mul_le_mul_of_nonneg_left B.physicalProtocol_traceNormError_le (by norm_num))
 
 end ADHWFQSWIidMixedSourceRouteBlock
 
 /-- Assemble a source-route block from its fixed compressed source witness,
-one-shot bound, one-shot tail estimate, and semantic double-triangle field. -/
+one-shot bound, and proved one-shot tail estimate. -/
 theorem exists_adhwFQSWIidSourceRouteBlock
     {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δ ε : ℝ}
     {T : ADHWFQSWSimultaneousTypicalProjectors ψ n δ ε}
@@ -1589,23 +2103,13 @@ theorem exists_adhwFQSWIidSourceRouteBlock
     (honeShotBound :
       adhwFQSWOneShotErrorBound W.source q ≤
         Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δ / 8))) :
-    ∀ traceNormError : ℝ,
-      traceNormError ≤
-          traceDistance T.compressedSource.matrix T.normalizedTypicalSource.matrix +
-            H.toOneShotProtocol.traceNormError +
-            traceDistance T.normalizedTypicalSource.matrix
-              (adhwFQSWIidSourceState ψ n).matrix →
-        Nonempty (ADHWFQSWIidSourceRouteBlock ψ n δ ε T atyp btyp rtyp q e) :=
-  fun traceNormError hsemantic =>
-    ⟨{ compressedSourceWitness := W
-       oneShotBound := H
-       oneShotTail_le := honeShotBound
-       traceNormError := traceNormError
-       traceNormError_le_sourceRoute := hsemantic }⟩
+    Nonempty (ADHWFQSWIidSourceRouteBlock ψ n δ ε T atyp btyp rtyp q e) :=
+  ⟨{ compressedSourceWitness := W
+     oneShotBound := H
+     oneShotTail_le := honeShotBound }⟩
 
 /-- Assemble a mixed-slack source-route block from the fixed compressed source
-witness, one-shot bound, rate-slack tail estimate, and semantic double-triangle
-field. -/
+witness, one-shot bound, and proved rate-slack tail estimate. -/
 theorem exists_adhwFQSWIidMixedSourceRouteBlock
     {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δtyp δrate ε : ℝ}
     {T : ADHWFQSWSimultaneousTypicalProjectors ψ n δtyp ε}
@@ -1620,22 +2124,13 @@ theorem exists_adhwFQSWIidMixedSourceRouteBlock
     (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e)))
     (honeShotBound :
       adhwFQSWOneShotErrorBound W.source q ≤
-        Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δrate / 8))) :
-    ∀ traceNormError : ℝ,
-      traceNormError ≤
-          traceDistance T.compressedSource.matrix T.normalizedTypicalSource.matrix +
-            H.toOneShotProtocol.traceNormError +
-            traceDistance T.normalizedTypicalSource.matrix
-              (adhwFQSWIidSourceState ψ n).matrix →
-        Nonempty
-          (ADHWFQSWIidMixedSourceRouteBlock
-            ψ n δtyp δrate ε T atyp btyp rtyp q e) :=
-  fun traceNormError hsemantic =>
-    ⟨{ compressedSourceWitness := W
-       oneShotBound := H
-       oneShotTail_le_mixed := honeShotBound
-       traceNormError := traceNormError
-       traceNormError_le_sourceRoute := hsemantic }⟩
+        Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δrate / 4))) :
+    Nonempty
+      (ADHWFQSWIidMixedSourceRouteBlock
+        ψ n δtyp δrate ε T atyp btyp rtyp q e) :=
+  ⟨{ compressedSourceWitness := W
+     oneShotBound := H
+     oneShotTail_le_mixed := honeShotBound }⟩
 
 /-- One finite i.i.d. ADHW FQSW block produced by the simultaneous typicality,
 padded-embedding, one-shot, and rounded-rate route of fqsw.tex lines
@@ -1725,59 +2220,6 @@ theorem exists_adhwFQSWIidBlockConstruction_of_sourceRoutePostCompression
     typicalProjectors paddedAtypEmbedding typicalBobRegister typicalRefRegister
     rateChoice oneShotCardinalitySideConditions sourceRouteBlock
 
-theorem ADHWFQSWIidBlockConstruction.sourceRouteTraceNormError_le_rounded
-    {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δ ε : ℝ}
-    {atyp : Type p} {btyp : Type u1} {rtyp : Type v1}
-    {q : Type x} {e : Type y}
-    [Fintype atyp] [DecidableEq atyp]
-    [Fintype btyp] [DecidableEq btyp]
-    [Fintype rtyp] [DecidableEq rtyp]
-    [Fintype q] [DecidableEq q] [Nonempty q]
-    [Fintype e] [DecidableEq e] [Nonempty e]
-    (B : ADHWFQSWIidBlockConstruction ψ n δ ε atyp btyp rtyp q e) :
-    B.sourceRouteBlock.traceNormError ≤
-      adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ :=
-  B.sourceRouteBlock.traceNormError_le_rounded
-
-theorem ADHWFQSWIidBlockConstruction.sourceRouteNormalizedError_le_rounded_half
-    {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δ ε : ℝ}
-    {atyp : Type p} {btyp : Type u1} {rtyp : Type v1}
-    {q : Type x} {e : Type y}
-    [Fintype atyp] [DecidableEq atyp]
-    [Fintype btyp] [DecidableEq btyp]
-    [Fintype rtyp] [DecidableEq rtyp]
-    [Fintype q] [DecidableEq q] [Nonempty q]
-    [Fintype e] [DecidableEq e] [Nonempty e]
-    (B : ADHWFQSWIidBlockConstruction ψ n δ ε atyp btyp rtyp q e) :
-    (1 / 2 : ℝ) * B.sourceRouteBlock.traceNormError ≤
-      (1 / 2 : ℝ) *
-        adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ :=
-  B.sourceRouteBlock.normalizedError_le_rounded_half
-
-/-- The source-route operational data exposed by the i.i.d. witness helper.
-It records the post-compression trace-norm error proved by a source-route
-block, without pretending to be a full-source `FQSWBlockProtocol`. -/
-structure ADHWFQSWIidSourceRouteOperationalSurface
-    (ψ : PureVector (Prod (Prod a b) r)) (n : ℕ) (δ ε : ℝ)
-    (q : Type x) (e : Type y) where
-  traceNormError : ℝ
-  traceNormError_le_rounded :
-    traceNormError ≤ adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ
-
-namespace ADHWFQSWIidSourceRouteOperationalSurface
-
-variable {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δ ε : ℝ}
-variable {q : Type x} {e : Type y}
-
-/-- Forget ADHW source-route proof metadata, retaining only the explicitly
-non-operational rate/error certificate used by the scalar IID route. -/
-def toFQSWRateErrorCertificate
-    (S : ADHWFQSWIidSourceRouteOperationalSurface ψ n δ ε q e) :
-    FQSWRateErrorCertificate ψ n q e where
-  traceNormError := S.traceNormError
-
-end ADHWFQSWIidSourceRouteOperationalSurface
-
 namespace ADHWFQSWIidBlockConstruction
 
 variable {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δ ε : ℝ}
@@ -1789,20 +2231,72 @@ variable [Fintype rtyp] [DecidableEq rtyp]
 variable [Fintype q] [DecidableEq q] [Nonempty q]
 variable [Fintype e] [DecidableEq e] [Nonempty e]
 
-/-- Forget the private typical support types while retaining the source-route
-post-compression error surface proved by this block. -/
-def sourceRouteOperationalSurface
+/-- The concrete physical protocol selected by an IID block construction.
+Its communication and ebit registers are the finite `q` and `e` chosen by
+the ADHW rounding argument. -/
+def physicalProtocol
     (B : ADHWFQSWIidBlockConstruction ψ n δ ε atyp btyp rtyp q e) :
-    ADHWFQSWIidSourceRouteOperationalSurface ψ n δ ε q e where
-  traceNormError := B.sourceRouteBlock.traceNormError
-  traceNormError_le_rounded := B.sourceRouteTraceNormError_le_rounded
+    FQSWBlockProtocol ψ n q e e :=
+  B.sourceRouteBlock.physicalProtocol
 
-theorem sourceRouteOperationalSurface_normalizedError_le_rounded_half
+/-- The physical block's computed trace-norm error obeys the rounded source
+route estimate. -/
+theorem physicalProtocol_traceNormError_le_rounded
     (B : ADHWFQSWIidBlockConstruction ψ n δ ε atyp btyp rtyp q e) :
-    (1 / 2 : ℝ) * B.sourceRouteOperationalSurface.traceNormError ≤
-      (1 / 2 : ℝ) *
-        adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ :=
-  B.sourceRouteNormalizedError_le_rounded_half
+    B.physicalProtocol.traceNormError ≤
+      adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ :=
+  B.sourceRouteBlock.physicalProtocol_traceNormError_le_rounded
+
+/-- The physical block's computed normalized error obeys half the rounded
+source-route estimate. -/
+theorem physicalProtocol_normalizedError_le_rounded_half
+    (B : ADHWFQSWIidBlockConstruction ψ n δ ε atyp btyp rtyp q e) :
+    B.physicalProtocol.normalizedError ≤
+      (1 / 2 : ℝ) * adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ :=
+  B.sourceRouteBlock.physicalProtocol_normalizedError_le_rounded_half
+
+/-- The finite-register communication bound for the concrete physical block.
+The `9δ/4` term is the explicit ceiling slack in the existing ADHW rate
+choice. -/
+theorem physicalProtocol_communicationRate_le
+    (B : ADHWFQSWIidBlockConstruction ψ n δ ε atyp btyp rtyp q e)
+    (hn : 0 < n) :
+    FQSWBlockProtocol.communicationRate B.physicalProtocol ≤
+      ψ.fqswCommunicationRate + (9 / 4 : ℝ) * δ :=
+  B.rateChoice.communicationRate_le B.physicalProtocol hn
+
+/-- The finite-register ebit-yield bound for the concrete physical block. -/
+theorem physicalProtocol_ebitYieldRate_ge
+    (B : ADHWFQSWIidBlockConstruction ψ n δ ε atyp btyp rtyp q e)
+    (hn : 0 < n) :
+    ψ.fqswEbitYieldRate - 3 * δ ≤
+      FQSWBlockProtocol.ebitYieldRate B.physicalProtocol :=
+  B.rateChoice.ebitYieldRate_ge B.physicalProtocol hn
+
+/-- Reparameterizing the finite construction with rate slack `δ/3` gives the
+source-facing communication window `I(A;R)/2 + δ`. -/
+theorem physicalProtocol_communicationRate_le_slack
+    {δTarget : ℝ}
+    (B : ADHWFQSWIidBlockConstruction
+      ψ n (δTarget / 3) ε atyp btyp rtyp q e)
+    (hn : 0 < n) (hδ : 0 ≤ δTarget) :
+    FQSWBlockProtocol.communicationRate B.physicalProtocol ≤
+      ψ.fqswCommunicationRate + δTarget := by
+  have hrate := B.physicalProtocol_communicationRate_le hn
+  nlinarith
+
+/-- Reparameterizing the finite construction with rate slack `δ/3` gives the
+source-facing ebit-yield window `I(A;B)/2 - δ`. -/
+theorem physicalProtocol_ebitYieldRate_ge_slack
+    {δTarget : ℝ}
+    (B : ADHWFQSWIidBlockConstruction
+      ψ n (δTarget / 3) ε atyp btyp rtyp q e)
+    (hn : 0 < n) :
+    ψ.fqswEbitYieldRate - δTarget ≤
+      FQSWBlockProtocol.ebitYieldRate B.physicalProtocol := by
+  have hyield := B.physicalProtocol_ebitYieldRate_ge hn
+  convert hyield using 1
+  ring
 
 end ADHWFQSWIidBlockConstruction
 
@@ -1882,35 +2376,6 @@ theorem ADHWFQSWIidMixedBlockConstruction.rateChoice
     ADHWFQSWIidRateChoice ψ n δrate q e :=
   B.balancedRateChoice.rateChoice
 
-theorem ADHWFQSWIidMixedBlockConstruction.sourceRouteTraceNormError_le_rounded_rate
-    {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δtyp δrate ε : ℝ}
-    {atyp : Type p} {btyp : Type u1} {rtyp : Type v1}
-    {q : Type x} {e : Type y}
-    [Fintype atyp] [DecidableEq atyp]
-    [Fintype btyp] [DecidableEq btyp]
-    [Fintype rtyp] [DecidableEq rtyp]
-    [Fintype q] [DecidableEq q] [Nonempty q]
-    [Fintype e] [DecidableEq e] [Nonempty e]
-    (B : ADHWFQSWIidMixedBlockConstruction ψ n δtyp δrate ε atyp btyp rtyp q e) :
-    B.sourceRouteBlock.traceNormError ≤
-      adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δrate :=
-  B.sourceRouteBlock.traceNormError_le_rounded_rate
-
-theorem ADHWFQSWIidMixedBlockConstruction.sourceRouteNormalizedError_le_rounded_rate_half
-    {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δtyp δrate ε : ℝ}
-    {atyp : Type p} {btyp : Type u1} {rtyp : Type v1}
-    {q : Type x} {e : Type y}
-    [Fintype atyp] [DecidableEq atyp]
-    [Fintype btyp] [DecidableEq btyp]
-    [Fintype rtyp] [DecidableEq rtyp]
-    [Fintype q] [DecidableEq q] [Nonempty q]
-    [Fintype e] [DecidableEq e] [Nonempty e]
-    (B : ADHWFQSWIidMixedBlockConstruction ψ n δtyp δrate ε atyp btyp rtyp q e) :
-    (1 / 2 : ℝ) * B.sourceRouteBlock.traceNormError ≤
-      (1 / 2 : ℝ) *
-        adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δrate :=
-  B.sourceRouteBlock.normalizedError_le_rounded_rate_half
-
 namespace ADHWFQSWIidMixedBlockConstruction
 
 variable {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δtyp δrate ε : ℝ}
@@ -1922,20 +2387,73 @@ variable [Fintype rtyp] [DecidableEq rtyp]
 variable [Fintype q] [DecidableEq q] [Nonempty q]
 variable [Fintype e] [DecidableEq e] [Nonempty e]
 
-/-- Forget the private typical support types while retaining the mixed
-source-route post-compression error surface proved by this block. -/
-def sourceRouteOperationalSurface
-    (B : ADHWFQSWIidMixedBlockConstruction ψ n δtyp δrate ε atyp btyp rtyp q e) :
-    ADHWFQSWIidSourceRouteOperationalSurface ψ n δrate ε q e where
-  traceNormError := B.sourceRouteBlock.traceNormError
-  traceNormError_le_rounded := B.sourceRouteTraceNormError_le_rounded_rate
+/-- The concrete physical protocol selected by the mixed-slack IID route. -/
+def physicalProtocol
+    (B : ADHWFQSWIidMixedBlockConstruction
+      ψ n δtyp δrate ε atyp btyp rtyp q e) :
+    FQSWBlockProtocol ψ n q e e :=
+  B.sourceRouteBlock.physicalProtocol
 
-theorem sourceRouteOperationalSurface_normalizedError_le_rounded_rate_half
-    (B : ADHWFQSWIidMixedBlockConstruction ψ n δtyp δrate ε atyp btyp rtyp q e) :
-    (1 / 2 : ℝ) * B.sourceRouteOperationalSurface.traceNormError ≤
-      (1 / 2 : ℝ) *
-        adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δrate :=
-  B.sourceRouteNormalizedError_le_rounded_rate_half
+/-- The actual physical block obeys the exact ADHW full-source trace-norm
+bound. -/
+theorem physicalProtocol_traceNormError_le
+    (B : ADHWFQSWIidMixedBlockConstruction
+      ψ n δtyp δrate ε atyp btyp rtyp q e) :
+    B.physicalProtocol.traceNormError ≤
+      adhwFQSWIidPostCompressionTraceErrorBound ε n δrate :=
+  B.sourceRouteBlock.physicalProtocol_traceNormError_le
+
+/-- The actual physical block's normalized error obeys half the exact ADHW
+full-source bound. -/
+theorem physicalProtocol_normalizedError_le
+    (B : ADHWFQSWIidMixedBlockConstruction
+      ψ n δtyp δrate ε atyp btyp rtyp q e) :
+    B.physicalProtocol.normalizedError ≤
+      (1 / 2 : ℝ) * adhwFQSWIidPostCompressionTraceErrorBound ε n δrate :=
+  B.sourceRouteBlock.physicalProtocol_normalizedError_le
+
+/-- Concrete communication-rate bound for a mixed-slack IID block. -/
+theorem physicalProtocol_communicationRate_le
+    (B : ADHWFQSWIidMixedBlockConstruction
+      ψ n δtyp δrate ε atyp btyp rtyp q e)
+    (hn : 0 < n) :
+    FQSWBlockProtocol.communicationRate B.physicalProtocol ≤
+      ψ.fqswCommunicationRate + (9 / 4 : ℝ) * δrate :=
+  B.rateChoice.communicationRate_le B.physicalProtocol hn
+
+/-- Concrete ebit-yield bound for a mixed-slack IID block. -/
+theorem physicalProtocol_ebitYieldRate_ge
+    (B : ADHWFQSWIidMixedBlockConstruction
+      ψ n δtyp δrate ε atyp btyp rtyp q e)
+    (hn : 0 < n) :
+    ψ.fqswEbitYieldRate - 3 * δrate ≤
+      FQSWBlockProtocol.ebitYieldRate B.physicalProtocol :=
+  B.rateChoice.ebitYieldRate_ge B.physicalProtocol hn
+
+/-- A mixed construction with rate slack `δ/3` meets the source-facing
+communication window `I(A;R)/2 + δ`, independently of its typicality slack. -/
+theorem physicalProtocol_communicationRate_le_slack
+    {δTarget : ℝ}
+    (B : ADHWFQSWIidMixedBlockConstruction
+      ψ n δtyp (δTarget / 3) ε atyp btyp rtyp q e)
+    (hn : 0 < n) (hδ : 0 ≤ δTarget) :
+    FQSWBlockProtocol.communicationRate B.physicalProtocol ≤
+      ψ.fqswCommunicationRate + δTarget := by
+  have hrate := B.physicalProtocol_communicationRate_le hn
+  nlinarith
+
+/-- A mixed construction with rate slack `δ/3` meets the source-facing
+ebit-yield window `I(A;B)/2 - δ`. -/
+theorem physicalProtocol_ebitYieldRate_ge_slack
+    {δTarget : ℝ}
+    (B : ADHWFQSWIidMixedBlockConstruction
+      ψ n δtyp (δTarget / 3) ε atyp btyp rtyp q e)
+    (hn : 0 < n) :
+    ψ.fqswEbitYieldRate - δTarget ≤
+      FQSWBlockProtocol.ebitYieldRate B.physicalProtocol := by
+  have hyield := B.physicalProtocol_ebitYieldRate_ge hn
+  convert hyield using 1
+  ring
 
 end ADHWFQSWIidMixedBlockConstruction
 
@@ -1946,7 +2464,7 @@ estimate. -/
 theorem exists_adhwFQSWIidMixedBlockConstruction_eventually
     (ψ : PureVector (Prod (Prod a b) r)) {δtyp δrate ε : ℝ}
     (hδtyp : 0 < δtyp) (hδrate : 0 < δrate) (hε : 0 < ε)
-    (hδtyp_le_quarter : δtyp ≤ δrate / 4) :
+    (hδtyp_le_eighth : δtyp ≤ δrate / 8) :
     ∃ N : ℕ, ∀ n : ℕ, n ≥ N →
       ∃ (atyp : Type u), ∃ (_ : Fintype atyp), ∃ (_ : DecidableEq atyp),
         ∃ (btyp : Type v), ∃ (_ : Fintype btyp), ∃ (_ : DecidableEq btyp),
@@ -1959,7 +2477,7 @@ theorem exists_adhwFQSWIidMixedBlockConstruction_eventually
                       ψ n δtyp δrate ε atyp btyp rtyp q e) := by
   obtain ⟨Ndata, hdata⟩ :=
     exists_adhwFQSWIidBalancedCardinalityChoice_mixed_eventually
-      (ψ := ψ) hδtyp hδrate hε hδtyp_le_quarter
+      (ψ := ψ) hδtyp hδrate hε (by linarith)
   let Nlarge : ℕ := Nat.ceil (4 / δrate)
   refine ⟨max Ndata Nlarge, ?_⟩
   intro n hn
@@ -2001,24 +2519,10 @@ theorem exists_adhwFQSWIidMixedBlockConstruction_eventually
   obtain ⟨H⟩ := exists_adhwFQSWIidCompressedOneShotBound W.source Sside
   have honeShotTail :
       adhwFQSWOneShotErrorBound W.source q ≤
-        Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δrate / 8)) :=
-    W.oneShotTail_le_mixed Rbalanced hδrate.le hδtyp_le_quarter hn_large
-  let traceNormError : ℝ :=
-    traceDistance T.compressedSource.matrix T.normalizedTypicalSource.matrix +
-      H.toOneShotProtocol.traceNormError +
-      traceDistance T.normalizedTypicalSource.matrix
-        (adhwFQSWIidSourceState ψ n).matrix
-  have hsemantic :
-      traceNormError ≤
-        traceDistance T.compressedSource.matrix T.normalizedTypicalSource.matrix +
-          H.toOneShotProtocol.traceNormError +
-          traceDistance T.normalizedTypicalSource.matrix
-            (adhwFQSWIidSourceState ψ n).matrix := by
-    dsimp [traceNormError]
-    exact le_rfl
+        Real.sqrt 8 * (2 : ℝ) ^ (-((n : ℝ) * δrate / 4)) :=
+    W.oneShotTail_le_mixed Rbalanced hδrate.le hδtyp_le_eighth hn_large
   obtain ⟨Route⟩ :=
-    exists_adhwFQSWIidMixedSourceRouteBlock
-      W H honeShotTail traceNormError hsemantic
+    exists_adhwFQSWIidMixedSourceRouteBlock W H honeShotTail
   obtain ⟨Bmixed⟩ :=
     exists_adhwFQSWIidMixedBlockConstruction
       ψ n δtyp δrate ε atyp btyp rtyp q e
@@ -2042,10 +2546,11 @@ structure ADHWFQSWIidConstruction (ψ : PureVector (Prod (Prod a b) r)) where
                   ∃ (_ : DecidableEq e), ∃ (_ : Nonempty e),
                     Nonempty
                       (ADHWFQSWIidMixedBlockConstruction
-                        ψ n (δ / 4) δ εerr atyp btyp rtyp q e)
+                        ψ n (δ / 8) δ εerr atyp btyp rtyp q e)
 
 /-- No-witness ADHW i.i.d. FQSW construction record.  The source route uses
-`δtyp = δrate / 4`, matching the mixed `skoro` proof path. -/
+`δtyp = δrate / 8`, which restores the exact ADHW `2^(-nδrate/4)` tail after
+the finite-register rounding estimates. -/
 theorem exists_adhwFQSWIidConstruction
     (ψ : PureVector (Prod (Prod a b) r)) :
     Nonempty (ADHWFQSWIidConstruction.{u, v, w, x, y} ψ) := by
@@ -2053,26 +2558,25 @@ theorem exists_adhwFQSWIidConstruction
   intro δ hδ εerr hεerr
   exact
     exists_adhwFQSWIidMixedBlockConstruction_eventually
-      (ψ := ψ) (δtyp := δ / 4) (δrate := δ) (ε := εerr)
+      (ψ := ψ) (δtyp := δ / 8) (δrate := δ) (ε := εerr)
       (by positivity) hδ hεerr le_rfl
 
 namespace PureVector
 
 variable (ψ : PureVector (Prod (Prod a b) r))
 
-/-- Witness-based ADHW rate/error certificate helper: the i.i.d.
-typical-subspace and Schumacher construction record yields the ADHW rate window
-and explicit-source normalized error bound from fqsw.tex lines 1093-1180.  It
-does not yet construct the canonical full-source block protocol. -/
-theorem fqsw_direct_rateErrorCertificates_of_iidConstruction
+/-- The ADHW i.i.d. construction supplies concrete physical block protocols
+with the source communication rate, ebit-yield rate, and vanishing computed
+trace-distance error; see fqsw.tex lines 1093-1180. -/
+theorem fqsw_direct_achievable_of_iidConstruction
     (h : ADHWFQSWIidConstruction.{u, v, w, x, y} ψ) :
-    PureVector.HasAsymptoticFQSWRateErrorCertificates.{u, v, w, x, y} ψ := by
+    PureVector.IsAchievableFQSW.{u, v, w, x, y, y} ψ := by
   intro δ hδ εerr hεerr
   have hδ3_pos : 0 < δ / 3 := by positivity
   have hε4_pos : 0 < εerr / 4 := by positivity
   obtain ⟨Nblocks, hblocks⟩ := h.typical_rate_blocks (δ / 3) hδ3_pos (εerr / 4) hε4_pos
   obtain ⟨Nerr, hNerr⟩ :=
-    eventually_half_adhwFQSWIidRoundedPostCompressionTraceErrorBound_le
+    eventually_half_adhwFQSWIidPostCompressionTraceErrorBound_le
       (δ := δ / 3) (ε := εerr) hδ3_pos hεerr
   refine ⟨max (max Nblocks Nerr) 1, fun n hn => ?_⟩
   have hn_blocks : n ≥ Nblocks := le_trans (le_max_left _ _) (le_trans (le_max_left _ _) hn)
@@ -2095,73 +2599,20 @@ theorem fqsw_direct_rateErrorCertificates_of_iidConstruction
   let _ : DecidableEq e := heD
   let _ : Nonempty e := heN
   obtain ⟨B⟩ := hBnonempty
-  let S : ADHWFQSWIidSourceRouteOperationalSurface ψ n (δ / 3) (εerr / 4) q e :=
-    B.sourceRouteOperationalSurface
-  let Spublic : FQSWRateErrorCertificate ψ n q e := S.toFQSWRateErrorCertificate
-  refine ⟨q, hqF, hqD, e, heF, heD, heN, Spublic, ?_, ?_, ?_⟩
-  · have hrate := B.rateChoice.communicationLogRate_le hn_pos
-    simp [FQSWRateErrorCertificate.communicationRate, if_neg (Nat.ne_of_gt hn_pos)]
-    nlinarith [hδ]
-  · have hyield := B.rateChoice.ebitYieldLogRate_ge hn_pos
-    simp [FQSWRateErrorCertificate.ebitYieldRate, if_neg (Nat.ne_of_gt hn_pos)]
-    nlinarith
-  · change (1 / 2 : ℝ) * S.traceNormError ≤ εerr
-    exact
-      (B.sourceRouteOperationalSurface_normalizedError_le_rounded_rate_half).trans
-        (hNerr n hn_err)
+  refine ⟨q, hqF, hqD, e, heF, heD, heN, e, heF, heD, B.physicalProtocol, ?_, ?_, ?_⟩
+  · exact B.physicalProtocol_communicationRate_le_slack hn_pos hδ.le
+  · exact B.physicalProtocol_ebitYieldRate_ge_slack hn_pos
+  · exact B.physicalProtocol_normalizedError_le.trans (hNerr n hn_err)
 
-/-- No-witness ADHW rate/error certificate theorem: for every pure source, the
-typical-subspace, source compression, one-shot decoupling, and mixed-slack
-route of fqsw.tex lines 1093-1180 establish the scalar rate and error window.
-The later concrete-protocol assembly is deliberately not claimed here. -/
-theorem fqsw_direct_rateErrorCertificates :
-    PureVector.HasAsymptoticFQSWRateErrorCertificates.{u, v, w, x, y} ψ := by
-  intro δ hδ εerr hεerr
-  have hδ3_pos : 0 < δ / 3 := by positivity
-  have hδtyp_pos : 0 < (δ / 3) / 4 := by positivity
-  have hε4_pos : 0 < εerr / 4 := by positivity
-  obtain ⟨Nblocks, hblocks⟩ :=
-    exists_adhwFQSWIidMixedBlockConstruction_eventually
-      (ψ := ψ) (δtyp := (δ / 3) / 4) (δrate := δ / 3) (ε := εerr / 4)
-      hδtyp_pos hδ3_pos hε4_pos le_rfl
-  obtain ⟨Nerr, hNerr⟩ :=
-    eventually_half_adhwFQSWIidRoundedPostCompressionTraceErrorBound_le
-      (δ := δ / 3) (ε := εerr) hδ3_pos hεerr
-  refine ⟨max (max Nblocks Nerr) 1, fun n hn => ?_⟩
-  have hn_blocks : n ≥ Nblocks := le_trans (le_max_left _ _) (le_trans (le_max_left _ _) hn)
-  have hn_err : n ≥ Nerr := le_trans (le_max_right _ _) (le_trans (le_max_left _ _) hn)
-  have hn_pos : 0 < n := by
-    exact Nat.lt_of_lt_of_le Nat.zero_lt_one (le_trans (le_max_right _ _) hn)
-  obtain ⟨atyp, hatypF, hatypD, btyp, hbtypF, hbtypD, rtyp, hrtypF, hrtypD,
-      q, hqF, hqD, hqN, e, heF, heD, heN, hBnonempty⟩ :=
-    hblocks n hn_blocks
-  let _ : Fintype atyp := hatypF
-  let _ : DecidableEq atyp := hatypD
-  let _ : Fintype btyp := hbtypF
-  let _ : DecidableEq btyp := hbtypD
-  let _ : Fintype rtyp := hrtypF
-  let _ : DecidableEq rtyp := hrtypD
-  let _ : Fintype q := hqF
-  let _ : DecidableEq q := hqD
-  let _ : Nonempty q := hqN
-  let _ : Fintype e := heF
-  let _ : DecidableEq e := heD
-  let _ : Nonempty e := heN
-  obtain ⟨B⟩ := hBnonempty
-  let S : ADHWFQSWIidSourceRouteOperationalSurface ψ n (δ / 3) (εerr / 4) q e :=
-    B.sourceRouteOperationalSurface
-  let Spublic : FQSWRateErrorCertificate ψ n q e := S.toFQSWRateErrorCertificate
-  refine ⟨q, hqF, hqD, e, heF, heD, heN, Spublic, ?_, ?_, ?_⟩
-  · have hrate := B.rateChoice.communicationLogRate_le hn_pos
-    simp [FQSWRateErrorCertificate.communicationRate, if_neg (Nat.ne_of_gt hn_pos)]
-    nlinarith [hδ]
-  · have hyield := B.rateChoice.ebitYieldLogRate_ge hn_pos
-    simp [FQSWRateErrorCertificate.ebitYieldRate, if_neg (Nat.ne_of_gt hn_pos)]
-    nlinarith
-  · change (1 / 2 : ℝ) * S.traceNormError ≤ εerr
-    exact
-      (B.sourceRouteOperationalSurface_normalizedError_le_rounded_rate_half).trans
-        (hNerr n hn_err)
+/-- Source-faithful ADHW FQSW direct achievability: every finite-dimensional
+pure tripartite source admits concrete physical block protocols with quantum
+communication rate approaching `I(A;R)/2`, ebit-yield rate approaching
+`I(A;B)/2`, and vanishing computed trace-distance error, following fqsw.tex
+lines 1093-1180. -/
+theorem fqsw_direct_achievable :
+    PureVector.IsAchievableFQSW.{u, v, w, x, y, y} ψ :=
+  Nonempty.elim (exists_adhwFQSWIidConstruction ψ)
+    (fqsw_direct_achievable_of_iidConstruction ψ)
 
 end PureVector
 

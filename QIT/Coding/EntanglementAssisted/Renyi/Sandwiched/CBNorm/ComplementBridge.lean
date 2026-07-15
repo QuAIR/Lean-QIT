@@ -9,7 +9,7 @@ module
 public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.CBNorm.Induced
 public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.CBNorm.Complement
 public import QIT.States.Purification.Schatten
-public import QIT.Information.Renyi.FrankLieb
+public import QIT.Information.Renyi.FrankLieb.Variational
 
 /-!
 # Complement bridge for the EA CB `1 -> alpha` norm

@@ -455,7 +455,7 @@ theorem extractorSeedOutputBucket_eq_sum (H : HashFamily F Z S)
       ∑ z : Z, if H.hash f z = s then E.cqBlock z else 0 :=
   rfl
 
-omit [DecidableEq F] [Nonempty F] [Fintype S] [Nonempty S] in
+omit [DecidableEq F] [Nonempty F] [Fintype S] [Nonempty S] [DecidableEq Z] in
 /-- The source-style output bucket is positive semidefinite. -/
 theorem extractorSeedOutputBucket_posSemidef (H : HashFamily F Z S)
     (E : Ensemble Z e) (f : F) (s : S) :
@@ -515,7 +515,7 @@ def extractorSeedOutputBucketState (H : HashFamily F Z S) (E : Ensemble Z e)
   pos := H.extractorSeedOutputBucket_posSemidef E f s
   trace_le_one := H.extractorSeedOutputBucket_trace_re_le_one E f s
 
-omit [DecidableEq F] [Nonempty F] [Fintype S] [Nonempty S] in
+omit [DecidableEq F] [Nonempty F] [Fintype S] [Nonempty S] [DecidableEq Z] in
 @[simp]
 theorem extractorSeedOutputBucketState_matrix (H : HashFamily F Z S)
     (E : Ensemble Z e) (f : F) (s : S) :
@@ -523,7 +523,7 @@ theorem extractorSeedOutputBucketState_matrix (H : HashFamily F Z S)
       H.extractorSeedOutputBucket E f s :=
   rfl
 
-omit [DecidableEq F] [Nonempty F] [Fintype S] [Nonempty S] in
+omit [DecidableEq F] [Nonempty F] [Fintype S] [Nonempty S] [DecidableEq Z] in
 @[simp]
 theorem extractorSeedOutputBucketState_trace_re (H : HashFamily F Z S)
     (E : Ensemble Z e) (f : F) (s : S) :
@@ -648,7 +648,7 @@ private theorem centerCoeff_pair_sum (H : HashFamily F Z S)
         (Fintype.card S : ℝ) * α * α := by
         simp only [sub_mul, mul_sub, Finset.sum_sub_distrib, Finset.mul_sum,
           Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
-        ring
+        ring_nf
     _ = (if H.hash f z = H.hash f z' then (1 : ℝ) else 0) - α := by
         rw [hsum_pair, hsum_indicator_left, hsum_indicator_right]
         have hα : (Fintype.card S : ℝ) * α = 1 := by

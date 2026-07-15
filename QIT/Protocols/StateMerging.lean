@@ -6,7 +6,12 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Protocols.StateMerging.Core
+public import QIT.Protocols.StateMerging.Converse
+public import QIT.Protocols.StateMerging.DirectRates
+public import QIT.Protocols.StateMerging.DirectProtocol
+public import QIT.Protocols.StateMerging.DirectOperational
+public import QIT.Protocols.StateMerging.Direct
+public import QIT.Protocols.StateMerging.Optimality
 
 /-!
 # State merging

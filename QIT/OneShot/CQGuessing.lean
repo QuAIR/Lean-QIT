@@ -7,6 +7,8 @@ Authors: QuAIR Team
 module
 
 public import QIT.OneShot.Smooth
+public import QIT.OneShot.SmoothAttainment
+public import QIT.States.Topology
 public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import QIT.Util.SDP.StrongDuality
 public import Mathlib.Analysis.CStarAlgebra.Matrix
@@ -35,6 +37,197 @@ namespace QIT
 universe u v
 
 noncomputable section
+
+namespace State
+
+variable {a : Type u} {b : Type v}
+variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+
+/-- A closed purified-distance ball in the normalized-state topology. -/
+theorem purifiedBall_isClosed (ρ : State a) (ε : ℝ) :
+    IsClosed ({σ : State a | ρ.purifiedBall ε σ}) := by
+  have hclosed :
+      IsClosed
+        ({σ : State a |
+          ρ.toSubnormalized.purifiedBall ε σ.toSubnormalized}) :=
+    (SubnormalizedState.purifiedBall_isClosed (a := a) ρ.toSubnormalized ε).preimage
+      State.continuous_toSubnormalized
+  have hset :
+      {σ : State a | ρ.purifiedBall ε σ} =
+        {σ : State a | ρ.toSubnormalized.purifiedBall ε σ.toSubnormalized} := by
+    ext σ
+    exact State.purifiedBall_iff_toSubnormalized_purifiedBall ρ σ ε
+  rwa [hset]
+
+/-- A purified-distance ball is compact as a closed subset of the compact
+normalized-state space. -/
+theorem purifiedBall_isCompact (ρ : State a) (ε : ℝ) :
+    IsCompact ({σ : State a | ρ.purifiedBall ε σ}) := by
+  have hcompact :=
+    (State.isCompact_univ (a := a)).inter_right (purifiedBall_isClosed (a := a) ρ ε)
+  simpa [Set.univ_inter] using hcompact
+
+/-- Compact feasible pairs `(ρ', T_B)` for the normalized conditional-min scale
+over a normalized purified-distance ball, with a harmless trace cap on `T_B`. -/
+def conditionalMinEntropyScaleFeasiblePairSet
+    (ρ : State (Prod a b)) (ε B : ℝ) :
+    Set (State (Prod a b) × CMatrix b) :=
+  ({ρ' : State (Prod a b) | ρ.purifiedBall ε ρ'} ×ˢ
+      SubnormalizedState.psdTraceBoundedMatrixSet b B) ∩
+    {p | p.1.matrix ≤ Matrix.kronecker (1 : CMatrix a) p.2}
+
+/-- The matrix-order constraint in the normalized feasible-pair domain is
+closed. -/
+theorem conditionalMinEntropyScaleFeasiblePair_order_isClosed :
+    IsClosed
+      ({p : State (Prod a b) × CMatrix b |
+        p.1.matrix ≤ Matrix.kronecker (1 : CMatrix a) p.2}) := by
+  let f : State (Prod a b) × CMatrix b → CMatrix (Prod a b) :=
+    fun p => Matrix.kronecker (1 : CMatrix a) p.2 - p.1.matrix
+  have hf : Continuous f := by
+    exact ((SubnormalizedState.continuous_kronecker_one_matrix (a := a) (b := b)).comp
+        continuous_snd).sub
+      (State.continuous_matrix.comp continuous_fst)
+  have hset :
+      {p : State (Prod a b) × CMatrix b |
+        p.1.matrix ≤ Matrix.kronecker (1 : CMatrix a) p.2} =
+      {p | f p ∈ ({M : CMatrix (Prod a b) | M.PosSemidef} : Set (CMatrix (Prod a b)))} := by
+    ext p
+    simp [f, Matrix.le_iff]
+  rw [hset]
+  exact (psdCone (Prod a b)).isClosed.preimage hf
+
+/-- The normalized feasible-pair domain for the conditional-min scale is
+compact. -/
+theorem conditionalMinEntropyScaleFeasiblePairSet_isCompact
+    (ρ : State (Prod a b)) (ε B : ℝ) :
+    IsCompact (conditionalMinEntropyScaleFeasiblePairSet (a := a) (b := b) ρ ε B) := by
+  let ball : Set (State (Prod a b)) := {ρ' | ρ.purifiedBall ε ρ'}
+  let tset : Set (CMatrix b) := SubnormalizedState.psdTraceBoundedMatrixSet b B
+  have hball : IsCompact ball := by
+    simpa [ball] using State.purifiedBall_isCompact (a := Prod a b) ρ ε
+  have htset : IsCompact tset := by
+    simpa [tset] using SubnormalizedState.psdTraceBoundedMatrixSet_isCompact (b := b) (R := B)
+  have hbase : IsCompact (ball ×ˢ tset) := hball.prod htset
+  have hclosed := conditionalMinEntropyScaleFeasiblePair_order_isClosed (a := a) (b := b)
+  simpa [conditionalMinEntropyScaleFeasiblePairSet, ball, tset] using
+    hbase.inter_right hclosed
+
+private theorem neg_log2_antitone_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
+    -log2 y ≤ -log2 x := by
+  unfold log2
+  exact neg_le_neg
+    (div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
+      (le_of_lt (Real.log_pos one_lt_two)))
+
+/-- Normalized-candidate smooth conditional min-entropy attains its maximum on
+every nonempty normalized purified-distance ball. -/
+theorem smoothConditionalMinEntropyNormalizedCandidates_exists_optimizer
+    [Nonempty a] [Nonempty b]
+    (ρ : State (Prod a b)) {ε : ℝ} (hε_nonneg : 0 ≤ ε) :
+    ∃ ρmin : State (Prod a b),
+      ρ.purifiedBall ε ρmin ∧
+        ρ.smoothConditionalMinEntropyNormalizedCandidates ε =
+          ρmin.conditionalMinEntropy ∧
+          ∀ ρ' : State (Prod a b),
+            ρ.purifiedBall ε ρ' →
+              ρ'.conditionalMinEntropy ≤ ρmin.conditionalMinEntropy := by
+  let B : ℝ := Fintype.card b
+  let feasibleSet :=
+    conditionalMinEntropyScaleFeasiblePairSet (a := a) (b := b) ρ ε B
+  have hcompact : IsCompact feasibleSet := by
+    dsimp [feasibleSet]
+    exact conditionalMinEntropyScaleFeasiblePairSet_isCompact
+      (a := a) (b := b) ρ ε B
+  have hnonempty : feasibleSet.Nonempty := by
+    refine ⟨(ρ, (1 : CMatrix b)), ?_⟩
+    dsimp [feasibleSet, conditionalMinEntropyScaleFeasiblePairSet, B,
+      SubnormalizedState.psdTraceBoundedMatrixSet]
+    constructor
+    · constructor
+      · exact ρ.purifiedBall_self_of_nonneg hε_nonneg
+      · constructor
+        · exact Matrix.PosSemidef.one
+        · rw [Matrix.trace_one]
+          norm_num
+    · simpa [Matrix.one_kronecker_one] using ρ.matrix_le_one
+  let traceFun : State (Prod a b) × CMatrix b → ℝ := fun p => p.2.trace.re
+  have htraceFun_cont : Continuous traceFun := by
+    exact Complex.continuous_re.comp (Continuous.matrix_trace continuous_snd)
+  obtain ⟨pmin, hpmin, hpmin_min⟩ :=
+    LowerSemicontinuousOn.exists_isMinOn hnonempty hcompact
+      (htraceFun_cont.lowerSemicontinuous.lowerSemicontinuousOn feasibleSet)
+  let ρmin : State (Prod a b) := pmin.1
+  let Tmin : CMatrix b := pmin.2
+  rcases hpmin with ⟨⟨hρmin_ball, hTmin_set⟩, hρmin_le_Tmin⟩
+  have hTmin_feas :
+      ConditionalMinEntropyScaleFeasible (a := a) ρmin Tmin :=
+    ⟨hTmin_set.1, hρmin_le_Tmin⟩
+  have hTmin_trace_pos : 0 < Tmin.trace.re := by
+    have hscale_lb :
+        (Fintype.card a : ℝ)⁻¹ ≤ Tmin.trace.re :=
+      conditionalMinEntropyScaleFeasible_trace_lower_bound (a := a) hTmin_feas
+    have hcard_a_pos : 0 < (Fintype.card a : ℝ) := by
+      exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
+    exact lt_of_lt_of_le (inv_pos.mpr hcard_a_pos) hscale_lb
+  have hmin_le_trace_of_feasible :
+      ∀ ρ' : State (Prod a b), ρ.purifiedBall ε ρ' →
+        ∀ T : CMatrix b,
+          ConditionalMinEntropyScaleFeasible (a := a) ρ' T →
+            Tmin.trace.re ≤ T.trace.re := by
+    intro ρ' hball T hT
+    by_cases hTcap : T.trace.re ≤ B
+    · have hp : (ρ', T) ∈ feasibleSet := by
+        dsimp [feasibleSet, conditionalMinEntropyScaleFeasiblePairSet,
+          SubnormalizedState.psdTraceBoundedMatrixSet]
+        exact ⟨⟨hball, hT.1, hTcap⟩, hT.2⟩
+      simpa [traceFun, Tmin] using hpmin_min hp
+    · have hB_lt : B < T.trace.re := lt_of_not_ge hTcap
+      exact hTmin_set.2.trans (le_of_lt hB_lt)
+  have hscale_ge_Tmin :
+      ∀ ρ' : State (Prod a b), ρ.purifiedBall ε ρ' →
+        Tmin.trace.re ≤ ρ'.conditionalMinEntropyScale (a := a) := by
+    intro ρ' hball
+    rw [conditionalMinEntropyScale_eq_sInf_scaleValueSet]
+    refine le_csInf (ρ'.conditionalMinEntropyScaleValueSet_nonempty (a := a)) ?_
+    intro t ht
+    rcases ht with ⟨T, hT, rfl⟩
+    exact hmin_le_trace_of_feasible ρ' hball T hT
+  have hscale_ρmin_le_Tmin :
+      ρmin.conditionalMinEntropyScale (a := a) ≤ Tmin.trace.re := by
+    rw [conditionalMinEntropyScale_eq_sInf_scaleValueSet]
+    exact csInf_le (by
+      rw [ρmin.conditionalMinEntropyScaleValueSet_eq_normalizedScaleValueSet (a := a)]
+      exact ρmin.conditionalMinEntropyNormalizedScaleValueSet_bddBelow (a := a))
+      ⟨Tmin, hTmin_feas, rfl⟩
+  have hscale_ρmin_eq_Tmin :
+      ρmin.conditionalMinEntropyScale (a := a) = Tmin.trace.re :=
+    le_antisymm hscale_ρmin_le_Tmin (hscale_ge_Tmin ρmin hρmin_ball)
+  have hoptimizer :
+      ∀ ρ' : State (Prod a b), ρ.purifiedBall ε ρ' →
+        ρ'.conditionalMinEntropy ≤ ρmin.conditionalMinEntropy := by
+    intro ρ' hball
+    have hscale_ge := hscale_ge_Tmin ρ' hball
+    rw [ρ'.conditionalMinEntropy_eq_neg_log2_scale_of_nonempty (a := a),
+      ρmin.conditionalMinEntropy_eq_neg_log2_scale_of_nonempty (a := a),
+      hscale_ρmin_eq_Tmin]
+    exact neg_log2_antitone_of_pos hTmin_trace_pos hscale_ge
+  refine ⟨ρmin, hρmin_ball, ?_, hoptimizer⟩
+  rw [smoothConditionalMinEntropyNormalizedCandidates_eq_sSup_candidates]
+  apply le_antisymm
+  · refine csSup_le ?_ ?_
+    · exact ⟨ρ.conditionalMinEntropy, ρ,
+        ρ.purifiedBall_self_of_nonneg hε_nonneg, rfl⟩
+    · intro h hh
+      rcases hh with ⟨ρ', hρ'_ball, rfl⟩
+      exact hoptimizer ρ' hρ'_ball
+  · refine le_csSup ?_ ⟨ρmin, hρmin_ball, rfl⟩
+    refine ⟨log2 (Fintype.card a : ℝ), ?_⟩
+    intro h hh
+    rcases hh with ⟨ρ', _hρ'_ball, rfl⟩
+    exact ρ'.conditionalMinEntropy_le_log2_card_left (a := a) (b := b)
+
+end State
 
 namespace Ensemble
 
@@ -175,6 +368,193 @@ theorem CqSmoothConditionalMinEntropyCandidate_eq
       ∃ E' : Ensemble ι b, E.cqState.purifiedBall ε E'.cqState ∧
         h ≤ E'.cqState.conditionalMinEntropy :=
   Iff.rfl
+
+end Ensemble
+
+namespace State
+
+variable {ι : Type u} {b : Type v}
+variable [Fintype ι] [DecidableEq ι] [Fintype b] [DecidableEq b] [Nonempty b]
+
+/-- Repackage the source-coordinate pinching of a normalized bipartite state as
+a normalized cq ensemble. Zero-trace source blocks get an arbitrary normalized
+side state because their probability weight is zero. -/
+def sourceCoordinatePinchEnsemble (ρ : State (Prod ι b)) : Ensemble ι b where
+  probs := fun x => Real.toNNReal (Classical.block ρ.matrix x x).trace.re
+  weights_sum := by
+    apply NNReal.coe_injective
+    rw [NNReal.coe_sum]
+    have hblock_nonneg :
+        ∀ x, 0 ≤ (Classical.block ρ.matrix x x).trace.re := by
+      intro x
+      have htrace_nonneg : 0 ≤ (Classical.block ρ.matrix x x).trace :=
+        Matrix.PosSemidef.trace_nonneg
+          (by simpa [Classical.block] using ρ.pos.submatrix (fun i : b => (x, i)))
+      exact htrace_nonneg.1
+    have hsum :=
+      congrArg Complex.re (Classical.sum_block_trace (ι := ι) (a := b) ρ.matrix)
+    rw [ρ.trace_eq_one] at hsum
+    calc
+      (∑ x, ↑(Real.toNNReal (Classical.block ρ.matrix x x).trace.re) : ℝ) =
+          ∑ x, (Classical.block ρ.matrix x x).trace.re := by
+            refine Finset.sum_congr rfl fun x _ => ?_
+            exact Real.coe_toNNReal _ (hblock_nonneg x)
+      _ = 1 := by simpa using hsum
+  states := fun x =>
+    if hx : (Classical.block ρ.matrix x x).trace.re = 0 then
+      State.maximallyMixed b
+    else
+      State.normalizePSD (Classical.block ρ.matrix x x)
+        (by simpa [Classical.block] using ρ.pos.submatrix (fun i : b => (x, i))) hx
+
+private theorem sourceCoordinatePinchEnsemble_weightedBlock
+    (ρ : State (Prod ι b)) (x : ι) :
+    ((ρ.sourceCoordinatePinchEnsemble.probs x : ℂ) •
+        (ρ.sourceCoordinatePinchEnsemble.states x).matrix) =
+      Classical.block ρ.matrix x x := by
+    classical
+    let B : CMatrix b := Classical.block ρ.matrix x x
+    have hBpos : B.PosSemidef := by
+      simpa [B, Classical.block] using ρ.pos.submatrix (fun i : b => (x, i))
+    have hBtrace_nonneg : 0 ≤ B.trace :=
+      Matrix.PosSemidef.trace_nonneg hBpos
+    have hBtr_nonneg : 0 ≤ B.trace.re :=
+      hBtrace_nonneg.1
+    by_cases hzero : B.trace.re = 0
+    · have hBtrace : B.trace = 0 := by
+        apply Complex.ext
+        · exact hzero
+        · exact hBtrace_nonneg.2.symm
+      have hBzero : B = 0 :=
+        (Matrix.PosSemidef.trace_eq_zero_iff hBpos).mp hBtrace
+      simp [State.sourceCoordinatePinchEnsemble, B, hBzero]
+    · have hprob :
+          ((Real.toNNReal B.trace.re : ℝ≥0) : ℂ) = (B.trace.re : ℂ) := by
+        norm_num [Real.coe_toNNReal _ hBtr_nonneg]
+      have hreal : B.trace.re * (B.trace.re)⁻¹ = 1 :=
+        mul_inv_cancel₀ hzero
+      have hcomplex : (B.trace.re : ℂ) * (((B.trace.re)⁻¹ : ℝ) : ℂ) = 1 := by
+        exact_mod_cast hreal
+      have hblock_ne : (Classical.block ρ.matrix x x).trace.re ≠ 0 := by
+        simpa [B] using hzero
+      simp only [State.sourceCoordinatePinchEnsemble, hblock_ne, dite_false,
+        State.normalizePSD_matrix]
+      change ((Real.toNNReal B.trace.re : ℝ≥0) : ℂ) • (((B.trace.re)⁻¹ : ℝ) • B) = B
+      rw [hprob]
+      ext i j
+      simp only [Matrix.smul_apply]
+      change (B.trace.re : ℂ) * ((((B.trace.re)⁻¹ : ℝ) : ℂ) * B i j) = B i j
+      rw [← mul_assoc, hcomplex, one_mul]
+
+/-- The cq state reconstructed from the source-coordinate-pinched ensemble is
+exactly the source-coordinate pinching of the original normalized state, after
+embedding both as subnormalized states. -/
+theorem sourceCoordinatePinchEnsemble_cqState_toSubnormalized
+    (ρ : State (Prod ι b)) :
+    ρ.sourceCoordinatePinchEnsemble.cqState.toSubnormalized =
+      ρ.toSubnormalized.sourceCoordinatePinch := by
+  classical
+  apply SubnormalizedState.ext
+  rw [State.toSubnormalized_matrix,
+    SubnormalizedState.sourceCoordinatePinch_matrix_eq_blockDiagonal,
+    Classical.cqState_eq_blockDiagonal]
+  apply congrArg Classical.blockDiagonal
+  funext x
+  simpa [State.toSubnormalized_matrix] using
+    sourceCoordinatePinchEnsemble_weightedBlock (ρ := ρ) x
+
+end State
+
+namespace Ensemble
+
+variable {ι : Type u} {b : Type v}
+variable [Fintype ι] [DecidableEq ι] [Fintype b] [DecidableEq b]
+
+local instance cMatrixNormedSpaceRealReopened : NormedSpace ℝ (CMatrix b) :=
+  inferInstance
+
+noncomputable local instance cMatrixCStarAlgebraReopened : CStarAlgebra (CMatrix b) := {}
+
+attribute [local instance 1001] NormedAddCommGroup.toAddCommGroup
+  AddCommGroup.toAddCommMonoid NormedSpace.toModule
+attribute [local instance 1001] PseudoMetricSpace.toUniformSpace
+  UniformSpace.toTopologicalSpace
+
+/-- A normalized cq state is already diagonal in the source coordinate, hence
+source-coordinate pinching fixes its subnormalized embedding. -/
+theorem cqState_toSubnormalized_sourceCoordinatePinch
+    (E : Ensemble ι b) :
+    E.cqState.toSubnormalized.sourceCoordinatePinch =
+      E.cqState.toSubnormalized := by
+  apply SubnormalizedState.ext
+  rw [SubnormalizedState.sourceCoordinatePinch_matrix, State.toSubnormalized_matrix]
+  change (SubnormalizedState.sourceCoordinatePinchChannel (a := ι) (b := b)).map
+      E.cqState.matrix =
+    E.cqState.matrix
+  rw [Ensemble.cqState_matrix]
+  simp only [map_sum]
+  refine Finset.sum_congr rfl fun z _ => ?_
+  change (SubnormalizedState.sourceCoordinatePinchChannel (a := ι) (b := b)).map
+      ((E.probs z : ℂ) •
+        Matrix.kronecker (Matrix.single z z (1 : ℂ)) (E.states z).matrix) =
+    (E.probs z : ℂ) •
+      Matrix.kronecker (Matrix.single z z (1 : ℂ)) (E.states z).matrix
+  rw [map_smul]
+  rw [SubnormalizedState.sourceCoordinatePinchChannel_map_singleTensor]
+
+omit [DecidableEq ι] in
+theorem CqSmoothConditionalMinEntropyCandidate_of_smoothConditionalMinEntropyNormalizedCandidates
+    [DecidableEq ι] (E : Ensemble ι b) {ε : ℝ} (hε_nonneg : 0 ≤ ε) :
+    E.CqSmoothConditionalMinEntropyCandidate ε
+      (E.cqState.smoothConditionalMinEntropyNormalizedCandidates ε) := by
+  classical
+  haveI : Nonempty ι := E.index_nonempty
+  have hprod : Nonempty (Prod ι b) := E.cqState.nonempty
+  haveI : Nonempty b := ⟨(Classical.choice hprod).2⟩
+  rcases E.cqState.smoothConditionalMinEntropyNormalizedCandidates_exists_optimizer
+      (a := ι) (b := b) hε_nonneg with
+    ⟨ρmin, hρmin_ball, hsmooth, _hopt⟩
+  let E' : Ensemble ι b := ρmin.sourceCoordinatePinchEnsemble
+  have hball_sub :
+      E.cqState.toSubnormalized.purifiedBall ε ρmin.toSubnormalized :=
+    (State.purifiedBall_iff_toSubnormalized_purifiedBall E.cqState ρmin ε).mp
+      hρmin_ball
+  have hball_pinch :
+      E.cqState.toSubnormalized.purifiedBall ε ρmin.toSubnormalized.sourceCoordinatePinch := by
+    exact E.cqState.toSubnormalized.purifiedBall_sourceCoordinatePinch_of_fixed
+      (E.cqState_toSubnormalized_sourceCoordinatePinch) hball_sub
+  have hE'_sub :
+      E'.cqState.toSubnormalized = ρmin.toSubnormalized.sourceCoordinatePinch := by
+    simpa [E'] using ρmin.sourceCoordinatePinchEnsemble_cqState_toSubnormalized
+  have hball_state : E.cqState.purifiedBall ε E'.cqState := by
+    rw [State.purifiedBall_iff_toSubnormalized_purifiedBall]
+    simpa [hE'_sub] using hball_pinch
+  have hρmin_trace_pos : 0 < ρmin.toSubnormalized.matrix.trace.re := by
+    rw [State.toSubnormalized_trace]
+    norm_num
+  have hpinch_entropy :
+      ρmin.toSubnormalized.conditionalMinEntropy ≤
+        ρmin.toSubnormalized.sourceCoordinatePinch.conditionalMinEntropy :=
+    ρmin.toSubnormalized.conditionalMinEntropy_le_sourceCoordinatePinch_of_trace_pos
+      (a := ι) hρmin_trace_pos
+  have hρmin_entropy :
+      ρmin.toSubnormalized.conditionalMinEntropy = ρmin.conditionalMinEntropy := by
+    rw [State.toSubnormalized_conditionalMinEntropy_eq]
+  have hE'_entropy :
+      ρmin.toSubnormalized.sourceCoordinatePinch.conditionalMinEntropy =
+        E'.cqState.conditionalMinEntropy := by
+    have hsub :=
+      State.toSubnormalized_conditionalMinEntropy_eq (a := ι) (b := b)
+        (ρ := E'.cqState)
+    rw [hE'_sub] at hsub
+    exact hsub
+  refine ⟨E', hball_state, ?_⟩
+  calc
+    E.cqState.smoothConditionalMinEntropyNormalizedCandidates ε =
+        ρmin.conditionalMinEntropy := hsmooth
+    _ = ρmin.toSubnormalized.conditionalMinEntropy := hρmin_entropy.symm
+    _ ≤ ρmin.toSubnormalized.sourceCoordinatePinch.conditionalMinEntropy := hpinch_entropy
+    _ = E'.cqState.conditionalMinEntropy := hE'_entropy
 
 /-! ## cq SDP embedding -/
 

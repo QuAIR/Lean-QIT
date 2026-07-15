@@ -25,6 +25,8 @@ open scoped ComplexOrder MatrixOrder
 namespace QIT
 
 universe u v w x y z p u1 v1 w1
+universe ua0 ub0 ur0 ua1 ub1 ur1
+universe uq0 ue0 ubq0 urq0 uq1 ue1 ubq1 urq1
 
 noncomputable section
 
@@ -177,6 +179,24 @@ def fqswChannelOfReferenceIsometry
       (MatrixMap.ofReferenceIsometry V)
       (MatrixMap.ofReferenceIsometry_isCompletelyPositive V)
 
+/-- Applying an isometry channel to the left half of a pure bipartite state
+agrees with applying the isometry to the underlying pure vector. -/
+theorem fqswChannelOfReferenceIsometry_prod_id_applyState_pure
+    {r₁ : Type u} {r₂ : Type v} {s : Type w}
+    [Fintype r₁] [DecidableEq r₁] [Fintype r₂] [DecidableEq r₂]
+    [Fintype s] [DecidableEq s]
+    (V : ReferenceIsometry r₁ r₂) (Ψ : PureVector (Prod r₁ s)) :
+    ((fqswChannelOfReferenceIsometry V).prod (Channel.idChannel s)).applyState Ψ.state =
+      (V.applyPureVector Ψ).state := by
+  apply State.ext
+  change
+    MatrixMap.kron (MatrixMap.ofReferenceIsometry V) (Channel.idChannel s).map
+        Ψ.state.matrix =
+      rankOneMatrix (V.applyAmp Ψ.amp)
+  rw [PureVector.state_matrix]
+  rw [MatrixMap.kron_ofReferenceIsometry_idChannel_apply_eq_applyMatrixLeft]
+  exact (V.rankOne_applyAmp Ψ.amp).symm
+
 /-- Canonical maximally entangled pure vector associated to a finite basis
 equivalence between the two ebit registers. -/
 def maximallyEntangledPureVector (pairing : e ≃ et) : PureVector (Prod e et) where
@@ -223,6 +243,82 @@ def maximallyEntangledPureVector (pairing : e ≃ et) : PureVector (Prod e et) w
         field_simp [hsqrtC_ne]
         rw [← Complex.ofReal_natCast, ← Complex.ofReal_pow]
         exact congrArg Complex.ofReal (Real.sq_sqrt hcard_pos.le).symm
+
+/-- Local maximally mixed state constructor used by the FQSW source route. -/
+def adhwFQSWMaximallyMixedState (α : Type*) [Fintype α] [DecidableEq α] [Nonempty α] :
+    State α where
+  matrix := (((Fintype.card α : ℝ)⁻¹ : ℝ) : ℂ) • (1 : CMatrix α)
+  pos := by
+    have hscalar : (0 : ℂ) ≤ (((Fintype.card α : ℝ)⁻¹ : ℝ) : ℂ) := by
+      exact_mod_cast inv_nonneg.mpr (Nat.cast_nonneg (Fintype.card α : ℕ))
+    exact Matrix.PosSemidef.smul Matrix.PosSemidef.one hscalar
+  trace_eq_one := by
+    rw [Matrix.trace_smul, Matrix.trace_one]
+    have hcard : (Fintype.card α : ℂ) ≠ 0 := by
+      exact_mod_cast (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)
+    norm_num [hcard]
+
+/-- On a one-point finite system, every state is the local maximally mixed
+state. -/
+theorem state_matrix_eq_maximallyMixed_of_subsingleton
+    {α : Type u} [Fintype α] [DecidableEq α] [Nonempty α] [Subsingleton α]
+    (ρ : State α) :
+    ρ.matrix = (adhwFQSWMaximallyMixedState α).matrix := by
+  ext x y
+  have hxy : x = y := Subsingleton.elim _ _
+  subst y
+  have hdiag : ρ.matrix x x = 1 := by
+    have htrace := ρ.trace_eq_one
+    rw [Matrix.trace] at htrace
+    have hsum :
+        (∑ z : α, ρ.matrix z z) = ρ.matrix x x := by
+      apply Finset.sum_eq_single x
+      · intro z _ hz
+        exact False.elim (hz (Subsingleton.elim z x))
+      · intro h
+        exact False.elim (h (Finset.mem_univ x))
+    have hsum_diag :
+        (∑ z : α, Matrix.diag ρ.matrix z) = ρ.matrix x x := by
+      simpa [Matrix.diag] using hsum
+    rw [hsum_diag] at htrace
+    exact htrace
+  have hcard : (Fintype.card α : ℝ) = 1 := by
+    exact_mod_cast
+      (Fintype.card_eq_one_iff.mpr ⟨x, fun y => Subsingleton.elim y x⟩)
+  simp [adhwFQSWMaximallyMixedState, hdiag, hcard]
+
+/-- The first marginal of the canonical maximally entangled vector is
+maximally mixed. -/
+theorem maximallyEntangledPureVector_marginalA (pairing : e ≃ et) :
+    (maximallyEntangledPureVector pairing).state.marginalA =
+      adhwFQSWMaximallyMixedState e := by
+  apply State.ext
+  ext x y
+  have hcard_pos : 0 < (Fintype.card e : ℝ) := by
+    exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
+  have hsqrt_ne : (Real.sqrt (Fintype.card e : ℝ) : ℂ) ≠ 0 := by
+    exact_mod_cast (ne_of_gt (Real.sqrt_pos.2 hcard_pos))
+  have hcoef :
+      ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹ *
+          star ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹)) =
+        (((Fintype.card e : ℝ)⁻¹ : ℝ) : ℂ) := by
+    rw [star_inv₀]
+    simp
+    field_simp [hsqrt_ne]
+    rw [← Complex.ofReal_natCast, ← Complex.ofReal_pow]
+    exact congrArg Complex.ofReal (Real.sq_sqrt hcard_pos.le).symm
+  have hcoef' :
+      ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹ *
+          ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹)) =
+        (((Fintype.card e : ℝ)⁻¹ : ℝ) : ℂ) := by
+    simpa using hcoef
+  by_cases hxy : x = y
+  · subst y
+    simp [State.marginalA, partialTraceB,
+      maximallyEntangledPureVector, adhwFQSWMaximallyMixedState, hcoef']
+  · have hyx : ¬ y = x := fun h => hxy h.symm
+    simp [State.marginalA, partialTraceB,
+      maximallyEntangledPureVector, adhwFQSWMaximallyMixedState, hxy, hyx]
 
 /-- Regroup a left-associated tripartite source `(A × B) × R` so Alice's
 system is the left factor. -/
@@ -365,6 +461,18 @@ def outputPureVector :
 def outputState : State (Prod (Prod (Prod a b) r) (Prod e et)) :=
   C.outputPureVector.state
 
+/-- The mixed-state operational path on the source pure state agrees with the
+pure-vector definition of the computed one-shot output. -/
+theorem outputStateOfState_source_eq_outputState :
+    C.outputStateOfState ψ.state = C.outputState := by
+  unfold outputStateOfState outputState outputPureVector
+  dsimp only
+  rw [← PureVector.reindex_state]
+  rw [fqswChannelOfReferenceIsometry_prod_id_applyState_pure]
+  rw [← PureVector.reindex_state]
+  rw [fqswChannelOfReferenceIsometry_prod_id_applyState_pure]
+  rw [PureVector.reindex_state]
+
 /-- Source-shaped target: transferred `ABR` source tensor a canonical ebit. -/
 def targetState : State (Prod (Prod (Prod a b) r) (Prod e et)) :=
   ψ.state.prod (maximallyEntangledPureVector C.ebitPairing).state
@@ -404,48 +512,88 @@ theorem normalizedError_eq_half_traceNormError :
 
 end FQSWOneShotProtocol
 
-/-- Block FQSW protocol, obtained by applying the one-shot semantics to the
-grouped IID source `ψ^{⊗n}`. -/
+/-- A physical block FQSW protocol on the original IID registers.
+
+Unlike the one-shot layer, the Alice operation is a channel rather than an
+isometry: Schumacher compression maps the full `A^n` register into its smaller
+typical register and therefore needs a trace-preserving completion away from
+the typical support.  Output and error states are computed from these two
+operations and the source; they are not protocol fields. -/
 structure FQSWBlockProtocol (ψ : PureVector (Prod (Prod a b) r)) (n : ℕ)
     (q : Type x) (e : Type y) (et : Type z)
     [Fintype q] [DecidableEq q]
     [Fintype e] [DecidableEq e] [Nonempty e]
     [Fintype et] [DecidableEq et] where
-  oneShot :
-    FQSWOneShotProtocol
-      ((ψ.tensorPower n).reindex (fqswTensorPowerTripartiteEquiv a b r n))
-      q e et
+  aliceOperation : Channel (TensorPower a n) (Prod q e)
+  bobOperation :
+    Channel (Prod q (TensorPower b n))
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) et)
+  ebitPairing : e ≃ et
 
 namespace FQSWBlockProtocol
 
 variable {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ}
 variable (C : FQSWBlockProtocol ψ n q e et)
 
-def outputState :
+/-- Run a block protocol on an explicit state of the grouped block source. -/
+def outputStateOfBlockState (C : FQSWBlockProtocol ψ n q e et)
+    (ρ : State
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))) :
     State (Prod
       (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
       (Prod e et)) :=
-  C.oneShot.outputState
+  let ρA : State
+      (Prod (TensorPower a n) (Prod (TensorPower b n) (TensorPower r n))) :=
+    ρ.reindex
+      (fqswSourceToAliceInputEquiv
+        (TensorPower a n) (TensorPower b n) (TensorPower r n))
+  let ρU : State
+      (Prod (Prod q e) (Prod (TensorPower b n) (TensorPower r n))) :=
+    (C.aliceOperation.prod
+      (Channel.idChannel (Prod (TensorPower b n) (TensorPower r n)))).applyState ρA
+  let ρBobIn : State
+      (Prod (Prod q (TensorPower b n)) (Prod (TensorPower r n) e)) :=
+    ρU.reindex
+      (fqswAliceOutputToBobInputEquiv q e (TensorPower b n) (TensorPower r n))
+  let ρV : State
+      (Prod
+        (Prod (Prod (TensorPower a n) (TensorPower b n)) et)
+        (Prod (TensorPower r n) e)) :=
+    (C.bobOperation.prod
+      (Channel.idChannel (Prod (TensorPower r n) e))).applyState ρBobIn
+  ρV.reindex
+    (fqswBobOutputToFinalEquiv
+      (TensorPower a n) (TensorPower b n) et (TensorPower r n) e)
 
-def targetState :
-    State (Prod
-      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
-      (Prod e et)) :=
-  C.oneShot.targetState
-
-def normalizedError : ℝ :=
-  C.oneShot.normalizedError
-
-def traceNormError : ℝ :=
-  C.oneShot.traceNormError
-
+/-- Run a block protocol on the tensor power of an explicit single-copy
+source state. -/
 def outputStateOfState (C : FQSWBlockProtocol ψ n q e et)
     (ρ : State (Prod (Prod a b) r)) :
     State (Prod
       (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
       (Prod e et)) :=
-  FQSWOneShotProtocol.outputStateOfState C.oneShot
+  C.outputStateOfBlockState
     ((ρ.tensorPower n).reindex (fqswTensorPowerTripartiteEquiv a b r n))
+
+/-- Computed output on the IID source `ψ^{⊗n}`. -/
+def outputState :
+    State (Prod
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
+      (Prod e et)) :=
+  C.outputStateOfState ψ.state
+
+def targetState :
+    State (Prod
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
+      (Prod e et)) :=
+  ((ψ.tensorPower n).reindex (fqswTensorPowerTripartiteEquiv a b r n)).state.prod
+    (maximallyEntangledPureVector C.ebitPairing).state
+
+def normalizedError : ℝ :=
+  C.outputState.normalizedTraceDistance C.targetState
+
+def traceNormError : ℝ :=
+  traceDistance C.outputState.matrix C.targetState.matrix
 
 def traceNormErrorOfState (C : FQSWBlockProtocol ψ n q e et)
     (ρ : State (Prod (Prod a b) r)) : ℝ :=
@@ -458,104 +606,233 @@ def ebitYieldRate (_C : FQSWBlockProtocol ψ n q e et) : ℝ :=
   if n = 0 then 0 else log2 (Fintype.card e : ℝ) / (n : ℝ)
 
 theorem normalizedError_nonneg : 0 ≤ C.normalizedError :=
-  C.oneShot.normalizedError_nonneg
+  State.normalizedTraceDistance_nonneg _ _
 
 theorem traceNormError_nonneg : 0 ≤ C.traceNormError :=
-  C.oneShot.traceNormError_nonneg
+  traceDistance_nonneg _ _
 
-end FQSWBlockProtocol
-
-/-- A non-operational rate/error certificate retained for the existing IID
-source-route calculation.  Unlike `FQSWBlockProtocol`, it does not contain
-Alice and Bob operations or a computed output state. -/
-structure FQSWRateErrorCertificate
-    (ψ : PureVector (Prod (Prod a b) r)) (n : ℕ)
-    (q : Type x) (e : Type y) where
-  traceNormError : ℝ
-
-namespace FQSWRateErrorCertificate
-
-variable {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ}
-
-/-- Communication rate recorded by an FQSW rate/error certificate. -/
-def communicationRate (_S : FQSWRateErrorCertificate ψ n q e) [Fintype q] : ℝ :=
-  if n = 0 then 0 else log2 (Fintype.card q : ℝ) / (n : ℝ)
-
-/-- Ebit-yield rate recorded by an FQSW rate/error certificate. -/
-def ebitYieldRate (_S : FQSWRateErrorCertificate ψ n q e) [Fintype e] : ℝ :=
-  if n = 0 then 0 else log2 (Fintype.card e : ℝ) / (n : ℝ)
-
-/-- Normalized error corresponding to the stored trace-norm error. -/
-def normalizedError (S : FQSWRateErrorCertificate ψ n q e) : ℝ :=
-  (1 / 2 : ℝ) * S.traceNormError
-
-end FQSWRateErrorCertificate
-
-/-- A compressed-block FQSW protocol scaffold that records Alice's compression
-and preprocessing layer before the one-shot FQSW semantics are invoked. -/
-structure FQSWCompressedBlockProtocol (ψ : PureVector (Prod (Prod a b) r)) (n : ℕ)
-    (q : Type x) (e : Type y) (et : Type z)
-    [Fintype q] [DecidableEq q]
-    [Fintype e] [DecidableEq e] [Nonempty e]
-    [Fintype et] [DecidableEq et] where
-  aliceCompression : ReferenceIsometry (TensorPower a n) (TensorPower a n)
-  alicePreprocessing :
-    State (Prod (Prod a b) r) → State (Prod (Prod a b) r)
-  oneShot : FQSWBlockProtocol ψ n q e et
-
-namespace FQSWCompressedBlockProtocol
-
-variable {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ}
-variable (C : FQSWCompressedBlockProtocol ψ n q e et)
-
-/-- Output state for an externally supplied source state.  Alice's
-preprocessing is tensor-powered to the block source, Alice's compression
-isometry is applied to the block `A^n` register, and the resulting compressed
-source is passed through the block one-shot FQSW protocol. -/
-def outputStateOfState (C : FQSWCompressedBlockProtocol ψ n q e et)
-    (ρ : State (Prod (Prod a b) r)) :
-    State (Prod
-      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
-      (Prod e et)) :=
-  let ρpre := C.alicePreprocessing ρ
-  let ρblock : State
-      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n)) :=
-    (ρpre.tensorPower n).reindex (fqswTensorPowerTripartiteEquiv a b r n)
-  let ρA : State (Prod (TensorPower a n) (Prod (TensorPower b n) (TensorPower r n))) :=
-    ρblock.reindex
-      (fqswSourceToAliceInputEquiv (TensorPower a n) (TensorPower b n) (TensorPower r n))
-  let ρCompressed : State
-      (Prod (TensorPower a n) (Prod (TensorPower b n) (TensorPower r n))) :=
-    ((fqswChannelOfReferenceIsometry C.aliceCompression).prod
-      (Channel.idChannel (Prod (TensorPower b n) (TensorPower r n)))).applyState ρA
-  let ρcompressedSource : State
-      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n)) :=
-    ρCompressed.reindex
-      (fqswSourceToAliceInputEquiv
-        (TensorPower a n) (TensorPower b n) (TensorPower r n)).symm
-  FQSWOneShotProtocol.outputStateOfState C.oneShot.oneShot ρcompressedSource
-
-/-- Source-shaped trace-norm error for the compressed block semantics. -/
-def traceNormErrorOfState (C : FQSWCompressedBlockProtocol ψ n q e et)
-    (ρ : State (Prod (Prod a b) r)) : ℝ :=
-  traceDistance (C.outputStateOfState ρ).matrix C.oneShot.targetState.matrix
-
-/-- Source-shaped normalized trace-distance error for the compressed block
-semantics. -/
-def normalizedErrorOfState (C : FQSWCompressedBlockProtocol ψ n q e et)
-    (ρ : State (Prod (Prod a b) r)) : ℝ :=
-  (C.outputStateOfState ρ).normalizedTraceDistance C.oneShot.targetState
-
-theorem normalizedErrorOfState_eq_half_traceNormErrorOfState
-    (C : FQSWCompressedBlockProtocol ψ n q e et)
-    (ρ : State (Prod (Prod a b) r)) :
-    C.normalizedErrorOfState ρ =
-      (1 / 2 : ℝ) * C.traceNormErrorOfState ρ := by
+theorem normalizedError_eq_half_traceNormError :
+    C.normalizedError = (1 / 2 : ℝ) * C.traceNormError := by
   rfl
 
-end FQSWCompressedBlockProtocol
+private theorem fqswChannel_reindex_map
+    {alpha : Type*} {beta : Type*}
+    [Fintype alpha] [DecidableEq alpha] [Fintype beta] [DecidableEq beta]
+    (E : alpha ≃ beta) (X : CMatrix alpha) :
+    (Channel.reindex E).map X = X.submatrix E.symm E.symm := by
+  ext i j
+  simp [Channel.reindex, MatrixMap.ofReferenceIsometry_apply,
+    ReferenceIsometry.ofEquiv, Matrix.mul_apply]
+  rw [Finset.sum_eq_single (E.symm j)]
+  · rw [Finset.sum_eq_single (E.symm i)]
+    · simp
+    · intro x _ hx
+      have hne : i ≠ E x := by
+        intro hi
+        apply hx
+        simp [hi]
+      simp [hne]
+    · simp
+  · intro x _ hx
+    have hne : j ≠ E x := by
+      intro hj
+      apply hx
+      simp [hj]
+    simp [hne]
+  · simp
 
+private theorem fqswChannel_reindex_map_single
+    {alpha : Type*} {beta : Type*}
+    [Fintype alpha] [DecidableEq alpha] [Fintype beta] [DecidableEq beta]
+    (E : alpha ≃ beta) (i j : alpha) :
+    (Channel.reindex E).map (Matrix.single i j (1 : Complex)) =
+      Matrix.single (E i) (E j) (1 : Complex) := by
+  rw [fqswChannel_reindex_map]
+  ext x y
+  simp only [Matrix.submatrix_apply, Matrix.single_apply]
+  have hx : i = E.symm x ↔ E i = x := by
+    constructor
+    · intro h
+      rw [h, E.apply_symm_apply]
+    · intro h
+      apply E.injective
+      rw [E.apply_symm_apply, h]
+  have hy : j = E.symm y ↔ E j = y := by
+    constructor
+    · intro h
+      rw [h, E.apply_symm_apply]
+    · intro h
+      apply E.injective
+      rw [E.apply_symm_apply, h]
+  simp only [hx, hy]
 
+/-- Regrouping a tripartite source commutes with independent local channels. -/
+public theorem fqswSourceToAliceInput_naturality
+    {alpha : Type ua0} {beta : Type ub0} {gamma : Type ur0}
+    {alpha' : Type ua1} {beta' : Type ub1} {gamma' : Type ur1}
+    [Fintype alpha] [DecidableEq alpha]
+    [Fintype beta] [DecidableEq beta]
+    [Fintype gamma] [DecidableEq gamma]
+    [Fintype alpha'] [DecidableEq alpha']
+    [Fintype beta'] [DecidableEq beta']
+    [Fintype gamma'] [DecidableEq gamma']
+    (PhiA : Channel alpha alpha') (PhiB : Channel beta beta')
+    (PhiR : Channel gamma gamma') :
+    (PhiA.prod (PhiB.prod PhiR)).comp
+        (Channel.reindex (fqswSourceToAliceInputEquiv alpha beta gamma)) =
+      (Channel.reindex (fqswSourceToAliceInputEquiv alpha' beta' gamma')).comp
+        ((PhiA.prod PhiB).prod PhiR) := by
+  rw [Channel.mk.injEq]
+  apply LinearMap.ext
+  intro X
+  rw [MatrixMap.map_eq_sum_single
+    ((PhiA.prod (PhiB.prod PhiR)).comp
+      (Channel.reindex (fqswSourceToAliceInputEquiv alpha beta gamma))).map X]
+  rw [MatrixMap.map_eq_sum_single
+    ((Channel.reindex (fqswSourceToAliceInputEquiv alpha' beta' gamma')).comp
+      ((PhiA.prod PhiB).prod PhiR)).map X]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  refine Finset.sum_congr rfl fun j _ => ?_
+  congr 1
+  change MatrixMap.kron PhiA.map (MatrixMap.kron PhiB.map PhiR.map)
+      ((Channel.reindex (fqswSourceToAliceInputEquiv alpha beta gamma)).map
+        (Matrix.single i j (1 : Complex))) =
+    (Channel.reindex (fqswSourceToAliceInputEquiv alpha' beta' gamma')).map
+      (MatrixMap.kron (MatrixMap.kron PhiA.map PhiB.map) PhiR.map
+        (Matrix.single i j (1 : Complex)))
+  rw [fqswChannel_reindex_map_single]
+  rw [show Matrix.single
+      (fqswSourceToAliceInputEquiv alpha beta gamma i)
+      (fqswSourceToAliceInputEquiv alpha beta gamma j) (1 : Complex) =
+        Matrix.kronecker
+          (Matrix.single i.1.1 j.1.1 (1 : Complex))
+          (Matrix.single (i.1.2, i.2) (j.1.2, j.2) (1 : Complex)) by
+      exact single_prod_eq_kronecker_single _ _ _ _]
+  rw [MatrixMap.kron_apply_kronecker]
+  rw [show Matrix.single (i.1.2, i.2) (j.1.2, j.2) (1 : Complex) =
+        Matrix.kronecker
+          (Matrix.single i.1.2 j.1.2 (1 : Complex))
+          (Matrix.single i.2 j.2 (1 : Complex)) by
+      exact single_prod_eq_kronecker_single _ _ _ _]
+  rw [MatrixMap.kron_apply_kronecker]
+  rw [show Matrix.single i j (1 : Complex) =
+        Matrix.kronecker
+          (Matrix.single i.1 j.1 (1 : Complex))
+          (Matrix.single i.2 j.2 (1 : Complex)) by
+      exact single_prod_eq_kronecker_single _ _ _ _]
+  rw [MatrixMap.kron_apply_kronecker]
+  rw [show Matrix.single i.1 j.1 (1 : Complex) =
+        Matrix.kronecker
+          (Matrix.single i.1.1 j.1.1 (1 : Complex))
+          (Matrix.single i.1.2 j.1.2 (1 : Complex)) by
+      exact single_prod_eq_kronecker_single _ _ _ _]
+  rw [MatrixMap.kron_apply_kronecker, fqswChannel_reindex_map]
+  ext k l
+  simp [fqswSourceToAliceInputEquiv, Matrix.kronecker, mul_assoc]
+
+/-- Regrouping Alice's output into Bob's input commutes with independent local
+channels on the four registers. -/
+public theorem fqswAliceOutputToBobInput_naturality
+    {q0 : Type uq0} {e0 : Type ue0} {b0 : Type ubq0} {r0 : Type urq0}
+    {q1 : Type uq1} {e1 : Type ue1} {b1 : Type ubq1} {r1 : Type urq1}
+    [Fintype q0] [DecidableEq q0]
+    [Fintype e0] [DecidableEq e0]
+    [Fintype b0] [DecidableEq b0]
+    [Fintype r0] [DecidableEq r0]
+    [Fintype q1] [DecidableEq q1]
+    [Fintype e1] [DecidableEq e1]
+    [Fintype b1] [DecidableEq b1]
+    [Fintype r1] [DecidableEq r1]
+    (PhiQ : Channel q0 q1) (PhiE : Channel e0 e1)
+    (PhiB : Channel b0 b1) (PhiR : Channel r0 r1) :
+    ((PhiQ.prod PhiB).prod (PhiR.prod PhiE)).comp
+        (Channel.reindex (fqswAliceOutputToBobInputEquiv q0 e0 b0 r0)) =
+      (Channel.reindex (fqswAliceOutputToBobInputEquiv q1 e1 b1 r1)).comp
+        ((PhiQ.prod PhiE).prod (PhiB.prod PhiR)) := by
+  rw [Channel.mk.injEq]
+  apply LinearMap.ext
+  intro X
+  rw [MatrixMap.map_eq_sum_single
+    (((PhiQ.prod PhiB).prod (PhiR.prod PhiE)).comp
+      (Channel.reindex (fqswAliceOutputToBobInputEquiv q0 e0 b0 r0))).map X]
+  rw [MatrixMap.map_eq_sum_single
+    ((Channel.reindex (fqswAliceOutputToBobInputEquiv q1 e1 b1 r1)).comp
+      ((PhiQ.prod PhiE).prod (PhiB.prod PhiR))).map X]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  refine Finset.sum_congr rfl fun j _ => ?_
+  congr 1
+  change MatrixMap.kron (MatrixMap.kron PhiQ.map PhiB.map)
+      (MatrixMap.kron PhiR.map PhiE.map)
+      ((Channel.reindex (fqswAliceOutputToBobInputEquiv q0 e0 b0 r0)).map
+        (Matrix.single i j (1 : Complex))) =
+    (Channel.reindex (fqswAliceOutputToBobInputEquiv q1 e1 b1 r1)).map
+      (MatrixMap.kron (MatrixMap.kron PhiQ.map PhiE.map)
+        (MatrixMap.kron PhiB.map PhiR.map)
+        (Matrix.single i j (1 : Complex)))
+  rw [fqswChannel_reindex_map_single]
+  rw [show Matrix.single
+      (fqswAliceOutputToBobInputEquiv q0 e0 b0 r0 i)
+      (fqswAliceOutputToBobInputEquiv q0 e0 b0 r0 j) (1 : Complex) =
+        Matrix.kronecker
+          (Matrix.single (i.1.1, i.2.1) (j.1.1, j.2.1) (1 : Complex))
+          (Matrix.single (i.2.2, i.1.2) (j.2.2, j.1.2) (1 : Complex)) by
+      exact single_prod_eq_kronecker_single _ _ _ _]
+  rw [MatrixMap.kron_apply_kronecker]
+  rw [show Matrix.single (i.1.1, i.2.1) (j.1.1, j.2.1) (1 : Complex) =
+        Matrix.kronecker
+          (Matrix.single i.1.1 j.1.1 (1 : Complex))
+          (Matrix.single i.2.1 j.2.1 (1 : Complex)) by
+      exact single_prod_eq_kronecker_single _ _ _ _]
+  rw [MatrixMap.kron_apply_kronecker]
+  rw [show Matrix.single (i.2.2, i.1.2) (j.2.2, j.1.2) (1 : Complex) =
+        Matrix.kronecker
+          (Matrix.single i.2.2 j.2.2 (1 : Complex))
+          (Matrix.single i.1.2 j.1.2 (1 : Complex)) by
+      exact single_prod_eq_kronecker_single _ _ _ _]
+  rw [MatrixMap.kron_apply_kronecker]
+  rw [show Matrix.single i j (1 : Complex) =
+        Matrix.kronecker
+          (Matrix.single i.1 j.1 (1 : Complex))
+          (Matrix.single i.2 j.2 (1 : Complex)) by
+      exact single_prod_eq_kronecker_single _ _ _ _]
+  rw [MatrixMap.kron_apply_kronecker]
+  rw [show Matrix.single i.1 j.1 (1 : Complex) =
+        Matrix.kronecker
+          (Matrix.single i.1.1 j.1.1 (1 : Complex))
+          (Matrix.single i.1.2 j.1.2 (1 : Complex)) by
+      exact single_prod_eq_kronecker_single _ _ _ _]
+  rw [MatrixMap.kron_apply_kronecker]
+  rw [show Matrix.single i.2 j.2 (1 : Complex) =
+        Matrix.kronecker
+          (Matrix.single i.2.1 j.2.1 (1 : Complex))
+          (Matrix.single i.2.2 j.2.2 (1 : Complex)) by
+      exact single_prod_eq_kronecker_single _ _ _ _]
+  rw [MatrixMap.kron_apply_kronecker, fqswChannel_reindex_map]
+  ext k l
+  simp [fqswAliceOutputToBobInputEquiv, Matrix.kronecker, mul_assoc, mul_comm,
+    mul_left_comm]
+
+/-- Regard an isometric one-shot protocol on the grouped IID source as a
+physical block protocol. -/
+def ofOneShot
+    (C : FQSWOneShotProtocol
+      ((ψ.tensorPower n).reindex (fqswTensorPowerTripartiteEquiv a b r n))
+      q e et) :
+    FQSWBlockProtocol ψ n q e et where
+  aliceOperation := fqswChannelOfReferenceIsometry C.aliceIsometry
+  bobOperation := fqswChannelOfReferenceIsometry C.bobIsometry
+  ebitPairing := C.ebitPairing
+
+theorem outputStateOfBlockState_ofOneShot
+    (C : FQSWOneShotProtocol
+      ((ψ.tensorPower n).reindex (fqswTensorPowerTripartiteEquiv a b r n))
+      q e et)
+    (ρ : State
+      (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))) :
+    (ofOneShot C).outputStateOfBlockState ρ = C.outputStateOfState ρ := by
+  rfl
+
+end FQSWBlockProtocol
 
 namespace PureVector
 
@@ -568,19 +845,6 @@ def fqswCommunicationRate : ℝ :=
 /-- FQSW ebit-yield rate `(1/2) I(A;B)_ψ`. -/
 def fqswEbitYieldRate : ℝ :=
   (1 / 2 : ℝ) * mutualInformation ψ.state.marginalA
-
-/-- The asymptotic rate/error certificate reached by the current IID scalar
-route.  This predicate is intentionally not the operational FQSW
-achievability definition because its witness does not contain a protocol. -/
-def HasAsymptoticFQSWRateErrorCertificates : Prop :=
-  ∀ δ : ℝ, 0 < δ → ∀ εerr : ℝ, 0 < εerr →
-      ∃ N : ℕ, ∀ n : ℕ, n ≥ N →
-        ∃ (q : Type x), ∃ (_ : Fintype q), ∃ (_ : DecidableEq q),
-          ∃ (e : Type y), ∃ (_ : Fintype e), ∃ (_ : DecidableEq e), ∃ (_ : Nonempty e),
-            ∃ S : FQSWRateErrorCertificate ψ n q e,
-              S.communicationRate ≤ ψ.fqswCommunicationRate + δ ∧
-                ψ.fqswEbitYieldRate - δ ≤ S.ebitYieldRate ∧
-                  S.normalizedError ≤ εerr
 
 /-- Operational FQSW achievability with computed protocols: for every positive
 rate slack and error tolerance, all sufficiently large block lengths have an

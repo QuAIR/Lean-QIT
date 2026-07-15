@@ -45,11 +45,12 @@ open scoped ComplexOrder MatrixOrder NNReal
 
 namespace QIT
 
-universe u v
+universe u uIn uOut
 
 noncomputable section
 
-variable {a b : Type u} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+variable {a : Type uIn} {b : Type uOut}
+variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 variable (N : Channel a b)
 
 /-- Sum over `x` of `if x = anchor then c else 0` is `c` (the single matching
@@ -646,7 +647,7 @@ theorem uniformProbs_sum_eq_one (M : Type u) [Fintype M] [Nonempty M] :
 /-- Uniform ensemble over `M` with states `ρ m`. Each message is equally likely. -/
 noncomputable def uniformEnsemble
     (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M]
-    {a : Type u} [Fintype a] [DecidableEq a]
+    {a : Type uIn} [Fintype a] [DecidableEq a]
     (ρ : M → State a) : Ensemble M a :=
   Ensemble.mk (uniformProbs M) (uniformProbs_sum_eq_one M) ρ
 

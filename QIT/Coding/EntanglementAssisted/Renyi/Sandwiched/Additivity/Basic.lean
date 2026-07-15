@@ -12,7 +12,6 @@ public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.CBNorm
 public import QIT.Information.Renyi.ConditionalRenyiMinimax
 public import QIT.Information.Renyi.SandwichedRenyiOptimizedUSC
 public import QIT.HypothesisTesting.DPI
-public import QIT.Information.Renyi.RenyiDPI
 public import QIT.States.Purification.Canonical
 public import QIT.Util.Order.EReal
 

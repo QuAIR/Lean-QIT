@@ -179,6 +179,7 @@ theorem schumacher_converse_single_code
 
 end State
 
+omit [DecidableEq a] in
 /-- Per-copy upper bound on the tensor-power AFW modulus.
 
 For block length `n ≥ 1`, `afwContinuityModulus |Aⁿ| ε / (2n)` is bounded by

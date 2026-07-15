@@ -227,6 +227,7 @@ private theorem sqrt_mul_rpow_two_neg_le_of_log2_le_sub_two_log2_one_div
 
 namespace HashFamily
 
+omit [Nonempty F] in
 /--
 Optimized direct leftover-hash secrecy-distance bound with explicit slack.
 
@@ -321,6 +322,7 @@ private theorem extractorSecrecyDistance_conditionalMinEntropy_slack_rhs_tendsto
     hcont.continuousAt
   simpa using hcont0.tendsto.mono_left nhdsWithin_le_nhds
 
+omit [Nonempty F] in
 /--
 Optimized direct leftover-hash secrecy-distance bound in source form.
 
@@ -343,6 +345,7 @@ theorem extractorSecrecyDistance_le_sqrt_card_mul_rpow_of_collisionUniform_condi
         H.extractorSecrecyDistance_le_sqrt_card_mul_rpow_of_collisionUniform_conditionalMinEntropy_sub_slack
           hH E hη)
 
+omit [Nonempty F] in
 /--
 Smooth direct extractor secrecy from a cq-restricted smooth min-entropy
 candidate.

@@ -37,17 +37,18 @@ open scoped ComplexOrder MatrixOrder
 
 namespace QIT
 
-universe u v
+universe uIn uOut uEnsemble uMessage uAux uAuxOut
 
 noncomputable section
 
-variable {a b : Type u} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+variable {a : Type uIn} {b : Type uOut}
+variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 variable (N : Channel a b)
 
 /-- Local cardinality of the recursive tensor-power label type.  This mirrors
 the private HSW helper so the converse module can state its dimension bound
 self-containedly. -/
-private theorem hswConverse_tensorPower_card (α : Type u) [Fintype α] (n : ℕ) :
+private theorem hswConverse_tensorPower_card (α : Type uAux) [Fintype α] (n : ℕ) :
     Fintype.card (TensorPower α n) = (Fintype.card α) ^ n := by
   induction n with
   | zero =>
@@ -57,11 +58,11 @@ private theorem hswConverse_tensorPower_card (α : Type u) [Fintype α] (n : ℕ
       rw [Fintype.card_prod, ih, Nat.pow_succ]
       ring
 
-private theorem hswConverse_tensorPower_card_real (α : Type u) [Fintype α] (n : ℕ) :
+private theorem hswConverse_tensorPower_card_real (α : Type uAux) [Fintype α] (n : ℕ) :
     (Fintype.card (TensorPower α n) : ℝ) = (Fintype.card α : ℝ) ^ n := by
   exact_mod_cast hswConverse_tensorPower_card α n
 
-private theorem hswConverse_tensorPower_nonempty (α : Type u) [Nonempty α] :
+private theorem hswConverse_tensorPower_nonempty (α : Type uAux) [Nonempty α] :
     (n : ℕ) → Nonempty (TensorPower α n)
   | 0 => ⟨PUnit.unit⟩
   | n + 1 => ⟨(Classical.choice (inferInstance : Nonempty α),
@@ -75,7 +76,7 @@ private theorem hswConverse_log2_pow_nat (x : ℝ) (n : ℕ) :
 
 /-- The mutual information of the classical-quantum state associated with an
 ensemble is exactly the ensemble's Holevo information. -/
-theorem cqState_mutualInformation_eq_holevoInformation {ι : Type v}
+theorem cqState_mutualInformation_eq_holevoInformation {ι : Type uEnsemble}
     [Fintype ι] [DecidableEq ι] (E : Ensemble ι a) :
     mutualInformation E.cqState = E.holevoInformation := by
   unfold mutualInformation Ensemble.holevoInformation
@@ -89,7 +90,7 @@ entropy in the project normalized trace-distance convention. This is the
 source-shaped hypothesis interface used by HSW-style arguments; the AFW theorem
 itself is tracked by the entropy/continuity category. -/
 def alickiFannesWinter_statement
-    {c : Type v} [Fintype c] [DecidableEq c]
+    {c : Type uAux} [Fintype c] [DecidableEq c]
     (ρ σ : State (Prod a c)) (ε : ℝ) : Prop :=
   0 ≤ ε →
     ρ.normalizedTraceDistance σ ≤ ε →
@@ -102,7 +103,8 @@ def alickiFannesWinter_statement
 applying a CPTP map to one subsystem cannot increase mutual information,
 `I(A ; N(B))_ρ ≤ I(A ; B)_ρ`. -/
 theorem mutualInformation_dataProcessing_statement
-    {c d : Type v} [Fintype c] [DecidableEq c] [Fintype d] [DecidableEq d]
+    {c : Type uAux} {d : Type uAuxOut}
+    [Fintype c] [DecidableEq c] [Fintype d] [DecidableEq d]
     (ρ : State (Prod a c)) (Φ : Channel c d) :
     mutualInformation ρ ≥
       mutualInformation (((Channel.idChannel a).prod Φ).applyState ρ) := by
@@ -115,8 +117,8 @@ state `Σ_x p(x) |x⟩⟨x| ⊗ σ_x` is at most the Holevo information
 by the HSW converse chain; the cq entropy identity can later prove this
 interface directly. -/
 def cqHolevo_upperBound_statement
-    {ι : Type v} [Fintype ι] [DecidableEq ι]
-    {out : Type u} [Fintype out] [DecidableEq out]
+    {ι : Type uEnsemble} [Fintype ι] [DecidableEq ι]
+    {out : Type uAux} [Fintype out] [DecidableEq out]
     (E : Ensemble ι out) : Prop :=
   mutualInformation E.cqState ≤ E.holevoInformation
 
@@ -124,8 +126,8 @@ def cqHolevo_upperBound_statement
 identity `I(X;B) = χ({p_x, ρ_x})`. This closes the HSW converse cq identity
 interface used downstream. -/
 theorem cqHolevo_upperBound
-    {ι : Type v} [Fintype ι] [DecidableEq ι]
-    {out : Type u} [Fintype out] [DecidableEq out]
+    {ι : Type uEnsemble} [Fintype ι] [DecidableEq ι]
+    {out : Type uAux} [Fintype out] [DecidableEq out]
     (E : Ensemble ι out) :
     cqHolevo_upperBound_statement E := by
   unfold cqHolevo_upperBound_statement
@@ -134,20 +136,29 @@ theorem cqHolevo_upperBound
 /-- The cq output ensemble induced by an `n`-block HSW code contributes a
 Holevo value to the `n`-use channel Holevo supremum. -/
 theorem uniformOutput_holevoInformation_le_blockHolevoInformation
-    (n : ℕ) (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M]
+    (n : ℕ) (M : Type uMessage) [Fintype M] [DecidableEq M] [Nonempty M]
     (C : HSWClassicalCode N n M) :
-    (uniformEnsemble M C.outputState).holevoInformation ≤ N.blockHolevoInformation n := by
+    (uniformEnsemble M C.outputState).holevoInformation ≤
+      (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n := by
   let E : Ensemble M (TensorPower a n) := uniformEnsemble M C.encoder
+  let E' : Ensemble (ULift.{uEnsemble} M) (TensorPower a n) :=
+    E.relabelIndex Equiv.ulift
   have hmem :
       (uniformEnsemble M C.outputState).holevoInformation ∈
-        (N.tensorPower n).holevoInformationValues := by
-    refine ⟨M, inferInstance, inferInstance, E, ?_⟩
+        (Channel.holevoInformationValues.{uIn, uOut, max uEnsemble uMessage}
+          (N.tensorPower n)) := by
+    refine ⟨ULift.{uEnsemble} M, inferInstance, inferInstance, E', ?_⟩
     change (uniformEnsemble M C.outputState).holevoInformation =
-      ((N.tensorPower n).outputEnsemble E).holevoInformation
-    congr 1
+      ((N.tensorPower n).outputEnsemble E').holevoInformation
+    calc
+      (uniformEnsemble M C.outputState).holevoInformation =
+          ((N.tensorPower n).outputEnsemble E).holevoInformation := by
+        congr 1
+      _ = ((N.tensorPower n).outputEnsemble E').holevoInformation := by
+        simp [E']
   have hle :
       (uniformEnsemble M C.outputState).holevoInformation ≤
-        (N.tensorPower n).holevoInformation := by
+        (Channel.holevoInformation.{uIn, uOut, max uEnsemble uMessage} (N.tensorPower n)) := by
     exact le_csSup (N.tensorPower n).holevoInformationValues_bddAbove hmem
   simpa [Channel.blockHolevoInformation] using hle
 
@@ -158,13 +169,13 @@ the randomness-distribution/Fano lower bound and the cq Holevo identity bound.
 The conclusion is the finite-block inequality before the asymptotic
 regularized-Holevo squeeze. -/
 theorem hsw_finiteBlock_converse_log_card
-    (n : ℕ) (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M]
+    (n : ℕ) (M : Type uMessage) [Fintype M] [DecidableEq M] [Nonempty M]
     (C : HSWClassicalCode N n M) {ε : ℝ}
     (hFano : hswCode_randomnessDistribution_statement N n M ε)
     (hCQ : cqHolevo_upperBound_statement (uniformEnsemble M C.outputState))
     (hC : C.maxErrorAtMost ε) (hε0 : 0 ≤ ε) (hε1 : ε ≤ 1) :
     (1 - ε) * log2 (Fintype.card M : ℝ) + xlog2 ε + xlog2 (1 - ε) ≤
-      N.blockHolevoInformation n := by
+      (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n := by
   have hlower :
       (1 - ε) * log2 (Fintype.card M : ℝ) + xlog2 ε + xlog2 (1 - ε) ≤
         mutualInformation (cqChannelOutputState N n M C) :=
@@ -179,13 +190,13 @@ theorem hsw_finiteBlock_converse_log_card
 the `n = 0` message rate to be zero, this statement assumes `0 < n` and rewrites
 `log₂ |M|` as `n` times the operational code rate. -/
 theorem hsw_finiteBlock_converse_rate
-    (n : ℕ) (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M]
+    (n : ℕ) (M : Type uMessage) [Fintype M] [DecidableEq M] [Nonempty M]
     (C : HSWClassicalCode N n M) {ε : ℝ} (hn : 0 < n)
     (hFano : hswCode_randomnessDistribution_statement N n M ε)
     (hCQ : cqHolevo_upperBound_statement (uniformEnsemble M C.outputState))
     (hC : C.maxErrorAtMost ε) (hε0 : 0 ≤ ε) (hε1 : ε ≤ 1) :
     (1 - ε) * ((n : ℝ) * C.rate) + xlog2 ε + xlog2 (1 - ε) ≤
-      N.blockHolevoInformation n := by
+      (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n := by
   have hlog :
       (n : ℝ) * C.rate = log2 (Fintype.card M : ℝ) := by
     unfold HSWClassicalCode.rate hswMessageRate
@@ -197,24 +208,27 @@ theorem hsw_finiteBlock_converse_rate
 supremum. -/
 theorem blockHolevoRate_le_regularizedHolevoInformation [Nonempty a] [Nonempty b]
     {n : ℕ} (hn : 0 < n) :
-    N.blockHolevoInformation n / (n : ℝ) ≤ N.regularizedHolevoInformation := by
+    (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n / (n : ℝ) ≤
+      (Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) := by
   rw [Channel.regularizedHolevoInformation]
   exact le_csSup N.regularizedHolevoRateValues_bddAbove ⟨n, hn, rfl⟩
 
 /-- The output-dimension bound for every positive block Holevo rate. -/
 theorem blockHolevoRate_le_log_card [Nonempty a] [Nonempty b]
     {n : ℕ} (hn : 0 < n) :
-    N.blockHolevoInformation n / (n : ℝ) ≤ log2 (Fintype.card b : ℝ) := by
+    (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n / (n : ℝ) ≤
+      log2 (Fintype.card b : ℝ) := by
   have hnR : (0 : ℝ) < n := by exact_mod_cast hn
   have hbound :
-      N.blockHolevoInformation n ≤ log2 (Fintype.card (QIT.TensorPower b n)) := by
+      (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n ≤
+        log2 (Fintype.card (QIT.TensorPower b n)) := by
     haveI : Nonempty (QIT.TensorPower a n) := hswConverse_tensorPower_nonempty a n
     unfold Channel.blockHolevoInformation Channel.holevoInformation
     exact csSup_le
       (N.tensorPower n).holevoInformationValues_nonempty
       (fun r hr => (N.tensorPower n).mem_holevoInformationValues_le_log_card hr)
   calc
-    N.blockHolevoInformation n / (n : ℝ)
+    (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n / (n : ℝ)
         ≤ log2 (Fintype.card (QIT.TensorPower b n)) / (n : ℝ) :=
           div_le_div_of_nonneg_right hbound (le_of_lt hnR)
     _ = log2 (Fintype.card b : ℝ) := by
@@ -222,7 +236,7 @@ theorem blockHolevoRate_le_log_card [Nonempty a] [Nonempty b]
       field_simp [ne_of_gt hnR]
 
 /-- Nonnegativity of `log₂ |a|` for a nonempty finite type. -/
-private theorem log2_card_nonneg (α : Type u) [Fintype α] [Nonempty α] :
+private theorem log2_card_nonneg (α : Type uAux) [Fintype α] [Nonempty α] :
     0 ≤ log2 (Fintype.card α : ℝ) := by
   have hcard_pos_nat : 0 < Fintype.card α := Fintype.card_pos_iff.mpr inferInstance
   have hcard_one : (1 : ℝ) ≤ (Fintype.card α : ℝ) := by exact_mod_cast hcard_pos_nat
@@ -237,13 +251,17 @@ order-theoretic form of the HSW converse limit step. -/
 theorem le_regularizedHolevoInformation_of_forall_blockRate_ge_sub [Nonempty a] [Nonempty b]
     {R : ℝ}
     (hblock : ∀ η : ℝ, 0 < η →
-      ∃ n : ℕ, 0 < n ∧ R - η ≤ N.blockHolevoInformation n / (n : ℝ)) :
-    R ≤ N.regularizedHolevoInformation := by
+      ∃ n : ℕ, 0 < n ∧
+        R - η ≤ (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n / (n : ℝ)) :
+    R ≤ (Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) := by
   rw [le_iff_forall_pos_lt_add]
   intro η hη
   obtain ⟨n, hn, hR⟩ := hblock (η / 2) (by linarith)
-  have hsup := blockHolevoRate_le_regularizedHolevoInformation N hn
-  have hRsup : R - η / 2 ≤ N.regularizedHolevoInformation := hR.trans hsup
+  have hsup :=
+    blockHolevoRate_le_regularizedHolevoInformation.{uIn, uOut, uEnsemble, uMessage}
+      N hn
+  have hRsup :
+      R - η / 2 ≤ (Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) := hR.trans hsup
   linarith
 
 /-- Code-level supremum squeeze used by the HSW converse.
@@ -255,19 +273,21 @@ that slack. Then `R` is bounded by the regularized Holevo supremum. -/
 theorem le_regularizedHolevoInformation_of_forall_code_blockRate_bound
     [Nonempty a] [Nonempty b] {R : ℝ}
     (hcode : ∀ η : ℝ, 0 < η →
-      ∃ n : ℕ, ∃ M : Type u, ∃ (_ : Fintype M), ∃ (_ : DecidableEq M),
+      ∃ n : ℕ, ∃ M : Type uMessage, ∃ (_ : Fintype M), ∃ (_ : DecidableEq M),
         ∃ (_ : Nonempty M), ∃ C : HSWClassicalCode N n M,
           0 < n ∧ R - η ≤ C.rate ∧
-            C.rate ≤ N.blockHolevoInformation n / (n : ℝ) + η) :
-    R ≤ N.regularizedHolevoInformation := by
-  refine le_regularizedHolevoInformation_of_forall_blockRate_ge_sub N ?_
+            C.rate ≤ (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n / (n : ℝ) + η) :
+    R ≤ (Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) := by
+  refine le_regularizedHolevoInformation_of_forall_blockRate_ge_sub.{
+    uIn, uOut, uEnsemble, uMessage} N ?_
   intro η hη
   obtain ⟨n, M, hMF, hMD, hMne, C, hn, hR, hC⟩ := hcode (η / 2) (by linarith)
   letI : Fintype M := hMF
   letI : DecidableEq M := hMD
   letI : Nonempty M := hMne
   refine ⟨n, hn, ?_⟩
-  have hblock : R - η / 2 ≤ N.blockHolevoInformation n / (n : ℝ) + η / 2 :=
+  have hblock :
+      R - η / 2 ≤ (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n / (n : ℝ) + η / 2 :=
     hR.trans hC
   linarith
 
@@ -354,16 +374,16 @@ theorem exists_nat_const_div_le {A η : ℝ} (hη : 0 < η) :
 upper bound with an arbitrary additive slack. -/
 theorem hsw_finiteBlock_converse_rate_le_blockRate_add
     [Nonempty a] [Nonempty b]
-    (n : ℕ) (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M]
+    (n : ℕ) (M : Type uMessage) [Fintype M] [DecidableEq M] [Nonempty M]
     (C : HSWClassicalCode N n M) {ε η : ℝ} (hn : 0 < n)
     (hfinite :
       (1 - ε) * ((n : ℝ) * C.rate) + xlog2 ε + xlog2 (1 - ε) ≤
-        N.blockHolevoInformation n)
+        (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n)
     (hη : 0 < η) (hε0 : 0 ≤ ε) (hεhalf : ε ≤ 1 / 2)
     (hsmall_dim : 2 * ε * log2 (Fintype.card b : ℝ) ≤ η / 2)
     (hsmall_entropy :
       2 * (binaryEntropy ε / (n : ℝ)) ≤ η / 2) :
-    C.rate ≤ N.blockHolevoInformation n / (n : ℝ) + η := by
+    C.rate ≤ (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n / (n : ℝ) + η := by
   have hnR : 0 < (n : ℝ) := by exact_mod_cast hn
   have hε1 : ε ≤ 1 := by linarith
   have hlogsum :
@@ -372,26 +392,29 @@ theorem hsw_finiteBlock_converse_rate_le_blockRate_add
     ring
   have hmul :
       (1 - ε) * ((n : ℝ) * C.rate) ≤
-        N.blockHolevoInformation n + binaryEntropy ε := by
+        (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n + binaryEntropy ε := by
     linarith
   have hmain :
       (1 - ε) * C.rate ≤
-        N.blockHolevoInformation n / (n : ℝ) + binaryEntropy ε / (n : ℝ) := by
+        (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n / (n : ℝ) +
+          binaryEntropy ε / (n : ℝ) := by
     have hdiv := div_le_div_of_nonneg_right hmul hnR.le
     calc
       (1 - ε) * C.rate =
           ((1 - ε) * ((n : ℝ) * C.rate)) / (n : ℝ) := by
             field_simp [ne_of_gt hnR]
-      _ ≤ (N.blockHolevoInformation n + binaryEntropy ε) / (n : ℝ) := hdiv
-      _ = N.blockHolevoInformation n / (n : ℝ) + binaryEntropy ε / (n : ℝ) := by
+      _ ≤ ((Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n + binaryEntropy ε) /
+          (n : ℝ) := hdiv
+      _ = (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n / (n : ℝ) +
+          binaryEntropy ε / (n : ℝ) := by
             ring
   exact rate_le_base_add_of_one_sub_mul_le
     (r := C.rate)
-    (x := N.blockHolevoInformation n / (n : ℝ))
+    (x := (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n / (n : ℝ))
     (corr := binaryEntropy ε / (n : ℝ))
     (η := η)
     (L := log2 (Fintype.card b : ℝ))
-    hη hmain (blockHolevoRate_le_log_card N hn)
+    hη hmain (blockHolevoRate_le_log_card.{uIn, uOut, uEnsemble, uMessage} N hn)
     hε0 hεhalf hsmall_dim hsmall_entropy
 
 namespace Channel
@@ -405,9 +428,11 @@ finite-block regularized-Holevo squeeze above; it does not depend on the
 separate AFW continuity node. -/
 theorem hsw_regularizedHolevoInformation_converse
     [Nonempty a] [Nonempty b] (N : Channel a b) :
-    N.IsClassicalRateUpperBound N.regularizedHolevoInformation := by
+    (Channel.IsClassicalRateUpperBound.{uIn, uOut, uMessage} N)
+      (Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) := by
   intro R hAch
-  refine le_regularizedHolevoInformation_of_forall_code_blockRate_bound N ?_
+  refine le_regularizedHolevoInformation_of_forall_code_blockRate_bound.{
+    uIn, uOut, uEnsemble, uMessage} N ?_
   intro η hη
   let L : ℝ := log2 (Fintype.card b : ℝ)
   let ε : ℝ := min (1 / 2) (η / (4 * (L + 1)))
@@ -456,7 +481,7 @@ theorem hsw_regularizedHolevoInformation_converse
     simpa [mul_div_assoc] using hNerr n hn_ge_Nerr
   have hfinite :
       (1 - ε) * ((n : ℝ) * C.rate) + xlog2 ε + xlog2 (1 - ε) ≤
-        N.blockHolevoInformation n :=
+        (Channel.blockHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N) n :=
     hsw_finiteBlock_converse_rate N n M C hn_pos
       (hswCode_randomnessDistribution N n M ε)
       (cqHolevo_upperBound (uniformEnsemble M C.outputState))
@@ -472,7 +497,8 @@ end Channel
 rate for `N` is bounded by the regularized Holevo information.  The finite-block
 chain above is the local reusable ingredient for this asymptotic upper bound. -/
 def hsw_converse_statement : Prop :=
-  N.IsClassicalRateUpperBound N.regularizedHolevoInformation
+  (Channel.IsClassicalRateUpperBound.{uIn, uOut, uMessage} N)
+    (Channel.regularizedHolevoInformation.{uIn, uOut, max uEnsemble uMessage} N)
 
 end
 

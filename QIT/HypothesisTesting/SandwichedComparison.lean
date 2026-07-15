@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Information.Renyi.FrankLieb
+public import QIT.Information.Renyi.FrankLieb.DPI
 public import QIT.HypothesisTesting.MutualInformation
 
 /-!

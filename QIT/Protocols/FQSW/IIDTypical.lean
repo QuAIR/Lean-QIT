@@ -90,7 +90,7 @@ theorem adhwFQSWARState_marginalA_eq_systemA
   apply State.ext
   ext i j
   simp [adhwFQSWARState, adhwFQSWSystemAState, State.coherentTransferReferenceState,
-    State.marginalA, partialTraceB, Fintype.sum_prod_type]
+    State.marginalA, partialTraceB]
   rw [Finset.sum_comm]
 
 /-- The `R` marginal of the source-route `AR` state is the original reference
@@ -1000,21 +1000,25 @@ private theorem adhwFQSWIidLiftProjectorR_marginalB
       (fun a0 b0 v0 u0 =>
         PR x u0 * (ρ.matrix ((a0, b0), u0) ((a0, b0), v0) * PR v0 y)))
 
+omit [DecidableEq a] in
 private theorem adhwFQSWIidLiftProjectorA_posSemidef
     (n : ℕ) (PA : CMatrix (TensorPower a n)) (hPA : PA.PosSemidef) :
     (adhwFQSWIidLiftProjectorA (b := b) (r := r) n PA).PosSemidef :=
   (hPA.kronecker Matrix.PosSemidef.one).kronecker Matrix.PosSemidef.one
 
+omit [DecidableEq b] in
 private theorem adhwFQSWIidLiftProjectorB_posSemidef
     (n : ℕ) (PB : CMatrix (TensorPower b n)) (hPB : PB.PosSemidef) :
     (adhwFQSWIidLiftProjectorB (a := a) (r := r) n PB).PosSemidef :=
   (Matrix.PosSemidef.one.kronecker hPB).kronecker Matrix.PosSemidef.one
 
+omit [DecidableEq r] in
 private theorem adhwFQSWIidLiftProjectorR_posSemidef
     (n : ℕ) (PR : CMatrix (TensorPower r n)) (hPR : PR.PosSemidef) :
     (adhwFQSWIidLiftProjectorR (a := a) (b := b) n PR).PosSemidef :=
   Matrix.PosSemidef.one.kronecker hPR
 
+omit [DecidableEq a] [DecidableEq b] [DecidableEq r] in
 private theorem adhwFQSWIidLiftProjectorTriple_posSemidef
     (n : ℕ) (PA : CMatrix (TensorPower a n)) (PB : CMatrix (TensorPower b n))
     (PR : CMatrix (TensorPower r n))
@@ -1022,6 +1026,7 @@ private theorem adhwFQSWIidLiftProjectorTriple_posSemidef
     (adhwFQSWIidLiftProjectorTriple (a := a) (b := b) (r := r) n PA PB PR).PosSemidef :=
   (hPA.kronecker hPB).kronecker hPR
 
+omit [DecidableEq a] in
 private theorem adhwFQSWIidLiftProjectorA_idempotent
     (n : ℕ) (PA : CMatrix (TensorPower a n)) (hPAid : PA * PA = PA) :
     adhwFQSWIidLiftProjectorA (b := b) (r := r) n PA *
@@ -1050,6 +1055,7 @@ private theorem adhwFQSWIidLiftProjectorA_idempotent
           rw [hAB]
           simp [adhwFQSWIidLiftProjectorA]
 
+omit [DecidableEq b] in
 private theorem adhwFQSWIidLiftProjectorB_idempotent
     (n : ℕ) (PB : CMatrix (TensorPower b n)) (hPBid : PB * PB = PB) :
     adhwFQSWIidLiftProjectorB (a := a) (r := r) n PB *
@@ -1078,6 +1084,7 @@ private theorem adhwFQSWIidLiftProjectorB_idempotent
           rw [hAB]
           simp [adhwFQSWIidLiftProjectorB]
 
+omit [DecidableEq r] in
 private theorem adhwFQSWIidLiftProjectorR_idempotent
     (n : ℕ) (PR : CMatrix (TensorPower r n)) (hPRid : PR * PR = PR) :
     adhwFQSWIidLiftProjectorR (a := a) (b := b) n PR *
@@ -1088,6 +1095,7 @@ private theorem adhwFQSWIidLiftProjectorR_idempotent
       (1 : CMatrix (Prod (TensorPower a n) (TensorPower b n)))
       (1 : CMatrix (Prod (TensorPower a n) (TensorPower b n))) PR PR).symm
 
+omit [DecidableEq a] [DecidableEq b] [DecidableEq r] in
 theorem adhwFQSWIidLiftProjectorTriple_idempotent
     (n : ℕ) (PA : CMatrix (TensorPower a n)) (PB : CMatrix (TensorPower b n))
     (PR : CMatrix (TensorPower r n))

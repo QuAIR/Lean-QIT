@@ -8,6 +8,7 @@ module
 
 public import QIT.States.Geometry.Fidelity
 public import QIT.States.Geometry.FidelityConcavity
+public import QIT.States.Geometry.PureTargetFidelity
 public import QIT.States.Geometry.FuchsVdG
 public import QIT.States.Geometry.PurifiedDistanceAngle
 

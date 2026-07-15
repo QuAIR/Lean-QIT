@@ -49,7 +49,7 @@ open scoped ComplexOrder MatrixOrder
 
 namespace QIT
 
-universe u v
+universe u v uIn uOut uEnsemble uMessage uAux
 
 noncomputable section
 
@@ -324,7 +324,8 @@ product `p ⊗ p`, so `𝔼_𝒞{g(𝒞_m, 𝒞_m')} = Σ_{x,x'} p(x) p(x') g(x,
 distribution `p`, i.e. `𝔼_𝒞{f} = Σ_{𝒞 : M→𝒳} (∏_m p(𝒞_m)) · f(𝒞)`. The
 product factor `∏_m p(𝒞_m)` is the iid mass of the code `𝒞`.
 [Wilde2011Qst, qit-notes.tex:29750-29780] -/
-noncomputable def PackingLemma.codeExpectation {𝒳 M : Type*}
+noncomputable def PackingLemma.codeExpectation
+    {𝒳 : Type uAux} {M : Type uMessage}
     [Fintype 𝒳] [DecidableEq 𝒳] [Fintype M] [DecidableEq M]
     (p : 𝒳 → ℝ) (f : (M → 𝒳) → ℝ) : ℝ :=
   ∑ C : M → 𝒳, (∏ m : M, p (C m)) * f C
@@ -335,7 +336,8 @@ depending only on the `m`-th codeword averages to the one-variable mean
 measure: every coordinate `k ≠ m` contributes `Σ_{x_k} p(x_k) = 1`, leaving
 only the `m`-th marginal.
 [Wilde2011Qst, qit-notes.tex:29750-29780] -/
-private lemma PackingLemma.codeExpectation_marginal {𝒳 M : Type*}
+private lemma PackingLemma.codeExpectation_marginal
+    {𝒳 : Type uAux} {M : Type uMessage}
     [Fintype 𝒳] [DecidableEq 𝒳] [Fintype M] [DecidableEq M]
     (p : 𝒳 → ℝ) (hpsum : ∑ x, p x = 1) (m : M) (h : 𝒳 → ℝ) :
     codeExpectation p (fun C => h (C m)) = ∑ x, p x * h x := by
@@ -389,7 +391,8 @@ private lemma PackingLemma.codeExpectation_marginal {𝒳 M : Type*}
 the one-coordinate marginal twice: marginalize `𝒞_m'` first (treating
 `𝒞_m` as part of the rest), then marginalize `𝒞_m`.
 [Wilde2011Qst, qit-notes.tex:29750-29780] -/
-theorem PackingLemma.codeExpectation_pair_indep {𝒳 M : Type*}
+theorem PackingLemma.codeExpectation_pair_indep
+    {𝒳 : Type uAux} {M : Type uMessage}
     [Fintype 𝒳] [DecidableEq 𝒳] [Fintype M] [DecidableEq M]
     (p : 𝒳 → ℝ) (hpsum : ∑ x, p x = 1) (m : M) (m' : M) (hmm' : m ≠ m')
     (g : 𝒳 → 𝒳 → ℝ) :
@@ -489,7 +492,7 @@ the trace into `Tr(Φ Π σ̄ Π)`), and only projects to `ℝ` once via
 pack-4) and on `Φ·(1 − Π)` (PSD because `Π ≤ 1`).
 [Wilde2011Qst, qit-notes.tex:29680-29850] -/
 theorem PackingLemma.crossTerm_expectation_bound
-    {a : Type u} {𝒳 M : Type*}
+    {a : Type u} {𝒳 : Type uAux} {M : Type uMessage}
     [Fintype a] [DecidableEq a] [Fintype 𝒳] [DecidableEq 𝒳]
     [Fintype M] [DecidableEq M]
     (E : Ensemble 𝒳 a) (P : CMatrix a) (_hP : P.PosSemidef) (_hPid : P * P = P)
@@ -686,7 +689,7 @@ cross-codeword expectation by `d/D` via `crossTerm_expectation_bound`, counting
 the `|M|−1` off-diagonal messages via `Finset.card_erase_of_mem`.
 [Wilde2011Qst, qit-notes.tex:29680-29850] -/
 theorem PackingLemma.lemma_avgError
-    {a : Type u} {𝒳 M : Type*}
+    {a : Type u} {𝒳 : Type uAux} {M : Type uMessage}
     [Fintype a] [DecidableEq a] [Fintype 𝒳] [DecidableEq 𝒳]
     [Fintype M] [DecidableEq M] [Nonempty M]
     (E : Ensemble 𝒳 a) (P : CMatrix a) (hP : P.PosSemidef) (hPid : P * P = P)
@@ -939,7 +942,8 @@ monotonicity), giving `1 − Re Tr(Λ_m σ) ≤ 2·Re Tr((1−Υ_{C_m})σ) +
 4·Σ_{m'≠m} Re Tr(Υ_{C_m'} σ)`, then bounds the own-codeword term
 `Re Tr((1−Υ_{C_m})σ_{C_m}) ≤ ε + 2√ε` via `ownTerm_bound`.
 [Wilde2011Qst, qit-notes.tex:29680-29850] -/
-private theorem PackingLemma.pgmError_bound {a : Type u} {𝒳 M : Type*}
+private theorem PackingLemma.pgmError_bound
+    {a : Type u} {𝒳 : Type uAux} {M : Type uMessage}
     [Fintype a] [DecidableEq a] [Fintype 𝒳] [DecidableEq 𝒳]
     [Fintype M] [DecidableEq M]
     (P : CMatrix a) (hP : P.PosSemidef) (hPid : P * P = P)
@@ -1027,7 +1031,8 @@ weights summing to `1`, then some code `𝒞₀` attains `f(𝒞₀) ≤ η`. Th
 exceeded `η`, the weighted mean would exceed `η` as well.
 [Wilde2011Qst, qit-notes.tex:29853-29920] -/
 private theorem PackingLemma.exists_code_le_expectation
-    {𝒳 M : Type*} [Fintype 𝒳] [DecidableEq 𝒳] [Fintype M] [DecidableEq M] [Nonempty M]
+    {𝒳 : Type uAux} {M : Type uMessage}
+    [Fintype 𝒳] [DecidableEq 𝒳] [Fintype M] [DecidableEq M] [Nonempty M]
     (p : 𝒳 → ℝ) (hpsum : ∑ x, p x = 1) (hp_nonneg : ∀ x, 0 ≤ p x)
     (f : (M → 𝒳) → ℝ) (η : ℝ)
     (hexp : codeExpectation p f ≤ η) :
@@ -1103,7 +1108,7 @@ absorbing the failure outcome `none` into one message (which only *reduces* that
 message's error).
 [Wilde2011Qst, qit-notes.tex:29853-29920] -/
 theorem PackingLemma.packingLemma_avgError
-    {a : Type u} {𝒳 M : Type*}
+    {a : Type u} {𝒳 : Type uAux} {M : Type uMessage}
     [Fintype a] [DecidableEq a] [Fintype 𝒳] [DecidableEq 𝒳]
     [Fintype M] [DecidableEq M] [Nonempty M]
     (E : Ensemble 𝒳 a) (P : CMatrix a) (hP : P.PosSemidef) (hPid : P * P = P)
@@ -1257,7 +1262,7 @@ there, while `φ` lifts each classical codeword to an *input* state on
 `TensorPower a n`.
 [Wilde2011Qst, qit-notes.tex:33634-33808] -/
 theorem PackingLemma.hswCode_averageErrorAtMost_of_packing
-    {a : Type u} {b : Type v} {𝒳 : Type*} {M : Type u}
+    {a : Type uIn} {b : Type uOut} {𝒳 : Type uAux} {M : Type uMessage}
     [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
     [Fintype 𝒳] [DecidableEq 𝒳] [Fintype M] [DecidableEq M] [Nonempty M]
     (N : Channel a b) (n : ℕ)
@@ -1317,7 +1322,8 @@ supplies the message-cardinality/rate estimate, since that estimate comes from
 the separate HSW message-size choice `|M| ≈ 2^{n(χ-\delta)}` rather than from
 the square-root-measurement error analysis itself. -/
 theorem PackingLemma.hswAverageErrorPackingWitness_of_packing
-    {a : Type u} {b : Type v} {ι : Type u} {𝒳 : Type*} {M : Type u}
+    {a : Type uIn} {b : Type uOut} {ι : Type uEnsemble}
+    {𝒳 : Type uAux} {M : Type uMessage}
     [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
     [Fintype ι] [DecidableEq ι] [Fintype 𝒳] [DecidableEq 𝒳]
     [Fintype M] [DecidableEq M] [Nonempty M]

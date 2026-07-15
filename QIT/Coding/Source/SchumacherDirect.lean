@@ -305,6 +305,52 @@ def typicalEncoder (ρ : State a) (n : ℕ) (δ : ℝ)
     (typicalEncoderKraus_krausAdjoint_one ρ n δ i0)
   mapsPositive := MatrixMap.ofKraus_mapsPositive _
 
+/-- An atypical correction branch vanishes after the typical-support decoder.
+The corresponding columns of the eigenbasis unitary have disjoint typicality
+predicates, hence are orthogonal. -/
+private theorem atypicalEncoderKraus_mul_typicalIsometry
+    (ρ : State a) (n : ℕ) (δ : ℝ)
+    (i0 : TypicalSubspaceIndex ρ n δ)
+    (l : AtypicalSubspaceIndex ρ n δ) :
+    atypicalEncoderKraus ρ n δ i0 l * typicalIsometry ρ n δ = 0 := by
+  classical
+  let U : CMatrix (TensorPower a n) := tensorPowerEigenvectorUnitary ρ n
+  have hUstarU : Matrix.conjTranspose U * U = 1 :=
+    Unitary.coe_star_mul_self _
+  ext w j
+  by_cases hw : w = i0
+  · subst w
+    simp only [Matrix.mul_apply, atypicalEncoderKraus, typicalIsometry,
+      Matrix.submatrix_apply, if_pos, Matrix.zero_apply]
+    have hentry := congrArg (fun M : CMatrix (TensorPower a n) => M l.val j.val) hUstarU
+    have hne : l.val ≠ j.val := by
+      intro h
+      exact l.prop (h ▸ j.prop)
+    simpa [Matrix.mul_apply, Matrix.conjTranspose_apply, Matrix.one_apply, hne] using hentry
+  · simp [Matrix.mul_apply, atypicalEncoderKraus, hw]
+
+/-- Schumacher compression is lossless on the typical register: decoding into
+the typical support and immediately re-encoding is the identity channel. -/
+theorem typicalEncoder_comp_typicalDecoder_eq_idChannel
+    (ρ : State a) (n : ℕ) (δ : ℝ)
+    (i0 : TypicalSubspaceIndex ρ n δ) :
+    (typicalEncoder ρ n δ i0).comp (typicalDecoder ρ n δ) =
+      Channel.idChannel (TypicalSubspaceIndex ρ n δ) := by
+  rw [Channel.mk.injEq]
+  show (MatrixMap.ofKraus (typicalEncoderKraus ρ n δ i0)).comp
+      (MatrixMap.ofKraus (fun _ : Unit => typicalIsometry ρ n δ)) = _
+  rw [MatrixMap.ofKraus_comp_ofKraus]
+  ext X i j
+  simp only [MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk,
+    Fintype.sum_prod_type, Fintype.sum_sum_type, Fintype.sum_unique,
+    typicalEncoderKraus]
+  rw [typicalIsometry_conjTranspose_mul_self]
+  simp only [one_mul, Matrix.conjTranspose_one, mul_one]
+  have hatyp : ∀ l : AtypicalSubspaceIndex ρ n δ,
+      atypicalEncoderKraus ρ n δ i0 l * typicalIsometry ρ n δ = 0 :=
+    atypicalEncoderKraus_mul_typicalIsometry ρ n δ i0
+  simp [hatyp, Channel.idChannel, MatrixMap.ofKraus]
+
 /-- The Schumacher compression code built from the typical isometry. -/
 def typicalCompressionCode (ρ : State a) (n : ℕ) (δ : ℝ)
     (i0 : TypicalSubspaceIndex ρ n δ) :
@@ -337,6 +383,7 @@ private lemma sum_ite_eq_single_f (i : α) (T : α → ℂ) :
       exact (h (Finset.mem_univ i)).elim
   rw [hkey, if_pos rfl]
 
+omit [DecidableEq β] in
 /-- Entry of a `(I ⊗ A) X (I ⊗ A)ᴴ` conjugation collapses to a partial slice.
 Here `A` is square on `β` (the right-factor system). -/
 private theorem kron_one_mul_conjTranspose_entry (A : CMatrix β)
@@ -388,6 +435,7 @@ private theorem kron_one_mul_conjTranspose_entry (A : CMatrix β)
   -- Reorder the two `β`-sums to match the right-hand side.
   rw [Finset.sum_comm]
 
+omit [DecidableEq κ] in
 /-- Tensoring the identity channel with a Kraus-form map acts entry-wise as a
 sum of `(I ⊗ M_k) X (I ⊗ M_k)ᴴ` conjugations, in the natural slice form. -/
 private theorem kron_idChannel_ofKraus_apply_entry
@@ -399,6 +447,7 @@ private theorem kron_idChannel_ofKraus_apply_entry
   simp only [MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk,
     Matrix.sum_apply, Matrix.mul_apply, Matrix.conjTranspose_apply]
 
+omit [DecidableEq κ] in
 /-- The matrix form: `kron id (ofKraus M)` is the sum of `(I⊗M_k) X (I⊗M_k)ᴴ`
 Kraus conjugations. -/
 private theorem kron_idChannel_ofKraus_apply

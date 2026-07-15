@@ -997,6 +997,7 @@ theorem SmoothMinRateUpperFromContinuity.of_profile
   filter_upwards [hε_upper hε_nonneg hε_lt_one] with n hn_upper
   linarith
 
+omit [DecidableEq a] in
 /-- Tensor-power cardinalities turn the AFW dimension term into an exactly
 linear entropy contribution, `log₂ |A^n| = n log₂ |A|`. -/
 theorem log2_tensorPower_card (n : ℕ) :
@@ -1006,6 +1007,7 @@ theorem log2_tensorPower_card (n : ℕ) :
   rw [tensorPower_card (a := a) n, Nat.cast_pow, Real.log_pow]
   ring
 
+omit [DecidableEq a] in
 /-- For fixed smoothing radius, the normalized AFW tensor-power modulus has
 the source rate limit `2 ε log₂ |A|`.
 

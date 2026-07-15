@@ -179,8 +179,14 @@ theorem exists_conditionalMaxFidelityBlockFeasible_of_le_scaled_identityTensor
         CMatrix (Sum (Prod a b) (Prod a b))).PosSemidef := by
     have hadd := hX0.add hdiag
     convert hadd using 1
-    ext i j <;> cases i <;> cases j <;>
-      simp [Matrix.fromBlocks, Matrix.of_apply]
+    ext i j
+    cases i
+    · cases j
+      · simp [Matrix.fromBlocks, Matrix.of_apply]
+      · simp [Matrix.fromBlocks, Matrix.of_apply]
+    · cases j
+      · simp [Matrix.fromBlocks, Matrix.of_apply]
+      · simp [Matrix.fromBlocks, Matrix.of_apply]
   let r : ℝ := (Real.sqrt d)⁻¹
   have hsqrt : 0 < Real.sqrt d := Real.sqrt_pos.mpr hd
   have hr : 0 < r := inv_pos.mpr hsqrt

@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Core.Pure
+public import QIT.States.SubnormalizedTopology
 public import Mathlib.Topology.MetricSpace.ProperSpace
 
 /-!
@@ -33,6 +34,15 @@ namespace State
 
 variable {a : Type u} [Fintype a] [DecidableEq a]
 
+/-- The matrix-level normalized-state domain. -/
+def stateMatrixSet (a : Type u) [Fintype a] : Set (CMatrix a) :=
+  {M | M.PosSemidef ∧ M.trace = 1}
+
+omit [DecidableEq a] in
+theorem mem_stateMatrixSet_iff {M : CMatrix a} :
+    M ∈ stateMatrixSet a ↔ M.PosSemidef ∧ M.trace = 1 :=
+  Iff.rfl
+
 /-- States carry the topology induced by their density matrices. -/
 instance instTopologicalSpace : TopologicalSpace (State a) :=
   TopologicalSpace.induced State.matrix inferInstance
@@ -41,6 +51,65 @@ instance instTopologicalSpace : TopologicalSpace (State a) :=
 @[fun_prop]
 theorem continuous_matrix : Continuous (fun ρ : State a => ρ.matrix) :=
   continuous_induced_dom
+
+private theorem matrix_injective :
+    Function.Injective (fun ρ : State a => ρ.matrix) := by
+  intro ρ σ hρσ
+  exact ext hρσ
+
+theorem isEmbedding_matrix :
+    Topology.IsEmbedding (fun ρ : State a => ρ.matrix) :=
+  Function.Injective.isEmbedding_induced matrix_injective
+
+/-- The matrix-level normalized-state domain is compact. -/
+theorem stateMatrixSet_isCompact :
+    IsCompact (stateMatrixSet a) := by
+  have hsubcompact :
+      IsCompact (SubnormalizedState.subnormalizedMatrixSet a) :=
+    SubnormalizedState.subnormalizedMatrixSet_isCompact (a := a)
+  have htrace_closed : IsClosed ({M : CMatrix a | M.trace = 1} : Set (CMatrix a)) := by
+    exact isClosed_eq (Continuous.matrix_trace continuous_id) continuous_const
+  have hset :
+      stateMatrixSet a =
+        SubnormalizedState.subnormalizedMatrixSet a ∩ {M : CMatrix a | M.trace = 1} := by
+    ext M
+    constructor
+    · rintro ⟨hMpos, hMtrace⟩
+      constructor
+      · exact ⟨hMpos, by rw [hMtrace]; norm_num⟩
+      · exact hMtrace
+    · rintro ⟨hMsub, hMtrace⟩
+      exact ⟨hMsub.1, hMtrace⟩
+  rw [hset]
+  exact hsubcompact.inter_right htrace_closed
+
+private theorem matrix_image_univ :
+    (fun ρ : State a => ρ.matrix) '' Set.univ =
+      stateMatrixSet a := by
+  ext M
+  constructor
+  · rintro ⟨ρ, -, rfl⟩
+    exact ⟨ρ.pos, ρ.trace_eq_one⟩
+  · intro hM
+    refine ⟨⟨M, hM.1, hM.2⟩, Set.mem_univ _, rfl⟩
+
+/-- The full type of finite-dimensional normalized states is compact. -/
+theorem isCompact_univ :
+    IsCompact (Set.univ : Set (State a)) := by
+  rw [isEmbedding_matrix.isCompact_iff]
+  rw [matrix_image_univ]
+  exact stateMatrixSet_isCompact (a := a)
+
+/-- Normalized states form a compact space in the density-matrix topology. -/
+instance instCompactSpace : CompactSpace (State a) :=
+  isCompact_univ_iff.mp isCompact_univ
+
+/-- The embedding of a normalized state as a subnormalized state is continuous. -/
+theorem continuous_toSubnormalized :
+    Continuous (fun ρ : State a => ρ.toSubnormalized) := by
+  rw [continuous_induced_rng]
+  change Continuous fun ρ : State a => ρ.toSubnormalized.matrix
+  simpa [State.toSubnormalized_matrix] using continuous_matrix
 
 variable {b : Type v} [Fintype b] [DecidableEq b]
 

@@ -7,7 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Renyi.ConditionalRenyiTraceBridge
-public import QIT.Information.Renyi.FrankLieb
+public import QIT.Information.Renyi.FrankLieb.ScalarOperator
 public import QIT.OneShot.SmoothEndpoint
 public import QIT.States.PosSqrtOrder
 public import QIT.Classical.Bridge

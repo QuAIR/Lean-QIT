@@ -356,7 +356,7 @@ theorem adhwFQSWOneShotErrorBound_le_iid_entropy_exponent_of_slack_skoro_bound
 
 /-- Schumacher typical-support isometry, reindexed by a finite equivalence
 from an externally named typical register. -/
-private def adhwFQSWTypicalSupportIsometryOfEquiv
+def adhwFQSWTypicalSupportIsometryOfEquiv
     {α : Type u} {ι : Type v}
     [Fintype α] [DecidableEq α] [Fintype ι] [DecidableEq ι]
     (ρ : State α) (n : ℕ) (δ : ℝ)
@@ -369,7 +369,7 @@ private def adhwFQSWTypicalSupportIsometryOfEquiv
 
 /-- The reindexed Schumacher support isometry has the expected typical
 projector as its range projection. -/
-private theorem adhwFQSWTypicalSupportIsometryOfEquiv_range_projector
+theorem adhwFQSWTypicalSupportIsometryOfEquiv_range_projector
     {α : Type u} {ι : Type v}
     [Fintype α] [DecidableEq α] [Fintype ι] [DecidableEq ι]
     (ρ : State α) (n : ℕ) (δ : ℝ)
@@ -395,6 +395,268 @@ private theorem adhwFQSWTypicalSupportIsometryOfEquiv_range_projector
     _ = ρ.typicalSubspaceProjector n δ := by
           simpa [V] using State.typicalIsometry_mul_conjTranspose ρ n δ
 
+/-- Schumacher's typical decoder is the channel induced by its support isometry. -/
+theorem State.typicalDecoder_eq_fqswChannelOfReferenceIsometry
+    {α : Type u} [Fintype α] [DecidableEq α]
+    (ρ : State α) (n : ℕ) (δ : ℝ) :
+    State.typicalDecoder ρ n δ =
+      fqswChannelOfReferenceIsometry
+        ({ matrix := State.typicalIsometry ρ n δ
+           isometry := State.typicalIsometry_conjTranspose_mul_self ρ n δ } :
+          ReferenceIsometry (State.TypicalSubspaceIndex ρ n δ) (TensorPower α n)) := by
+  rw [Channel.mk.injEq]
+  ext X i j
+  simp [State.typicalDecoder, fqswChannelOfReferenceIsometry,
+    MatrixMap.ofReferenceIsometry_apply, MatrixMap.ofKraus]
+
+/-- Kraus family for a trace-preserving retraction from a padded sum register.
+The right summand is retained coherently; each left-summand basis vector is
+sent to a fixed fallback basis vector. -/
+def fqswSumInrRetractionKraus
+    {extra : Type u} {α : Type v}
+    [Fintype extra] [DecidableEq extra]
+    [Fintype α] [DecidableEq α]
+    (i0 : α) : (Unit ⊕ extra) → Matrix α (Sum extra α) ℂ
+  | Sum.inl _ => Matrix.conjTranspose (ReferenceIsometry.sumInr extra α).matrix
+  | Sum.inr k => Matrix.single i0 (Sum.inl k) 1
+
+theorem fqswSumInrRetractionKraus_adjoint_one
+    {extra : Type u} {α : Type v}
+    [Fintype extra] [DecidableEq extra]
+    [Fintype α] [DecidableEq α]
+    (i0 : α) :
+    MatrixMap.krausAdjoint (fqswSumInrRetractionKraus (extra := extra) i0)
+        (1 : CMatrix α) = 1 := by
+  classical
+  ext x y
+  cases x with
+  | inl x =>
+      cases y with
+      | inl y =>
+          simp only [MatrixMap.krausAdjoint, fqswSumInrRetractionKraus,
+            ReferenceIsometry.sumInr, Matrix.sum_apply, Matrix.mul_apply,
+            Matrix.conjTranspose_apply, Matrix.one_apply, Fintype.sum_sum_type,
+            Fintype.sum_unique, Matrix.mul_one]
+          simp only [Matrix.single, Matrix.of_apply,
+            star_zero, zero_mul, Finset.sum_const_zero, zero_add, Sum.inl.injEq]
+          by_cases hxy : x = y
+          · subst y
+            rw [if_pos rfl, Finset.sum_eq_single x]
+            · rw [Finset.sum_eq_single i0]
+              · simp
+              · intro z _ hz
+                simp [Ne.symm hz]
+              · simp
+            · intro k _ hk
+              simp [hk]
+            · simp
+          · rw [if_neg hxy]
+            apply Finset.sum_eq_zero
+            intro k _
+            by_cases hkx : k = x
+            · subst k
+              simp [hxy]
+            · simp [hkx]
+      | inr y =>
+          simp [MatrixMap.krausAdjoint, fqswSumInrRetractionKraus,
+            ReferenceIsometry.sumInr, Matrix.sum_apply, Matrix.mul_apply,
+            Matrix.conjTranspose_apply]
+  | inr x =>
+      cases y with
+      | inl y =>
+          simp [MatrixMap.krausAdjoint, fqswSumInrRetractionKraus,
+            ReferenceIsometry.sumInr, Matrix.sum_apply, Matrix.mul_apply,
+            Matrix.conjTranspose_apply]
+      | inr y =>
+          simp [MatrixMap.krausAdjoint, fqswSumInrRetractionKraus,
+            ReferenceIsometry.sumInr, Matrix.sum_apply, Matrix.mul_apply,
+            Matrix.conjTranspose_apply, Matrix.one_apply]
+
+/-- CPTP retraction of a padded sum register onto its right summand. -/
+def fqswSumInrRetractionChannel
+    {extra : Type u} {α : Type v}
+    [Fintype extra] [DecidableEq extra]
+    [Fintype α] [DecidableEq α]
+    (i0 : α) : Channel (Sum extra α) α where
+  map := MatrixMap.ofKraus (fqswSumInrRetractionKraus (extra := extra) i0)
+  completelyPositive := MatrixMap.ofKraus_completelyPositive _
+  tracePreserving := MatrixMap.ofKraus_isTracePreserving_of_krausAdjoint_one _
+    (fqswSumInrRetractionKraus_adjoint_one i0)
+  mapsPositive := MatrixMap.ofKraus_mapsPositive _
+
+theorem fqswSumInrRetractionChannel_comp_inclusion
+    {extra : Type u} {α : Type v}
+    [Fintype extra] [DecidableEq extra]
+    [Fintype α] [DecidableEq α]
+    (i0 : α) :
+    (fqswSumInrRetractionChannel (extra := extra) i0).comp
+        (fqswChannelOfReferenceIsometry (ReferenceIsometry.sumInr extra α)) =
+      Channel.idChannel α := by
+  rw [Channel.mk.injEq]
+  ext X i j
+  simp [Channel.comp, fqswSumInrRetractionChannel,
+    fqswSumInrRetractionKraus, fqswChannelOfReferenceIsometry,
+    MatrixMap.ofReferenceIsometry_apply, ReferenceIsometry.sumInr,
+    MatrixMap.ofKraus, Matrix.mul_apply, Channel.idChannel]
+
+theorem fqswChannel_comp_assoc
+    {α : Type u} {β : Type v} {γ : Type w} {ζ : Type x}
+    [Fintype α] [DecidableEq α]
+    [Fintype β] [DecidableEq β]
+    [Fintype γ] [DecidableEq γ]
+    [Fintype ζ] [DecidableEq ζ]
+    (Φ : Channel γ ζ) (Ψ : Channel β γ) (Ω : Channel α β) :
+    (Φ.comp Ψ).comp Ω = Φ.comp (Ψ.comp Ω) := by
+  rw [Channel.mk.injEq]
+  rfl
+
+/-- Composing a channel with the identity on its input leaves it unchanged. -/
+theorem Channel.comp_idChannel
+    {α : Type u} {β : Type v} [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    (Φ : Channel α β) : Φ.comp (Channel.idChannel α) = Φ := by
+  rw [Channel.mk.injEq]
+  ext X i j
+  simp [Channel.comp, Channel.idChannel, MatrixMap.ofKraus]
+
+/-- Composing the identity on a channel's output leaves the channel unchanged. -/
+theorem Channel.idChannel_comp
+    {alpha : Type u} {beta : Type v}
+    [Fintype alpha] [DecidableEq alpha] [Fintype beta] [DecidableEq beta]
+    (Phi : Channel alpha beta) : (Channel.idChannel beta).comp Phi = Phi := by
+  rw [Channel.mk.injEq]
+  ext X i j
+  simp [Channel.comp, Channel.idChannel, MatrixMap.ofKraus]
+
+theorem fqswChannelOfReferenceIsometry_comp
+    {α : Type u} {β : Type v} {γ : Type w}
+    [Fintype α] [DecidableEq α]
+    [Fintype β] [DecidableEq β]
+    [Fintype γ] [DecidableEq γ]
+    (W : ReferenceIsometry β γ) (V : ReferenceIsometry α β) :
+    (fqswChannelOfReferenceIsometry W).comp (fqswChannelOfReferenceIsometry V) =
+      fqswChannelOfReferenceIsometry (W.comp V) := by
+  rw [Channel.mk.injEq]
+  ext X i j
+  simp [Channel.comp, fqswChannelOfReferenceIsometry,
+    MatrixMap.ofReferenceIsometry_apply, ReferenceIsometry.comp,
+    Matrix.conjTranspose_mul, Matrix.mul_assoc]
+
+/-- The channel of the identity basis equivalence is the identity channel. -/
+theorem fqswChannelOfReferenceIsometry_ofEquiv_refl
+    {α : Type u} [Fintype α] [DecidableEq α] :
+    fqswChannelOfReferenceIsometry (ReferenceIsometry.ofEquiv (Equiv.refl α)) =
+      Channel.idChannel α := by
+  rw [Channel.mk.injEq]
+  ext X i j
+  simp [fqswChannelOfReferenceIsometry, Channel.idChannel,
+    MatrixMap.ofReferenceIsometry_apply, ReferenceIsometry.ofEquiv, MatrixMap.ofKraus,
+    Matrix.mul_apply]
+
+private theorem fqswChannel_reindex_symm_comp_reindex
+    {α : Type u} {β : Type v} [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    (E : α ≃ β) :
+    (Channel.reindex E.symm).comp (Channel.reindex E) = Channel.idChannel α := by
+  rw [Channel.mk.injEq]
+  ext X i j
+  let V := ReferenceIsometry.ofEquiv E
+  have hsymm : (ReferenceIsometry.ofEquiv E.symm).matrix = Matrix.conjTranspose V.matrix := by
+    ext x y
+    by_cases h : y = E x
+    · simp [V, ReferenceIsometry.ofEquiv, Matrix.conjTranspose, h]
+    · have h' : ¬x = E.symm y := by
+        intro h'
+        apply h
+        simpa using (congrArg E h').symm
+      simp [V, ReferenceIsometry.ofEquiv, Matrix.conjTranspose, h, h']
+  change
+    ((MatrixMap.ofReferenceIsometry (ReferenceIsometry.ofEquiv E.symm)).comp
+      (MatrixMap.ofReferenceIsometry (ReferenceIsometry.ofEquiv E))) X i j =
+    MatrixMap.ofKraus (fun _ : Unit => (1 : CMatrix α)) X i j
+  simp only [LinearMap.comp_apply, MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk,
+    Fintype.sum_unique, Matrix.conjTranspose_one, Matrix.one_mul, Matrix.mul_one]
+  rw [MatrixMap.ofReferenceIsometry_apply, MatrixMap.ofReferenceIsometry_apply, hsymm,
+    Matrix.conjTranspose_conjTranspose]
+  have hmatrix :
+      Matrix.conjTranspose V.matrix * (V.matrix * X * Matrix.conjTranspose V.matrix) * V.matrix =
+        ((Matrix.conjTranspose V.matrix * V.matrix) * X) *
+          (Matrix.conjTranspose V.matrix * V.matrix) := by
+    rw [← Matrix.mul_assoc (Matrix.conjTranspose V.matrix) (V.matrix * X)
+      (Matrix.conjTranspose V.matrix)]
+    rw [← Matrix.mul_assoc (Matrix.conjTranspose V.matrix) V.matrix X]
+    rw [Matrix.mul_assoc]
+  rw [hmatrix, V.isometry]
+  simp
+
+/-- Parallel channel composition distributes over product channels. -/
+theorem Channel.prod_comp_prod
+    {α₁ : Type u} {β₁ : Type v} {γ₁ : Type w}
+    {α₂ : Type x} {β₂ : Type y} {γ₂ : Type z}
+    [Fintype α₁] [DecidableEq α₁] [Fintype β₁] [DecidableEq β₁]
+    [Fintype γ₁] [DecidableEq γ₁] [Fintype α₂] [DecidableEq α₂]
+    [Fintype β₂] [DecidableEq β₂] [Fintype γ₂] [DecidableEq γ₂]
+    (Φ₁ : Channel β₁ γ₁) (Φ₂ : Channel β₂ γ₂)
+    (Ψ₁ : Channel α₁ β₁) (Ψ₂ : Channel α₂ β₂) :
+    (Φ₁.prod Φ₂).comp (Ψ₁.prod Ψ₂) = (Φ₁.comp Ψ₁).prod (Φ₂.comp Ψ₂) := by
+  rw [Channel.mk.injEq]
+  ext X i j
+  change (MatrixMap.kron Φ₁.map Φ₂.map (MatrixMap.kron Ψ₁.map Ψ₂.map X)) i j =
+    (MatrixMap.kron (Φ₁.map.comp Ψ₁.map) (Φ₂.map.comp Ψ₂.map) X) i j
+  rw [MatrixMap.kron_comp_apply_general]
+
+/-- The channel induced by a product isometry is the product of the induced channels. -/
+theorem fqswChannelOfReferenceIsometry_prod
+    {α₁ : Type u} {β₁ : Type v} {α₂ : Type w} {β₂ : Type x}
+    [Fintype α₁] [DecidableEq α₁] [Fintype β₁] [DecidableEq β₁]
+    [Fintype α₂] [DecidableEq α₂] [Fintype β₂] [DecidableEq β₂]
+    (V : ReferenceIsometry α₁ β₁) (W : ReferenceIsometry α₂ β₂) :
+    fqswChannelOfReferenceIsometry (V.prod W) =
+      (fqswChannelOfReferenceIsometry V).prod (fqswChannelOfReferenceIsometry W) := by
+  rw [Channel.mk.injEq]
+  ext X i j
+  change MatrixMap.ofReferenceIsometry (V.prod W) X i j =
+    MatrixMap.kron (MatrixMap.ofReferenceIsometry V) (MatrixMap.ofReferenceIsometry W) X i j
+  rw [MatrixMap.map_eq_sum_single
+    (MatrixMap.ofReferenceIsometry (V.prod W)) X]
+  rw [MatrixMap.map_eq_sum_single
+    (MatrixMap.kron (MatrixMap.ofReferenceIsometry V) (MatrixMap.ofReferenceIsometry W)) X]
+  simp only [Matrix.sum_apply]
+  refine Finset.sum_congr rfl fun ef _ => ?_
+  refine Finset.sum_congr rfl fun ef' _ => ?_
+  simp only [Matrix.smul_apply]
+  congr 1
+  rcases ef with ⟨a, c⟩
+  rcases ef' with ⟨a', c'⟩
+  rw [single_prod_eq_kronecker_single]
+  rw [MatrixMap.kron_apply_kronecker]
+  simp only [MatrixMap.ofReferenceIsometry_apply, ReferenceIsometry.prod]
+  change
+    (Matrix.kronecker V.matrix W.matrix *
+        Matrix.kronecker (Matrix.single a a' (1 : ℂ)) (Matrix.single c c' (1 : ℂ)) *
+      Matrix.conjTranspose (Matrix.kronecker V.matrix W.matrix)) i j =
+      (V.matrix * Matrix.single a a' (1 : ℂ) * Matrix.conjTranspose V.matrix) i.1 j.1 *
+        (W.matrix * Matrix.single c c' (1 : ℂ) * Matrix.conjTranspose W.matrix) i.2 j.2
+  have hconj :
+      Matrix.conjTranspose (Matrix.kronecker V.matrix W.matrix) =
+        Matrix.kronecker (Matrix.conjTranspose V.matrix) (Matrix.conjTranspose W.matrix) := by
+    simpa [Matrix.kronecker] using Matrix.conjTranspose_kronecker V.matrix W.matrix
+  rw [hconj]
+  rw [show Matrix.kronecker V.matrix W.matrix *
+      Matrix.kronecker (Matrix.single a a' (1 : ℂ)) (Matrix.single c c' (1 : ℂ)) =
+        Matrix.kronecker (V.matrix * Matrix.single a a' (1 : ℂ))
+          (W.matrix * Matrix.single c c' (1 : ℂ)) from
+      (Matrix.mul_kronecker_mul V.matrix (Matrix.single a a' (1 : ℂ))
+        W.matrix (Matrix.single c c' (1 : ℂ))).symm]
+  rw [show Matrix.kronecker (V.matrix * Matrix.single a a' (1 : ℂ))
+      (W.matrix * Matrix.single c c' (1 : ℂ)) *
+      Matrix.kronecker (Matrix.conjTranspose V.matrix) (Matrix.conjTranspose W.matrix) =
+        Matrix.kronecker
+          (V.matrix * Matrix.single a a' (1 : ℂ) * Matrix.conjTranspose V.matrix)
+          (W.matrix * Matrix.single c c' (1 : ℂ) * Matrix.conjTranspose W.matrix) from
+      (Matrix.mul_kronecker_mul (V.matrix * Matrix.single a a' (1 : ℂ))
+        (Matrix.conjTranspose V.matrix) (W.matrix * Matrix.single c c' (1 : ℂ))
+        (Matrix.conjTranspose W.matrix)).symm]
+  rfl
+
 /-- Padded embedding of the ADHW typical Alice support `A^typ` into
 `A₁ × A₂`, replacing the exact factorization assumption in fqsw.tex lines
 1140-1147 by an injective finite-dimensional basis embedding. -/
@@ -406,7 +668,12 @@ structure ADHWFQSWPaddedAtypEmbedding
   atypDimension_eq_projector_rank :
     (Fintype.card atyp : ℝ) =
       (adhwFQSWSystemAState ψ).typicalSubspaceDimension n δ
+  typicalIndexEquiv :
+    atyp ≃ State.TypicalSubspaceIndex (adhwFQSWSystemAState ψ) n δ
   supportIsometry : ReferenceIsometry atyp (TensorPower a n)
+  supportIsometry_eq_typicalIndexEquiv :
+    supportIsometry = adhwFQSWTypicalSupportIsometryOfEquiv
+      (adhwFQSWSystemAState ψ) n δ typicalIndexEquiv
   supportIsometry_range_projector_eq :
     supportIsometry.matrix * Matrix.conjTranspose supportIsometry.matrix =
       (adhwFQSWSystemAState ψ).typicalSubspaceProjector n δ
@@ -428,6 +695,234 @@ replacement for the exact tensor factorization in ADHW fqsw.tex lines
 def isometry (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e) :
     ReferenceIsometry atyp (Prod q e) :=
   ReferenceIsometry.ofInjective P.embedding P.embedding.injective
+
+/-- Basis coordinates unused by the padded typical-support embedding. -/
+def paddingComplement (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e) :=
+  {x : Prod q e // x ∉ Set.range P.embedding}
+
+/-- Split the padded register into unused coordinates and the embedded true
+typical register.  The true typical coordinates occupy the right summand. -/
+def paddingEquiv (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e) :
+    Sum P.paddingComplement atyp ≃ Prod q e :=
+  (Equiv.sumComm P.paddingComplement atyp).trans <|
+    (Equiv.sumCongr P.embedding.toEquivRange (Equiv.refl P.paddingComplement)).trans <|
+      Equiv.Set.sumCompl (Set.range P.embedding)
+
+@[simp]
+theorem paddingEquiv_apply_inr
+    (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e) (i : atyp) :
+    P.paddingEquiv (Sum.inr i) = P.embedding i := by
+  rfl
+
+@[simp]
+theorem paddingEquiv_symm_apply_embedding
+    (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e) (i : atyp) :
+    P.paddingEquiv.symm (P.embedding i) = Sum.inr i := by
+  exact P.paddingEquiv.symm_apply_eq.mpr (P.paddingEquiv_apply_inr i).symm
+
+/-- After splitting off the unused padding coordinates, the concrete basis
+embedding is the standard right-summand inclusion. -/
+theorem reindexed_isometry_eq_sumInr
+    (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e)
+    [Fintype P.paddingComplement] [DecidableEq P.paddingComplement] :
+    (ReferenceIsometry.ofEquiv P.paddingEquiv.symm).comp P.isometry =
+      ReferenceIsometry.sumInr P.paddingComplement atyp := by
+  rw [ReferenceIsometry.mk.injEq]
+  ext z i
+  classical
+  cases z with
+  | inl z =>
+      simp [ReferenceIsometry.comp, ReferenceIsometry.ofEquiv,
+        isometry, ReferenceIsometry.ofInjective, ReferenceIsometry.sumInr,
+        Matrix.mul_apply]
+  | inr z =>
+      simp [ReferenceIsometry.comp, ReferenceIsometry.ofEquiv,
+        isometry, ReferenceIsometry.ofInjective, ReferenceIsometry.sumInr,
+        Matrix.mul_apply]
+
+/-- Reindexing the padded embedding into complement-plus-support coordinates
+produces the canonical right-summand inclusion channel. -/
+theorem reindex_comp_isometry_eq_sumInrChannel
+    (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e)
+    [Fintype P.paddingComplement] [DecidableEq P.paddingComplement] :
+    (Channel.reindex P.paddingEquiv.symm).comp
+        (fqswChannelOfReferenceIsometry P.isometry) =
+      fqswChannelOfReferenceIsometry
+        (ReferenceIsometry.sumInr P.paddingComplement atyp) := by
+  change
+    (fqswChannelOfReferenceIsometry (ReferenceIsometry.ofEquiv P.paddingEquiv.symm)).comp
+        (fqswChannelOfReferenceIsometry P.isometry) = _
+  rw [fqswChannelOfReferenceIsometry_comp,
+    ADHWFQSWPaddedAtypEmbedding.reindexed_isometry_eq_sumInr P]
+
+/-- CPTP decoder from the padded coordinates back to the true typical
+register.  Off-support padding coordinates are sent to a fixed fallback basis
+state; this behavior is physical but irrelevant on the encoded support. -/
+def paddingRetraction (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e)
+    [Nonempty atyp] : Channel (Prod q e) atyp := by
+  classical
+  letI : Finite P.paddingComplement :=
+    Finite.of_injective Subtype.val Subtype.val_injective
+  letI : Fintype P.paddingComplement := Fintype.ofFinite P.paddingComplement
+  letI : DecidableEq P.paddingComplement := Classical.decEq P.paddingComplement
+  exact
+    (fqswSumInrRetractionChannel (Nonempty.some inferInstance)).comp
+      (Channel.reindex P.paddingEquiv.symm)
+
+/-- Physical Schumacher encoder followed by the padded coordinate embedding. -/
+def physicalEncoder (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e)
+    [Nonempty atyp] : Channel (TensorPower a n) (Prod q e) :=
+  (fqswChannelOfReferenceIsometry P.isometry).comp <|
+    (Channel.reindex P.typicalIndexEquiv.symm).comp <|
+      State.typicalEncoder (adhwFQSWSystemAState ψ) n δ
+        (P.typicalIndexEquiv (Nonempty.some inferInstance))
+
+/-- Physical decoder from padded coordinates into the original Alice block. -/
+def physicalDecoder (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e)
+    [Nonempty atyp] : Channel (Prod q e) (TensorPower a n) :=
+  (State.typicalDecoder (adhwFQSWSystemAState ψ) n δ).comp <|
+    (Channel.reindex P.typicalIndexEquiv).comp P.paddingRetraction
+
+/-- The padded retraction is exactly a left inverse on encoded typical
+coordinates. -/
+theorem paddingRetraction_comp_isometry
+    (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e)
+    [Nonempty atyp] :
+    P.paddingRetraction.comp (fqswChannelOfReferenceIsometry P.isometry) =
+      Channel.idChannel atyp := by
+  classical
+  letI : Finite P.paddingComplement :=
+    Finite.of_injective Subtype.val Subtype.val_injective
+  letI : Fintype P.paddingComplement := Fintype.ofFinite P.paddingComplement
+  letI : DecidableEq P.paddingComplement := Classical.decEq P.paddingComplement
+  rw [paddingRetraction, fqswChannel_comp_assoc,
+    ADHWFQSWPaddedAtypEmbedding.reindex_comp_isometry_eq_sumInrChannel P]
+  exact fqswSumInrRetractionChannel_comp_inclusion (Nonempty.some inferInstance)
+
+/-- Encoding after the true typical-support inclusion is the padded embedding channel. -/
+theorem physicalEncoder_comp_supportIsometry
+    (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e)
+    [Nonempty atyp] :
+    P.physicalEncoder.comp (fqswChannelOfReferenceIsometry P.supportIsometry) =
+      fqswChannelOfReferenceIsometry P.isometry := by
+  have hdecoder :
+      fqswChannelOfReferenceIsometry P.supportIsometry =
+        (State.typicalDecoder (adhwFQSWSystemAState ψ) n δ).comp
+          (Channel.reindex P.typicalIndexEquiv) := by
+    rw [P.supportIsometry_eq_typicalIndexEquiv]
+    change
+      fqswChannelOfReferenceIsometry
+          (({ matrix := State.typicalIsometry (adhwFQSWSystemAState ψ) n δ
+              isometry := State.typicalIsometry_conjTranspose_mul_self
+                (adhwFQSWSystemAState ψ) n δ } :
+              ReferenceIsometry
+                (State.TypicalSubspaceIndex (adhwFQSWSystemAState ψ) n δ)
+                (TensorPower a n)).comp
+            (ReferenceIsometry.ofEquiv P.typicalIndexEquiv)) =
+        (State.typicalDecoder (adhwFQSWSystemAState ψ) n δ).comp
+          (fqswChannelOfReferenceIsometry (ReferenceIsometry.ofEquiv P.typicalIndexEquiv))
+    rw [State.typicalDecoder_eq_fqswChannelOfReferenceIsometry,
+      fqswChannelOfReferenceIsometry_comp]
+  have hid_left :
+      (Channel.idChannel (State.TypicalSubspaceIndex (adhwFQSWSystemAState ψ) n δ)).comp
+          (Channel.reindex P.typicalIndexEquiv) =
+        Channel.reindex P.typicalIndexEquiv := by
+    rw [Channel.mk.injEq]
+    ext X i j
+    simp [Channel.comp, Channel.idChannel, Channel.reindex,
+      MatrixMap.ofReferenceIsometry_apply, ReferenceIsometry.ofEquiv, MatrixMap.ofKraus,
+      Matrix.mul_apply]
+  have hreindex :
+      (Channel.reindex P.typicalIndexEquiv.symm).comp
+          (Channel.reindex P.typicalIndexEquiv) = Channel.idChannel atyp := by
+    rw [Channel.mk.injEq]
+    ext X i j
+    let V := ReferenceIsometry.ofEquiv P.typicalIndexEquiv
+    have hsymm :
+        (ReferenceIsometry.ofEquiv P.typicalIndexEquiv.symm).matrix =
+          Matrix.conjTranspose V.matrix := by
+      ext x y
+      by_cases h : y = P.typicalIndexEquiv x
+      · simp [V, ReferenceIsometry.ofEquiv, Matrix.conjTranspose, h]
+      · have h' : ¬x = P.typicalIndexEquiv.symm y := by
+          intro h'
+          apply h
+          simpa using (congrArg P.typicalIndexEquiv h').symm
+        simp [V, ReferenceIsometry.ofEquiv, Matrix.conjTranspose, h, h']
+    change
+      ((MatrixMap.ofReferenceIsometry (ReferenceIsometry.ofEquiv P.typicalIndexEquiv.symm)).comp
+        (MatrixMap.ofReferenceIsometry (ReferenceIsometry.ofEquiv P.typicalIndexEquiv))) X i j =
+      MatrixMap.ofKraus (fun _ : Unit => (1 : CMatrix atyp)) X i j
+    simp only [LinearMap.comp_apply, MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk,
+      Fintype.sum_unique, Matrix.conjTranspose_one, Matrix.one_mul, Matrix.mul_one]
+    rw [MatrixMap.ofReferenceIsometry_apply, MatrixMap.ofReferenceIsometry_apply]
+    change
+      ((ReferenceIsometry.ofEquiv P.typicalIndexEquiv.symm).matrix *
+          (V.matrix * X * Matrix.conjTranspose V.matrix) *
+        Matrix.conjTranspose (ReferenceIsometry.ofEquiv P.typicalIndexEquiv.symm).matrix) i j =
+      X i j
+    rw [hsymm, Matrix.conjTranspose_conjTranspose]
+    have hmatrix :
+        Matrix.conjTranspose V.matrix * (V.matrix * X * Matrix.conjTranspose V.matrix) * V.matrix =
+          ((Matrix.conjTranspose V.matrix * V.matrix) * X) *
+            (Matrix.conjTranspose V.matrix * V.matrix) := by
+      rw [← Matrix.mul_assoc (Matrix.conjTranspose V.matrix) (V.matrix * X)
+        (Matrix.conjTranspose V.matrix)]
+      rw [← Matrix.mul_assoc (Matrix.conjTranspose V.matrix) V.matrix X]
+      rw [Matrix.mul_assoc]
+    rw [hmatrix, V.isometry]
+    simp
+  have hid_right :
+      (fqswChannelOfReferenceIsometry P.isometry).comp (Channel.idChannel atyp) =
+        fqswChannelOfReferenceIsometry P.isometry := by
+    rw [Channel.mk.injEq]
+    ext X i j
+    simp [Channel.comp, Channel.idChannel, fqswChannelOfReferenceIsometry,
+      MatrixMap.ofReferenceIsometry_apply, MatrixMap.ofKraus]
+  rw [hdecoder]
+  unfold physicalEncoder
+  rw [fqswChannel_comp_assoc, fqswChannel_comp_assoc]
+  rw [← fqswChannel_comp_assoc
+    (State.typicalEncoder (adhwFQSWSystemAState ψ) n δ
+      (P.typicalIndexEquiv (Nonempty.some inferInstance)))
+    (State.typicalDecoder (adhwFQSWSystemAState ψ) n δ)
+    (Channel.reindex P.typicalIndexEquiv)]
+  rw [State.typicalEncoder_comp_typicalDecoder_eq_idChannel, hid_left, hreindex, hid_right]
+
+/-- Decoding after the padded embedding recovers the true typical-support channel. -/
+theorem physicalDecoder_comp_isometry_eq_supportIsometryChannel
+    (P : ADHWFQSWPaddedAtypEmbedding ψ n δ atyp q e)
+    [Nonempty atyp] :
+    P.physicalDecoder.comp (fqswChannelOfReferenceIsometry P.isometry) =
+      fqswChannelOfReferenceIsometry P.supportIsometry := by
+  have hdecoder :
+      (State.typicalDecoder (adhwFQSWSystemAState ψ) n δ).comp
+          (Channel.reindex P.typicalIndexEquiv) =
+        fqswChannelOfReferenceIsometry P.supportIsometry := by
+    rw [P.supportIsometry_eq_typicalIndexEquiv]
+    change
+      (State.typicalDecoder (adhwFQSWSystemAState ψ) n δ).comp
+          (fqswChannelOfReferenceIsometry (ReferenceIsometry.ofEquiv P.typicalIndexEquiv)) =
+        fqswChannelOfReferenceIsometry
+          (({ matrix := State.typicalIsometry (adhwFQSWSystemAState ψ) n δ
+              isometry := State.typicalIsometry_conjTranspose_mul_self
+                (adhwFQSWSystemAState ψ) n δ } :
+              ReferenceIsometry
+                (State.TypicalSubspaceIndex (adhwFQSWSystemAState ψ) n δ)
+                (TensorPower a n)).comp
+            (ReferenceIsometry.ofEquiv P.typicalIndexEquiv))
+    rw [State.typicalDecoder_eq_fqswChannelOfReferenceIsometry,
+      fqswChannelOfReferenceIsometry_comp]
+  have hid_right :
+      (Channel.reindex P.typicalIndexEquiv).comp
+          (Channel.idChannel atyp) = Channel.reindex P.typicalIndexEquiv := by
+    rw [Channel.mk.injEq]
+    ext X i j
+    simp [Channel.comp, Channel.idChannel, Channel.reindex,
+      MatrixMap.ofReferenceIsometry_apply, ReferenceIsometry.ofEquiv, MatrixMap.ofKraus]
+  unfold physicalDecoder
+  rw [fqswChannel_comp_assoc, fqswChannel_comp_assoc,
+    paddingRetraction_comp_isometry, hid_right, hdecoder]
 
 /-- Lift a padded one-shot Alice coordinate back into the true typical Alice
 support inside `A^n`: first project from `A₁ × A₂` onto the embedded `A^typ`
@@ -542,7 +1037,9 @@ theorem exists_adhwFQSWPaddedAtypEmbedding
         (adhwFQSWSystemAState ψ) n δ E
   exact
     ⟨{ atypDimension_eq_projector_rank := hdim
+       typicalIndexEquiv := E
        supportIsometry := supportIsometry
+       supportIsometry_eq_typicalIndexEquiv := rfl
        supportIsometry_range_projector_eq := hrangeA
        embedding := Classical.choice (Function.Embedding.nonempty_of_card_le hcard)
        paddingSlack := Fintype.card (Prod q e) - Fintype.card atyp
@@ -722,6 +1219,7 @@ variable [Fintype q] [DecidableEq q]
 variable [Fintype e] [DecidableEq e] [Nonempty e]
 variable [Fintype et] [DecidableEq et]
 
+omit [DecidableEq q] [DecidableEq e] [Nonempty e] in
 /-- Communication-rate rounding lemma for the raw finite `A₁` register used by
 the source-route block. -/
 theorem communicationLogRate_le (R : ADHWFQSWIidRateChoice ψ n δ q e)
@@ -744,6 +1242,7 @@ theorem communicationRate_le (R : ADHWFQSWIidRateChoice ψ n δ q e)
   rw [if_neg (Nat.ne_of_gt hn)]
   exact R.communicationLogRate_le hn
 
+omit [DecidableEq q] [DecidableEq e] [Nonempty e] in
 /-- Ebit-yield rounding lemma for the raw finite `A₂` register used by the
 source-route block. -/
 theorem ebitYieldLogRate_ge (R : ADHWFQSWIidRateChoice ψ n δ q e)
@@ -1152,7 +1651,13 @@ structure ADHWFQSWIidTypicalBobRegister
   card_eq_projector_rank :
     (Fintype.card btyp : ℝ) =
       (adhwFQSWSystemBState ψ).typicalSubspaceDimension n T.typicalitySlack
+  typicalIndexEquiv :
+    btyp ≃ State.TypicalSubspaceIndex
+      (adhwFQSWSystemBState ψ) n T.typicalitySlack
   supportIsometry : ReferenceIsometry btyp (TensorPower b n)
+  supportIsometry_eq_typicalIndexEquiv :
+    supportIsometry = adhwFQSWTypicalSupportIsometryOfEquiv
+      (adhwFQSWSystemBState ψ) n T.typicalitySlack typicalIndexEquiv
   supportIsometry_range_projector_eq :
     supportIsometry.matrix * Matrix.conjTranspose supportIsometry.matrix =
       (adhwFQSWSystemBState ψ).typicalSubspaceProjector n T.typicalitySlack
@@ -1166,10 +1671,149 @@ structure ADHWFQSWIidTypicalRefRegister
   card_eq_projector_rank :
     (Fintype.card rtyp : ℝ) =
       (adhwFQSWSystemRState ψ).typicalSubspaceDimension n T.typicalitySlack
+  typicalIndexEquiv :
+    rtyp ≃ State.TypicalSubspaceIndex
+      (adhwFQSWSystemRState ψ) n T.typicalitySlack
   supportIsometry : ReferenceIsometry rtyp (TensorPower r n)
+  supportIsometry_eq_typicalIndexEquiv :
+    supportIsometry = adhwFQSWTypicalSupportIsometryOfEquiv
+      (adhwFQSWSystemRState ψ) n T.typicalitySlack typicalIndexEquiv
   supportIsometry_range_projector_eq :
     supportIsometry.matrix * Matrix.conjTranspose supportIsometry.matrix =
       (adhwFQSWSystemRState ψ).typicalSubspaceProjector n T.typicalitySlack
+
+namespace ADHWFQSWIidTypicalBobRegister
+
+variable {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δ ε : ℝ}
+variable {T : ADHWFQSWSimultaneousTypicalProjectors ψ n δ ε}
+variable {btyp : Type u1} [Fintype btyp] [DecidableEq btyp]
+
+/-- Physical Schumacher encoder from Bob's original IID register into the
+finite typical register used by the one-shot FQSW protocol. -/
+def physicalEncoder
+    (B : ADHWFQSWIidTypicalBobRegister ψ n δ ε T btyp)
+    [Nonempty btyp] : Channel (TensorPower b n) btyp :=
+  (Channel.reindex B.typicalIndexEquiv.symm).comp <|
+    State.typicalEncoder (adhwFQSWSystemBState ψ) n T.typicalitySlack
+      (B.typicalIndexEquiv (Nonempty.some inferInstance))
+
+/-- Isometric decoder from Bob's typical register back to `B^n`. -/
+def physicalDecoder
+    (B : ADHWFQSWIidTypicalBobRegister ψ n δ ε T btyp) :
+    Channel btyp (TensorPower b n) :=
+  (State.typicalDecoder (adhwFQSWSystemBState ψ) n T.typicalitySlack).comp
+    (Channel.reindex B.typicalIndexEquiv)
+
+/-- Bob's physical encoder is a left inverse of the chosen typical-support
+isometry. -/
+theorem physicalEncoder_comp_supportIsometry
+    (B : ADHWFQSWIidTypicalBobRegister ψ n δ ε T btyp)
+    [Nonempty btyp] :
+    B.physicalEncoder.comp (fqswChannelOfReferenceIsometry B.supportIsometry) =
+      Channel.idChannel btyp := by
+  have hdecoder :
+      fqswChannelOfReferenceIsometry B.supportIsometry =
+        (State.typicalDecoder (adhwFQSWSystemBState ψ) n T.typicalitySlack).comp
+          (Channel.reindex B.typicalIndexEquiv) := by
+    rw [B.supportIsometry_eq_typicalIndexEquiv]
+    change
+      fqswChannelOfReferenceIsometry
+          (({ matrix := State.typicalIsometry (adhwFQSWSystemBState ψ) n T.typicalitySlack
+              isometry := State.typicalIsometry_conjTranspose_mul_self
+                (adhwFQSWSystemBState ψ) n T.typicalitySlack } :
+              ReferenceIsometry
+                (State.TypicalSubspaceIndex
+                  (adhwFQSWSystemBState ψ) n T.typicalitySlack)
+                (TensorPower b n)).comp
+            (ReferenceIsometry.ofEquiv B.typicalIndexEquiv)) =
+        (State.typicalDecoder (adhwFQSWSystemBState ψ) n T.typicalitySlack).comp
+          (fqswChannelOfReferenceIsometry
+            (ReferenceIsometry.ofEquiv B.typicalIndexEquiv))
+    rw [State.typicalDecoder_eq_fqswChannelOfReferenceIsometry,
+      fqswChannelOfReferenceIsometry_comp]
+  have hid_left :
+      (Channel.idChannel
+          (State.TypicalSubspaceIndex
+            (adhwFQSWSystemBState ψ) n T.typicalitySlack)).comp
+          (Channel.reindex B.typicalIndexEquiv) =
+        Channel.reindex B.typicalIndexEquiv := by
+    rw [Channel.mk.injEq]
+    ext X i j
+    simp [Channel.comp, Channel.idChannel, Channel.reindex,
+      MatrixMap.ofReferenceIsometry_apply, ReferenceIsometry.ofEquiv, MatrixMap.ofKraus,
+      Matrix.mul_apply]
+  rw [hdecoder]
+  unfold physicalEncoder
+  rw [fqswChannel_comp_assoc]
+  rw [← fqswChannel_comp_assoc
+    (State.typicalEncoder (adhwFQSWSystemBState ψ) n T.typicalitySlack
+      (B.typicalIndexEquiv (Nonempty.some inferInstance)))
+    (State.typicalDecoder (adhwFQSWSystemBState ψ) n T.typicalitySlack)
+    (Channel.reindex B.typicalIndexEquiv)]
+  rw [State.typicalEncoder_comp_typicalDecoder_eq_idChannel, hid_left,
+    fqswChannel_reindex_symm_comp_reindex]
+
+/-- Bob's physical decoder is exactly the channel of the chosen typical-support
+isometry. -/
+theorem physicalDecoder_eq_supportIsometryChannel
+    (B : ADHWFQSWIidTypicalBobRegister ψ n δ ε T btyp) :
+    B.physicalDecoder = fqswChannelOfReferenceIsometry B.supportIsometry := by
+  rw [B.supportIsometry_eq_typicalIndexEquiv]
+  change
+    (State.typicalDecoder (adhwFQSWSystemBState ψ) n T.typicalitySlack).comp
+        (fqswChannelOfReferenceIsometry
+          (ReferenceIsometry.ofEquiv B.typicalIndexEquiv)) =
+      fqswChannelOfReferenceIsometry
+        (({ matrix := State.typicalIsometry (adhwFQSWSystemBState ψ) n T.typicalitySlack
+            isometry := State.typicalIsometry_conjTranspose_mul_self
+              (adhwFQSWSystemBState ψ) n T.typicalitySlack } :
+            ReferenceIsometry
+              (State.TypicalSubspaceIndex
+                (adhwFQSWSystemBState ψ) n T.typicalitySlack)
+              (TensorPower b n)).comp
+          (ReferenceIsometry.ofEquiv B.typicalIndexEquiv))
+  rw [State.typicalDecoder_eq_fqswChannelOfReferenceIsometry,
+    fqswChannelOfReferenceIsometry_comp]
+
+end ADHWFQSWIidTypicalBobRegister
+
+namespace ADHWFQSWIidTypicalRefRegister
+
+variable {ψ : PureVector (Prod (Prod a b) r)} {n : ℕ} {δ ε : ℝ}
+variable {T : ADHWFQSWSimultaneousTypicalProjectors ψ n δ ε}
+variable {rtyp : Type v1} [Fintype rtyp] [DecidableEq rtyp]
+
+/-- Isometric decoder from the finite reference typical register back to
+`R^n`. -/
+def physicalDecoder
+    (R : ADHWFQSWIidTypicalRefRegister ψ n δ ε T rtyp) :
+    Channel rtyp (TensorPower r n) :=
+  (State.typicalDecoder (adhwFQSWSystemRState ψ) n T.typicalitySlack).comp
+    (Channel.reindex R.typicalIndexEquiv)
+
+/-- The reference decoder is exactly the channel of its typical-support
+isometry. -/
+theorem physicalDecoder_eq_supportIsometryChannel
+    (R : ADHWFQSWIidTypicalRefRegister ψ n δ ε T rtyp) :
+    R.physicalDecoder = fqswChannelOfReferenceIsometry R.supportIsometry := by
+  rw [R.supportIsometry_eq_typicalIndexEquiv]
+  change
+    (State.typicalDecoder (adhwFQSWSystemRState ψ) n T.typicalitySlack).comp
+        (fqswChannelOfReferenceIsometry
+          (ReferenceIsometry.ofEquiv R.typicalIndexEquiv)) =
+      fqswChannelOfReferenceIsometry
+        (({ matrix := State.typicalIsometry (adhwFQSWSystemRState ψ) n T.typicalitySlack
+            isometry := State.typicalIsometry_conjTranspose_mul_self
+              (adhwFQSWSystemRState ψ) n T.typicalitySlack } :
+            ReferenceIsometry
+              (State.TypicalSubspaceIndex
+                (adhwFQSWSystemRState ψ) n T.typicalitySlack)
+              (TensorPower r n)).comp
+          (ReferenceIsometry.ofEquiv R.typicalIndexEquiv))
+  rw [State.typicalDecoder_eq_fqswChannelOfReferenceIsometry,
+    fqswChannelOfReferenceIsometry_comp]
+
+end ADHWFQSWIidTypicalRefRegister
 
 /-- Construct the finite typical support registers `A^typ`, `B^typ`, and
 `R^typ` used in the ADHW i.i.d. source route directly from the existing
@@ -1214,7 +1858,7 @@ theorem exists_adhwFQSWIidTypicalSupportRegisters
       simpa [btyp, E, supportIsometry] using
         adhwFQSWTypicalSupportIsometryOfEquiv_range_projector
           (adhwFQSWSystemBState ψ) n T.typicalitySlack E
-    exact ⟨⟨hcardB, supportIsometry, hrangeB⟩⟩
+    exact ⟨⟨hcardB, E, supportIsometry, rfl, hrangeB⟩⟩
   · let E : rtyp ≃ State.TypicalSubspaceIndex
         (adhwFQSWSystemRState ψ) n T.typicalitySlack := Equiv.refl rtyp
     let supportIsometry : ReferenceIsometry rtyp (TensorPower r n) :=
@@ -1232,7 +1876,7 @@ theorem exists_adhwFQSWIidTypicalSupportRegisters
       simpa [rtyp, E, supportIsometry] using
         adhwFQSWTypicalSupportIsometryOfEquiv_range_projector
           (adhwFQSWSystemRState ψ) n T.typicalitySlack E
-    exact ⟨⟨hcardR, supportIsometry, hrangeR⟩⟩
+    exact ⟨⟨hcardR, E, supportIsometry, rfl, hrangeR⟩⟩
 
 /-- The true Alice typical support fits inside the padded `A₁ × A₂` register
 once `A₁` meets the communication lower target and `A₂` meets the balanced

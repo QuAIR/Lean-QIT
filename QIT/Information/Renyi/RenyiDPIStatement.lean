@@ -18,7 +18,7 @@ upward sandwiched conditional Renyi duality, and measurement-map monotonicity.
 These declarations are `Prop`-valued targets used by local reduction theorems.
 The completed public PSD-reference sandwiched Renyi DPI theorem is
 `QIT.State.sandwichedRenyiPSDReferenceE_dataProcessing_channel_ge_of_half_le_lt_one_or_one_lt`
-in `QIT.Information.Renyi.FrankLieb`.
+in `QIT.Information.Renyi.FrankLieb.DPI`.
 -/
 
 @[expose] public section
@@ -43,7 +43,7 @@ namespace Statement
 over the range `α ∈ [1/2, ∞)`, `α ≠ 1`, for an endomorphism channel.
 
 This is a planning-only statement surface. The completed public PSD-reference
-DPI theorem lives in `QIT.Information.Renyi.FrankLieb`. -/
+DPI theorem lives in `QIT.Information.Renyi.FrankLieb.DPI`. -/
 def sandwichedRenyi_dataProcessing_statement (ρ σ : State a) (Φ : Channel a a)
     (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
     (hρΦ : (Φ.applyState ρ).matrix.PosDef) (hσΦ : (Φ.applyState σ).matrix.PosDef)
