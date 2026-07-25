@@ -168,6 +168,49 @@ theorem fromBlocks_diagonal_posSemidef [Fintype α] [DecidableEq α]
       rfl
     simpa [hquad] using hsum
 
+/-- A block-diagonal matrix with positive definite diagonal blocks is positive
+definite, even when the two block index types have different dimensions. -/
+theorem fromBlocks_diagonal_posDef [Fintype α] [DecidableEq α]
+    [Fintype β] [DecidableEq β] {A : Matrix α α ℂ} {D : Matrix β β ℂ}
+    (hA : A.PosDef) (hD : D.PosDef) :
+    (Matrix.fromBlocks A 0 0 D : Matrix (Sum α β) (Sum α β) ℂ).PosDef := by
+  classical
+  refine Matrix.PosDef.of_dotProduct_mulVec_pos
+    (fromBlocks_diagonal_posSemidef hA.posSemidef hD.posSemidef).isHermitian ?_
+  intro x hx
+  let xl : α → ℂ := fun i => x (Sum.inl i)
+  let xr : β → ℂ := fun i => x (Sum.inr i)
+  have hsplit : xl ≠ 0 ∨ xr ≠ 0 := by
+    by_cases hxl : xl = 0
+    · right
+      intro hxr
+      apply hx
+      funext i
+      cases i with
+      | inl i =>
+          change xl i = 0
+          simpa using congrFun hxl i
+      | inr i =>
+          change xr i = 0
+          simpa using congrFun hxr i
+    · exact Or.inl hxl
+  have hleft : 0 ≤ star xl ⬝ᵥ A.mulVec xl := hA.posSemidef.dotProduct_mulVec_nonneg xl
+  have hright : 0 ≤ star xr ⬝ᵥ D.mulVec xr := hD.posSemidef.dotProduct_mulVec_nonneg xr
+  have hsum : 0 < star xl ⬝ᵥ A.mulVec xl + star xr ⬝ᵥ D.mulVec xr := by
+    cases hsplit with
+    | inl hxl => exact add_pos_of_pos_of_nonneg (hA.dotProduct_mulVec_pos hxl) hright
+    | inr hxr => exact add_pos_of_nonneg_of_pos hleft (hD.dotProduct_mulVec_pos hxr)
+  have hquad :
+      star x ⬝ᵥ (Matrix.fromBlocks A 0 0 D).mulVec x =
+        star xl ⬝ᵥ A.mulVec xl + star xr ⬝ᵥ D.mulVec xr := by
+    rw [Matrix.dotProduct_mulVec, Matrix.vecMul_fromBlocks, Matrix.dotProduct_block]
+    simp [Matrix.dotProduct_mulVec, xl, xr]
+    change
+      Matrix.vecMul (star xl) A ⬝ᵥ xl + Matrix.vecMul (star xr) D ⬝ᵥ xr =
+      Matrix.vecMul (star xl) A ⬝ᵥ xl + Matrix.vecMul (star xr) D ⬝ᵥ xr
+    rfl
+  simpa [hquad] using hsum
+
 /-- A Gram/congruence block matrix is positive semidefinite.
 
 This is the block factorization

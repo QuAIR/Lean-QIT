@@ -29,12 +29,17 @@ namespace State
 variable {a : Type u} {b : Type v}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 
+@[simp]
+theorem toSubnormalized_matrix_ne_zero (ρ : State a) :
+    ρ.toSubnormalized.matrix ≠ 0 := by
+  simpa only [State.toSubnormalized_matrix] using ρ.density_matrix_ne_zero
+
 /-- Embedding a normalized center into the subnormalized state space does not
 change its unsmoothed conditional min-entropy. -/
 @[simp]
 theorem toSubnormalized_conditionalMinEntropy_eq
     (ρ : State (Prod a b)) :
-    ρ.toSubnormalized.conditionalMinEntropy = ρ.conditionalMinEntropy := by
+    ρ.toSubnormalized.conditionalMinEntropy = (ρ.conditionalMinEntropy : EReal) := by
   letI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
   letI : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
   have hstate :
@@ -45,14 +50,41 @@ theorem toSubnormalized_conditionalMinEntropy_eq
   have hscale := SubnormalizedState.conditionalMinEntropy_ofStateScale
     (a := a) (b := b) ρ (t := 1) (by norm_num) (by norm_num)
   rw [hstate] at hscale
-  simpa [log2] using hscale
+  rw [SubnormalizedState.conditionalMinEntropy_eq_coe_finite_of_matrix_ne_zero
+    ρ.toSubnormalized_matrix_ne_zero]
+  congr 1
+  simpa [SubnormalizedState.conditionalMinEntropyFinite, log2] using hscale
+
+@[simp]
+theorem toSubnormalized_conditionalMinEntropyFinite_eq
+    (ρ : State (Prod a b)) :
+    ρ.toSubnormalized.conditionalMinEntropyFinite ρ.toSubnormalized_matrix_ne_zero =
+      ρ.conditionalMinEntropy := by
+  letI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
+  letI : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
+  have hstate :
+      SubnormalizedState.ofStateScale ρ 1 (by norm_num) (by norm_num) =
+        ρ.toSubnormalized := by
+    apply SubnormalizedState.ext
+    simp [SubnormalizedState.ofStateScale_matrix]
+  have hscale := SubnormalizedState.conditionalMinEntropy_ofStateScale
+    (a := a) (b := b) ρ (t := 1) (by norm_num) (by norm_num)
+  rw [hstate] at hscale
+  simpa [SubnormalizedState.conditionalMinEntropyFinite, log2] using hscale
+
+@[simp]
+theorem toSubnormalized_conditionalMinEntropyRaw_eq
+    (ρ : State (Prod a b)) :
+    ρ.toSubnormalized.conditionalMinEntropyRaw = ρ.conditionalMinEntropy := by
+  simpa [SubnormalizedState.conditionalMinEntropyFinite] using
+    ρ.toSubnormalized_conditionalMinEntropyFinite_eq (a := a) (b := b)
 
 /-- Embedding a normalized center into the subnormalized state space does not
 change its unsmoothed conditional max-entropy. -/
 @[simp]
 theorem toSubnormalized_conditionalMaxEntropy_eq
     (ρ : State (Prod a b)) :
-    ρ.toSubnormalized.conditionalMaxEntropy = ρ.conditionalMaxEntropy := by
+    ρ.toSubnormalized.conditionalMaxEntropy = (ρ.conditionalMaxEntropy : EReal) := by
   letI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
   letI : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
   have hstate :
@@ -63,7 +95,34 @@ theorem toSubnormalized_conditionalMaxEntropy_eq
   have hscale := SubnormalizedState.conditionalMaxEntropy_ofStateScale
     (a := a) (b := b) ρ (t := 1) (by norm_num) (by norm_num)
   rw [hstate] at hscale
-  simpa [log2] using hscale
+  rw [SubnormalizedState.conditionalMaxEntropy_eq_coe_finite_of_matrix_ne_zero
+    ρ.toSubnormalized_matrix_ne_zero]
+  congr 1
+  simpa [SubnormalizedState.conditionalMaxEntropyFinite, log2] using hscale
+
+@[simp]
+theorem toSubnormalized_conditionalMaxEntropyFinite_eq
+    (ρ : State (Prod a b)) :
+    ρ.toSubnormalized.conditionalMaxEntropyFinite ρ.toSubnormalized_matrix_ne_zero =
+      ρ.conditionalMaxEntropy := by
+  letI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
+  letI : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
+  have hstate :
+      SubnormalizedState.ofStateScale ρ 1 (by norm_num) (by norm_num) =
+        ρ.toSubnormalized := by
+    apply SubnormalizedState.ext
+    simp [SubnormalizedState.ofStateScale_matrix]
+  have hscale := SubnormalizedState.conditionalMaxEntropy_ofStateScale
+    (a := a) (b := b) ρ (t := 1) (by norm_num) (by norm_num)
+  rw [hstate] at hscale
+  simpa [SubnormalizedState.conditionalMaxEntropyFinite, log2] using hscale
+
+@[simp]
+theorem toSubnormalized_conditionalMaxEntropyRaw_eq
+    (ρ : State (Prod a b)) :
+    ρ.toSubnormalized.conditionalMaxEntropyRaw = ρ.conditionalMaxEntropy := by
+  simpa [SubnormalizedState.conditionalMaxEntropyFinite] using
+    ρ.toSubnormalized_conditionalMaxEntropyFinite_eq (a := a) (b := b)
 
 /-- Zero-radius source-facing smooth conditional min-entropy is the unsmoothed
 conditional min-entropy [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
@@ -71,7 +130,7 @@ theorem smoothConditionalMinEntropy_zero (ρ : State (Prod a b)) :
     ρ.smoothConditionalMinEntropy 0 (le_refl 0) (by norm_num) =
       ρ.conditionalMinEntropy := by
   rw [State.smoothConditionalMinEntropy_zero_eq_toSubnormalized,
-    State.toSubnormalized_conditionalMinEntropy_eq]
+    State.toSubnormalized_conditionalMinEntropyFinite_eq]
 
 /-- Zero-radius source-facing smooth conditional max-entropy is the unsmoothed
 conditional max-entropy [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
@@ -79,7 +138,7 @@ theorem smoothConditionalMaxEntropy_zero (ρ : State (Prod a b)) :
     ρ.smoothConditionalMaxEntropy 0 (le_refl 0) (by norm_num) =
       ρ.conditionalMaxEntropy := by
   rw [State.smoothConditionalMaxEntropy_zero_eq_toSubnormalized,
-    State.toSubnormalized_conditionalMaxEntropy_eq]
+    State.toSubnormalized_conditionalMaxEntropyFinite_eq]
 
 private def pureVectorOfAmplitudeMatrix {r : Type*} {α : Type*}
     [Fintype r] [DecidableEq r] [Fintype α] [DecidableEq α]
@@ -1827,8 +1886,10 @@ the normalized complementary-marginal equality through the common scale. -/
 theorem conditionalMaxEntropy_marginalAB_eq_neg_conditionalMinEntropy_marginalAC_of_scaled_pure
     [Nonempty a] [Nonempty b] [Nonempty c]
     (ψ : PureVector (Prod (Prod a b) c)) {t : ℝ} (ht : 0 < t) (ht1 : t ≤ 1) :
-    (abMarginalFromScaledTripartitePure (a := a) (b := b) (c := c) ψ t ht.le ht1).conditionalMaxEntropy =
-      - (acMarginalFromScaledTripartitePure (a := a) (b := b) (c := c) ψ t ht.le ht1).conditionalMinEntropy := by
+    (abMarginalFromScaledTripartitePure (a := a) (b := b) (c := c)
+      ψ t ht.le ht1).conditionalMaxEntropyRaw =
+      - (acMarginalFromScaledTripartitePure (a := a) (b := b) (c := c)
+        ψ t ht.le ht1).conditionalMinEntropyRaw := by
   rw [abMarginalFromScaledTripartitePure, acMarginalFromScaledTripartitePure,
     conditionalMaxEntropy_ofStateScale (a := a) (b := b) ψ.state.marginalAB ht ht1,
     conditionalMinEntropy_ofStateScale (a := a) (b := c) ψ.state.marginalAC ht ht1]

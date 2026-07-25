@@ -106,7 +106,7 @@ through the complementary map and then uses the positive `alpha -> alpha`
 supremum bridge. -/
 theorem cbOneToAlphaPureRankOneValue_le_cbOneToAlphaNorm
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : ℝ} (halpha : 1 < alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
     (psi : Prod a a → ℂ)
     (hden :
       0 < psdSchattenPNorm
@@ -128,10 +128,9 @@ theorem cbOneToAlphaPureRankOneValue_le_cbOneToAlphaNorm
     { matrix := partialTraceA (a := a) (b := a) (rankOneMatrix psi),
       pos := partialTraceA_posSemidef (rankOneMatrix_pos psi),
       norm_pos := by
-        have hp : 0 < alpha := lt_trans zero_lt_one halpha
         have hEq :=
           psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
-            (r := a) (a := a) psi hp
+            (r := a) (a := a) psi alpha
         exact hEq ▸ hden }
   have hNum :
       psdSchattenPNorm
@@ -147,7 +146,6 @@ theorem cbOneToAlphaPureRankOneValue_le_cbOneToAlphaNorm
             (partialTraceA (a := a) (b := a) (rankOneMatrix psi))
             (partialTraceA_posSemidef (rankOneMatrix_pos psi)))
           alpha := by
-    have hp : 0 < alpha := lt_trans zero_lt_one halpha
     have hLeft :
         Phi.referenceLift (rankOneMatrix psi) =
           partialTraceB (a := Prod a b) (b := a × b)
@@ -162,7 +160,7 @@ theorem cbOneToAlphaPureRankOneValue_le_cbOneToAlphaNorm
                 MatrixMap.referenceLift_ofKraus_rankOne_eq_partialTraceB K psi
     have hSchmidt :=
       psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
-        (r := Prod a b) (a := a × b) chi hp
+        (r := Prod a b) (a := a × b) chi alpha
     have hRight :
         partialTraceA (a := Prod a b) (b := a × b) (rankOneMatrix chi) =
           MatrixMap.cpComplement Phi hPhi
@@ -205,10 +203,9 @@ theorem cbOneToAlphaPureRankOneValue_le_cbOneToAlphaNorm
           (partialTraceA (a := a) (b := a) (rankOneMatrix psi))
           (partialTraceA_posSemidef (rankOneMatrix_pos psi))
           alpha := by
-    have hp : 0 < alpha := lt_trans zero_lt_one halpha
     exact
       psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
-        (r := a) (a := a) psi hp
+        (r := a) (a := a) psi alpha
   have hQuot :
       psdSchattenPNorm
           (Phi.referenceLift (rankOneMatrix psi))
@@ -225,7 +222,14 @@ theorem cbOneToAlphaPureRankOneValue_le_cbOneToAlphaNorm
     unfold alphaToAlphaPositiveValue
     rw [hNum, hDen]
   rw [hQuot]
-  rw [MatrixMap.cbOneToAlphaNorm_eq_cpComplement_alphaToAlphaNorm Phi hPhi halpha]
+  have hbridge :
+      cbOneToAlphaNorm Phi hPhi alpha =
+        alphaToAlphaNorm (MatrixMap.cpComplement Phi hPhi)
+          (MatrixMap.cpComplement_isCompletelyPositive Phi hPhi) alpha := by
+    simpa [SchattenOrder.ofOneLt] using
+      (MatrixMap.cbOneToAlphaNorm_eq_cpComplement_alphaToAlphaNorm
+        Phi hPhi halpha)
+  rw [hbridge]
   exact MatrixMap.alphaToAlphaPositiveValue_le_alphaToAlphaNorm_of_one_lt
     (MatrixMap.cpComplement Phi hPhi)
     (MatrixMap.cpComplement_isCompletelyPositive Phi hPhi)
@@ -466,7 +470,7 @@ private theorem partialTraceA_rankOne_stinespringReference_eq_krausComplement_pa
 private theorem cbOneToAlphaPureRankOneValueWithRef_le_cbOneToAlphaNorm
     {r : Type w} [Fintype r] [DecidableEq r]
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : ℝ} (halpha : 1 < alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
     (psi : Prod r a → ℂ)
     (hden :
       0 < psdSchattenPNorm
@@ -493,10 +497,9 @@ private theorem cbOneToAlphaPureRankOneValueWithRef_le_cbOneToAlphaNorm
     { matrix := partialTraceA (a := r) (b := a) (rankOneMatrix psi),
       pos := partialTraceA_posSemidef (rankOneMatrix_pos psi),
       norm_pos := by
-        have hp : 0 < alpha := lt_trans zero_lt_one halpha
         have hEq :=
           psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
-            (r := r) (a := a) psi hp
+            (r := r) (a := a) psi alpha
         exact hEq ▸ hden }
   have hNum :
       psdSchattenPNorm
@@ -517,7 +520,6 @@ private theorem cbOneToAlphaPureRankOneValueWithRef_le_cbOneToAlphaNorm
             (partialTraceA (a := r) (b := a) (rankOneMatrix psi))
             (partialTraceA_posSemidef (rankOneMatrix_pos psi)))
           alpha := by
-    have hp : 0 < alpha := lt_trans zero_lt_one halpha
     have hLeft :
         MatrixMap.kron (Channel.idChannel r).map Phi (rankOneMatrix psi) =
           partialTraceB (a := Prod r b) (b := a × b)
@@ -533,7 +535,7 @@ private theorem cbOneToAlphaPureRankOneValueWithRef_le_cbOneToAlphaNorm
                 referenceLift_ofKraus_rankOne_eq_partialTraceB_withRef K psi
     have hSchmidt :=
       psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
-        (r := Prod r b) (a := a × b) chi hp
+        (r := Prod r b) (a := a × b) chi alpha
     have hRight :
         partialTraceA (a := Prod r b) (b := a × b) (rankOneMatrix chi) =
           MatrixMap.cpComplement Phi hPhi
@@ -581,10 +583,9 @@ private theorem cbOneToAlphaPureRankOneValueWithRef_le_cbOneToAlphaNorm
           (partialTraceA (a := r) (b := a) (rankOneMatrix psi))
           (partialTraceA_posSemidef (rankOneMatrix_pos psi))
           alpha := by
-    have hp : 0 < alpha := lt_trans zero_lt_one halpha
     exact
       psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
-        (r := r) (a := a) psi hp
+        (r := r) (a := a) psi alpha
   have hQuot :
       psdSchattenPNorm
           (MatrixMap.kron (Channel.idChannel r).map Phi (rankOneMatrix psi))
@@ -606,7 +607,14 @@ private theorem cbOneToAlphaPureRankOneValueWithRef_le_cbOneToAlphaNorm
     unfold alphaToAlphaPositiveValue
     rw [hNum, hDen]
   rw [hQuot]
-  rw [MatrixMap.cbOneToAlphaNorm_eq_cpComplement_alphaToAlphaNorm Phi hPhi halpha]
+  have hbridge :
+      cbOneToAlphaNorm Phi hPhi alpha =
+        alphaToAlphaNorm (MatrixMap.cpComplement Phi hPhi)
+          (MatrixMap.cpComplement_isCompletelyPositive Phi hPhi) alpha := by
+    simpa [SchattenOrder.ofOneLt] using
+      (MatrixMap.cbOneToAlphaNorm_eq_cpComplement_alphaToAlphaNorm
+        Phi hPhi halpha)
+  rw [hbridge]
   exact MatrixMap.alphaToAlphaPositiveValue_le_alphaToAlphaNorm_of_one_lt
     (MatrixMap.cpComplement Phi hPhi)
     (MatrixMap.cpComplement_isCompletelyPositive Phi hPhi)
@@ -614,7 +622,7 @@ private theorem cbOneToAlphaPureRankOneValueWithRef_le_cbOneToAlphaNorm
 
 theorem cbOneToAlphaAlternateExpression_nonneg
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : ℝ) :
+    (alpha : SchattenOrder) :
     0 ≤ cbOneToAlphaAlternateExpression Phi hPhi alpha := by
   unfold cbOneToAlphaAlternateExpression
   exact Real.sSup_nonneg (by
@@ -623,7 +631,7 @@ theorem cbOneToAlphaAlternateExpression_nonneg
 
 private theorem cbOneToAlphaOriginalValue_le_alternateValue_of_marginal_norm_pos
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : ℝ} (halpha : 1 < alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
     (Y : CBOneToAlphaOriginalDomain a)
     (hnorm_pos :
       0 < psdSchattenPNorm
@@ -645,21 +653,21 @@ private theorem cbOneToAlphaOriginalValue_le_alternateValue_of_marginal_norm_pos
     simpa [X, hX, Z, hZ, normZ] using hnorm_pos
   let A : CBOneToAlphaAlternateDomain a alpha :=
     { matrix := X, pos := hX, marginal_norm_pos := hnormZ_pos }
-  have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
+  have halpha_pos : 0 < (alpha : Real) := lt_trans zero_lt_one halpha
   have hZ_eq :
-      Z = CFC.rpow Y.matrix (1 / alpha) := by
+      Z = CFC.rpow Y.matrix (1 / (alpha : Real)) := by
     simpa [X, Z] using
       partialTraceB_cbOneToAlphaOriginalInput_eq_rpow
         (a := a) Y.pos halpha_pos
-  have hRpow : (CFC.rpow Y.matrix (1 / alpha)).PosSemidef :=
-    cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos
+  have hRpow : (CFC.rpow Y.matrix (1 / (alpha : Real))).PosSemidef :=
+    cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos
   have hnorm_le_one : normZ ≤ 1 := by
     let T : AlphaToAlphaTraceDomain a alpha :=
       { matrix := Y.matrix, pos := Y.pos, trace_le_one := Y.trace_le_one }
     have hT := T.rpow_schatten_norm_le_one halpha
     have hnorm_eq :
         normZ =
-          psdSchattenPNorm (CFC.rpow Y.matrix (1 / alpha)) hRpow alpha :=
+          psdSchattenPNorm (CFC.rpow Y.matrix (1 / (alpha : Real))) hRpow alpha :=
       psdSchattenPNorm_congr hZ_eq hZ hRpow alpha
     exact hnorm_eq.trans_le hT
   have hratio_nonneg : 0 ≤ cbOneToAlphaAlternateValue Phi hPhi A :=
@@ -681,7 +689,7 @@ private theorem cbOneToAlphaOriginalValue_le_alternateValue_of_marginal_norm_pos
 
 private theorem cbOneToAlphaOriginalValue_eq_zero_of_marginal_norm_zero
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : ℝ} (halpha : 1 < alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
     (Y : CBOneToAlphaOriginalDomain a)
     (hnorm_zero :
       psdSchattenPNorm
@@ -694,7 +702,7 @@ private theorem cbOneToAlphaOriginalValue_eq_zero_of_marginal_norm_zero
   let hX : X.PosSemidef := cbOneToAlphaOriginalInput_posSemidef Y.pos alpha
   let Z : CMatrix a := partialTraceB (a := a) (b := a) X
   let hZ : Z.PosSemidef := partialTraceB_posSemidef hX
-  have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
+  have halpha_pos : 0 < (alpha : Real) := lt_trans zero_lt_one halpha
   have hnormZ_zero : psdSchattenPNorm Z hZ alpha = 0 := by
     simpa [X, hX, Z, hZ] using hnorm_zero
   have hZzero : Z = 0 := by
@@ -721,11 +729,11 @@ private theorem cbOneToAlphaOriginalValue_eq_zero_of_marginal_norm_zero
           Matrix.PosSemidef.zero alpha := by
           exact psdSchattenPNorm_congr hPhiXzero hPhiXpos
             Matrix.PosSemidef.zero alpha
-    _ = 0 := psdSchattenPNorm_zero alpha (ne_of_gt halpha_pos)
+    _ = 0 := psdSchattenPNorm_zero alpha
 
 private theorem cbOneToAlphaOriginalValue_le_alternateExpression_of_bddAbove
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : ℝ} (halpha : 1 < alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
     (hbdd : BddAbove (cbOneToAlphaAlternateValueSet Phi hPhi alpha))
     (Y : CBOneToAlphaOriginalDomain a) :
     cbOneToAlphaOriginalValue Phi hPhi Y alpha ≤
@@ -756,7 +764,7 @@ private theorem cbOneToAlphaOriginalValue_le_alternateExpression_of_bddAbove
 
 theorem cbOneToAlphaNorm_le_cbOneToAlphaAlternateExpression_of_bddAbove
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : ℝ} (halpha : 1 < alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
     (hbdd : BddAbove (cbOneToAlphaAlternateValueSet Phi hPhi alpha)) :
     cbOneToAlphaNorm Phi hPhi alpha ≤
       cbOneToAlphaAlternateExpression Phi hPhi alpha := by
@@ -771,7 +779,7 @@ theorem cbOneToAlphaNorm_le_cbOneToAlphaAlternateExpression_of_bddAbove
 
 omit [Fintype b] [DecidableEq b] in
 private theorem alphaToAlphaPositiveValue_id_eq_one
-    {alpha : ℝ} (Z : AlphaToAlphaPositiveDomain a alpha) :
+    {alpha : SchattenOrder} (Z : AlphaToAlphaPositiveDomain a alpha) :
     alphaToAlphaPositiveValue (Channel.idChannel a).map
       (Channel.idChannel a).completelyPositive Z = 1 := by
   unfold alphaToAlphaPositiveValue
@@ -791,7 +799,7 @@ private theorem alphaToAlphaPositiveValue_id_eq_one
 
 omit [Fintype b] [DecidableEq b] in
 private theorem alphaToAlphaNorm_id_eq_one
-    [Nonempty a] {alpha : ℝ} :
+    [Nonempty a] {alpha : SchattenOrder} :
     alphaToAlphaNorm (Channel.idChannel a).map
       (Channel.idChannel a).completelyPositive alpha = 1 := by
   let Z0 : AlphaToAlphaPositiveDomain a alpha :=
@@ -846,7 +854,7 @@ private theorem cbOneToAlphaNorm_congr_map_unit
     (hmap : Phi = Psi)
     (hPhi : MatrixMap.IsCompletelyPositive Phi)
     (hPsi : MatrixMap.IsCompletelyPositive Psi)
-    (alpha : ℝ) :
+    (alpha : SchattenOrder) :
     cbOneToAlphaNorm Phi hPhi alpha =
       cbOneToAlphaNorm Psi hPsi alpha := by
   subst hmap
@@ -858,7 +866,7 @@ private theorem alphaToAlphaNorm_congr_map_self
     (hmap : Phi = Psi)
     (hPhi : MatrixMap.IsCompletelyPositive Phi)
     (hPsi : MatrixMap.IsCompletelyPositive Psi)
-    (alpha : ℝ) :
+    (alpha : SchattenOrder) :
     alphaToAlphaNorm Phi hPhi alpha =
       alphaToAlphaNorm Psi hPsi alpha := by
   subst hmap
@@ -871,7 +879,7 @@ This is the final trace-factor step in
 [KhatriWilde2024Principles, Chapters/EA_capacity.tex:2102-2140], specifically
 source lines 2137-2140. -/
 theorem cbOneToAlphaNorm_traceEffectToUnit_one
-    [Nonempty a] {alpha : ℝ} (halpha : 1 < alpha) :
+    [Nonempty a] {alpha : SchattenOrder} (halpha : 1 < (alpha : Real)) :
     MatrixMap.cbOneToAlphaNorm
       (MatrixMap.traceEffectToUnit (1 : CMatrix a))
       ((MatrixMap.traceEffectToUnit_traceNonincreasingCP
@@ -893,7 +901,10 @@ theorem cbOneToAlphaNorm_traceEffectToUnit_one
           (MatrixMap.krausComplement K)
           (MatrixMap.krausComplement_isCompletelyPositive K)
           alpha :=
-          MatrixMap.cbOneToAlphaNorm_eq_krausComplement_alphaToAlphaNorm K halpha
+          by
+            simpa [SchattenOrder.ofOneLt] using
+              (MatrixMap.cbOneToAlphaNorm_eq_krausComplement_alphaToAlphaNorm
+                K halpha)
       _ =
         alphaToAlphaNorm
           (Channel.idChannel a).map
@@ -928,12 +939,12 @@ private theorem psdSchattenPNorm_isometry_conj
     {r : Type v} [Fintype r] [DecidableEq r]
     (V : Matrix r a ℂ) {A : CMatrix a} (hA : A.PosSemidef)
     (hV : Matrix.conjTranspose V * V = (1 : CMatrix a))
-    {p : ℝ} (hp : 0 < p) :
+    (p : SchattenOrder) :
     psdSchattenPNorm (V * A * Matrix.conjTranspose V)
         (hA.mul_mul_conjTranspose_same V) p =
       psdSchattenPNorm A hA p := by
-  unfold psdSchattenPNorm
-  rw [psdTracePower_isometry_conj V hA hV hp]
+  simp only [psdSchattenPNorm, Internal.psdSchattenExpression]
+  rw [psdTracePower_isometry_conj V hA hV p.property]
 
 /-- Canonical purification amplitude for an arbitrary `Y_RA`, arranged as
 `R | (A,S)`.
@@ -1094,7 +1105,7 @@ private theorem psdSchattenPNorm_padOutputRightUnit
     {η : Type w} [Fintype η] [DecidableEq η] [Inhabited η] [Subsingleton η]
     {A : CMatrix (Prod a b)} (hA : A.PosSemidef)
     (hPad : (padOutputRightUnit (η := η) A).PosSemidef)
-    {p : ℝ} (hp : 0 < p) :
+    (p : SchattenOrder) :
     psdSchattenPNorm (padOutputRightUnit (η := η) A) hPad p =
       psdSchattenPNorm A hA p := by
   let V : Matrix (Prod a (Prod b η)) (Prod a b) ℂ :=
@@ -1110,7 +1121,7 @@ private theorem psdSchattenPNorm_padOutputRightUnit
     _ = psdSchattenPNorm A hA p := by
           exact psdSchattenPNorm_isometry_conj V hA
             (by simpa [V] using outputRightUnitIsometry_isometry (a := a) (b := b) (η := η))
-            hp
+            p
 
 private theorem kron_traceEffectToUnit_one_apply
     {s : Type w} [Fintype s] [DecidableEq s]
@@ -1232,7 +1243,7 @@ source lines 2131-2140. -/
 theorem cbOneToAlphaAlternateValue_le_cbOneToAlphaNorm
     [Nonempty a]
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : ℝ} (halpha : 1 < alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
     (Y : CBOneToAlphaAlternateDomain a alpha) :
     cbOneToAlphaAlternateValue Phi hPhi Y ≤
       cbOneToAlphaNorm Phi hPhi alpha := by
@@ -1248,7 +1259,7 @@ theorem cbOneToAlphaAlternateValue_le_cbOneToAlphaNorm
     MatrixMap.isCompletelyPositive_kron Phi TrS hPhi hTrS
   let psi : Prod a (Prod a s) → ℂ :=
     cbOneToAlphaPurificationAmp Y.matrix
-  have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
+  have halpha_pos : 0 < (alpha : Real) := lt_trans zero_lt_one halpha
   have hDenMatrix :
       partialTraceB (a := a) (b := Prod a s) (rankOneMatrix psi) =
         partialTraceB (a := a) (b := a) Y.matrix := by
@@ -1328,7 +1339,7 @@ theorem cbOneToAlphaAlternateValue_le_cbOneToAlphaNorm
           hPad alpha := by
             exact psdSchattenPNorm_congr hNumMatrix _ hPad alpha
       _ = psdSchattenPNorm (Phi.referenceLift Y.matrix) hAltNum alpha := by
-            exact psdSchattenPNorm_padOutputRightUnit hAltNum hPad halpha_pos
+            exact psdSchattenPNorm_padOutputRightUnit hAltNum hPad alpha
   have hValueEq :
       cbOneToAlphaAlternateValue Phi hPhi Y =
         psdSchattenPNorm
@@ -1350,7 +1361,8 @@ theorem cbOneToAlphaAlternateValue_le_cbOneToAlphaNorm
       cbOneToAlphaNorm Theta hTheta alpha =
         cbOneToAlphaNorm Phi hPhi alpha *
           cbOneToAlphaNorm TrS hTrS alpha := by
-    exact cbOneToAlphaNorm_kron_eq_mul Phi hPhi TrS hTrS halpha
+    simpa [SchattenOrder.ofOneLt] using
+      (cbOneToAlphaNorm_kron_eq_mul Phi hPhi TrS hTrS halpha)
   have hTrNorm :
       cbOneToAlphaNorm TrS hTrS alpha = 1 := by
     simpa [TrS, hTrS, s] using
@@ -1375,7 +1387,7 @@ theorem cbOneToAlphaAlternateValue_le_cbOneToAlphaNorm
           rw [hThetaNorm, hTrNorm, mul_one]
 
 private def CBOneToAlphaAlternateDomain.one
-    [Nonempty a] (alpha : ℝ) : CBOneToAlphaAlternateDomain a alpha where
+    [Nonempty a] (alpha : SchattenOrder) : CBOneToAlphaAlternateDomain a alpha where
   matrix := 1
   pos := Matrix.PosSemidef.one
   marginal_norm_pos := by
@@ -1410,7 +1422,7 @@ private def CBOneToAlphaAlternateDomain.one
 theorem cbOneToAlphaAlternateExpression_le_cbOneToAlphaNorm
     [Nonempty a]
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : ℝ} (halpha : 1 < alpha) :
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real)) :
     cbOneToAlphaAlternateExpression Phi hPhi alpha ≤
       cbOneToAlphaNorm Phi hPhi alpha := by
   unfold cbOneToAlphaAlternateExpression
@@ -1429,7 +1441,7 @@ in lines 2110-2140. -/
 theorem cbOneToAlphaNorm_eq_cbOneToAlphaAlternateExpression
     [Nonempty a]
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : ℝ} (halpha : 1 < alpha) :
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real)) :
     cbOneToAlphaNorm Phi hPhi alpha =
       cbOneToAlphaAlternateExpression Phi hPhi alpha := by
   have hbdd : BddAbove (cbOneToAlphaAlternateValueSet Phi hPhi alpha) :=

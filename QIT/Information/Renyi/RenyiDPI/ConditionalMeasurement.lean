@@ -35,24 +35,6 @@ namespace State
 
 open RenyiDPI.Statement
 
-/-- The maximally mixed state is full-rank on a nonempty finite system. -/
-theorem maximallyMixed_posDef [Nonempty a] :
-    (maximallyMixed a).matrix.PosDef := by
-  have hcard_pos : 0 < ((Fintype.card a : ℝ)⁻¹ : ℝ) := by
-    exact inv_pos.mpr (by exact_mod_cast Fintype.card_pos_iff.mpr inferInstance)
-  have hcard_pos_complex : (0 : ℂ) < (((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ) := by
-    exact_mod_cast hcard_pos
-  rw [maximallyMixed_matrix]
-  exact (IsStrictlyPositive.smul hcard_pos_complex
-    (Matrix.PosDef.isStrictlyPositive (Matrix.PosDef.one : (1 : CMatrix a).PosDef))).posDef
-
-/-- The normalized product reference `π_A ⊗ σ_B` is full-rank whenever
-`σ_B` is full-rank. -/
-theorem maximallyMixed_prod_posDef [Nonempty a]
-    (σ : State b) (hσ : σ.matrix.PosDef) :
-    ((maximallyMixed a).prod σ).matrix.PosDef :=
-  State.prod_posDef (maximallyMixed_posDef (a := a)) hσ
-
 /-- Conditional Renyi's unnormalized reference `I_A ⊗ σ_B` is the dimension
 factor times the normalized product reference `π_A ⊗ σ_B`.
 
@@ -82,7 +64,7 @@ theorem conditionalRenyi_normalizedReference_posDef
   haveI : Nonempty a := by
     rcases ρ.nonempty with ⟨x⟩
     exact ⟨x.1⟩
-  simpa using maximallyMixed_prod_posDef (a := a) σ hσ
+  simpa using maximallyMixed_prod_posDef (a := a) hσ
 
 /-- Real powers of the conditional Renyi unnormalized reference split into the
 dimension factor and the normalized product reference power.

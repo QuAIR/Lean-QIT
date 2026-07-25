@@ -28,77 +28,83 @@ namespace SubnormalizedState
 
 variable {c : Type x} [Fintype c] [DecidableEq c]
 
-/-! ## Subnormalized endpoint companion values -/
+/-! ## Canonical subnormalized endpoint values -/
 
-/-- Extended-real companion to the finite-real subnormalized conditional
-min-entropy branch.
+/-- Compatibility alias for the former companion API.  The canonical name now
+already has the safe extended-real codomain. -/
+@[deprecated conditionalMinEntropy (since := "2026-07-22")]
+abbrev conditionalMinEntropyE (ρ : SubnormalizedState (Prod a b)) : EReal :=
+  ρ.conditionalMinEntropy
 
-The zero subnormalized state has source-faithful endpoint value `⊤`; all
-nonzero states use the existing finite-real branch from `QIT.OneShot.Smooth`. -/
-def conditionalMinEntropyE (ρ : SubnormalizedState (Prod a b)) : EReal :=
-  if ρ.matrix = 0 then ⊤ else (ρ.conditionalMinEntropy : EReal)
+/-- Compatibility alias for the former companion API.  The canonical name now
+already has the safe extended-real codomain. -/
+@[deprecated conditionalMaxEntropy (since := "2026-07-22")]
+abbrev conditionalMaxEntropyE (ρ : SubnormalizedState (Prod a b)) : EReal :=
+  ρ.conditionalMaxEntropy
 
-/-- Extended-real companion to the finite-real subnormalized conditional
-max-entropy branch.
-
-The zero subnormalized state has source-faithful endpoint value `⊥`; all
-nonzero states use the existing finite-real branch from `QIT.OneShot.Smooth`. -/
-def conditionalMaxEntropyE (ρ : SubnormalizedState (Prod a b)) : EReal :=
-  if ρ.matrix = 0 then ⊥ else (ρ.conditionalMaxEntropy : EReal)
-
-@[simp]
+@[deprecated conditionalMinEntropy_eq_top_of_matrix_eq_zero (since := "2026-07-22")]
 theorem conditionalMinEntropyE_eq_top_of_matrix_eq_zero
     {ρ : SubnormalizedState (Prod a b)} (hρ : ρ.matrix = 0) :
-    ρ.conditionalMinEntropyE = ⊤ := by
-  simp [conditionalMinEntropyE, hρ]
+    ρ.conditionalMinEntropy = ⊤ :=
+  ρ.conditionalMinEntropy_eq_top_of_matrix_eq_zero hρ
 
-@[simp]
+@[deprecated conditionalMaxEntropy_eq_bot_of_matrix_eq_zero (since := "2026-07-22")]
 theorem conditionalMaxEntropyE_eq_bot_of_matrix_eq_zero
     {ρ : SubnormalizedState (Prod a b)} (hρ : ρ.matrix = 0) :
-    ρ.conditionalMaxEntropyE = ⊥ := by
-  simp [conditionalMaxEntropyE, hρ]
+    ρ.conditionalMaxEntropy = ⊥ :=
+  ρ.conditionalMaxEntropy_eq_bot_of_matrix_eq_zero hρ
 
-@[simp]
+@[deprecated conditionalMinEntropy_eq_coe_finite_of_matrix_ne_zero
+    (since := "2026-07-22")]
 theorem conditionalMinEntropyE_eq_coe_of_matrix_ne_zero
     {ρ : SubnormalizedState (Prod a b)} (hρ : ρ.matrix ≠ 0) :
-    ρ.conditionalMinEntropyE = (ρ.conditionalMinEntropy : EReal) := by
-  simp [conditionalMinEntropyE, hρ]
+    ρ.conditionalMinEntropy = (ρ.conditionalMinEntropyFinite hρ : EReal) :=
+  ρ.conditionalMinEntropy_eq_coe_finite_of_matrix_ne_zero hρ
 
-@[simp]
+@[deprecated conditionalMaxEntropy_eq_coe_finite_of_matrix_ne_zero
+    (since := "2026-07-22")]
 theorem conditionalMaxEntropyE_eq_coe_of_matrix_ne_zero
     {ρ : SubnormalizedState (Prod a b)} (hρ : ρ.matrix ≠ 0) :
-    ρ.conditionalMaxEntropyE = (ρ.conditionalMaxEntropy : EReal) := by
-  simp [conditionalMaxEntropyE, hρ]
+    ρ.conditionalMaxEntropy = (ρ.conditionalMaxEntropyFinite hρ : EReal) :=
+  ρ.conditionalMaxEntropy_eq_coe_finite_of_matrix_ne_zero hρ
 
-theorem conditionalMinEntropyE_eq_coe_of_trace_pos
+theorem conditionalMinEntropy_eq_coe_finite_of_trace_pos
     {ρ : SubnormalizedState (Prod a b)} (hρ : 0 < ρ.matrix.trace.re) :
-    ρ.conditionalMinEntropyE = (ρ.conditionalMinEntropy : EReal) := by
-  exact ρ.conditionalMinEntropyE_eq_coe_of_matrix_ne_zero (by
-    intro hzero
-    rw [hzero] at hρ
-    simp at hρ)
+    ρ.conditionalMinEntropy =
+      (ρ.conditionalMinEntropyFinite
+        (by intro hzero; rw [hzero] at hρ; simp at hρ) : EReal) := by
+  apply ρ.conditionalMinEntropy_eq_coe_finite_of_matrix_ne_zero
 
-theorem conditionalMaxEntropyE_eq_coe_of_trace_pos
+theorem conditionalMaxEntropy_eq_coe_finite_of_trace_pos
     {ρ : SubnormalizedState (Prod a b)} (hρ : 0 < ρ.matrix.trace.re) :
-    ρ.conditionalMaxEntropyE = (ρ.conditionalMaxEntropy : EReal) := by
-  exact ρ.conditionalMaxEntropyE_eq_coe_of_matrix_ne_zero (by
-    intro hzero
-    rw [hzero] at hρ
-    simp at hρ)
+    ρ.conditionalMaxEntropy =
+      (ρ.conditionalMaxEntropyFinite
+        (by intro hzero; rw [hzero] at hρ; simp at hρ) : EReal) := by
+  apply ρ.conditionalMaxEntropy_eq_coe_finite_of_matrix_ne_zero
 
-theorem conditionalMinEntropyE_eq_coe_of_purifiedBall_lt_sqrt_trace
+theorem conditionalMinEntropy_eq_coe_finite_of_purifiedBall_lt_sqrt_trace
     {ρ ρ' : SubnormalizedState (Prod a b)} {ε : ℝ}
     (hball : ρ.purifiedBall ε ρ') (hε : ε < Real.sqrt ρ.matrix.trace.re) :
-    ρ'.conditionalMinEntropyE = (ρ'.conditionalMinEntropy : EReal) := by
-  exact ρ'.conditionalMinEntropyE_eq_coe_of_trace_pos
-    (SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace ρ ρ' hε hball)
+    ∃ hρ' : ρ'.matrix ≠ 0,
+      ρ'.conditionalMinEntropy = (ρ'.conditionalMinEntropyFinite hρ' : EReal) := by
+  have hpos := SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace ρ ρ' hε hball
+  let hne : ρ'.matrix ≠ 0 := by
+    intro hzero
+    rw [hzero] at hpos
+    simp at hpos
+  exact ⟨hne, ρ'.conditionalMinEntropy_eq_coe_finite_of_matrix_ne_zero hne⟩
 
-theorem conditionalMaxEntropyE_eq_coe_of_purifiedBall_lt_sqrt_trace
+theorem conditionalMaxEntropy_eq_coe_finite_of_purifiedBall_lt_sqrt_trace
     {ρ ρ' : SubnormalizedState (Prod a b)} {ε : ℝ}
     (hball : ρ.purifiedBall ε ρ') (hε : ε < Real.sqrt ρ.matrix.trace.re) :
-    ρ'.conditionalMaxEntropyE = (ρ'.conditionalMaxEntropy : EReal) := by
-  exact ρ'.conditionalMaxEntropyE_eq_coe_of_trace_pos
-    (SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace ρ ρ' hε hball)
+    ∃ hρ' : ρ'.matrix ≠ 0,
+      ρ'.conditionalMaxEntropy = (ρ'.conditionalMaxEntropyFinite hρ' : EReal) := by
+  have hpos := SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace ρ ρ' hε hball
+  let hne : ρ'.matrix ≠ 0 := by
+    intro hzero
+    rw [hzero] at hpos
+    simp at hpos
+  exact ⟨hne, ρ'.conditionalMaxEntropy_eq_coe_finite_of_matrix_ne_zero hne⟩
 
 /-- A subnormalized conditional min-entropy is uniformly bounded above when the
 state trace has a positive lower bound. -/
@@ -106,7 +112,7 @@ theorem conditionalMinEntropy_le_of_trace_lower_bound
     [Nonempty a] [Nonempty b]
     (ρ : SubnormalizedState (Prod a b)) {δ : ℝ}
     (hδ : 0 < δ) (hδρ : δ ≤ ρ.matrix.trace.re) :
-    ρ.conditionalMinEntropy ≤ log2 (Fintype.card a : ℝ) - log2 δ := by
+    ρ.conditionalMinEntropyRaw ≤ log2 (Fintype.card a : ℝ) - log2 δ := by
   have hρ : 0 < ρ.matrix.trace.re := lt_of_lt_of_le hδ hδρ
   rw [← SubnormalizedState.ofStateScale_normalize_trace_eq ρ hρ]
   rw [conditionalMinEntropy_ofStateScale
@@ -127,7 +133,7 @@ theorem conditionalMaxEntropy_ge_of_trace_lower_bound
     [Nonempty a] [Nonempty b]
     (ρ : SubnormalizedState (Prod a b)) {δ : ℝ}
     (hδ : 0 < δ) (hδρ : δ ≤ ρ.matrix.trace.re) :
-    -log2 (Fintype.card a : ℝ) + log2 δ ≤ ρ.conditionalMaxEntropy := by
+    -log2 (Fintype.card a : ℝ) + log2 δ ≤ ρ.conditionalMaxEntropyRaw := by
   have hρ : 0 < ρ.matrix.trace.re := lt_of_lt_of_le hδ hδρ
   rw [← SubnormalizedState.ofStateScale_normalize_trace_eq ρ hρ]
   rw [conditionalMaxEntropy_ofStateScale
@@ -144,26 +150,26 @@ theorem conditionalMaxEntropy_ge_of_trace_lower_bound
 
 /-- Smooth subnormalized min-entropy candidate sets are nonempty for
 nonnegative smoothing radius. -/
-theorem SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg
+theorem SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg
     (ρ : SubnormalizedState (Prod a b)) {ε : ℝ} (hε : 0 ≤ ε) :
-    ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h}).Nonempty :=
-  ⟨ρ.conditionalMinEntropy, ρ, ρ.purifiedBall_self_of_nonneg hε, rfl⟩
+    ({h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h}).Nonempty :=
+  ⟨ρ.conditionalMinEntropyRaw, ρ, ρ.purifiedBall_self_of_nonneg hε, rfl⟩
 
 /-- Smooth subnormalized max-entropy candidate sets are nonempty for
 nonnegative smoothing radius. -/
-theorem SmoothConditionalMaxEntropyCandidate_set_nonempty_of_nonneg
+theorem SmoothConditionalMaxEntropyCandidateRaw_set_nonempty_of_nonneg
     (ρ : SubnormalizedState (Prod a b)) {ε : ℝ} (hε : 0 ≤ ε) :
-    ({h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρ ε h}).Nonempty :=
-  ⟨ρ.conditionalMaxEntropy, ρ, ρ.purifiedBall_self_of_nonneg hε, rfl⟩
+    ({h : ℝ | SmoothConditionalMaxEntropyCandidateRaw (a := a) ρ ε h}).Nonempty :=
+  ⟨ρ.conditionalMaxEntropyRaw, ρ, ρ.purifiedBall_self_of_nonneg hε, rfl⟩
 
 /-- Smooth subnormalized min-entropy candidates are bounded above in any ball
 whose radius is below `sqrt (Tr ρ)`. -/
-theorem SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+theorem SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
     [Nonempty a] [Nonempty b]
     (ρ : SubnormalizedState (Prod a b)) {ε : ℝ}
     (hε : ε < Real.sqrt ρ.matrix.trace.re) :
     BddAbove {h : ℝ |
-      SmoothConditionalMinEntropyCandidate (a := a) ρ ε h} := by
+      SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h} := by
   let δ : ℝ := (Real.sqrt ρ.matrix.trace.re - ε) ^ 2
   have hδ : 0 < δ := by
     dsimp [δ]
@@ -184,22 +190,57 @@ theorem le_smoothConditionalMinEntropy_of_candidate_of_lt_sqrt_trace
     [Nonempty a] [Nonempty b] {ρ : SubnormalizedState (Prod a b)} {ε h : ℝ}
     (hε_nonneg : 0 ≤ ε)
     (hε : ε < Real.sqrt ρ.matrix.trace.re)
-    (hcand : SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := a) ρ ε h) :
+    (hcand : SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h) :
     h ≤ ρ.smoothConditionalMinEntropy ε hε_nonneg hε := by
   rw [SubnormalizedState.smoothConditionalMinEntropy_eq_sSup_candidates]
   exact le_csSup
-    (SubnormalizedState.SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+    (SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
       (a := a) ρ hε)
     hcand
 
+/-- Smooth conditional min-entropy is monotone in the smoothing radius on its
+canonical finite domain. -/
+theorem smoothConditionalMinEntropy_mono
+    [Nonempty a] [Nonempty b]
+    (ρ : SubnormalizedState (Prod a b)) {ε δ : ℝ}
+    (hε_nonneg : 0 ≤ ε) (hδ_nonneg : 0 ≤ δ) (hεδ : ε ≤ δ)
+    (hε_trace : ε < Real.sqrt ρ.matrix.trace.re)
+    (hδ_trace : δ < Real.sqrt ρ.matrix.trace.re) :
+    ρ.smoothConditionalMinEntropy ε hε_nonneg hε_trace ≤
+      ρ.smoothConditionalMinEntropy δ hδ_nonneg hδ_trace := by
+  rw [SubnormalizedState.smoothConditionalMinEntropy_eq_sSup_candidates,
+    SubnormalizedState.smoothConditionalMinEntropy_eq_sSup_candidates]
+  refine csSup_le
+    (SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg
+      (a := a) ρ hε_nonneg) ?_
+  intro h hh
+  exact le_csSup
+    (SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
+      (a := a) ρ hδ_trace)
+    (SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw_mono hεδ hh)
+
+/-- Raw smooth conditional min-entropy is monotone whenever the two radii lie
+in the canonical finite domain. -/
+theorem smoothConditionalMinEntropyRaw_mono_of_nonneg_of_lt_sqrt_trace
+    [Nonempty a] [Nonempty b]
+    (ρ : SubnormalizedState (Prod a b)) {ε δ : ℝ}
+    (hε_nonneg : 0 ≤ ε) (hδ_nonneg : 0 ≤ δ) (hεδ : ε ≤ δ)
+    (hε_trace : ε < Real.sqrt ρ.matrix.trace.re)
+    (hδ_trace : δ < Real.sqrt ρ.matrix.trace.re) :
+    ρ.smoothConditionalMinEntropyRaw ε ≤
+      ρ.smoothConditionalMinEntropyRaw δ := by
+  simpa only [SubnormalizedState.smoothConditionalMinEntropy_eq_raw] using
+    ρ.smoothConditionalMinEntropy_mono hε_nonneg hδ_nonneg hεδ
+      hε_trace hδ_trace
+
 /-- Smooth subnormalized max-entropy candidates are bounded below in any ball
 whose radius is below `sqrt (Tr ρ)`. -/
-theorem SmoothConditionalMaxEntropyCandidate_bddBelow_of_lt_sqrt_trace
+theorem SmoothConditionalMaxEntropyCandidateRaw_bddBelow_of_lt_sqrt_trace
     [Nonempty a] [Nonempty b]
     (ρ : SubnormalizedState (Prod a b)) {ε : ℝ}
     (hε : ε < Real.sqrt ρ.matrix.trace.re) :
     BddBelow {h : ℝ |
-      SmoothConditionalMaxEntropyCandidate (a := a) ρ ε h} := by
+      SmoothConditionalMaxEntropyCandidateRaw (a := a) ρ ε h} := by
   let δ : ℝ := (Real.sqrt ρ.matrix.trace.re - ε) ^ 2
   have hδ : 0 < δ := by
     dsimp [δ]
@@ -221,14 +262,14 @@ theorem smoothConditionalMinEntropyRaw_le_of_candidate_lift
     (ρpost : SubnormalizedState (Prod a b))
     (ρsource : SubnormalizedState (Prod source b)) {ε : ℝ}
     (hpost_nonempty :
-      ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h}).Nonempty)
+      ({h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρpost ε h}).Nonempty)
     (hsource_bdd :
       BddAbove {h : ℝ |
-        SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h})
+        SmoothConditionalMinEntropyCandidateRaw (a := source) ρsource ε h})
     (hlift : ∀ h,
-      SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h →
+      SmoothConditionalMinEntropyCandidateRaw (a := a) ρpost ε h →
         ∃ h',
-          SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h' ∧ h ≤ h') :
+          SmoothConditionalMinEntropyCandidateRaw (a := source) ρsource ε h' ∧ h ≤ h') :
     ρpost.smoothConditionalMinEntropyRaw ε ≤
       ρsource.smoothConditionalMinEntropyRaw ε := by
   rw [smoothConditionalMinEntropyRaw_eq_sSup_candidates,
@@ -249,14 +290,14 @@ theorem smoothConditionalMinEntropyRaw_le_of_candidate_lift_diff_side
     (ρpost : SubnormalizedState (Prod a b))
     (ρsource : SubnormalizedState (Prod source c)) {ε : ℝ}
     (hpost_nonempty :
-      ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h}).Nonempty)
+      ({h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρpost ε h}).Nonempty)
     (hsource_bdd :
       BddAbove {h : ℝ |
-        SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h})
+        SmoothConditionalMinEntropyCandidateRaw (a := source) ρsource ε h})
     (hlift : ∀ h,
-      SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h →
+      SmoothConditionalMinEntropyCandidateRaw (a := a) ρpost ε h →
         ∃ h',
-          SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h' ∧ h ≤ h') :
+          SmoothConditionalMinEntropyCandidateRaw (a := source) ρsource ε h' ∧ h ≤ h') :
     ρpost.smoothConditionalMinEntropyRaw ε ≤
       ρsource.smoothConditionalMinEntropyRaw ε := by
   rw [smoothConditionalMinEntropyRaw_eq_sSup_candidates,
@@ -276,14 +317,14 @@ theorem smoothConditionalMinEntropyRaw_le_of_candidate_lift_of_lt_sqrt_trace
     (ρsource : SubnormalizedState (Prod source b)) {ε : ℝ}
     (hε0 : 0 ≤ ε) (hεsource : ε < Real.sqrt ρsource.matrix.trace.re)
     (hlift : ∀ h,
-      SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h →
+      SmoothConditionalMinEntropyCandidateRaw (a := a) ρpost ε h →
         ∃ h',
-          SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h' ∧ h ≤ h') :
+          SmoothConditionalMinEntropyCandidateRaw (a := source) ρsource ε h' ∧ h ≤ h') :
     ρpost.smoothConditionalMinEntropyRaw ε ≤
       ρsource.smoothConditionalMinEntropyRaw ε :=
   smoothConditionalMinEntropyRaw_le_of_candidate_lift ρpost ρsource
-    (SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg (a := a) ρpost hε0)
-    (SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+    (SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg (a := a) ρpost hε0)
+    (SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
       (a := source) ρsource hεsource)
     hlift
 
@@ -296,14 +337,14 @@ theorem smoothConditionalMinEntropyRaw_le_of_candidate_lift_diff_side_of_lt_sqrt
     (ρsource : SubnormalizedState (Prod source c)) {ε : ℝ}
     (hε0 : 0 ≤ ε) (hεsource : ε < Real.sqrt ρsource.matrix.trace.re)
     (hlift : ∀ h,
-      SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h →
+      SmoothConditionalMinEntropyCandidateRaw (a := a) ρpost ε h →
         ∃ h',
-          SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h' ∧ h ≤ h') :
+          SmoothConditionalMinEntropyCandidateRaw (a := source) ρsource ε h' ∧ h ≤ h') :
     ρpost.smoothConditionalMinEntropyRaw ε ≤
       ρsource.smoothConditionalMinEntropyRaw ε :=
   smoothConditionalMinEntropyRaw_le_of_candidate_lift_diff_side ρpost ρsource
-    (SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg (a := a) ρpost hε0)
-    (SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+    (SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg (a := a) ρpost hε0)
+    (SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
       (a := source) ρsource hεsource)
     hlift
 
@@ -315,15 +356,15 @@ theorem smoothConditionalMinEntropyRaw_le_of_witness_lift
     (ρpost : SubnormalizedState (Prod a b))
     (ρsource : SubnormalizedState (Prod source b)) {ε : ℝ}
     (hpost_nonempty :
-      ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h}).Nonempty)
+      ({h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρpost ε h}).Nonempty)
     (hsource_bdd :
       BddAbove {h : ℝ |
-        SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h})
+        SmoothConditionalMinEntropyCandidateRaw (a := source) ρsource ε h})
     (hlift : ∀ ρpost',
       ρpost.purifiedBall ε ρpost' →
         ∃ ρsource',
           ρsource.purifiedBall ε ρsource' ∧
-          ρpost'.conditionalMinEntropy ≤ ρsource'.conditionalMinEntropy) :
+          ρpost'.conditionalMinEntropyRaw ≤ ρsource'.conditionalMinEntropyRaw) :
     ρpost.smoothConditionalMinEntropyRaw ε ≤
       ρsource.smoothConditionalMinEntropyRaw ε := by
   refine smoothConditionalMinEntropyRaw_le_of_candidate_lift ρpost ρsource
@@ -331,7 +372,7 @@ theorem smoothConditionalMinEntropyRaw_le_of_witness_lift
   intro h hcand
   rcases hcand with ⟨ρpost', hball, rfl⟩
   rcases hlift ρpost' hball with ⟨ρsource', hsourceball, hle⟩
-  exact ⟨ρsource'.conditionalMinEntropy, ⟨ρsource', hsourceball, rfl⟩, hle⟩
+  exact ⟨ρsource'.conditionalMinEntropyRaw, ⟨ρsource', hsourceball, rfl⟩, hle⟩
 
 /-- Witness-level lift for smooth min-entropy suprema with different
 conditioning-register types. -/
@@ -341,15 +382,15 @@ theorem smoothConditionalMinEntropyRaw_le_of_witness_lift_diff_side
     (ρpost : SubnormalizedState (Prod a b))
     (ρsource : SubnormalizedState (Prod source c)) {ε : ℝ}
     (hpost_nonempty :
-      ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρpost ε h}).Nonempty)
+      ({h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρpost ε h}).Nonempty)
     (hsource_bdd :
       BddAbove {h : ℝ |
-        SmoothConditionalMinEntropyCandidate (a := source) ρsource ε h})
+        SmoothConditionalMinEntropyCandidateRaw (a := source) ρsource ε h})
     (hlift : ∀ ρpost',
       ρpost.purifiedBall ε ρpost' →
         ∃ ρsource',
           ρsource.purifiedBall ε ρsource' ∧
-          ρpost'.conditionalMinEntropy ≤ ρsource'.conditionalMinEntropy) :
+          ρpost'.conditionalMinEntropyRaw ≤ ρsource'.conditionalMinEntropyRaw) :
     ρpost.smoothConditionalMinEntropyRaw ε ≤
       ρsource.smoothConditionalMinEntropyRaw ε := by
   refine smoothConditionalMinEntropyRaw_le_of_candidate_lift_diff_side ρpost ρsource
@@ -357,7 +398,7 @@ theorem smoothConditionalMinEntropyRaw_le_of_witness_lift_diff_side
   intro h hcand
   rcases hcand with ⟨ρpost', hball, rfl⟩
   rcases hlift ρpost' hball with ⟨ρsource', hsourceball, hle⟩
-  exact ⟨ρsource'.conditionalMinEntropy, ⟨ρsource', hsourceball, rfl⟩, hle⟩
+  exact ⟨ρsource'.conditionalMinEntropyRaw, ⟨ρsource', hsourceball, rfl⟩, hle⟩
 
 /-- A convenient small-radius form of
 `smoothConditionalMinEntropyRaw_le_of_witness_lift`, discharging the usual
@@ -372,12 +413,12 @@ theorem smoothConditionalMinEntropyRaw_le_of_witness_lift_of_lt_sqrt_trace
       ρpost.purifiedBall ε ρpost' →
         ∃ ρsource',
           ρsource.purifiedBall ε ρsource' ∧
-          ρpost'.conditionalMinEntropy ≤ ρsource'.conditionalMinEntropy) :
+          ρpost'.conditionalMinEntropyRaw ≤ ρsource'.conditionalMinEntropyRaw) :
     ρpost.smoothConditionalMinEntropyRaw ε ≤
       ρsource.smoothConditionalMinEntropyRaw ε :=
   smoothConditionalMinEntropyRaw_le_of_witness_lift ρpost ρsource
-    (SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg (a := a) ρpost hε0)
-    (SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+    (SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg (a := a) ρpost hε0)
+    (SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
       (a := source) ρsource hεsource)
     hlift
 
@@ -393,12 +434,12 @@ theorem smoothConditionalMinEntropyRaw_le_of_witness_lift_diff_side_of_lt_sqrt_t
       ρpost.purifiedBall ε ρpost' →
         ∃ ρsource',
           ρsource.purifiedBall ε ρsource' ∧
-          ρpost'.conditionalMinEntropy ≤ ρsource'.conditionalMinEntropy) :
+          ρpost'.conditionalMinEntropyRaw ≤ ρsource'.conditionalMinEntropyRaw) :
     ρpost.smoothConditionalMinEntropyRaw ε ≤
       ρsource.smoothConditionalMinEntropyRaw ε :=
   smoothConditionalMinEntropyRaw_le_of_witness_lift_diff_side ρpost ρsource
-    (SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg (a := a) ρpost hε0)
-    (SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+    (SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg (a := a) ρpost hε0)
+    (SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
       (a := source) ρsource hεsource)
     hlift
 
@@ -414,41 +455,41 @@ theorem smoothConditionalMinEntropy_conditioningIsometryApply
         (by rwa [conditioningIsometryApply_trace_re]) =
       ρ.smoothConditionalMinEntropy ε hε0 hε := by
   change sSup {h : ℝ |
-      SmoothConditionalMinEntropyCandidate (a := a) (ρ.conditioningIsometryApply V) ε h} =
-    sSup {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h}
+      SmoothConditionalMinEntropyCandidateRaw (a := a) (ρ.conditioningIsometryApply V) ε h} =
+    sSup {h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h}
   have hεPlus :
       ε < Real.sqrt (ρ.conditioningIsometryApply V).matrix.trace.re := by
     rwa [conditioningIsometryApply_trace_re]
   have hbddSource :
-      BddAbove {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h} :=
-    SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+      BddAbove {h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h} :=
+    SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
       (a := a) ρ hε
   have hbddPlus :
       BddAbove {h : ℝ |
-        SmoothConditionalMinEntropyCandidate (a := a)
+        SmoothConditionalMinEntropyCandidateRaw (a := a)
           (ρ.conditioningIsometryApply V) ε h} :=
-    SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+    SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
       (a := a) (ρ.conditioningIsometryApply V) hεPlus
   have hnonSource :
-      ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h}).Nonempty :=
-    SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg
+      ({h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h}).Nonempty :=
+    SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg
       (a := a) ρ hε0
   have hnonPlus :
       ({h : ℝ |
-        SmoothConditionalMinEntropyCandidate (a := a)
+        SmoothConditionalMinEntropyCandidateRaw (a := a)
           (ρ.conditioningIsometryApply V) ε h}).Nonempty :=
-    SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg
+    SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg
       (a := a) (ρ.conditioningIsometryApply V) hε0
   apply le_antisymm
   · refine csSup_le hnonPlus ?_
     intro h hh
-    rcases SmoothConditionalMinEntropyCandidate.conditioningIsometryApply_compress
+    rcases SmoothConditionalMinEntropyCandidateRaw.conditioningIsometryApply_compress
         (a := a) ρ V hε hh with ⟨h', hh', hle⟩
     exact le_trans hle (le_csSup hbddSource hh')
   · refine csSup_le hnonSource ?_
     intro h hh
     exact le_csSup hbddPlus
-      (SmoothConditionalMinEntropyCandidate.conditioningIsometryApply
+      (SmoothConditionalMinEntropyCandidateRaw.conditioningIsometryApply
         (a := a) ρ V hε hh)
 
 /-- Subnormalized smooth conditional min-entropy is invariant under arbitrary
@@ -463,41 +504,41 @@ theorem smoothConditionalMinEntropy_sourceIsometryApply
         (by rwa [sourceIsometryApply_trace_re]) =
       ρ.smoothConditionalMinEntropy ε hε0 hε := by
   change sSup {h : ℝ |
-      SmoothConditionalMinEntropyCandidate (a := aPlus) (ρ.sourceIsometryApply V) ε h} =
-    sSup {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h}
+      SmoothConditionalMinEntropyCandidateRaw (a := aPlus) (ρ.sourceIsometryApply V) ε h} =
+    sSup {h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h}
   have hεPlus :
       ε < Real.sqrt (ρ.sourceIsometryApply V).matrix.trace.re := by
     rwa [sourceIsometryApply_trace_re]
   have hbddSource :
-      BddAbove {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h} :=
-    SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+      BddAbove {h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h} :=
+    SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
       (a := a) ρ hε
   have hbddPlus :
       BddAbove {h : ℝ |
-        SmoothConditionalMinEntropyCandidate (a := aPlus)
+        SmoothConditionalMinEntropyCandidateRaw (a := aPlus)
           (ρ.sourceIsometryApply V) ε h} :=
-    SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+    SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
       (a := aPlus) (ρ.sourceIsometryApply V) hεPlus
   have hnonSource :
-      ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h}).Nonempty :=
-    SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg
+      ({h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h}).Nonempty :=
+    SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg
       (a := a) ρ hε0
   have hnonPlus :
       ({h : ℝ |
-        SmoothConditionalMinEntropyCandidate (a := aPlus)
+        SmoothConditionalMinEntropyCandidateRaw (a := aPlus)
           (ρ.sourceIsometryApply V) ε h}).Nonempty :=
-    SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg
+    SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg
       (a := aPlus) (ρ.sourceIsometryApply V) hε0
   apply le_antisymm
   · refine csSup_le hnonPlus ?_
     intro h hh
-    rcases SmoothConditionalMinEntropyCandidate.sourceIsometryApply_compress
+    rcases SmoothConditionalMinEntropyCandidateRaw.sourceIsometryApply_compress
         (a := a) ρ V hε hh with ⟨h', hh', hle⟩
     exact le_trans hle (le_csSup hbddSource hh')
   · refine csSup_le hnonSource ?_
     intro h hh
     exact le_csSup hbddPlus
-      (SmoothConditionalMinEntropyCandidate.sourceIsometryApply
+      (SmoothConditionalMinEntropyCandidateRaw.sourceIsometryApply
         (a := a) ρ V hε hh)
 
 /-- Transport the scaled-pure radius condition to the `AB` marginal trace. -/
@@ -566,10 +607,10 @@ theorem smoothConditionalMaxEntropy_marginalAB_eq_neg_smoothConditionalMinEntrop
   refine smoothConditionalMaxEntropyRaw_eq_neg_smoothConditionalMinEntropyRaw_of_candidate_bounds
     (a := a) (b := b) (c := c)
     (ρAB := ρAB) (ρAC := ρAC) (ε := ε)
-    (ρAB.SmoothConditionalMaxEntropyCandidate_set_nonempty_of_nonneg (a := a) hε0)
-    (ρAC.SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg (a := a) hε0)
-    (ρAB.SmoothConditionalMaxEntropyCandidate_bddBelow_of_lt_sqrt_trace (a := a) hεAB)
-    (ρAC.SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace (a := a) hεAC)
+    (ρAB.SmoothConditionalMaxEntropyCandidateRaw_set_nonempty_of_nonneg (a := a) hε0)
+    (ρAC.SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg (a := a) hε0)
+    (ρAB.SmoothConditionalMaxEntropyCandidateRaw_bddBelow_of_lt_sqrt_trace (a := a) hεAB)
+    (ρAC.SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace (a := a) hεAC)
     ?_ ?_
   · intro h hcand
     rcases hcand with ⟨ρAB', hballAB, hh⟩
@@ -585,7 +626,7 @@ theorem smoothConditionalMaxEntropy_marginalAB_eq_neg_smoothConditionalMinEntrop
       hemb.exists_complementaryPureMarginalRel
         (a := a) (b := b) (c := c) hρAB'
     have hdual :
-        ρAB'.conditionalMaxEntropy = -ρACPlus'.conditionalMinEntropy :=
+        ρAB'.conditionalMaxEntropyRaw = -ρACPlus'.conditionalMinEntropyRaw :=
       (conditionalMinMaxEntropyDualOn_complementaryPureMarginals
         (a := a) (b := b) (c := ACPlusReference a b c))
         ρAB' ρACPlus' hrel
@@ -598,14 +639,14 @@ theorem smoothConditionalMaxEntropy_marginalAB_eq_neg_smoothConditionalMinEntrop
         embeddedACPlusBaseFromScaledPure_eq_conditioningIsometryApply_sumInr
           (a := a) (b := b) (c := c) ψ t ht.le ht1
     have hcandPlus :
-        SmoothConditionalMinEntropyCandidate (a := a)
+        SmoothConditionalMinEntropyCandidateRaw (a := a)
           (ρAC.conditioningIsometryApply
             (ReferenceIsometry.sumInr (ABHat a b) c)) ε (-h) := by
       refine ⟨ρACPlus', ?_, ?_⟩
       · rwa [← hbase]
       · rw [hh, hdual]
         ring
-    exact SmoothConditionalMinEntropyCandidate.conditioningIsometryApply_sumInr_compress
+    exact SmoothConditionalMinEntropyCandidateRaw.conditioningIsometryApply_sumInr_compress
       (a := a) (b := c) (extra := ABHat a b) ρAC hεAC hcandPlus
   · intro m hcand
     rcases hcand with ⟨ρAC', hballAC, hm⟩
@@ -621,7 +662,7 @@ theorem smoothConditionalMaxEntropy_marginalAB_eq_neg_smoothConditionalMinEntrop
       hemb.exists_complementaryPureMarginalRel
         (a := a) (b := b) (c := c) hρAC'
     have hdual :
-        ρABPlus'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy :=
+        ρABPlus'.conditionalMaxEntropyRaw = -ρAC'.conditionalMinEntropyRaw :=
       (conditionalMinMaxEntropyDualOn_complementaryPureMarginals
         (a := a) (b := ABPlusReference a b c) (c := c))
         ρABPlus' ρAC' hrel
@@ -634,13 +675,13 @@ theorem smoothConditionalMaxEntropy_marginalAB_eq_neg_smoothConditionalMinEntrop
         embeddedABPlusBaseFromScaledPure_eq_conditioningIsometryApply_sumInr
           (a := a) (b := b) (c := c) ψ t ht.le ht1
     have hcandPlus :
-        SmoothConditionalMaxEntropyCandidate (a := a)
+        SmoothConditionalMaxEntropyCandidateRaw (a := a)
           (ρAB.conditioningIsometryApply
             (ReferenceIsometry.sumInr (ACHat a c) b)) ε (-m) := by
       refine ⟨ρABPlus', ?_, ?_⟩
       · rwa [← hbase]
       · rw [hm, hdual]
-    exact SmoothConditionalMaxEntropyCandidate.conditioningIsometryApply_sumInr_compress
+    exact SmoothConditionalMaxEntropyCandidateRaw.conditioningIsometryApply_sumInr_compress
       (a := a) (b := b) (extra := ACHat a c) ρAB hεAB hcandPlus
 
 end SubnormalizedState

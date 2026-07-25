@@ -194,17 +194,17 @@ theorem conditionalMaxEntropyPositiveValueSet_bddAbove_of_trace_pos
 
 /-- Subnormalized conditional max-entropy is lower semicontinuous on any
 positive trace-lower-bound region. -/
-theorem conditionalMaxEntropy_lowerSemicontinuousOn_trace_lower_bound
+theorem conditionalMaxEntropyRaw_lowerSemicontinuousOn_trace_lower_bound
     [Nonempty a] [Nonempty b] {δ : ℝ} (hδ : 0 < δ) :
     LowerSemicontinuousOn
-      (fun ρ : SubnormalizedState (Prod a b) => ρ.conditionalMaxEntropy)
+      (fun ρ : SubnormalizedState (Prod a b) => ρ.conditionalMaxEntropyRaw)
       {ρ | δ ≤ ρ.matrix.trace.re} := by
   intro ρ hρ y hy
   have hρ_pos : 0 < ρ.matrix.trace.re := lt_of_lt_of_le hδ hρ
   have hne :
       (ρ.conditionalMaxEntropyPositiveValueSet (a := a)).Nonempty :=
     ρ.conditionalMaxEntropyPositiveValueSet_nonempty_of_trace_pos (a := a) hρ_pos
-  change y < ρ.conditionalMaxEntropy at hy
+  change y < ρ.conditionalMaxEntropyRaw at hy
   rw [conditionalMaxEntropy_eq_sSup_positiveValueSet] at hy
   rcases exists_lt_of_lt_csSup hne hy with ⟨h, hh, hyh⟩
   rcases hh with ⟨σ, hpos, rfl⟩
@@ -248,12 +248,14 @@ theorem smoothConditionalMaxEntropy_exists_optimizer
     (ρ : SubnormalizedState (Prod a b)) {ε : ℝ}
     (hε_nonneg : 0 ≤ ε) (hε : ε < Real.sqrt ρ.matrix.trace.re) :
     ∃ ρmax : SubnormalizedState (Prod a b),
+      ∃ hρmax : ρmax.matrix ≠ 0,
       ρ.purifiedBall ε ρmax ∧
         ρ.smoothConditionalMaxEntropy ε hε_nonneg hε =
-          ρmax.conditionalMaxEntropy ∧
+          ρmax.conditionalMaxEntropyFinite hρmax ∧
           ∀ ρ' : SubnormalizedState (Prod a b),
-            ρ.purifiedBall ε ρ' →
-              ρmax.conditionalMaxEntropy ≤ ρ'.conditionalMaxEntropy := by
+            ∀ hρ' : ρ'.matrix ≠ 0, ρ.purifiedBall ε ρ' →
+              ρmax.conditionalMaxEntropyFinite hρmax ≤
+                ρ'.conditionalMaxEntropyFinite hρ' := by
   let δ : ℝ := (Real.sqrt ρ.matrix.trace.re - ε) ^ 2
   have hδ : 0 < δ := by
     dsimp [δ]
@@ -273,31 +275,37 @@ theorem smoothConditionalMaxEntropy_exists_optimizer
     exact ρ.purifiedBall_trace_lower_bound ρ' hε hball
   have hlsc_trace :
       LowerSemicontinuousOn
-        (fun ρ' : SubnormalizedState (Prod a b) => ρ'.conditionalMaxEntropy)
+        (fun ρ' : SubnormalizedState (Prod a b) => ρ'.conditionalMaxEntropyRaw)
         {ρ' | δ ≤ ρ'.matrix.trace.re} :=
-    conditionalMaxEntropy_lowerSemicontinuousOn_trace_lower_bound
+    conditionalMaxEntropyRaw_lowerSemicontinuousOn_trace_lower_bound
       (a := a) (b := b) hδ
   have hlsc_ball :
       LowerSemicontinuousOn
-        (fun ρ' : SubnormalizedState (Prod a b) => ρ'.conditionalMaxEntropy)
+        (fun ρ' : SubnormalizedState (Prod a b) => ρ'.conditionalMaxEntropyRaw)
         ball :=
     hlsc_trace.mono hball_subset_trace
   obtain ⟨ρmax, hρmax_ball, hρmax_min⟩ :=
     LowerSemicontinuousOn.exists_isMinOn hball_nonempty hball_compact hlsc_ball
-  refine ⟨ρmax, hρmax_ball, ?_, ?_⟩
+  have hρmax : ρmax.matrix ≠ 0 := by
+    have hpos := SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace
+      ρ ρmax hε hρmax_ball
+    intro hzero
+    rw [hzero] at hpos
+    simp at hpos
+  refine ⟨ρmax, hρmax, hρmax_ball, ?_, ?_⟩
   · rw [smoothConditionalMaxEntropy_eq_sInf_candidates]
     apply le_antisymm
     · exact csInf_le
-        (SubnormalizedState.SmoothConditionalMaxEntropyCandidate_bddBelow_of_lt_sqrt_trace
+        (SubnormalizedState.SmoothConditionalMaxEntropyCandidateRaw_bddBelow_of_lt_sqrt_trace
           (a := a) ρ hε)
         ⟨ρmax, hρmax_ball, rfl⟩
     · refine le_csInf
-        (SubnormalizedState.SmoothConditionalMaxEntropyCandidate_set_nonempty_of_nonneg
+        (SubnormalizedState.SmoothConditionalMaxEntropyCandidateRaw_set_nonempty_of_nonneg
           (a := a) ρ hε_nonneg) ?_
       intro h hh
       rcases hh with ⟨ρ', hρ'_ball, rfl⟩
       exact hρmax_min hρ'_ball
-  · intro ρ' hρ'_ball
+  · intro ρ' _hρ' hρ'_ball
     exact hρmax_min hρ'_ball
 
 private theorem neg_log2_antitone_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
@@ -315,14 +323,16 @@ theorem smoothConditionalMinEntropy_exists_scale_optimizer
     (ρ : SubnormalizedState (Prod a b)) {ε : ℝ}
     (hε_nonneg : 0 ≤ ε) (hε : ε < Real.sqrt ρ.matrix.trace.re) :
     ∃ (ρmin : SubnormalizedState (Prod a b)) (Tmin : CMatrix b),
+      ∃ hρmin : ρmin.matrix ≠ 0,
       ρ.purifiedBall ε ρmin ∧
         ConditionalMinEntropyScaleFeasible (a := a) ρmin Tmin ∧
           ρmin.conditionalMinEntropyScale (a := a) = Tmin.trace.re ∧
             ρ.smoothConditionalMinEntropy ε hε_nonneg hε =
-              ρmin.conditionalMinEntropy ∧
+              ρmin.conditionalMinEntropyFinite hρmin ∧
               ∀ ρ' : SubnormalizedState (Prod a b),
-                ρ.purifiedBall ε ρ' →
-                  ρ'.conditionalMinEntropy ≤ ρmin.conditionalMinEntropy := by
+                ∀ hρ' : ρ'.matrix ≠ 0, ρ.purifiedBall ε ρ' →
+                  ρ'.conditionalMinEntropyFinite hρ' ≤
+                    ρmin.conditionalMinEntropyFinite hρmin := by
   let B : ℝ := Fintype.card b
   let feasibleSet :=
     conditionalMinEntropyScaleFeasiblePairSet (a := a) (b := b) ρ ε B
@@ -403,9 +413,13 @@ theorem smoothConditionalMinEntropy_exists_scale_optimizer
     le_antisymm hscale_ρmin_le_Tmin (hscale_ge_Tmin ρmin hρmin_ball)
   have hρmin_trace_pos : 0 < ρmin.matrix.trace.re :=
     SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace ρ ρmin hε hρmin_ball
+  have hρmin : ρmin.matrix ≠ 0 := by
+    intro hzero
+    rw [hzero] at hρmin_trace_pos
+    simp at hρmin_trace_pos
   have hoptimizer :
       ∀ ρ' : SubnormalizedState (Prod a b), ρ.purifiedBall ε ρ' →
-        ρ'.conditionalMinEntropy ≤ ρmin.conditionalMinEntropy := by
+        ρ'.conditionalMinEntropyRaw ≤ ρmin.conditionalMinEntropyRaw := by
     intro ρ' hball
     have hρ'_trace_pos : 0 < ρ'.matrix.trace.re :=
       SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace ρ ρ' hε hball
@@ -418,19 +432,21 @@ theorem smoothConditionalMinEntropy_exists_scale_optimizer
         (a := a) hρmin_trace_pos,
       hscale_ρmin_eq_Tmin]
     exact neg_log2_antitone_of_pos hTmin_trace_pos hscale_ge
-  refine ⟨ρmin, Tmin, hρmin_ball, hTmin_feas, hscale_ρmin_eq_Tmin, ?_, hoptimizer⟩
+  refine ⟨ρmin, Tmin, hρmin, hρmin_ball, hTmin_feas, hscale_ρmin_eq_Tmin, ?_, ?_⟩
   rw [smoothConditionalMinEntropy_eq_sSup_candidates]
   apply le_antisymm
   · refine csSup_le
-      (SubnormalizedState.SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg
+      (SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg
         (a := a) ρ hε_nonneg) ?_
     intro h hh
     rcases hh with ⟨ρ', hρ'_ball, rfl⟩
     exact hoptimizer ρ' hρ'_ball
   · exact le_csSup
-      (SubnormalizedState.SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+      (SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
         (a := a) ρ hε)
       ⟨ρmin, hρmin_ball, rfl⟩
+  · intro ρ' _hρ' hball
+    exact hoptimizer ρ' hball
 
 /-- Smooth subnormalized conditional min-entropy attains its maximum on every
 purified-distance ball with radius below `sqrt (Tr ρ)`. -/
@@ -439,16 +455,18 @@ theorem smoothConditionalMinEntropy_exists_optimizer
     (ρ : SubnormalizedState (Prod a b)) {ε : ℝ}
     (hε_nonneg : 0 ≤ ε) (hε : ε < Real.sqrt ρ.matrix.trace.re) :
     ∃ ρmin : SubnormalizedState (Prod a b),
+      ∃ hρmin : ρmin.matrix ≠ 0,
       ρ.purifiedBall ε ρmin ∧
         ρ.smoothConditionalMinEntropy ε hε_nonneg hε =
-          ρmin.conditionalMinEntropy ∧
+          ρmin.conditionalMinEntropyFinite hρmin ∧
           ∀ ρ' : SubnormalizedState (Prod a b),
-            ρ.purifiedBall ε ρ' →
-              ρ'.conditionalMinEntropy ≤ ρmin.conditionalMinEntropy := by
+            ∀ hρ' : ρ'.matrix ≠ 0, ρ.purifiedBall ε ρ' →
+              ρ'.conditionalMinEntropyFinite hρ' ≤
+                ρmin.conditionalMinEntropyFinite hρmin := by
   rcases ρ.smoothConditionalMinEntropy_exists_scale_optimizer
       (a := a) hε_nonneg hε with
-    ⟨ρmin, _Tmin, hρmin_ball, _hTmin_feas, _hscale, hmin_eq, hoptimizer⟩
-  exact ⟨ρmin, hρmin_ball, hmin_eq, hoptimizer⟩
+    ⟨ρmin, _Tmin, hρmin, hρmin_ball, _hTmin_feas, _hscale, hmin_eq, hoptimizer⟩
+  exact ⟨ρmin, hρmin, hρmin_ball, hmin_eq, hoptimizer⟩
 
 /-- Combined smooth min/max source-spine theorem: both smooth extrema over the
 subnormalized purified-distance ball are attained. -/
@@ -457,25 +475,29 @@ theorem smoothConditionalMinMaxEntropy_exists_optimizers
     (ρ : SubnormalizedState (Prod a b)) {ε : ℝ}
     (hε_nonneg : 0 ≤ ε) (hε : ε < Real.sqrt ρ.matrix.trace.re) :
     ∃ ρmin ρmax : SubnormalizedState (Prod a b),
+      ∃ (hρmin : ρmin.matrix ≠ 0) (hρmax : ρmax.matrix ≠ 0),
       ρ.purifiedBall ε ρmin ∧
           ρ.purifiedBall ε ρmax ∧
           ρ.smoothConditionalMinEntropy ε hε_nonneg hε =
-              ρmin.conditionalMinEntropy ∧
+              ρmin.conditionalMinEntropyFinite hρmin ∧
             ρ.smoothConditionalMaxEntropy ε hε_nonneg hε =
-              ρmax.conditionalMaxEntropy ∧
+              ρmax.conditionalMaxEntropyFinite hρmax ∧
               (∀ ρ' : SubnormalizedState (Prod a b),
-                ρ.purifiedBall ε ρ' →
-                  ρ'.conditionalMinEntropy ≤ ρmin.conditionalMinEntropy) ∧
+                ∀ hρ' : ρ'.matrix ≠ 0, ρ.purifiedBall ε ρ' →
+                  ρ'.conditionalMinEntropyFinite hρ' ≤
+                    ρmin.conditionalMinEntropyFinite hρmin) ∧
                 ∀ ρ' : SubnormalizedState (Prod a b),
-                  ρ.purifiedBall ε ρ' →
-                    ρmax.conditionalMaxEntropy ≤ ρ'.conditionalMaxEntropy := by
+                  ∀ hρ' : ρ'.matrix ≠ 0, ρ.purifiedBall ε ρ' →
+                    ρmax.conditionalMaxEntropyFinite hρmax ≤
+                      ρ'.conditionalMaxEntropyFinite hρ' := by
   rcases smoothConditionalMinEntropy_exists_optimizer
       (a := a) (b := b) ρ hε_nonneg hε with
-    ⟨ρmin, hρmin_ball, hmin_eq, hmin_opt⟩
+    ⟨ρmin, hρmin, hρmin_ball, hmin_eq, hmin_opt⟩
   rcases smoothConditionalMaxEntropy_exists_optimizer
       (a := a) (b := b) ρ hε_nonneg hε with
-    ⟨ρmax, hρmax_ball, hmax_eq, hmax_opt⟩
-  exact ⟨ρmin, ρmax, hρmin_ball, hρmax_ball, hmin_eq, hmax_eq, hmin_opt, hmax_opt⟩
+    ⟨ρmax, hρmax, hρmax_ball, hmax_eq, hmax_opt⟩
+  exact ⟨ρmin, ρmax, hρmin, hρmax, hρmin_ball, hρmax_ball,
+    hmin_eq, hmax_eq, hmin_opt, hmax_opt⟩
 
 end SubnormalizedState
 

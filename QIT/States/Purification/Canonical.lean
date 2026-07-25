@@ -7,6 +7,9 @@ Authors: QuAIR Team
 module
 
 public import QIT.Core.Pure
+public import QIT.States.MaximallyEntangled
+public import QIT.States.MaximallyMixed
+public import QIT.States.Purification.Equivalence
 public import QIT.States.Purification.Predicate
 public import QIT.States.PosSqrt
 
@@ -63,6 +66,24 @@ theorem canonicalPurification_purifies (ρ : State a) :
     ρ.canonicalPurification.Purifies ρ := by
   rw [PureVector.purifies_iff, PureVector.state_matrix]
   exact canonicalPurification_matrix ρ
+
+/-- The canonical purification of the maximally mixed state is the canonical
+maximally entangled pure vector on the same register order. -/
+theorem canonicalPurification_maximallyMixed [Nonempty a] :
+    canonicalPurification (maximallyMixed a) =
+      PureVector.maximallyEntangled (Equiv.refl a) := by
+  apply PureVector.ext_amp
+  funext x
+  rcases x with ⟨i, j⟩
+  by_cases h : i = j
+  · subst j
+    simp [canonicalPurification, canonicalPurificationAmp,
+      State.maximallyMixed_sqrtMatrix, PureVector.maximallyEntangled_amp]
+  · have h' : ¬ j = i := by
+      intro hji
+      exact h hji.symm
+    simp [canonicalPurification, canonicalPurificationAmp,
+      State.maximallyMixed_sqrtMatrix, PureVector.maximallyEntangled_amp, h, h']
 
 end State
 

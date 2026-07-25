@@ -40,28 +40,25 @@ theorem IsAchievableStateMergingRate.mono
     (hRS : R ≤ S)
     (hR : IsAchievableStateMergingRate.{u, v, w, x, y, z, p, q} psi R) :
     IsAchievableStateMergingRate.{u, v, w, x, y, z, p, q} psi S := by
-  rcases hR with ⟨outputEbitExponent, houtputEbitExponent, hR⟩
-  refine ⟨outputEbitExponent, houtputEbitExponent, ?_⟩
   intro delta hdelta epsilon hepsilon
-  obtain ⟨N, hN, hblocks⟩ := hR delta hdelta epsilon hepsilon
-  refine ⟨N, hN, ?_⟩
+  obtain ⟨N, hblocks⟩ := hR delta hdelta epsilon hepsilon
+  refine ⟨N, ?_⟩
   intro n hn
   obtain ⟨kA, hkAF, hkAD, hkAN, kB, hkBF, hkBD,
       lA, hlAF, hlAD, hlAN, lB, hlBF, hlBD,
       outcome, houtcomeF, houtcomeD, houtcomeN,
-      C, hrate, herror, houtput⟩ := hblocks n hn
+      C, hrate, herror⟩ := hblocks n hn
   refine ⟨kA, hkAF, hkAD, hkAN, kB, hkBF, hkBD,
     lA, hlAF, hlAD, hlAN, lB, hlBF, hlBD,
     outcome, houtcomeF, houtcomeD, houtcomeN,
-    C, ?_, herror, houtput⟩
+    C, ?_, herror⟩
   exact hrate.trans (by simpa [add_comm] using add_le_add_right hRS delta)
 
-/-- The ADHW FQSW-plus-teleportation construction achieves the conditional
-entropy endpoint. In particular, this includes negative conditional entropy,
-where the protocol generates net entanglement. -/
-theorem stateMerging_direct_achievable_at_conditionalEntropy
+/-- The concrete ADHW FQSW-plus-teleportation construction obeys the stronger
+uniform output-ebit exponent bound used by the original HOW/Fannes converse. -/
+theorem stateMerging_direct_achievable_at_conditionalEntropy_withOutputEbitExponent
     (psi : PureVector (Prod (Prod a b) r)) :
-    PureVector.IsAchievableStateMergingRate.{u, v, w, x, x, y, y, x}
+    PureVector.IsAchievableStateMergingRateWithOutputEbitExponent.{u, v, w, x, x, y, y, x}
       psi psi.state.marginalA.conditionalEntropy := by
   refine ⟨psi.fqswEbitYieldRate, psi.fqswEbitYieldRate_nonneg, ?_⟩
   intro delta hdelta epsilon hepsilon
@@ -140,6 +137,17 @@ theorem stateMerging_direct_achievable_at_conditionalEntropy
   · exact log2_card_le_exponent_mul_of_card_le_two_rpow
       e n psi.fqswEbitYieldRate
       B.balancedRateChoice.ebit_card_upper_for_target
+
+/-- The ADHW FQSW-plus-teleportation construction achieves the conditional
+entropy endpoint for the canonical HOW rate predicate. In particular, this
+includes negative conditional entropy, where the protocol generates net
+entanglement. -/
+theorem stateMerging_direct_achievable_at_conditionalEntropy
+    (psi : PureVector (Prod (Prod a b) r)) :
+    PureVector.IsAchievableStateMergingRate.{u, v, w, x, x, y, y, x}
+      psi psi.state.marginalA.conditionalEntropy :=
+  (stateMerging_direct_achievable_at_conditionalEntropy_withOutputEbitExponent psi)
+    |>.toIsAchievableStateMergingRate
 
 /-- Every net entanglement rate strictly above the conditional entropy is
 achievable by the concrete FQSW-plus-teleportation route. -/

@@ -389,7 +389,8 @@ theorem posSemidef_trace_mul_rpow_le_psdSchattenPNorm_mul_trace_rpow
     {M X : CMatrix a} (hM : M.PosSemidef) (hX : X.PosSemidef)
     {c : ℝ} (hc_pos : 0 < c) (hc_lt_one : c < 1) :
     ((M * CFC.rpow X (1 - c)).trace).re ≤
-      psdSchattenPNorm M hM (1 / c) * X.trace.re ^ (1 - c) := by
+      psdSchattenPNorm M hM ⟨1 / c, one_div_pos.mpr hc_pos⟩ *
+        X.trace.re ^ (1 - c) := by
   let S : ℝ := X.trace.re
   let T : ℝ := ((M * CFC.rpow X (1 - c)).trace).re
   have hS_nonneg : 0 ≤ S := by
@@ -422,7 +423,7 @@ theorem posSemidef_trace_mul_rpow_le_psdSchattenPNorm_mul_trace_rpow
       field_simp [ne_of_gt hr_pos]
     have hholder :
         ((M * CFC.rpow N (1 - c)).trace).re ≤
-          psdSchattenPNorm M hM (1 / c) :=
+          psdSchattenPNorm M hM ⟨1 / c, one_div_pos.mpr hc_pos⟩ :=
       psd_trace_rpow_holder_variational_upper
         (M := M) (N := N) hM hN hNtr hpq hr
     have hNpow :
@@ -433,7 +434,7 @@ theorem posSemidef_trace_mul_rpow_le_psdSchattenPNorm_mul_trace_rpow
           (A := X) (s := 1 - c) hX hscale_nonneg
     have hholder' :
         ((M * ((S⁻¹ ^ (1 - c) : ℝ) • CFC.rpow X (1 - c))).trace).re ≤
-          psdSchattenPNorm M hM (1 / c) := by
+          psdSchattenPNorm M hM ⟨1 / c, one_div_pos.mpr hc_pos⟩ := by
       have hholder' := hholder
       rw [hNpow] at hholder'
       exact hholder'
@@ -442,7 +443,8 @@ theorem posSemidef_trace_mul_rpow_le_psdSchattenPNorm_mul_trace_rpow
           S⁻¹ ^ (1 - c) * T := by
       simp [T, Matrix.trace_smul, Complex.mul_re]
     have hscaled :
-        S⁻¹ ^ (1 - c) * T ≤ psdSchattenPNorm M hM (1 / c) := by
+        S⁻¹ ^ (1 - c) * T ≤
+          psdSchattenPNorm M hM ⟨1 / c, one_div_pos.mpr hc_pos⟩ := by
       simpa [htrace_smul] using hholder'
     have hSr_nonneg : 0 ≤ S ^ (1 - c) := Real.rpow_nonneg hS_nonneg _
     have hSr_pos : 0 < S ^ (1 - c) := Real.rpow_pos_of_pos hS_pos _
@@ -451,7 +453,7 @@ theorem posSemidef_trace_mul_rpow_le_psdSchattenPNorm_mul_trace_rpow
       exact inv_mul_cancel₀ (ne_of_gt hSr_pos)
     have hmul :
         (S⁻¹ ^ (1 - c) * T) * S ^ (1 - c) ≤
-          psdSchattenPNorm M hM (1 / c) * S ^ (1 - c) :=
+          psdSchattenPNorm M hM ⟨1 / c, one_div_pos.mpr hc_pos⟩ * S ^ (1 - c) :=
       mul_le_mul_of_nonneg_right hscaled hSr_nonneg
     calc
       T = (S⁻¹ ^ (1 - c) * T) * S ^ (1 - c) := by
@@ -460,7 +462,8 @@ theorem posSemidef_trace_mul_rpow_le_psdSchattenPNorm_mul_trace_rpow
                 (S⁻¹ ^ (1 - c) * T) * S ^ (1 - c) =
                     T * (S⁻¹ ^ (1 - c) * S ^ (1 - c)) := by ring
                 _ = T := by rw [hscale_mul, mul_one]).symm
-      _ ≤ psdSchattenPNorm M hM (1 / c) * S ^ (1 - c) := hmul
+      _ ≤ psdSchattenPNorm M hM ⟨1 / c, one_div_pos.mpr hc_pos⟩ *
+          S ^ (1 - c) := hmul
 
 /-- Upper-bound side of the finite-dimensional Epstein--Young variational
 formula for the Epstein trace primitive. -/
@@ -480,18 +483,19 @@ theorem epsteinDualObjective_le_epsteinTraceTerm
   have hS_nonneg : 0 ≤ S := by
     simpa [S] using (Matrix.PosSemidef.trace_nonneg hX).1
   have htrace_holder :
-      T ≤ psdSchattenPNorm M hM (1 / c) * S ^ (1 - c) := by
+      T ≤ psdSchattenPNorm M hM ⟨1 / c, one_div_pos.mpr hc_pos⟩ *
+        S ^ (1 - c) := by
     simpa [T, S] using
       posSemidef_trace_mul_rpow_le_psdSchattenPNorm_mul_trace_rpow
         (M := M) (X := X) hM hX hc_pos hc_lt_one
   have hnorm :
-      psdSchattenPNorm M hM (1 / c) = A ^ c := by
+      psdSchattenPNorm M hM ⟨1 / c, one_div_pos.mpr hc_pos⟩ = A ^ c := by
     have hpower_eq : psdTracePower M hM (1 / c) = A := by
       change (CFC.rpow M (1 / c)).trace.re = A
       rfl
     have hinv : 1 / (1 / c) = c := by
       field_simp [hc_pos.ne']
-    rw [psdSchattenPNorm, hpower_eq, hinv]
+    rw [psdSchattenPNorm, Internal.psdSchattenExpression, hpower_eq, hinv]
     rfl
   have htrace_bound : T ≤ A ^ c * S ^ (1 - c) := by
     rw [hnorm] at htrace_holder

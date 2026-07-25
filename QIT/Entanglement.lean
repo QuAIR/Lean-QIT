@@ -9,6 +9,7 @@ module
 public import QIT.Entanglement.Separable
 public import QIT.Entanglement.PPT
 public import QIT.Entanglement.Majorization
+public import QIT.Entanglement.MaximallyEntangled
 
 /-!
 # Entanglement and state geometry

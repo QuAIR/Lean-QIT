@@ -8,6 +8,7 @@ module
 
 public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.Basic
 public import QIT.Information.Entropy.EntropyTensorPower
+public import QIT.States.MaximallyEntangled
 
 /-!
 # Completely bounded `1 -> alpha` norm API for EA sandwiched Renyi proofs
@@ -85,14 +86,43 @@ theorem referenceLift_mapsPositive
 
 /-- The unnormalized maximally entangled projector `|Gamma><Gamma|` is the
 Choi matrix of the identity channel. -/
-def maximallyEntangledProjector (a : Type u) [Fintype a] [DecidableEq a] :
+def unnormalizedMaximallyEntangledProjector (a : Type u) [Fintype a] [DecidableEq a] :
     CMatrix (Prod a a) :=
   MatrixMap.choi (Channel.idChannel a).map
 
 /-- The unnormalized maximally entangled projector is positive semidefinite. -/
-theorem maximallyEntangledProjector_posSemidef :
-    (maximallyEntangledProjector a).PosSemidef :=
+theorem unnormalizedMaximallyEntangledProjector_posSemidef :
+    (unnormalizedMaximallyEntangledProjector a).PosSemidef :=
   (Channel.idChannel a).completelyPositive
+
+/-- On a nonempty finite system, the unnormalized Choi/Gamma projector is the
+dimension-scaled normalized canonical maximally entangled state. -/
+theorem unnormalizedMaximallyEntangledProjector_eq_card_smul_state [Nonempty a] :
+    unnormalizedMaximallyEntangledProjector a =
+      (Fintype.card a : ℂ) • (State.maximallyEntangled (Equiv.refl a)).matrix := by
+  ext x y
+  rcases x with ⟨i, j⟩
+  rcases y with ⟨i', j'⟩
+  by_cases hij : i = j
+  · by_cases hi'j' : i' = j'
+    · subst j
+      subst j'
+      have hcard_pos : 0 < (Fintype.card a : ℝ) := by
+        exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
+      have hsqrt_ne : (Real.sqrt (Fintype.card a : ℝ) : ℂ) ≠ 0 := by
+        exact_mod_cast (ne_of_gt (Real.sqrt_pos.2 hcard_pos))
+      simp [unnormalizedMaximallyEntangledProjector, MatrixMap.choi, Channel.idChannel_map,
+        State.maximallyEntangled, PureVector.maximallyEntangled, PureVector.state,
+        rankOneMatrix_apply, Matrix.single]
+      field_simp [hsqrt_ne]
+      rw [← Complex.ofReal_natCast, ← Complex.ofReal_pow]
+      exact congrArg Complex.ofReal (Real.sq_sqrt hcard_pos.le)
+    · simp [unnormalizedMaximallyEntangledProjector, MatrixMap.choi, Channel.idChannel_map,
+        State.maximallyEntangled, PureVector.maximallyEntangled, PureVector.state,
+        rankOneMatrix_apply, Matrix.single, hij, hi'j']
+  · simp [unnormalizedMaximallyEntangledProjector, MatrixMap.choi, Channel.idChannel_map,
+      State.maximallyEntangled, PureVector.maximallyEntangled, PureVector.state,
+      rankOneMatrix_apply, Matrix.single, hij]
 
 /-- The reference-side weight `Y_R^(1/(2 alpha)) tensor I_A` from the source CB
 norm definition. -/
@@ -113,7 +143,7 @@ theorem cbOneToAlphaReferenceWeight_isHermitian
 before applying `id_R tensor M`. -/
 def cbOneToAlphaOriginalInput (Y : CMatrix a) (alpha : ℝ) : CMatrix (Prod a a) :=
   cbOneToAlphaReferenceWeight Y alpha *
-    maximallyEntangledProjector a *
+    unnormalizedMaximallyEntangledProjector a *
       cbOneToAlphaReferenceWeight Y alpha
 
 /-- The source CB-norm input is positive semidefinite whenever `Y` is. -/
@@ -124,7 +154,7 @@ theorem cbOneToAlphaOriginalInput_posSemidef
   have hW : W.IsHermitian := cbOneToAlphaReferenceWeight_isHermitian hY alpha
   have h :=
     Matrix.PosSemidef.conjTranspose_mul_mul_same
-      (maximallyEntangledProjector_posSemidef (a := a)) W
+      (unnormalizedMaximallyEntangledProjector_posSemidef (a := a)) W
   simpa [cbOneToAlphaOriginalInput, W, hW.eq] using h
 
 /-- Domain of the source Choi/Gamma CB norm expression. -/
@@ -145,7 +175,7 @@ def CBOneToAlphaOriginalDomain.zero (a : Type u) [Fintype a] :
 /-- Source CB `1 -> alpha` value for a single admissible reference-side input. -/
 def cbOneToAlphaOriginalValue
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (Y : CBOneToAlphaOriginalDomain a) (alpha : ℝ) : ℝ :=
+    (Y : CBOneToAlphaOriginalDomain a) (alpha : SchattenOrder) : ℝ :=
   psdSchattenPNorm
     (Phi.referenceLift (cbOneToAlphaOriginalInput Y.matrix alpha))
     (Phi.referenceLift_mapsPositive hPhi
@@ -155,33 +185,33 @@ def cbOneToAlphaOriginalValue
 /-- Value set of the source Choi/Gamma CB `1 -> alpha` norm expression. -/
 def cbOneToAlphaOriginalValueSet
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : ℝ) : Set ℝ :=
+    (alpha : SchattenOrder) : Set ℝ :=
   Set.range fun Y : CBOneToAlphaOriginalDomain a =>
     cbOneToAlphaOriginalValue Phi hPhi Y alpha
 
 /-- Source-side CB `1 -> alpha` norm surface from `eq-operator_CB_alpha_norm`. -/
 def cbOneToAlphaNorm
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : ℝ) : ℝ :=
+    (alpha : SchattenOrder) : ℝ :=
   sSup (cbOneToAlphaOriginalValueSet Phi hPhi alpha)
 
 theorem cbOneToAlphaNorm_eq_sSup
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : ℝ) :
+    (alpha : SchattenOrder) :
     cbOneToAlphaNorm Phi hPhi alpha =
       sSup (cbOneToAlphaOriginalValueSet Phi hPhi alpha) := by
   rfl
 
 theorem cbOneToAlphaOriginalValue_mem_valueSet
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (Y : CBOneToAlphaOriginalDomain a) (alpha : ℝ) :
+    (Y : CBOneToAlphaOriginalDomain a) (alpha : SchattenOrder) :
     cbOneToAlphaOriginalValue Phi hPhi Y alpha ∈
       cbOneToAlphaOriginalValueSet Phi hPhi alpha := by
   exact ⟨Y, rfl⟩
 
 theorem cbOneToAlphaOriginalValue_nonneg
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (Y : CBOneToAlphaOriginalDomain a) (alpha : ℝ) :
+    (Y : CBOneToAlphaOriginalDomain a) (alpha : SchattenOrder) :
     0 ≤ cbOneToAlphaOriginalValue Phi hPhi Y alpha :=
   psdSchattenPNorm_nonneg
     (Phi.referenceLift (cbOneToAlphaOriginalInput Y.matrix alpha))
@@ -193,7 +223,7 @@ theorem cbOneToAlphaOriginalValue_nonneg
 positive bipartite inputs whose reference marginal has nonzero Schatten
 `alpha` expression. -/
 structure CBOneToAlphaAlternateDomain (a : Type u) [Fintype a] [DecidableEq a]
-    (alpha : ℝ) where
+    (alpha : SchattenOrder) where
   matrix : CMatrix (Prod a a)
   pos : matrix.PosSemidef
   marginal_norm_pos :
@@ -205,7 +235,7 @@ structure CBOneToAlphaAlternateDomain (a : Type u) [Fintype a] [DecidableEq a]
 /-- Source alternate-expression value for one positive bipartite input. -/
 def cbOneToAlphaAlternateValue
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : ℝ} (Y : CBOneToAlphaAlternateDomain a alpha) : ℝ :=
+    {alpha : SchattenOrder} (Y : CBOneToAlphaAlternateDomain a alpha) : ℝ :=
   psdSchattenPNorm
       (Phi.referenceLift Y.matrix)
       (Phi.referenceLift_mapsPositive hPhi Y.pos)
@@ -219,33 +249,33 @@ def cbOneToAlphaAlternateValue
 `eq-eacc_CB_1alpha_norm_alt`. -/
 def cbOneToAlphaAlternateValueSet
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : ℝ) : Set ℝ :=
+    (alpha : SchattenOrder) : Set ℝ :=
   Set.range fun Y : CBOneToAlphaAlternateDomain a alpha =>
     cbOneToAlphaAlternateValue Phi hPhi Y
 
 /-- Right-hand side of the alternate CB `1 -> alpha` norm expression. -/
 def cbOneToAlphaAlternateExpression
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : ℝ) : ℝ :=
+    (alpha : SchattenOrder) : ℝ :=
   sSup (cbOneToAlphaAlternateValueSet Phi hPhi alpha)
 
 theorem cbOneToAlphaAlternateExpression_eq_sSup
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : ℝ) :
+    (alpha : SchattenOrder) :
     cbOneToAlphaAlternateExpression Phi hPhi alpha =
       sSup (cbOneToAlphaAlternateValueSet Phi hPhi alpha) := by
   rfl
 
 theorem cbOneToAlphaAlternateValue_mem_valueSet
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : ℝ} (Y : CBOneToAlphaAlternateDomain a alpha) :
+    {alpha : SchattenOrder} (Y : CBOneToAlphaAlternateDomain a alpha) :
     cbOneToAlphaAlternateValue Phi hPhi Y ∈
       cbOneToAlphaAlternateValueSet Phi hPhi alpha := by
   exact ⟨Y, rfl⟩
 
 theorem cbOneToAlphaAlternateValue_nonneg
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : ℝ} (Y : CBOneToAlphaAlternateDomain a alpha) :
+    {alpha : SchattenOrder} (Y : CBOneToAlphaAlternateDomain a alpha) :
     0 ≤ cbOneToAlphaAlternateValue Phi hPhi Y := by
   exact div_nonneg
     (psdSchattenPNorm_nonneg (Phi.referenceLift Y.matrix)

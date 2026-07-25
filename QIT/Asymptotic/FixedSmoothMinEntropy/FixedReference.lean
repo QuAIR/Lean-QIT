@@ -360,7 +360,7 @@ private theorem ConditionalMinEntropyFeasible.exists_posDef_reference_below
   have hσ'pos : σ'.matrix.PosDef := by
     simpa [σ'] using
       State.regularizedWithState_posDef_of_noise σ m
-        (State.maximallyMixed_posDef_of_nonempty (a := b)) hp0 hp1 hp_pos
+        (State.maximallyMixed_posDef (a := b)) hp0 hp1 hp_pos
   refine ⟨σ', hσ'pos, ?_⟩
   rw [ConditionalMinEntropyFeasible] at hfeas ⊢
   let cμ : ℝ := Real.rpow 2 (-μ)
@@ -929,8 +929,8 @@ theorem conditionalMinEntropyFixed_le_conditionalMinEntropy
     (hfixed : ({lam : ℝ |
       ConditionalMinEntropyFeasible (a := a) ρ σ lam}).Nonempty)
     (hρtr : 0 < ρ.matrix.trace.re) :
-    ρ.conditionalMinEntropyFixed σ ≤ ρ.conditionalMinEntropy := by
-  rw [conditionalMinEntropyFixed_eq, conditionalMinEntropy_eq]
+    ρ.conditionalMinEntropyFixed σ ≤ ρ.conditionalMinEntropyRaw := by
+  rw [conditionalMinEntropyFixed_eq, conditionalMinEntropyRaw_eq]
   refine csSup_le hfixed ?_
   intro lam hlam
   exact le_csSup
@@ -1035,11 +1035,11 @@ theorem SmoothConditionalMinEntropyFixedSubnormalizedCandidate_bddAbove
 
 /-- Subnormalized smooth min-entropy candidates around a normalized center are
 bounded above for radii below one. -/
-theorem SubnormalizedState.SmoothConditionalMinEntropyCandidate_bddAbove_of_state_center
+theorem SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_state_center
     (ρ : State (Prod a b)) {ε : ℝ}
     (hε_nonneg : 0 ≤ ε) (hε_lt : ε < 1) :
     BddAbove {h : ℝ |
-      SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := a)
+      SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := a)
         ρ.toSubnormalized ε h} := by
   haveI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
   let δ : ℝ := (1 - ε) ^ 2
@@ -1062,7 +1062,7 @@ theorem SubnormalizedState.SmoothConditionalMinEntropyCandidate_bddAbove_of_stat
       norm_num
     simpa [δ, hcenter_trace] using
       ρ.toSubnormalized.purifiedBall_trace_lower_bound ρ' hε_sqrt hball
-  rw [SubnormalizedState.conditionalMinEntropy_eq]
+  rw [SubnormalizedState.conditionalMinEntropyRaw_eq]
   by_cases hne :
       ({lam : ℝ | ∃ σ : SubnormalizedState b,
         SubnormalizedState.ConditionalMinEntropyFeasible (a := a) ρ' σ lam}).Nonempty
@@ -1085,7 +1085,7 @@ theorem SubnormalizedState.SmoothConditionalMinEntropyCandidate_bddAbove_of_stat
 
 /-- Moving a normalized center only increases the smoothing radius needed for
 subnormalized smooth min-entropy.  This is the `sSup`-level form of
-`SubnormalizedState.SmoothConditionalMinEntropyCandidate_center_migration`. -/
+`SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw_center_migration`. -/
 theorem subnormalizedSmoothConditionalMinEntropyRaw_center_migration
     (ρ η : State (Prod a b)) {ε δ : ℝ}
     (hε_nonneg : 0 ≤ ε)
@@ -1096,13 +1096,13 @@ theorem subnormalizedSmoothConditionalMinEntropyRaw_center_migration
   rw [SubnormalizedState.smoothConditionalMinEntropyRaw_eq_sSup_candidates,
     SubnormalizedState.smoothConditionalMinEntropyRaw_eq_sSup_candidates]
   refine csSup_le ?_ ?_
-  · exact ⟨η.toSubnormalized.conditionalMinEntropy, η.toSubnormalized,
+  · exact ⟨η.toSubnormalized.conditionalMinEntropyRaw, η.toSubnormalized,
       SubnormalizedState.purifiedBall_self_of_nonneg η.toSubnormalized hε_nonneg, rfl⟩
   intro h hh
   exact le_csSup
-    (SubnormalizedState.SmoothConditionalMinEntropyCandidate_bddAbove_of_state_center
+    (SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_state_center
       (a := a) ρ hεδ_nonneg hεδ_lt)
-    (SubnormalizedState.SmoothConditionalMinEntropyCandidate_center_migration
+    (SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw_center_migration
       (a := a) hcenter hh)
 
 /-- Tensor-power spelling of center migration for the unrestricted internal
@@ -1177,10 +1177,10 @@ theorem smoothConditionalMinEntropyFixedSubnormalized_le_subnormalizedSmoothCond
     (SubnormalizedState.conditionalMinEntropyFixed_le_conditionalMinEntropy
       (a := a) ρ' σ (hfixed ρ' hball) hρ'tr)
     (le_csSup
-      (SubnormalizedState.SmoothConditionalMinEntropyCandidate_bddAbove_of_state_center
+      (SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_state_center
         (a := a) ρ hε_nonneg hε_lt)
-      (show SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := a)
-          ρ.toSubnormalized ε ρ'.conditionalMinEntropy from
+      (show SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := a)
+          ρ.toSubnormalized ε ρ'.conditionalMinEntropyRaw from
         ⟨ρ', hball, rfl⟩))
 
 /-- A subnormalized purified-ball witness with a fixed-reference feasible

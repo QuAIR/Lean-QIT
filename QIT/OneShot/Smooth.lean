@@ -1541,10 +1541,6 @@ theorem purifiedBall_iff_toSubnormalized_purifiedBall (ρ σ : State a) (ε : �
 
 variable {b : Type v} [Fintype b] [DecidableEq b]
 
-/-- The matrix `I_A ⊗ σ_B` used in conditional min/max entropy definitions. -/
-def identityTensorStateMatrix (σ : State b) : CMatrix (Prod a b) :=
-  Matrix.kronecker (1 : CMatrix a) σ.matrix
-
 /-- Feasibility predicate for the conditional min-entropy order constraint
 `ρ_AB ≤ 2^{-λ} • (I_A ⊗ σ_B)` in the local bits convention. -/
 def ConditionalMinEntropyFeasible (ρ : State (Prod a b)) (σ : State b) (lam : ℝ) :
@@ -1900,18 +1896,53 @@ theorem ConditionalMinEntropyFeasible_eq
       ρ.matrix ≤ (Real.rpow 2 (-lam) : ℂ) • identityTensorStateMatrix (a := a) σ :=
   Iff.rfl
 
-/-- Subnormalized conditional min-entropy as the supremum of feasible
-exponents over subnormalized side-information states. -/
-def conditionalMinEntropy (ρ : SubnormalizedState (Prod a b)) : ℝ :=
+/-- Internal real-valued branch of subnormalized conditional min-entropy.
+
+This helper is not the canonical endpoint API: `sSup` totalizes the zero-state
+branch in `ℝ`.  Source-facing code must use `conditionalMinEntropy`, or
+`conditionalMinEntropyFinite` after supplying a nonzero-state proof. -/
+def conditionalMinEntropyRaw (ρ : SubnormalizedState (Prod a b)) : ℝ :=
   sSup {lam : ℝ | ∃ σ : SubnormalizedState b,
     ConditionalMinEntropyFeasible (a := a) ρ σ lam}
 
 @[simp]
-theorem conditionalMinEntropy_eq (ρ : SubnormalizedState (Prod a b)) :
-    ρ.conditionalMinEntropy =
+theorem conditionalMinEntropyRaw_eq (ρ : SubnormalizedState (Prod a b)) :
+    ρ.conditionalMinEntropyRaw =
       sSup {lam : ℝ | ∃ σ : SubnormalizedState b,
         ConditionalMinEntropyFeasible (a := a) ρ σ lam} :=
   rfl
+
+/-- Finite real branch of subnormalized conditional min-entropy.
+
+The nonzero proof prevents callers from silently projecting the canonical
+extended-real zero-state value `⊤` to an arbitrary real number. -/
+def conditionalMinEntropyFinite
+    (ρ : SubnormalizedState (Prod a b)) (_hρ : ρ.matrix ≠ 0) : ℝ :=
+  ρ.conditionalMinEntropyRaw
+
+/-- A positive real trace rules out the zero subnormalized state. -/
+theorem matrix_ne_zero_of_trace_re_pos
+    (ρ : SubnormalizedState a) (hρ : 0 < ρ.matrix.trace.re) : ρ.matrix ≠ 0 := by
+  intro hzero
+  rw [hzero] at hρ
+  simp at hρ
+
+/-- Canonical subnormalized conditional min-entropy.  The zero state has value
+`⊤`; every nonzero state uses the finite real branch. -/
+def conditionalMinEntropy (ρ : SubnormalizedState (Prod a b)) : EReal :=
+  if hρ : ρ.matrix = 0 then ⊤ else (ρ.conditionalMinEntropyFinite hρ : EReal)
+
+@[simp]
+theorem conditionalMinEntropy_eq_top_of_matrix_eq_zero
+    {ρ : SubnormalizedState (Prod a b)} (hρ : ρ.matrix = 0) :
+    ρ.conditionalMinEntropy = ⊤ := by
+  simp [conditionalMinEntropy, hρ]
+
+@[simp]
+theorem conditionalMinEntropy_eq_coe_finite_of_matrix_ne_zero
+    {ρ : SubnormalizedState (Prod a b)} (hρ : ρ.matrix ≠ 0) :
+    ρ.conditionalMinEntropy = (ρ.conditionalMinEntropyFinite hρ : EReal) := by
+  simp [conditionalMinEntropy, hρ]
 
 /-- The trace-norm squared-fidelity candidate `log₂ F(ρ_AB, I_A ⊗ σ_B)` for
 subnormalized conditional max-entropy.
@@ -1923,84 +1954,143 @@ def conditionalMaxEntropyFidelityCandidate
   log2 ((traceNorm (psdSqrt ρ.matrix *
     psdSqrt (identityTensorStateMatrix (a := a) σ))) ^ 2)
 
-/-- Subnormalized conditional max-entropy as the supremum over subnormalized
-side-information states of positive squared-fidelity candidates.
+/-- Internal real-valued branch of subnormalized conditional max-entropy.
 
-The positivity guard avoids assigning finite real content to the usual
-extended-real value `log 0 = -∞`. -/
-def conditionalMaxEntropy (ρ : SubnormalizedState (Prod a b)) : ℝ :=
+The positivity guard removes `log 0` candidates, but `sSup ∅` still totalizes
+the zero state in `ℝ`.  Source-facing code must use `conditionalMaxEntropy`, or
+`conditionalMaxEntropyFinite` after supplying a nonzero-state proof. -/
+def conditionalMaxEntropyRaw (ρ : SubnormalizedState (Prod a b)) : ℝ :=
   sSup {h : ℝ | ∃ σ : SubnormalizedState b,
     0 < (traceNorm (psdSqrt ρ.matrix *
       psdSqrt (identityTensorStateMatrix (a := a) σ))) ^ 2 ∧
       h = conditionalMaxEntropyFidelityCandidate (a := a) ρ σ}
 
 @[simp]
-theorem conditionalMaxEntropy_eq (ρ : SubnormalizedState (Prod a b)) :
-    ρ.conditionalMaxEntropy =
+theorem conditionalMaxEntropyRaw_eq (ρ : SubnormalizedState (Prod a b)) :
+    ρ.conditionalMaxEntropyRaw =
       sSup {h : ℝ | ∃ σ : SubnormalizedState b,
         0 < (traceNorm (psdSqrt ρ.matrix *
           psdSqrt (identityTensorStateMatrix (a := a) σ))) ^ 2 ∧
           h = conditionalMaxEntropyFidelityCandidate (a := a) ρ σ} :=
   rfl
 
+/-- Finite real branch of subnormalized conditional max-entropy.
+
+The nonzero proof prevents callers from silently projecting the canonical
+extended-real zero-state value `⊥` to an arbitrary real number. -/
+def conditionalMaxEntropyFinite
+    (ρ : SubnormalizedState (Prod a b)) (_hρ : ρ.matrix ≠ 0) : ℝ :=
+  ρ.conditionalMaxEntropyRaw
+
+/-- Canonical subnormalized conditional max-entropy.  The zero state has value
+`⊥`; every nonzero state uses the finite real branch. -/
+def conditionalMaxEntropy (ρ : SubnormalizedState (Prod a b)) : EReal :=
+  if hρ : ρ.matrix = 0 then ⊥ else (ρ.conditionalMaxEntropyFinite hρ : EReal)
+
+@[simp]
+theorem conditionalMaxEntropy_eq_bot_of_matrix_eq_zero
+    {ρ : SubnormalizedState (Prod a b)} (hρ : ρ.matrix = 0) :
+    ρ.conditionalMaxEntropy = ⊥ := by
+  simp [conditionalMaxEntropy, hρ]
+
+@[simp]
+theorem conditionalMaxEntropy_eq_coe_finite_of_matrix_ne_zero
+    {ρ : SubnormalizedState (Prod a b)} (hρ : ρ.matrix ≠ 0) :
+    ρ.conditionalMaxEntropy = (ρ.conditionalMaxEntropyFinite hρ : EReal) := by
+  simp [conditionalMaxEntropy, hρ]
+
 /-! ## Subnormalized smooth conditional min/max entropy -/
 
 /-- Candidate values for subnormalized smooth conditional min-entropy at
 smoothing radius `ε`. -/
-def SmoothConditionalMinEntropyCandidate
+def SmoothConditionalMinEntropyCandidateRaw
     (ρ : SubnormalizedState (Prod a b)) (ε h : ℝ) : Prop :=
   ∃ ρ' : SubnormalizedState (Prod a b),
-    ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropy
+    ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropyRaw
+
+@[simp]
+theorem SmoothConditionalMinEntropyCandidateRaw_eq
+    (ρ : SubnormalizedState (Prod a b)) (ε h : ℝ) :
+    SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h ↔
+      ∃ ρ' : SubnormalizedState (Prod a b),
+        ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropyRaw :=
+  Iff.rfl
+
+/-- Candidate values for subnormalized smooth conditional max-entropy at
+smoothing radius `ε`. -/
+def SmoothConditionalMaxEntropyCandidateRaw
+    (ρ : SubnormalizedState (Prod a b)) (ε h : ℝ) : Prop :=
+  ∃ ρ' : SubnormalizedState (Prod a b),
+    ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropyRaw
+
+@[simp]
+theorem SmoothConditionalMaxEntropyCandidateRaw_eq
+    (ρ : SubnormalizedState (Prod a b)) (ε h : ℝ) :
+    SmoothConditionalMaxEntropyCandidateRaw (a := a) ρ ε h ↔
+      ∃ ρ' : SubnormalizedState (Prod a b),
+        ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropyRaw :=
+  Iff.rfl
+
+/-- Safe real-valued candidate for subnormalized smooth conditional min-entropy.
+
+The nonzero witness makes the finite branch explicit and prevents the
+canonical zero-state value `⊤` from being projected to `ℝ`. -/
+def SmoothConditionalMinEntropyCandidate
+    (ρ : SubnormalizedState (Prod a b)) (ε h : ℝ) : Prop :=
+  ∃ ρ' : SubnormalizedState (Prod a b), ∃ hρ' : ρ'.matrix ≠ 0,
+    ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropyFinite hρ'
 
 @[simp]
 theorem SmoothConditionalMinEntropyCandidate_eq
     (ρ : SubnormalizedState (Prod a b)) (ε h : ℝ) :
     SmoothConditionalMinEntropyCandidate (a := a) ρ ε h ↔
-      ∃ ρ' : SubnormalizedState (Prod a b),
-        ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropy :=
+      ∃ ρ' : SubnormalizedState (Prod a b), ∃ hρ' : ρ'.matrix ≠ 0,
+        ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropyFinite hρ' :=
   Iff.rfl
 
-/-- Candidate values for subnormalized smooth conditional max-entropy at
-smoothing radius `ε`. -/
+/-- Safe real-valued candidate for subnormalized smooth conditional max-entropy.
+
+The nonzero witness makes the finite branch explicit and prevents the
+canonical zero-state value `⊥` from being projected to `ℝ`. -/
 def SmoothConditionalMaxEntropyCandidate
     (ρ : SubnormalizedState (Prod a b)) (ε h : ℝ) : Prop :=
-  ∃ ρ' : SubnormalizedState (Prod a b),
-    ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropy
+  ∃ ρ' : SubnormalizedState (Prod a b), ∃ hρ' : ρ'.matrix ≠ 0,
+    ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropyFinite hρ'
 
 @[simp]
 theorem SmoothConditionalMaxEntropyCandidate_eq
     (ρ : SubnormalizedState (Prod a b)) (ε h : ℝ) :
     SmoothConditionalMaxEntropyCandidate (a := a) ρ ε h ↔
-      ∃ ρ' : SubnormalizedState (Prod a b),
-        ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropy :=
+      ∃ ρ' : SubnormalizedState (Prod a b), ∃ hρ' : ρ'.matrix ≠ 0,
+        ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropyFinite hρ' :=
   Iff.rfl
 
 /-- Subnormalized smooth min-entropy candidates are monotone in the smoothing
 radius. -/
-theorem SmoothConditionalMinEntropyCandidate_mono
+theorem SmoothConditionalMinEntropyCandidateRaw_mono
     {ρ : SubnormalizedState (Prod a b)} {ε δ h : ℝ} (hεδ : ε ≤ δ) :
-    SmoothConditionalMinEntropyCandidate (a := a) ρ ε h →
-      SmoothConditionalMinEntropyCandidate (a := a) ρ δ h := by
+    SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h →
+      SmoothConditionalMinEntropyCandidateRaw (a := a) ρ δ h := by
   rintro ⟨ρ', hball, hh⟩
   exact ⟨ρ', purifiedBall_mono hεδ hball, hh⟩
 
 /-- Smooth min-entropy candidates migrate when the smoothing center is moved.
 The smoothing radius increases by the purified distance between the old and
 new centers. -/
-theorem SmoothConditionalMinEntropyCandidate_center_migration
+theorem SmoothConditionalMinEntropyCandidateRaw_center_migration
     {ρ η : SubnormalizedState (Prod a b)} {ε δ h : ℝ}
     (hcenter : η.purifiedDistance ρ ≤ δ) :
-    SmoothConditionalMinEntropyCandidate (a := a) η ε h →
-      SmoothConditionalMinEntropyCandidate (a := a) ρ (ε + δ) h := by
+    SmoothConditionalMinEntropyCandidateRaw (a := a) η ε h →
+      SmoothConditionalMinEntropyCandidateRaw (a := a) ρ (ε + δ) h := by
   rintro ⟨ρ', hball, hh⟩
   exact ⟨ρ', SubnormalizedState.purifiedBall_center_migration hcenter hball, hh⟩
 
 /-- Subnormalized smooth max-entropy candidates are monotone in the smoothing
 radius. -/
-theorem SmoothConditionalMaxEntropyCandidate_mono
+theorem SmoothConditionalMaxEntropyCandidateRaw_mono
     {ρ : SubnormalizedState (Prod a b)} {ε δ h : ℝ} (hεδ : ε ≤ δ) :
-    SmoothConditionalMaxEntropyCandidate (a := a) ρ ε h →
-      SmoothConditionalMaxEntropyCandidate (a := a) ρ δ h := by
+    SmoothConditionalMaxEntropyCandidateRaw (a := a) ρ ε h →
+      SmoothConditionalMaxEntropyCandidateRaw (a := a) ρ δ h := by
   rintro ⟨ρ', hball, hh⟩
   exact ⟨ρ', purifiedBall_mono hεδ hball, hh⟩
 
@@ -2013,7 +2103,7 @@ of [Tomamichel2015FiniteResources, calculus.tex:386-396] and
 [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
 def smoothConditionalMinEntropyRaw
     (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) : ℝ :=
-  sSup {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h}
+  sSup {h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h}
 
 /-- Canonical finite-domain subnormalized smooth conditional min-entropy.
 
@@ -2037,7 +2127,7 @@ theorem smoothConditionalMinEntropy_eq_raw
 theorem smoothConditionalMinEntropyRaw_eq_sSup_candidates
     (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) :
     ρ.smoothConditionalMinEntropyRaw ε =
-      sSup {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h} :=
+      sSup {h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h} :=
   rfl
 
 @[simp]
@@ -2046,14 +2136,14 @@ theorem smoothConditionalMinEntropyRaw_eq
     ρ.smoothConditionalMinEntropyRaw ε =
       sSup {h : ℝ |
         ∃ ρ' : SubnormalizedState (Prod a b),
-          ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropy} :=
+          ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropyRaw} :=
   rfl
 
 theorem smoothConditionalMinEntropy_eq_sSup_candidates
     (ρ : SubnormalizedState (Prod a b)) (ε : ℝ)
     (hε_nonneg : 0 ≤ ε) (hε_lt : ε < Real.sqrt ρ.matrix.trace.re) :
     ρ.smoothConditionalMinEntropy ε hε_nonneg hε_lt =
-      sSup {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρ ε h} :=
+      sSup {h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρ ε h} :=
   rfl
 
 @[simp]
@@ -2063,7 +2153,7 @@ theorem smoothConditionalMinEntropy_eq
     ρ.smoothConditionalMinEntropy ε hε_nonneg hε_lt =
       sSup {h : ℝ |
         ∃ ρ' : SubnormalizedState (Prod a b),
-          ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropy} :=
+          ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMinEntropyRaw} :=
   rfl
 
 /-- Unrestricted real-valued infimum helper for subnormalized smooth
@@ -2075,7 +2165,7 @@ This totalized `sInf` surface is internal. Source-facing uses must call
 [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
 def smoothConditionalMaxEntropyRaw
     (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) : ℝ :=
-  sInf {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρ ε h}
+  sInf {h : ℝ | SmoothConditionalMaxEntropyCandidateRaw (a := a) ρ ε h}
 
 /-- Canonical finite-domain subnormalized smooth conditional max-entropy. -/
 def smoothConditionalMaxEntropy
@@ -2095,7 +2185,7 @@ theorem smoothConditionalMaxEntropy_eq_raw
 theorem smoothConditionalMaxEntropyRaw_eq_sInf_candidates
     (ρ : SubnormalizedState (Prod a b)) (ε : ℝ) :
     ρ.smoothConditionalMaxEntropyRaw ε =
-      sInf {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρ ε h} :=
+      sInf {h : ℝ | SmoothConditionalMaxEntropyCandidateRaw (a := a) ρ ε h} :=
   rfl
 
 @[simp]
@@ -2104,14 +2194,14 @@ theorem smoothConditionalMaxEntropyRaw_eq
     ρ.smoothConditionalMaxEntropyRaw ε =
       sInf {h : ℝ |
         ∃ ρ' : SubnormalizedState (Prod a b),
-          ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropy} :=
+          ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropyRaw} :=
   rfl
 
 theorem smoothConditionalMaxEntropy_eq_sInf_candidates
     (ρ : SubnormalizedState (Prod a b)) (ε : ℝ)
     (hε_nonneg : 0 ≤ ε) (hε_lt : ε < Real.sqrt ρ.matrix.trace.re) :
     ρ.smoothConditionalMaxEntropy ε hε_nonneg hε_lt =
-      sInf {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρ ε h} :=
+      sInf {h : ℝ | SmoothConditionalMaxEntropyCandidateRaw (a := a) ρ ε h} :=
   rfl
 
 @[simp]
@@ -2121,18 +2211,18 @@ theorem smoothConditionalMaxEntropy_eq
     ρ.smoothConditionalMaxEntropy ε hε_nonneg hε_lt =
       sInf {h : ℝ |
         ∃ ρ' : SubnormalizedState (Prod a b),
-          ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropy} :=
+          ρ.purifiedBall ε ρ' ∧ h = ρ'.conditionalMaxEntropyRaw} :=
   rfl
 
 /-- Zero-radius subnormalized smooth conditional min-entropy is the unsmoothed
 conditional min-entropy [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
 theorem smoothConditionalMinEntropyRaw_zero (ρ : SubnormalizedState (Prod a b)) :
-    ρ.smoothConditionalMinEntropyRaw 0 = ρ.conditionalMinEntropy := by
+    ρ.smoothConditionalMinEntropyRaw 0 = ρ.conditionalMinEntropyRaw := by
   rw [SubnormalizedState.smoothConditionalMinEntropyRaw_eq]
   have hset :
       {h : ℝ | ∃ ρ' : SubnormalizedState (Prod a b),
-        ρ.purifiedBall 0 ρ' ∧ h = ρ'.conditionalMinEntropy} =
-        {ρ.conditionalMinEntropy} := by
+        ρ.purifiedBall 0 ρ' ∧ h = ρ'.conditionalMinEntropyRaw} =
+        {ρ.conditionalMinEntropyRaw} := by
     ext h
     constructor
     · rintro ⟨ρ', hball, hh⟩
@@ -2145,25 +2235,25 @@ theorem smoothConditionalMinEntropyRaw_zero (ρ : SubnormalizedState (Prod a b))
       rw [Set.mem_singleton_iff] at hh
       exact ⟨ρ, SubnormalizedState.purifiedBall_self_of_nonneg ρ (le_refl (0 : ℝ)), hh⟩
   rw [hset]
-  exact csSup_singleton ρ.conditionalMinEntropy
+  exact csSup_singleton ρ.conditionalMinEntropyRaw
 
 /-- Zero-radius canonical smooth conditional min-entropy on its finite domain. -/
 theorem smoothConditionalMinEntropy_zero
     (ρ : SubnormalizedState (Prod a b))
     (htrace : 0 < Real.sqrt ρ.matrix.trace.re) :
     ρ.smoothConditionalMinEntropy 0 (le_refl 0) htrace =
-      ρ.conditionalMinEntropy :=
+      ρ.conditionalMinEntropyRaw :=
   ρ.smoothConditionalMinEntropyRaw_zero
 
 /-- Zero-radius subnormalized smooth conditional max-entropy is the unsmoothed
 conditional max-entropy [Tomamichel2015FiniteResources, calculus.tex:418-442]. -/
 theorem smoothConditionalMaxEntropyRaw_zero (ρ : SubnormalizedState (Prod a b)) :
-    ρ.smoothConditionalMaxEntropyRaw 0 = ρ.conditionalMaxEntropy := by
+    ρ.smoothConditionalMaxEntropyRaw 0 = ρ.conditionalMaxEntropyRaw := by
   rw [SubnormalizedState.smoothConditionalMaxEntropyRaw_eq]
   have hset :
       {h : ℝ | ∃ ρ' : SubnormalizedState (Prod a b),
-        ρ.purifiedBall 0 ρ' ∧ h = ρ'.conditionalMaxEntropy} =
-        {ρ.conditionalMaxEntropy} := by
+        ρ.purifiedBall 0 ρ' ∧ h = ρ'.conditionalMaxEntropyRaw} =
+        {ρ.conditionalMaxEntropyRaw} := by
     ext h
     constructor
     · rintro ⟨ρ', hball, hh⟩
@@ -2176,14 +2266,14 @@ theorem smoothConditionalMaxEntropyRaw_zero (ρ : SubnormalizedState (Prod a b))
       rw [Set.mem_singleton_iff] at hh
       exact ⟨ρ, SubnormalizedState.purifiedBall_self_of_nonneg ρ (le_refl (0 : ℝ)), hh⟩
   rw [hset]
-  exact csInf_singleton ρ.conditionalMaxEntropy
+  exact csInf_singleton ρ.conditionalMaxEntropyRaw
 
 /-- Zero-radius canonical smooth conditional max-entropy on its finite domain. -/
 theorem smoothConditionalMaxEntropy_zero
     (ρ : SubnormalizedState (Prod a b))
     (htrace : 0 < Real.sqrt ρ.matrix.trace.re) :
     ρ.smoothConditionalMaxEntropy 0 (le_refl 0) htrace =
-      ρ.conditionalMaxEntropy :=
+      ρ.conditionalMaxEntropyRaw :=
   ρ.smoothConditionalMaxEntropyRaw_zero
 
 /-! ## Subnormalized pure-marginal pairing and smooth-duality bridges -/
@@ -3350,8 +3440,8 @@ def SmoothConditionalMinMaxCandidateDuality
     (ρAB : SubnormalizedState (Prod a b)) (ρAC : SubnormalizedState (Prod a c))
     (ε : ℝ) : Prop :=
   ∀ h : ℝ,
-    SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h ↔
-      SmoothConditionalMinEntropyCandidate (a := a) ρAC ε (-h)
+    SmoothConditionalMaxEntropyCandidateRaw (a := a) ρAB ε h ↔
+      SmoothConditionalMinEntropyCandidateRaw (a := a) ρAC ε (-h)
 
 @[simp]
 theorem SmoothConditionalMinMaxCandidateDuality_eq
@@ -3359,8 +3449,8 @@ theorem SmoothConditionalMinMaxCandidateDuality_eq
     (ε : ℝ) :
     SmoothConditionalMinMaxCandidateDuality (a := a) ρAB ρAC ε ↔
       ∀ h : ℝ,
-        SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h ↔
-          SmoothConditionalMinEntropyCandidate (a := a) ρAC ε (-h) :=
+        SmoothConditionalMaxEntropyCandidateRaw (a := a) ρAB ε h ↔
+          SmoothConditionalMinEntropyCandidateRaw (a := a) ρAC ε (-h) :=
   Iff.rfl
 
 /-- Witness-level form of the subnormalized purified-smoothing min/max
@@ -3372,10 +3462,10 @@ def SmoothConditionalMinMaxWitnessDuality
     (ε : ℝ) : Prop :=
   (∀ ρAB' : SubnormalizedState (Prod a b), ρAB.purifiedBall ε ρAB' →
       ∃ ρAC' : SubnormalizedState (Prod a c), ρAC.purifiedBall ε ρAC' ∧
-        ρAB'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy) ∧
+        ρAB'.conditionalMaxEntropyRaw = -ρAC'.conditionalMinEntropyRaw) ∧
     (∀ ρAC' : SubnormalizedState (Prod a c), ρAC.purifiedBall ε ρAC' →
       ∃ ρAB' : SubnormalizedState (Prod a b), ρAB.purifiedBall ε ρAB' ∧
-        ρAB'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy)
+        ρAB'.conditionalMaxEntropyRaw = -ρAC'.conditionalMinEntropyRaw)
 
 @[simp]
 theorem SmoothConditionalMinMaxWitnessDuality_eq
@@ -3384,10 +3474,10 @@ theorem SmoothConditionalMinMaxWitnessDuality_eq
     SmoothConditionalMinMaxWitnessDuality (a := a) ρAB ρAC ε ↔
       (∀ ρAB' : SubnormalizedState (Prod a b), ρAB.purifiedBall ε ρAB' →
           ∃ ρAC' : SubnormalizedState (Prod a c), ρAC.purifiedBall ε ρAC' ∧
-            ρAB'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy) ∧
+            ρAB'.conditionalMaxEntropyRaw = -ρAC'.conditionalMinEntropyRaw) ∧
         (∀ ρAC' : SubnormalizedState (Prod a c), ρAC.purifiedBall ε ρAC' →
           ∃ ρAB' : SubnormalizedState (Prod a b), ρAB.purifiedBall ε ρAB' ∧
-            ρAB'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy) :=
+            ρAB'.conditionalMaxEntropyRaw = -ρAC'.conditionalMinEntropyRaw) :=
   Iff.rfl
 
 /-- Relation-parametric pairing of subnormalized smoothed `AB` and `AC`
@@ -3464,14 +3554,15 @@ smooth witness bridge. -/
 def ConditionalMinMaxEntropyDualOn
     (Rel : SubnormalizedState (Prod a b) → SubnormalizedState (Prod a c) → Prop) : Prop :=
   ∀ ρAB' : SubnormalizedState (Prod a b), ∀ ρAC' : SubnormalizedState (Prod a c),
-    Rel ρAB' ρAC' → ρAB'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy
+    Rel ρAB' ρAC' → ρAB'.conditionalMaxEntropyRaw = -ρAC'.conditionalMinEntropyRaw
 
 @[simp]
 theorem ConditionalMinMaxEntropyDualOn_eq
     (Rel : SubnormalizedState (Prod a b) → SubnormalizedState (Prod a c) → Prop) :
     ConditionalMinMaxEntropyDualOn (a := a) Rel ↔
       ∀ ρAB' : SubnormalizedState (Prod a b), ∀ ρAC' : SubnormalizedState (Prod a c),
-        Rel ρAB' ρAC' → ρAB'.conditionalMaxEntropy = -ρAC'.conditionalMinEntropy :=
+        Rel ρAB' ρAC' →
+          ρAB'.conditionalMaxEntropyRaw = -ρAC'.conditionalMinEntropyRaw :=
   Iff.rfl
 
 /-- Pairing transport plus unsmoothed pairwise duality gives the
@@ -3521,9 +3612,9 @@ theorem smoothConditionalMaxEntropyRaw_eq_neg_smoothConditionalMinEntropyRaw_of_
     ρAB.smoothConditionalMaxEntropyRaw ε =
       -ρAC.smoothConditionalMinEntropyRaw ε := by
   let maxSet : Set ℝ :=
-    {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h}
+    {h : ℝ | SmoothConditionalMaxEntropyCandidateRaw (a := a) ρAB ε h}
   let minSet : Set ℝ :=
-    {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρAC ε h}
+    {h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρAC ε h}
   have hset : maxSet = -minSet := by
     ext h
     simp only [maxSet, minSet, Set.mem_setOf_eq, Set.mem_neg]
@@ -3550,25 +3641,25 @@ compression. -/
 theorem smoothConditionalMaxEntropyRaw_eq_neg_smoothConditionalMinEntropyRaw_of_candidate_bounds
     {ρAB : SubnormalizedState (Prod a b)} {ρAC : SubnormalizedState (Prod a c)} {ε : ℝ}
     (hmaxNonempty :
-      ({h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h}).Nonempty)
+      ({h : ℝ | SmoothConditionalMaxEntropyCandidateRaw (a := a) ρAB ε h}).Nonempty)
     (hminNonempty :
-      ({h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρAC ε h}).Nonempty)
+      ({h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρAC ε h}).Nonempty)
     (hmaxBddBelow :
-      BddBelow {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h})
+      BddBelow {h : ℝ | SmoothConditionalMaxEntropyCandidateRaw (a := a) ρAB ε h})
     (hminBddAbove :
-      BddAbove {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρAC ε h})
+      BddAbove {h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρAC ε h})
     (hforward :
-      ∀ h : ℝ, SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h →
-        ∃ m : ℝ, SmoothConditionalMinEntropyCandidate (a := a) ρAC ε m ∧ -h ≤ m)
+      ∀ h : ℝ, SmoothConditionalMaxEntropyCandidateRaw (a := a) ρAB ε h →
+        ∃ m : ℝ, SmoothConditionalMinEntropyCandidateRaw (a := a) ρAC ε m ∧ -h ≤ m)
     (hreverse :
-      ∀ m : ℝ, SmoothConditionalMinEntropyCandidate (a := a) ρAC ε m →
-        ∃ h : ℝ, SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h ∧ h ≤ -m) :
+      ∀ m : ℝ, SmoothConditionalMinEntropyCandidateRaw (a := a) ρAC ε m →
+        ∃ h : ℝ, SmoothConditionalMaxEntropyCandidateRaw (a := a) ρAB ε h ∧ h ≤ -m) :
     ρAB.smoothConditionalMaxEntropyRaw ε =
       -ρAC.smoothConditionalMinEntropyRaw ε := by
   let maxSet : Set ℝ :=
-    {h : ℝ | SmoothConditionalMaxEntropyCandidate (a := a) ρAB ε h}
+    {h : ℝ | SmoothConditionalMaxEntropyCandidateRaw (a := a) ρAB ε h}
   let minSet : Set ℝ :=
-    {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρAC ε h}
+    {h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρAC ε h}
   have hge : -sSup minSet ≤ sInf maxSet := by
     refine le_csInf hmaxNonempty ?_
     intro h hh
@@ -3642,7 +3733,8 @@ subnormalized entropy of the embedded center. -/
 theorem smoothConditionalMinEntropy_zero_eq_toSubnormalized
     (ρ : State (Prod a b)) :
     ρ.smoothConditionalMinEntropy 0 (le_refl 0) (by norm_num) =
-      ρ.toSubnormalized.conditionalMinEntropy :=
+      ρ.toSubnormalized.conditionalMinEntropyFinite (by
+        simpa only [State.toSubnormalized_matrix] using ρ.density_matrix_ne_zero) :=
   SubnormalizedState.smoothConditionalMinEntropy_zero
     ρ.toSubnormalized (by rw [State.toSubnormalized_trace]; norm_num)
 
@@ -3651,7 +3743,8 @@ subnormalized entropy of the embedded center. -/
 theorem smoothConditionalMaxEntropy_zero_eq_toSubnormalized
     (ρ : State (Prod a b)) :
     ρ.smoothConditionalMaxEntropy 0 (le_refl 0) (by norm_num) =
-      ρ.toSubnormalized.conditionalMaxEntropy :=
+      ρ.toSubnormalized.conditionalMaxEntropyFinite (by
+        simpa only [State.toSubnormalized_matrix] using ρ.density_matrix_ne_zero) :=
   SubnormalizedState.smoothConditionalMaxEntropy_zero
     ρ.toSubnormalized (by rw [State.toSubnormalized_trace]; norm_num)
 
@@ -3693,8 +3786,8 @@ theorem toSubnormalized_SmoothConditionalMinEntropyCandidate_of
     {b : Type v} [Fintype b] [DecidableEq b]
     {ρ ρ' : State (Prod a b)} {ε h : ℝ}
     (hball : ρ.purifiedBall ε ρ')
-    (hh : h = ρ'.toSubnormalized.conditionalMinEntropy) :
-    SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := a)
+    (hh : h = ρ'.toSubnormalized.conditionalMinEntropyRaw) :
+    SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := a)
       ρ.toSubnormalized ε h := by
   exact ⟨ρ'.toSubnormalized,
     (purifiedBall_iff_toSubnormalized_purifiedBall ρ ρ' ε).mp hball, hh⟩
@@ -3706,8 +3799,8 @@ theorem toSubnormalized_SmoothConditionalMaxEntropyCandidate_of
     {b : Type v} [Fintype b] [DecidableEq b]
     {ρ ρ' : State (Prod a b)} {ε h : ℝ}
     (hball : ρ.purifiedBall ε ρ')
-    (hh : h = ρ'.toSubnormalized.conditionalMaxEntropy) :
-    SubnormalizedState.SmoothConditionalMaxEntropyCandidate (a := a)
+    (hh : h = ρ'.toSubnormalized.conditionalMaxEntropyRaw) :
+    SubnormalizedState.SmoothConditionalMaxEntropyCandidateRaw (a := a)
       ρ.toSubnormalized ε h := by
   exact ⟨ρ'.toSubnormalized,
     (purifiedBall_iff_toSubnormalized_purifiedBall ρ ρ' ε).mp hball, hh⟩

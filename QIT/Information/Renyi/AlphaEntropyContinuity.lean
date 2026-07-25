@@ -1177,7 +1177,7 @@ private theorem partialTraceA_posDef_of_posDef [Nonempty a]
   exact Finset.sum_pos' (fun i _ => hnonneg i)
     ⟨Classical.choice inferInstance, Finset.mem_univ _, hpos⟩
 
-private theorem marginalB_posDef_of_posDef
+theorem marginalB_posDef_of_posDef
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef) :
     ρ.marginalB.matrix.PosDef := by
   letI : Nonempty a := by

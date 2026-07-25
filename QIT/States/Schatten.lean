@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.States.PosSqrt
+public import QIT.States.TraceNorm.Distance
 public import Mathlib.Analysis.MeanInequalities
 public import Mathlib.Analysis.Convex.SpecificFunctions.Pow
 public import Mathlib.Analysis.SpecialFunctions.ExpDeriv
@@ -2069,6 +2069,104 @@ theorem cMatrix_rpow_conjStarAlgAut_nonneg
         change Continuous fun A : CMatrix a => (U : CMatrix a) * A * star (U : CMatrix a)
         fun_prop)).symm
 
+private theorem cMatrix_rpow_kronecker_nonneg_core
+    {a : Type u} {b : Type v} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+    {A : CMatrix a} {B : CMatrix b} (hA : A.PosSemidef) (hB : B.PosSemidef)
+    {s : ℝ} (hs0 : 0 ≤ s) :
+    CFC.rpow (Matrix.kronecker A B) s =
+      Matrix.kronecker (CFC.rpow A s) (CFC.rpow B s) := by
+  let UA := hA.isHermitian.eigenvectorUnitary
+  let UB := hB.isHermitian.eigenvectorUnitary
+  let U : Matrix.unitaryGroup (Prod a b) ℂ :=
+    ⟨Matrix.kronecker (UA : CMatrix a) (UB : CMatrix b),
+      Matrix.kronecker_mem_unitary UA.2 UB.2⟩
+  let da : a -> ℝ := hA.isHermitian.eigenvalues
+  let db : b -> ℝ := hB.isHermitian.eigenvalues
+  let dprod : Prod a b -> ℝ := fun i => da i.1 * db i.2
+  have hda : ∀ i, 0 ≤ da i := fun i => hA.eigenvalues_nonneg i
+  have hdb : ∀ i, 0 ≤ db i := fun i => hB.eigenvalues_nonneg i
+  have hdprod : ∀ i, 0 ≤ dprod i := fun i => mul_nonneg (hda i.1) (hdb i.2)
+  have hA_spec :
+      A = Unitary.conjStarAlgAut ℂ _ UA
+        (Matrix.diagonal (fun i => (da i : ℂ))) := by
+    simpa [UA, da, Function.comp_def] using hA.isHermitian.spectral_theorem
+  have hB_spec :
+      B = Unitary.conjStarAlgAut ℂ _ UB
+        (Matrix.diagonal (fun i => (db i : ℂ))) := by
+    simpa [UB, db, Function.comp_def] using hB.isHermitian.spectral_theorem
+  have hAB_spec :
+      Matrix.kronecker A B =
+        Unitary.conjStarAlgAut ℂ _ U
+          (Matrix.diagonal (fun i => (dprod i : ℂ))) := by
+    rw [hA_spec, hB_spec]
+    simp [U, dprod, Unitary.conjStarAlgAut_apply, star_eq_conjTranspose,
+      Matrix.conjTranspose_kronecker, Matrix.mul_kronecker_mul,
+      Matrix.diagonal_kronecker_diagonal, Matrix.mul_assoc]
+  have hDprod_psd :
+      (Matrix.diagonal (fun i => (dprod i : ℂ)) : CMatrix (Prod a b)).PosSemidef :=
+    Matrix.PosSemidef.diagonal (d := fun i => (dprod i : ℂ)) (by
+      intro i
+      change (0 : ℂ) ≤ (dprod i : ℂ)
+      exact_mod_cast hdprod i)
+  have hA_rpow :
+      CFC.rpow A s =
+        Unitary.conjStarAlgAut ℂ _ UA
+          (Matrix.diagonal (fun i => ((da i ^ s : ℝ) : ℂ))) := by
+    rw [hA_spec]
+    rw [cMatrix_rpow_conjStarAlgAut_nonneg UA
+      (Matrix.PosSemidef.diagonal (d := fun i => (da i : ℂ)) (by
+        intro i
+        change (0 : ℂ) ≤ (da i : ℂ)
+        exact_mod_cast hda i)) hs0]
+    rw [cMatrix_rpow_diagonal_ofReal da hda s]
+  have hB_rpow :
+      CFC.rpow B s =
+        Unitary.conjStarAlgAut ℂ _ UB
+          (Matrix.diagonal (fun i => ((db i ^ s : ℝ) : ℂ))) := by
+    rw [hB_spec]
+    rw [cMatrix_rpow_conjStarAlgAut_nonneg UB
+      (Matrix.PosSemidef.diagonal (d := fun i => (db i : ℂ)) (by
+        intro i
+        change (0 : ℂ) ≤ (db i : ℂ)
+        exact_mod_cast hdb i)) hs0]
+    rw [cMatrix_rpow_diagonal_ofReal db hdb s]
+  have hleft :
+      CFC.rpow (Matrix.kronecker A B) s =
+        Unitary.conjStarAlgAut ℂ _ U
+          (Matrix.diagonal (fun i => ((dprod i ^ s : ℝ) : ℂ))) := by
+    rw [hAB_spec]
+    rw [cMatrix_rpow_conjStarAlgAut_nonneg U hDprod_psd hs0]
+    rw [cMatrix_rpow_diagonal_ofReal dprod hdprod s]
+  have hdiag :
+      Matrix.diagonal (fun i : Prod a b => ((dprod i ^ s : ℝ) : ℂ)) =
+        Matrix.diagonal (fun i : Prod a b =>
+          (((da i.1 ^ s) * (db i.2 ^ s) : ℝ) : ℂ)) := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      simp [dprod, Real.mul_rpow (hda i.1) (hdb i.2)]
+    · simp [Matrix.diagonal, hij]
+  have hright :
+      Matrix.kronecker (CFC.rpow A s) (CFC.rpow B s) =
+        Unitary.conjStarAlgAut ℂ _ U
+          (Matrix.diagonal (fun i : Prod a b =>
+            (((da i.1 ^ s) * (db i.2 ^ s) : ℝ) : ℂ))) := by
+    rw [hA_rpow, hB_rpow]
+    simp [U, Unitary.conjStarAlgAut_apply, star_eq_conjTranspose,
+      Matrix.conjTranspose_kronecker, Matrix.mul_kronecker_mul,
+      Matrix.diagonal_kronecker_diagonal, Matrix.mul_assoc]
+  rw [hleft, hdiag, hright]
+
+/-- Kronecker products commute with `CFC.rpow` for positive semidefinite
+matrices and nonnegative exponents. -/
+theorem cMatrix_rpow_kronecker_nonneg
+    {a : Type u} {b : Type v} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+    {A : CMatrix a} {B : CMatrix b} (hA : A.PosSemidef) (hB : B.PosSemidef)
+    {s : ℝ} (hs0 : 0 ≤ s) :
+    CFC.rpow (Matrix.kronecker A B) s =
+      Matrix.kronecker (CFC.rpow A s) (CFC.rpow B s) :=
+  cMatrix_rpow_kronecker_nonneg_core hA hB hs0
+
 /-- Real powers commute with forward unitary conjugation on positive-definite
 matrices for arbitrary real exponents. -/
 theorem cMatrix_rpow_conjStarAlgAut_posDef
@@ -3955,20 +4053,70 @@ theorem psdTracePower_two (A : CMatrix a) (hA : A.PosSemidef) :
       (CFC.rpow_natCast A 2 (Matrix.nonneg_iff_posSemidef.mpr hA))
   rw [hpow]
 
-/-- The spectral Schatten `p`-norm expression `(Tr A^p)^(1/p)` for PSD
-matrices.  This is the quantity that the Holder variational theorem identifies
-with an optimization over normalized positive side states. -/
-def psdSchattenPNorm (A : CMatrix a) (hA : A.PosSemidef) (p : ℝ) : ℝ :=
-  Real.rpow (psdTracePower A hA p) (1 / p)
+/-- A mathematically valid order for a finite-dimensional Schatten norm. -/
+def SchattenOrder := {p : ℝ // 0 < p}
+
+namespace SchattenOrder
+
+instance : Coe SchattenOrder ℝ := ⟨fun p => p.1⟩
+
+/-- Construct a safe Schatten order from an explicit positivity proof. -/
+def ofPositive {p : ℝ} (hp : 0 < p) : SchattenOrder := ⟨p, hp⟩
+
+/-- Construct a safe Schatten order from the common stronger hypothesis `1 < p`. -/
+def ofOneLt {p : ℝ} (hp : 1 < p) : SchattenOrder :=
+  ⟨p, lt_trans zero_lt_one hp⟩
+
+/-- Schatten order one. -/
+def one : SchattenOrder := ⟨1, zero_lt_one⟩
+
+/-- Schatten order two. -/
+def two : SchattenOrder := ⟨2, by norm_num⟩
 
 @[simp]
-theorem psdSchattenPNorm_eq (A : CMatrix a) (hA : A.PosSemidef) (p : ℝ) :
+theorem coe_one : (one : ℝ) = 1 := rfl
+
+@[simp]
+theorem coe_two : (two : ℝ) = 2 := rfl
+
+@[simp]
+theorem coe_ofPositive {p : ℝ} (hp : 0 < p) :
+    (ofPositive hp : ℝ) = p := rfl
+
+@[simp]
+theorem coe_ofOneLt {p : ℝ} (hp : 1 < p) :
+    (ofOneLt hp : ℝ) = p := rfl
+
+end SchattenOrder
+
+/-- The unconstrained spectral expression underlying the PSD Schatten norm.
+
+This helper is intentionally kept under `QIT.Internal`: at nonpositive orders
+it is a totalized real expression, not a source-faithful Schatten norm. -/
+def Internal.psdSchattenExpression
+    (A : CMatrix a) (hA : A.PosSemidef) (p : ℝ) : ℝ :=
+  Real.rpow (psdTracePower A hA p) (1 / p)
+
+/-- The Schatten `p`-norm of a positive semidefinite matrix at a positive order. -/
+def psdSchattenPNorm
+    (A : CMatrix a) (hA : A.PosSemidef) (p : SchattenOrder) : ℝ :=
+  Internal.psdSchattenExpression A hA p
+
+/-- The Schatten `p`-norm of a general finite-dimensional operator, defined
+through its absolute value `sqrt (Lᴴ * L)`. -/
+def schattenPNorm (L : CMatrix a) (p : SchattenOrder) : ℝ :=
+  psdSchattenPNorm (psdSqrt (Matrix.conjTranspose L * L))
+    (psdSqrt_pos (Matrix.conjTranspose L * L)) p
+
+@[simp]
+theorem psdSchattenPNorm_eq (A : CMatrix a) (hA : A.PosSemidef) (p : SchattenOrder) :
     psdSchattenPNorm A hA p =
-      Real.rpow ((CFC.rpow A p).trace.re) (1 / p) :=
+      Real.rpow ((CFC.rpow A (p : ℝ)).trace.re) (1 / (p : ℝ)) :=
   rfl
 
 /-- PSD Schatten `p`-norm expressions are nonnegative. -/
-theorem psdSchattenPNorm_nonneg (A : CMatrix a) (hA : A.PosSemidef) (p : ℝ) :
+theorem psdSchattenPNorm_nonneg
+    (A : CMatrix a) (hA : A.PosSemidef) (p : SchattenOrder) :
     0 ≤ psdSchattenPNorm A hA p :=
   Real.rpow_nonneg (psdTracePower_nonneg A hA p) _
 
@@ -3981,7 +4129,7 @@ real-power step so callers do not need to repeat the trace-power continuity
 argument when proving continuity of sandwiched-Renyi objective functions. -/
 theorem psdSchattenPNorm_tendsto_of_tendsto_posSemidef
     {X : Type*} {l : Filter X} {F : X → CMatrix a} {A : CMatrix a}
-    {p : ℝ} (hp : 0 < p)
+    (p : SchattenOrder)
     (hF : Filter.Tendsto F l (nhds A))
     (hFpsd : ∀ x, (F x).PosSemidef)
     (hA : A.PosSemidef) :
@@ -3991,85 +4139,92 @@ theorem psdSchattenPNorm_tendsto_of_tendsto_posSemidef
       Filter.Tendsto (fun x => psdTracePower (F x) (hFpsd x) p) l
         (nhds (psdTracePower A hA p)) := by
     simpa [psdTracePower] using
-      cMatrix_rpow_trace_re_tendsto_of_tendsto_posSemidef hp hF
+      cMatrix_rpow_trace_re_tendsto_of_tendsto_posSemidef p.property hF
         (Filter.Eventually.of_forall hFpsd) hA
-  have hexp_nonneg : 0 ≤ (1 / p : ℝ) := one_div_nonneg.mpr hp.le
+  have hexp_nonneg : 0 ≤ (1 / (p : ℝ)) := one_div_nonneg.mpr p.property.le
   have hpow :
       ContinuousAt (fun x : ℝ => x ^ (1 / p : ℝ)) (psdTracePower A hA p) :=
     Real.continuousAt_rpow_const (psdTracePower A hA p) (1 / p) (Or.inr hexp_nonneg)
-  simpa [psdSchattenPNorm] using hpow.tendsto.comp htrace
+  simpa [psdSchattenPNorm, Internal.psdSchattenExpression] using
+    hpow.tendsto.comp htrace
 
 /-- PSD Schatten `p`-norm expressions multiply over Kronecker products. -/
 theorem psdSchattenPNorm_kronecker
     {b : Type v} [Fintype b] [DecidableEq b]
     {A : CMatrix a} {B : CMatrix b} (hA : A.PosSemidef) (hB : B.PosSemidef)
-    {p : Real} (hp : 0 < p) :
+    (p : SchattenOrder) :
     psdSchattenPNorm (Matrix.kronecker A B) (hA.kronecker hB) p =
       psdSchattenPNorm A hA p * psdSchattenPNorm B hB p := by
   rw [psdSchattenPNorm, psdSchattenPNorm, psdSchattenPNorm,
-    psdTracePower_kronecker hA hB (le_of_lt hp)]
+    Internal.psdSchattenExpression,
+    psdTracePower_kronecker hA hB p.property.le]
   exact Real.mul_rpow (psdTracePower_nonneg A hA p)
     (psdTracePower_nonneg B hB p)
 
 /-- A nonzero PSD matrix has strictly positive spectral Schatten `p`-norm
 expression. -/
 theorem psdSchattenPNorm_pos_of_ne_zero
-    (A : CMatrix a) (hA : A.PosSemidef) {p : ℝ}
+    (A : CMatrix a) (hA : A.PosSemidef) {p : SchattenOrder}
     (hAne : A ≠ 0) :
     0 < psdSchattenPNorm A hA p :=
-  Real.rpow_pos_of_pos (psdTracePower_pos_of_ne_zero A hA hAne) (1 / p)
+  Real.rpow_pos_of_pos (psdTracePower_pos_of_ne_zero A hA hAne) (1 / (p : ℝ))
 
 /-- PSD Schatten `p`-norm expressions are homogeneous under nonnegative real
 scalar multiplication. -/
 theorem psdSchattenPNorm_real_smul
-    {A : CMatrix a} (hA : A.PosSemidef) {lambda p : Real}
-    (hlambda : 0 <= lambda) (hp : 0 < p) :
+    {A : CMatrix a} (hA : A.PosSemidef) {lambda : Real}
+    (hlambda : 0 <= lambda) (p : SchattenOrder) :
     psdSchattenPNorm (lambda • A : CMatrix a)
         (Matrix.PosSemidef.smul hA hlambda) p =
       lambda * psdSchattenPNorm A hA p := by
-  rw [psdSchattenPNorm, psdTracePower_real_smul_posSemidef hA hlambda]
-  have hbase : 0 <= lambda ^ p := Real.rpow_nonneg hlambda p
+  have hp : 0 < (p : Real) := p.property
+  rw [psdSchattenPNorm, Internal.psdSchattenExpression,
+    psdTracePower_real_smul_posSemidef hA hlambda]
+  have hbase : 0 <= lambda ^ (p : Real) := Real.rpow_nonneg hlambda p
   have htrace : 0 <= psdTracePower A hA p := psdTracePower_nonneg A hA p
-  rw [show (lambda ^ p * psdTracePower A hA p).rpow (1 / p) =
-      (lambda ^ p) ^ (1 / p) * (psdTracePower A hA p) ^ (1 / p) by
+  rw [show (lambda ^ (p : Real) * psdTracePower A hA p).rpow
+      (1 / (p : Real)) =
+      (lambda ^ (p : Real)) ^ (1 / (p : Real)) *
+        (psdTracePower A hA p) ^ (1 / (p : Real)) by
     exact Real.mul_rpow hbase htrace]
-  have hp_ne : p ≠ 0 := ne_of_gt hp
-  have hpow : (lambda ^ p) ^ (1 / p) = lambda := by
+  have hp_ne : (p : Real) ≠ 0 := ne_of_gt hp
+  have hpow : (lambda ^ (p : Real)) ^ (1 / (p : Real)) = lambda := by
     calc
-      (lambda ^ p) ^ (1 / p) = lambda ^ (p * (1 / p)) := by
+      (lambda ^ (p : Real)) ^ (1 / (p : Real)) =
+          lambda ^ ((p : Real) * (1 / (p : Real))) := by
         rw [← Real.rpow_mul hlambda]
       _ = lambda ^ (1 : Real) := by
         congr 1
         field_simp [hp_ne]
       _ = lambda := Real.rpow_one lambda
   rw [hpow]
-  simp [psdSchattenPNorm, one_div]
+  simp [psdSchattenPNorm, Internal.psdSchattenExpression, one_div]
 
 /-- The PSD Schatten expression is insensitive to the particular PSD proof
 attached to definitionally equal matrices. -/
 theorem psdSchattenPNorm_congr
     {A B : CMatrix a} (hAB : A = B)
-    (hA : A.PosSemidef) (hB : B.PosSemidef) (p : Real) :
+    (hA : A.PosSemidef) (hB : B.PosSemidef) (p : SchattenOrder) :
     psdSchattenPNorm A hA p = psdSchattenPNorm B hB p := by
   subst B
-  simp [psdSchattenPNorm, psdTracePower]
+  simp [psdSchattenPNorm, Internal.psdSchattenExpression, psdTracePower]
 
 /-- The PSD Schatten expression of the zero matrix is zero for nonzero
 exponents. -/
-theorem psdSchattenPNorm_zero (p : Real) (hp : p ≠ 0) :
+theorem psdSchattenPNorm_zero (p : SchattenOrder) :
     psdSchattenPNorm (0 : CMatrix a) Matrix.PosSemidef.zero p = 0 := by
-  rw [psdSchattenPNorm, psdTracePower]
-  rw [CFC.zero_rpow (A := CMatrix a) hp]
+  rw [psdSchattenPNorm, Internal.psdSchattenExpression, psdTracePower]
+  rw [CFC.zero_rpow (A := CMatrix a) (ne_of_gt p.property)]
   rw [Matrix.trace_zero]
-  change (0 : Real) ^ (1 / p) = 0
+  change Real.rpow (0 : Real) (1 / (p : ℝ)) = 0
   rw [one_div]
-  exact Real.zero_rpow (inv_ne_zero hp)
+  exact Real.zero_rpow (inv_ne_zero (ne_of_gt p.property))
 
 /-- Strict positivity of the PSD Schatten expression forces strict positivity
 of the underlying positive power trace when `p > 1`. -/
 theorem psdTracePower_pos_of_psdSchattenPNorm_pos_of_one_lt
     {A : CMatrix a} (hA : A.PosSemidef) {p : Real}
-    (hp : 1 < p) (hnorm : 0 < psdSchattenPNorm A hA p) :
+    (hp : 1 < p) (hnorm : 0 < psdSchattenPNorm A hA ⟨p, lt_trans zero_lt_one hp⟩) :
     0 < psdTracePower A hA p := by
   have hp_pos : 0 < p := lt_trans zero_lt_one hp
   have hexp_ne : 1 / p ≠ 0 := one_div_ne_zero (ne_of_gt hp_pos)
@@ -4077,8 +4232,8 @@ theorem psdTracePower_pos_of_psdSchattenPNorm_pos_of_one_lt
     psdTracePower_nonneg A hA p
   have htrace_ne : psdTracePower A hA p ≠ 0 := by
     intro htrace_zero
-    have hnorm_zero : psdSchattenPNorm A hA p = 0 := by
-      rw [psdSchattenPNorm, htrace_zero]
+    have hnorm_zero : psdSchattenPNorm A hA ⟨p, hp_pos⟩ = 0 := by
+      rw [psdSchattenPNorm, Internal.psdSchattenExpression, htrace_zero]
       exact Real.zero_rpow hexp_ne
     exact (ne_of_gt hnorm) hnorm_zero
   exact lt_of_le_of_ne htrace_nonneg (Ne.symm htrace_ne)
@@ -4086,7 +4241,7 @@ theorem psdTracePower_pos_of_psdSchattenPNorm_pos_of_one_lt
 /-- A positive-definite matrix has strictly positive spectral Schatten
 `p`-norm expression on any nonempty finite space. -/
 theorem psdSchattenPNorm_pos_of_posDef [Nonempty a]
-    {A : CMatrix a} (hA : A.PosDef) {p : ℝ} :
+    {A : CMatrix a} (hA : A.PosDef) {p : SchattenOrder} :
     0 < psdSchattenPNorm A hA.posSemidef p := by
   have hAne : A ≠ 0 := by
     intro hzero
@@ -4098,9 +4253,45 @@ theorem psdSchattenPNorm_pos_of_posDef [Nonempty a]
 /-- At `p = 1`, the PSD Schatten expression is the real trace. -/
 @[simp]
 theorem psdSchattenPNorm_one (A : CMatrix a) (hA : A.PosSemidef) :
-    psdSchattenPNorm A hA (1 : ℝ) = A.trace.re := by
-  rw [psdSchattenPNorm, psdTracePower_one]
+    psdSchattenPNorm A hA SchattenOrder.one = A.trace.re := by
+  change Real.rpow (psdTracePower A hA (1 : ℝ)) (1 / (1 : ℝ)) = A.trace.re
+  rw [psdTracePower_one]
   simp [Real.rpow_one]
+
+/-- At `p = 2`, the PSD Schatten norm is the square root of the quadratic trace. -/
+@[simp]
+theorem psdSchattenPNorm_two (A : CMatrix a) (hA : A.PosSemidef) :
+    psdSchattenPNorm A hA SchattenOrder.two = Real.sqrt ((A * A).trace.re) := by
+  change Real.rpow (psdTracePower A hA (2 : ℝ)) (1 / (2 : ℝ)) =
+    Real.sqrt ((A * A).trace.re)
+  rw [psdTracePower_two]
+  exact (Real.sqrt_eq_rpow _).symm
+
+/-- On the positive cone, the general Schatten norm agrees with the PSD specialization. -/
+theorem schattenPNorm_eq_psdSchattenPNorm
+    (A : CMatrix a) (hA : A.PosSemidef) (p : SchattenOrder) :
+    schattenPNorm A p = psdSchattenPNorm A hA p := by
+  have hstar : Matrix.conjTranspose A = A := hA.isHermitian.eq
+  have hsqrt : psdSqrt (Matrix.conjTranspose A * A) = A := by
+    rw [hstar]
+    simpa [psdSqrt, sq] using (CFC.sqrt_sq A hA.nonneg)
+  unfold schattenPNorm
+  exact psdSchattenPNorm_congr hsqrt _ _ p
+
+/-- The order-one Schatten norm is the trace norm. -/
+@[simp]
+theorem schattenPNorm_one (L : CMatrix a) :
+    schattenPNorm L SchattenOrder.one = traceNorm L := by
+  rw [schattenPNorm, psdSchattenPNorm_one]
+  rfl
+
+/-- The order-two Schatten norm is the Frobenius/Hilbert--Schmidt norm. -/
+@[simp]
+theorem schattenPNorm_two (L : CMatrix a) :
+    schattenPNorm L SchattenOrder.two =
+      Real.sqrt ((Matrix.conjTranspose L * L).trace.re) := by
+  rw [schattenPNorm, psdSchattenPNorm_two,
+    psdSqrt_mul_self_of_posSemidef (Matrix.posSemidef_conjTranspose_mul_self L)]
 
 /-- Finite scalar reverse Holder inequality in the normalized-weight form used
 by the PSD reverse-Holder proof. -/
@@ -4254,7 +4445,7 @@ theorem posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
     {M B : CMatrix a} (hM : M.PosSemidef) (hB : B.PosSemidef)
     {p q : ℝ} (hpq : p.HolderConjugate q) (hq : 1 ≤ q)
     (hBq : psdTracePower B hB q ≤ 1) :
-    ((M * B).trace).re ≤ psdSchattenPNorm M hM p := by
+    ((M * B).trace).re ≤ psdSchattenPNorm M hM ⟨p, hpq.pos⟩ := by
   classical
   let U : Matrix.unitaryGroup a ℂ := hM.isHermitian.eigenvectorUnitary
   let B' : CMatrix a := star (U : CMatrix a) * B * (U : CMatrix a)
@@ -4280,8 +4471,9 @@ theorem posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
       (fun i _ => posSemidef_diagonal_re_nonneg hB' i)
   have hMnorm :
       (∑ i ∈ (Finset.univ : Finset a), hM.isHermitian.eigenvalues i ^ p) ^ (1 / p) =
-        psdSchattenPNorm M hM p := by
-    rw [psdSchattenPNorm, psdTracePower_eq_sum_eigenvalues_rpow]
+        psdSchattenPNorm M hM ⟨p, hpq.pos⟩ := by
+    rw [psdSchattenPNorm, Internal.psdSchattenExpression,
+      psdTracePower_eq_sum_eigenvalues_rpow]
     simp
   have hBpower_conj :
       psdTracePower B' hB' q = psdTracePower B hB q := by
@@ -4310,12 +4502,13 @@ theorem posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
           hM.isHermitian.eigenvalues i * (B' i i).re := htrace
     _ ≤ (∑ i ∈ (Finset.univ : Finset a), hM.isHermitian.eigenvalues i ^ p) ^ (1 / p) *
           (∑ i ∈ (Finset.univ : Finset a), (B' i i).re ^ q) ^ (1 / q) := hholder
-    _ = psdSchattenPNorm M hM p *
+    _ = psdSchattenPNorm M hM ⟨p, hpq.pos⟩ *
           (∑ i ∈ (Finset.univ : Finset a), (B' i i).re ^ q) ^ (1 / q) := by
             rw [hMnorm]
-    _ ≤ psdSchattenPNorm M hM p * 1 :=
-          mul_le_mul_of_nonneg_left hBnorm_le (psdSchattenPNorm_nonneg M hM p)
-    _ = psdSchattenPNorm M hM p := by rw [mul_one]
+    _ ≤ psdSchattenPNorm M hM ⟨p, hpq.pos⟩ * 1 :=
+          mul_le_mul_of_nonneg_left hBnorm_le
+            (psdSchattenPNorm_nonneg M hM ⟨p, hpq.pos⟩)
+    _ = psdSchattenPNorm M hM ⟨p, hpq.pos⟩ := by rw [mul_one]
 
 /-- Source-shaped finite-dimensional PSD Holder trace bound.
 
@@ -4329,13 +4522,14 @@ theorem psdTraceMul_le_psdSchattenPNorm_mul
     {M N : CMatrix a} (hM : M.PosSemidef) (hN : N.PosSemidef)
     {p q : ℝ} (_hp1 : 1 < p) (hpq : p.HolderConjugate q) :
     ((M * N).trace).re ≤
-      psdSchattenPNorm M hM p * psdSchattenPNorm N hN q := by
+      psdSchattenPNorm M hM ⟨p, hpq.pos⟩ *
+        psdSchattenPNorm N hN ⟨q, hpq.symm.pos⟩ := by
   by_cases hNzero : N = 0
   · have htrace : ((M * N).trace).re = 0 := by
       simp [hNzero]
     rw [htrace]
-    exact mul_nonneg (psdSchattenPNorm_nonneg M hM p)
-      (psdSchattenPNorm_nonneg N hN q)
+    exact mul_nonneg (psdSchattenPNorm_nonneg M hM ⟨p, hpq.pos⟩)
+      (psdSchattenPNorm_nonneg N hN ⟨q, hpq.symm.pos⟩)
   · let S : ℝ := psdTracePower N hN q
     have hq_pos : 0 < q := hpq.symm.pos
     have hSpos : 0 < S := by
@@ -4350,14 +4544,14 @@ theorem psdTraceMul_le_psdSchattenPNorm_mul
       simpa [B, S, scale, hB] using
         psdTracePower_normalized_real_smul_eq_one_of_ne_zero hN hNzero hq_pos
     have hholder :
-        ((M * B).trace).re ≤ psdSchattenPNorm M hM p :=
+        ((M * B).trace).re ≤ psdSchattenPNorm M hM ⟨p, hpq.pos⟩ :=
       posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
         (M := M) (B := B) hM hB hpq (le_of_lt hpq.symm.lt) (le_of_eq hBq_eq)
     have htrace_smul :
         ((M * B).trace).re = scale * ((M * N).trace).re := by
       simp [B, Matrix.trace_smul, Complex.mul_re, scale]
     have hscale_mul_norm :
-        scale * psdSchattenPNorm N hN q = 1 := by
+        scale * psdSchattenPNorm N hN ⟨q, hpq.symm.pos⟩ = 1 := by
       change S ^ (-(1 / q)) * S ^ (1 / q) = 1
       calc
         S ^ (-(1 / q)) * S ^ (1 / q) = S ^ (-(1 / q) + 1 / q) := by
@@ -4367,21 +4561,25 @@ theorem psdTraceMul_le_psdSchattenPNorm_mul
           ring
         _ = 1 := Real.rpow_zero S
     have hnorm_scale :
-        psdSchattenPNorm N hN q * scale = 1 := by
+        psdSchattenPNorm N hN ⟨q, hpq.symm.pos⟩ * scale = 1 := by
       rw [mul_comm, hscale_mul_norm]
     have hholder_scaled :
-        scale * ((M * N).trace).re ≤ psdSchattenPNorm M hM p := by
+        scale * ((M * N).trace).re ≤ psdSchattenPNorm M hM ⟨p, hpq.pos⟩ := by
       simpa [htrace_smul] using hholder
     calc
       ((M * N).trace).re =
-          (psdSchattenPNorm N hN q * scale) * ((M * N).trace).re := by
+          (psdSchattenPNorm N hN ⟨q, hpq.symm.pos⟩ * scale) *
+            ((M * N).trace).re := by
             rw [hnorm_scale, one_mul]
-      _ = psdSchattenPNorm N hN q * (scale * ((M * N).trace).re) := by
+      _ = psdSchattenPNorm N hN ⟨q, hpq.symm.pos⟩ *
+          (scale * ((M * N).trace).re) := by
             ring
-      _ ≤ psdSchattenPNorm N hN q * psdSchattenPNorm M hM p :=
+      _ ≤ psdSchattenPNorm N hN ⟨q, hpq.symm.pos⟩ *
+          psdSchattenPNorm M hM ⟨p, hpq.pos⟩ :=
             mul_le_mul_of_nonneg_left hholder_scaled
-              (psdSchattenPNorm_nonneg N hN q)
-      _ = psdSchattenPNorm M hM p * psdSchattenPNorm N hN q := by
+              (psdSchattenPNorm_nonneg N hN ⟨q, hpq.symm.pos⟩)
+      _ = psdSchattenPNorm M hM ⟨p, hpq.pos⟩ *
+          psdSchattenPNorm N hN ⟨q, hpq.symm.pos⟩ := by
             ring
 
 /-- Dual `q`-unit-ball criterion for PSD Schatten expressions.
@@ -4395,7 +4593,7 @@ theorem psdTracePower_le_one_of_trace_mul_le_psdSchattenPNorm
     {B : CMatrix a} (hB : B.PosSemidef) {p q : ℝ}
     (hpq : p.HolderConjugate q)
     (hbound : ∀ M : CMatrix a, ∀ hM : M.PosSemidef,
-      ((M * B).trace).re ≤ psdSchattenPNorm M hM p) :
+      ((M * B).trace).re ≤ psdSchattenPNorm M hM ⟨p, hpq.pos⟩) :
     psdTracePower B hB q ≤ 1 := by
   classical
   let S : ℝ := psdTracePower B hB q
@@ -4464,7 +4662,7 @@ theorem psdTracePower_le_one_of_trace_mul_le_psdSchattenPNorm
       psdTracePower M hM p = (CFC.rpow M p).trace.re := rfl
       _ = (CFC.rpow B q).trace.re := by rw [hpow]
       _ = S := rfl
-  have hS_le_norm : S ≤ psdSchattenPNorm M hM p := by
+  have hS_le_norm : S ≤ psdSchattenPNorm M hM ⟨p, hp_pos⟩ := by
     simpa [htrace_eq] using hbound M hM
   have hM_trace_re : (CFC.rpow M p).trace.re = S := by
     change psdTracePower M hM p = S
@@ -4472,7 +4670,8 @@ theorem psdTracePower_le_one_of_trace_mul_le_psdSchattenPNorm
   have hM_pow_trace_re : (trace (M ^ p)).re = S := by
     simpa using hM_trace_re
   have hS_le_rpow : S ≤ S ^ p⁻¹ := by
-    simpa [psdSchattenPNorm, hM_pow_trace_re, one_div] using hS_le_norm
+    simpa [psdSchattenPNorm, Internal.psdSchattenExpression,
+      hM_pow_trace_re, one_div] using hS_le_norm
   by_contra hnot
   have hS_gt_one : 1 < S := lt_of_not_ge hnot
   have hS_pow_le : S ^ p ≤ S := by
@@ -4494,7 +4693,7 @@ theorem psdTracePower_le_one_iff_trace_mul_le_psdSchattenPNorm
     (hpq : p.HolderConjugate q) :
     psdTracePower B hB q ≤ 1 ↔
       ∀ M : CMatrix a, ∀ hM : M.PosSemidef,
-        ((M * B).trace).re ≤ psdSchattenPNorm M hM p := by
+        ((M * B).trace).re ≤ psdSchattenPNorm M hM ⟨p, hpq.pos⟩ := by
   constructor
   · intro hBq M hM
     exact
@@ -4510,7 +4709,7 @@ theorem psd_trace_rpow_holder_variational_upper
     {M N : CMatrix a} (hM : M.PosSemidef) (hN : N.PosSemidef)
     (hNtr : N.trace.re = 1)
     {p q r : ℝ} (hpq : p.HolderConjugate q) (hr : r = 1 / q) :
-    ((M * CFC.rpow N r).trace).re ≤ psdSchattenPNorm M hM p := by
+    ((M * CFC.rpow N r).trace).re ≤ psdSchattenPNorm M hM ⟨p, hpq.pos⟩ := by
   let B : CMatrix a := CFC.rpow N r
   have hB : B.PosSemidef := cMatrix_rpow_posSemidef (A := N) (s := r) hN
   have hr_nonneg : 0 ≤ r := by
@@ -4544,7 +4743,7 @@ theorem psd_trace_rpow_reverse_holder_variational
     (hSupport : Matrix.Supports M N)
     {p r : ℝ} (hp0 : 0 < p) (hp1 : p < 1)
     (hr : r = 1 - 1 / p) :
-    psdSchattenPNorm M hM p ≤ ((M * CFC.rpow N r).trace).re := by
+    psdSchattenPNorm M hM ⟨p, hp0⟩ ≤ ((M * CFC.rpow N r).trace).re := by
   classical
   let U : Matrix.unitaryGroup a ℂ := hN.isHermitian.eigenvectorUnitary
   let M' : CMatrix a := star (U : CMatrix a) * M * (U : CMatrix a)
@@ -4587,13 +4786,13 @@ theorem psd_trace_rpow_reverse_holder_variational
       psdTracePower_le_posSemidef_sum_diagonal_re_rpow hM'
         (p := p) (le_of_lt hp0) (le_of_lt hp1)
   have hnorm_bound :
-      psdSchattenPNorm M hM p ≤ (∑ i, x i ^ p) ^ (1 / p) := by
-    rw [psdSchattenPNorm]
+      psdSchattenPNorm M hM ⟨p, hp0⟩ ≤ (∑ i, x i ^ p) ^ (1 / p) := by
+    rw [psdSchattenPNorm, Internal.psdSchattenExpression]
     rw [← htracePower_conj]
     exact Real.rpow_le_rpow
       (psdTracePower_nonneg M' hM' p) hdiag_bound (one_div_nonneg.mpr (le_of_lt hp0))
   calc
-    psdSchattenPNorm M hM p ≤ (∑ i, x i ^ p) ^ (1 / p) := hnorm_bound
+    psdSchattenPNorm M hM ⟨p, hp0⟩ ≤ (∑ i, x i ^ p) ^ (1 / p) := hnorm_bound
     _ ≤ ∑ i, x i * w i ^ r := hscalar_r
     _ = ((M * CFC.rpow N r).trace).re := htrace.symm
 
@@ -4611,7 +4810,7 @@ theorem psdTraceRpow_reverseHolder_source
     (hsigma_tr : sigma.trace.re = 1)
     (hSupport : Matrix.Supports M sigma)
     {p : ℝ} (hp0 : 0 < p) (hp1 : p < 1) :
-    psdSchattenPNorm M hM p ≤
+    psdSchattenPNorm M hM ⟨p, hp0⟩ ≤
       ((M * CFC.rpow sigma (1 - 1 / p)).trace).re :=
   psd_trace_rpow_reverse_holder_variational
     hM hsigma hsigma_tr hSupport hp0 hp1 rfl
@@ -4670,7 +4869,7 @@ theorem psdSchattenPNorm_le_of_reverseHolder_trace_le
     (hSupport : Matrix.Supports M N)
     {p C : ℝ} (hp0 : 0 < p) (hp1 : p < 1)
     (htrace_le : ((M * CFC.rpow N (1 - 1 / p)).trace).re ≤ C) :
-    psdSchattenPNorm M hM p ≤ C :=
+    psdSchattenPNorm M hM ⟨p, hp0⟩ ≤ C :=
   (psd_trace_rpow_reverse_holder_variational
     hM hN hNtr hSupport hp0 hp1 rfl).trans htrace_le
 
@@ -4685,7 +4884,7 @@ def psdTraceReverseHolderStateValueSet (M : CMatrix a) (p : ℝ) : Set ℝ :=
 is bounded below by the PSD Schatten `p` expression. -/
 theorem psdTraceReverseHolderStateValueSet_lowerBound
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp0 : 0 < p) (hp1 : p < 1) :
-    psdSchattenPNorm M hM p ∈
+    psdSchattenPNorm M hM ⟨p, hp0⟩ ∈
       lowerBounds (psdTraceReverseHolderStateValueSet M p) := by
   intro x hx
   rcases hx with ⟨N, hN, hNtr, hSupport, rfl⟩
@@ -4696,7 +4895,8 @@ theorem psdTraceReverseHolderStateValueSet_lowerBound
 theorem psdTraceReverseHolderStateValueSet_le_sInf
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp0 : 0 < p) (hp1 : p < 1)
     (hne : (psdTraceReverseHolderStateValueSet M p).Nonempty) :
-    psdSchattenPNorm M hM p ≤ sInf (psdTraceReverseHolderStateValueSet M p) :=
+    psdSchattenPNorm M hM ⟨p, hp0⟩ ≤
+      sInf (psdTraceReverseHolderStateValueSet M p) :=
   le_csInf hne (psdTraceReverseHolderStateValueSet_lowerBound hM hp0 hp1)
 
 /-- A side-state value attaining the Schatten expression is a genuine
@@ -4705,8 +4905,10 @@ the reusable support/negative-power lower bound from the later construction of
 an optimizer in the full conditional-Renyi route. -/
 theorem psdTraceReverseHolderStateValueSet_isLeast_of_mem
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp0 : 0 < p) (hp1 : p < 1)
-    (hmem : psdSchattenPNorm M hM p ∈ psdTraceReverseHolderStateValueSet M p) :
-    IsLeast (psdTraceReverseHolderStateValueSet M p) (psdSchattenPNorm M hM p) :=
+    (hmem : psdSchattenPNorm M hM ⟨p, hp0⟩ ∈
+      psdTraceReverseHolderStateValueSet M p) :
+    IsLeast (psdTraceReverseHolderStateValueSet M p)
+      (psdSchattenPNorm M hM ⟨p, hp0⟩) :=
   ⟨hmem, psdTraceReverseHolderStateValueSet_lowerBound hM hp0 hp1⟩
 
 /-- The normalized PSD optimizer for the reverse-Holder side when
@@ -4730,7 +4932,7 @@ theorem psdTraceReverseHolderOptimizer_props
     ∃ _hN : (psdTraceReverseHolderOptimizer M hM p).PosSemidef,
       (psdTraceReverseHolderOptimizer M hM p).trace.re = 1 ∧
         Matrix.Supports M (psdTraceReverseHolderOptimizer M hM p) ∧
-          psdSchattenPNorm M hM p =
+          psdSchattenPNorm M hM ⟨p, hp0⟩ =
             ((M * CFC.rpow (psdTraceReverseHolderOptimizer M hM p)
                 (1 - 1 / p)).trace).re := by
   classical
@@ -4812,14 +5014,15 @@ theorem psdTraceReverseHolderOptimizer_props
             simpa [r] using
               real_sum_reverse_holder_optimizer_value (ι := a) (x := d) hp0 hd hSpos_sum
   have hnorm :
-      psdSchattenPNorm M hM p = (∑ i, d i ^ p) ^ (1 / p) := by
-    rw [psdSchattenPNorm, psdTracePower_eq_sum_eigenvalues_rpow]
+      psdSchattenPNorm M hM ⟨p, hp0⟩ = (∑ i, d i ^ p) ^ (1 / p) := by
+    rw [psdSchattenPNorm, Internal.psdSchattenExpression,
+      psdTracePower_eq_sum_eigenvalues_rpow]
     simp [d]
   have hattain :
-      psdSchattenPNorm M hM p =
+      psdSchattenPNorm M hM ⟨p, hp0⟩ =
         ((M * CFC.rpow N (1 - 1 / p)).trace).re := by
     calc
-      psdSchattenPNorm M hM p = (∑ i, d i ^ p) ^ (1 / p) := hnorm
+      psdSchattenPNorm M hM ⟨p, hp0⟩ = (∑ i, d i ^ p) ^ (1 / p) := hnorm
       _ = ∑ i, d i * n i ^ r := hscalar.symm
       _ = ((M * CFC.rpow N (1 - 1 / p)).trace).re := by
         simpa [r] using htrace.symm
@@ -4831,11 +5034,11 @@ theorem psdTraceReverseHolderOptimizer_props
 
 private theorem psdTraceHolderStateValueSet_norm_mem [Nonempty a]
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp0 : 0 < p) :
-    psdSchattenPNorm M hM p ∈ psdTraceHolderStateValueSet M p := by
+    psdSchattenPNorm M hM ⟨p, hp0⟩ ∈ psdTraceHolderStateValueSet M p := by
   by_cases hMzero : M = 0
   · subst M
     refine ⟨basisDensityState (a := a), ?_⟩
-    rw [psdSchattenPNorm_zero p (ne_of_gt hp0)]
+    rw [psdSchattenPNorm_zero ⟨p, hp0⟩]
     simp
   · have hSpos : 0 < psdTracePower M hM p :=
       psdTracePower_pos_of_ne_zero M hM hMzero
@@ -4853,12 +5056,12 @@ private theorem psdTraceHolderStateValueSet_norm_mem [Nonempty a]
 
 private theorem psdTraceReverseHolderNormalizedStateValueSet_norm_mem [Nonempty a]
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp0 : 0 < p) :
-    psdSchattenPNorm M hM p ∈
+    psdSchattenPNorm M hM ⟨p, hp0⟩ ∈
       psdTraceReverseHolderNormalizedStateValueSet M p := by
   by_cases hMzero : M = 0
   · subst M
     refine ⟨basisDensityState (a := a), Matrix.Supports.zero_left _, ?_⟩
-    rw [psdSchattenPNorm_zero p (ne_of_gt hp0)]
+    rw [psdSchattenPNorm_zero ⟨p, hp0⟩]
     simp
   · have hSpos : 0 < psdTracePower M hM p :=
       psdTracePower_pos_of_ne_zero M hM hMzero
@@ -4879,7 +5082,8 @@ private theorem psdTraceReverseHolderNormalizedStateValueSet_norm_mem [Nonempty 
 variational formula, over normalized states, for `p > 1`. -/
 theorem psdTraceHolderStateValueSet_isGreatest_of_one_lt [Nonempty a]
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp : 1 < p) :
-    IsGreatest (psdTraceHolderStateValueSet M p) (psdSchattenPNorm M hM p) := by
+    IsGreatest (psdTraceHolderStateValueSet M p)
+      (psdSchattenPNorm M hM ⟨p, lt_trans zero_lt_one hp⟩) := by
   constructor
   · exact psdTraceHolderStateValueSet_norm_mem hM (lt_trans zero_lt_one hp)
   · intro x hx
@@ -4896,7 +5100,7 @@ theorem psdTraceHolderStateValueSet_isGreatest_of_one_lt [Nonempty a]
 theorem psdTraceHolderStateValueSet_isGreatest_one [Nonempty a]
     {M : CMatrix a} (hM : M.PosSemidef) :
     IsGreatest (psdTraceHolderStateValueSet M (1 : ℝ))
-      (psdSchattenPNorm M hM (1 : ℝ)) := by
+      (psdSchattenPNorm M hM SchattenOrder.one) := by
   constructor
   · refine ⟨basisDensityState (a := a), ?_⟩
     rw [show 1 - 1 / (1 : ℝ) = 0 by norm_num]
@@ -4912,7 +5116,8 @@ theorem psdTraceHolderStateValueSet_isGreatest_one [Nonempty a]
 variational formula, over normalized states, for `p ≥ 1`. -/
 theorem psdTraceHolderStateValueSet_isGreatest [Nonempty a]
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp : 1 ≤ p) :
-    IsGreatest (psdTraceHolderStateValueSet M p) (psdSchattenPNorm M hM p) := by
+    IsGreatest (psdTraceHolderStateValueSet M p)
+      (psdSchattenPNorm M hM ⟨p, lt_of_lt_of_le zero_lt_one hp⟩) := by
   rcases lt_or_eq_of_le hp with hp_lt | rfl
   · exact psdTraceHolderStateValueSet_isGreatest_of_one_lt hM hp_lt
   · exact psdTraceHolderStateValueSet_isGreatest_one hM
@@ -4921,14 +5126,15 @@ theorem psdTraceHolderStateValueSet_isGreatest [Nonempty a]
 formula. -/
 theorem psdTraceHolderStateValueSet_sSup_eq [Nonempty a]
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ} (hp : 1 ≤ p) :
-    sSup (psdTraceHolderStateValueSet M p) = psdSchattenPNorm M hM p :=
+    sSup (psdTraceHolderStateValueSet M p) =
+      psdSchattenPNorm M hM ⟨p, lt_of_lt_of_le zero_lt_one hp⟩ :=
   (psdTraceHolderStateValueSet_isGreatest hM hp).csSup_eq
 
 /-- Boundary `p = 1` case of Tomamichel's reverse-Holder minimum branch. -/
 theorem psdTraceReverseHolderNormalizedStateValueSet_isLeast_one [Nonempty a]
     {M : CMatrix a} (hM : M.PosSemidef) :
     IsLeast (psdTraceReverseHolderNormalizedStateValueSet M (1 : ℝ))
-      (psdSchattenPNorm M hM (1 : ℝ)) := by
+      (psdSchattenPNorm M hM SchattenOrder.one) := by
   constructor
   · exact psdTraceReverseHolderNormalizedStateValueSet_norm_mem hM zero_lt_one
   · intro x hx
@@ -4943,7 +5149,7 @@ theorem psdTraceReverseHolderNormalizedStateValueSet_isLeast_of_lt_one [Nonempty
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ}
     (hp0 : 0 < p) (hp1 : p < 1) :
     IsLeast (psdTraceReverseHolderNormalizedStateValueSet M p)
-      (psdSchattenPNorm M hM p) := by
+      (psdSchattenPNorm M hM ⟨p, hp0⟩) := by
   constructor
   · exact psdTraceReverseHolderNormalizedStateValueSet_norm_mem hM hp0
   · intro x hx
@@ -4957,7 +5163,7 @@ theorem psdTraceReverseHolderNormalizedStateValueSet_isLeast [Nonempty a]
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ}
     (hp0 : 0 < p) (hp1 : p ≤ 1) :
     IsLeast (psdTraceReverseHolderNormalizedStateValueSet M p)
-      (psdSchattenPNorm M hM p) := by
+      (psdSchattenPNorm M hM ⟨p, hp0⟩) := by
   rcases lt_or_eq_of_le hp1 with hp_lt | rfl
   · exact psdTraceReverseHolderNormalizedStateValueSet_isLeast_of_lt_one hM hp0 hp_lt
   · exact psdTraceReverseHolderNormalizedStateValueSet_isLeast_one hM
@@ -4967,7 +5173,8 @@ variational formula. -/
 theorem psdTraceReverseHolderNormalizedStateValueSet_sInf_eq [Nonempty a]
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ}
     (hp0 : 0 < p) (hp1 : p ≤ 1) :
-    sInf (psdTraceReverseHolderNormalizedStateValueSet M p) = psdSchattenPNorm M hM p :=
+    sInf (psdTraceReverseHolderNormalizedStateValueSet M p) =
+      psdSchattenPNorm M hM ⟨p, hp0⟩ :=
   (psdTraceReverseHolderNormalizedStateValueSet_isLeast hM hp0 hp1).csInf_eq
 
 /-- The explicit reverse-Holder optimizer is the normalized positive power
@@ -5033,7 +5240,7 @@ theorem psdTraceReverseHolderOptimizer_mem
     {M : CMatrix a} (hM : M.PosSemidef)
     {p : ℝ} (hp0 : 0 < p)
     (hSpos : 0 < psdTracePower M hM p) :
-    psdSchattenPNorm M hM p ∈ psdTraceReverseHolderStateValueSet M p := by
+    psdSchattenPNorm M hM ⟨p, hp0⟩ ∈ psdTraceReverseHolderStateValueSet M p := by
   rcases psdTraceReverseHolderOptimizer_props hM hp0 hSpos with
     ⟨hN, hNtr, hSupport, hattain⟩
   exact ⟨psdTraceReverseHolderOptimizer M hM p, hN, hNtr, hSupport, hattain⟩
@@ -5093,7 +5300,7 @@ theorem exists_psdTraceReverseHolder_sideState_attaining
     (hSpos : 0 < psdTracePower M hM p) :
     ∃ N : CMatrix a, ∃ _hN : N.PosSemidef,
       N.trace.re = 1 ∧ Matrix.Supports M N ∧
-        psdSchattenPNorm M hM p =
+        psdSchattenPNorm M hM ⟨p, hp0⟩ =
           ((M * CFC.rpow N (1 - 1 / p)).trace).re := by
   simpa [psdTraceReverseHolderStateValueSet] using
     (psdTraceReverseHolderOptimizer_mem hM hp0 hSpos)
@@ -5104,7 +5311,8 @@ theorem psdTraceReverseHolderStateValueSet_isLeast_of_tracePower_pos
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ}
     (hp0 : 0 < p) (hp1 : p < 1)
     (hSpos : 0 < psdTracePower M hM p) :
-    IsLeast (psdTraceReverseHolderStateValueSet M p) (psdSchattenPNorm M hM p) :=
+    IsLeast (psdTraceReverseHolderStateValueSet M p)
+      (psdSchattenPNorm M hM ⟨p, hp0⟩) :=
   psdTraceReverseHolderStateValueSet_isLeast_of_mem hM hp0 hp1
     (psdTraceReverseHolderOptimizer_mem hM hp0 hSpos)
 
@@ -5114,7 +5322,8 @@ theorem psdTraceReverseHolderStateValueSet_sInf_eq_of_tracePower_pos
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ}
     (hp0 : 0 < p) (hp1 : p < 1)
     (hSpos : 0 < psdTracePower M hM p) :
-    sInf (psdTraceReverseHolderStateValueSet M p) = psdSchattenPNorm M hM p :=
+    sInf (psdTraceReverseHolderStateValueSet M p) =
+      psdSchattenPNorm M hM ⟨p, hp0⟩ :=
   (psdTraceReverseHolderStateValueSet_isLeast_of_tracePower_pos
     hM hp0 hp1 hSpos).csInf_eq
 
@@ -5123,7 +5332,8 @@ matrices. -/
 theorem psdTraceReverseHolderStateValueSet_isLeast_of_ne_zero
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ}
     (hp0 : 0 < p) (hp1 : p < 1) (hMne : M ≠ 0) :
-    IsLeast (psdTraceReverseHolderStateValueSet M p) (psdSchattenPNorm M hM p) :=
+    IsLeast (psdTraceReverseHolderStateValueSet M p)
+      (psdSchattenPNorm M hM ⟨p, hp0⟩) :=
   psdTraceReverseHolderStateValueSet_isLeast_of_tracePower_pos hM hp0 hp1
     (psdTracePower_pos_of_ne_zero M hM hMne)
 
@@ -5132,7 +5342,8 @@ PSD matrices. -/
 theorem psdTraceReverseHolderStateValueSet_sInf_eq_of_ne_zero
     {M : CMatrix a} (hM : M.PosSemidef) {p : ℝ}
     (hp0 : 0 < p) (hp1 : p < 1) (hMne : M ≠ 0) :
-    sInf (psdTraceReverseHolderStateValueSet M p) = psdSchattenPNorm M hM p :=
+    sInf (psdTraceReverseHolderStateValueSet M p) =
+      psdSchattenPNorm M hM ⟨p, hp0⟩ :=
   (psdTraceReverseHolderStateValueSet_isLeast_of_ne_zero
     hM hp0 hp1 hMne).csInf_eq
 
@@ -5147,7 +5358,8 @@ Tomamichel's Schatten Holder variational lemma. -/
 theorem psdTraceHolderUnitBall_isGreatest
     {M : CMatrix a} (hM : M.PosSemidef) {p q : ℝ}
     (hpq : p.HolderConjugate q) :
-    IsGreatest (psdTraceHolderUnitBallValueSet M q) (psdSchattenPNorm M hM p) := by
+    IsGreatest (psdTraceHolderUnitBallValueSet M q)
+      (psdSchattenPNorm M hM ⟨p, hpq.pos⟩) := by
   classical
   constructor
   · let U : Matrix.unitaryGroup a ℂ := hM.isHermitian.eigenvectorUnitary
@@ -5212,7 +5424,7 @@ theorem psdTraceHolderUnitBall_isGreatest
       simp [D]
     have hvalR :
         (∑ i ∈ (Finset.univ : Finset a), hM.isHermitian.eigenvalues i * d i) =
-          psdSchattenPNorm M hM p := by
+          psdSchattenPNorm M hM ⟨p, hpq.pos⟩ := by
       have hval_coe := congrArg (fun x : ℝ≥0 => (x : ℝ)) hval
       have hvalR0 :
           (∑ i ∈ (Finset.univ : Finset a), hM.isHermitian.eigenvalues i * d i) =
@@ -5222,8 +5434,9 @@ theorem psdTraceHolderUnitBall_isGreatest
         (∑ i ∈ (Finset.univ : Finset a), hM.isHermitian.eigenvalues i * d i)
             = (∑ i ∈ (Finset.univ : Finset a), hM.isHermitian.eigenvalues i ^ p) ^
                 (1 / p) := hvalR0
-        _ = psdSchattenPNorm M hM p := by
-            rw [psdSchattenPNorm, psdTracePower_eq_sum_eigenvalues_rpow]
+        _ = psdSchattenPNorm M hM ⟨p, hpq.pos⟩ := by
+            rw [psdSchattenPNorm, Internal.psdSchattenExpression,
+              psdTracePower_eq_sum_eigenvalues_rpow]
             simp
     refine ⟨B, hB, hBq, ?_⟩
     rw [htraceB, hvalR]
@@ -5236,7 +5449,8 @@ theorem psdTraceHolderUnitBall_isGreatest
 theorem psdTraceHolderUnitBall_sSup_eq
     {M : CMatrix a} (hM : M.PosSemidef) {p q : ℝ}
     (hpq : p.HolderConjugate q) :
-    sSup (psdTraceHolderUnitBallValueSet M q) = psdSchattenPNorm M hM p :=
+    sSup (psdTraceHolderUnitBallValueSet M q) =
+      psdSchattenPNorm M hM ⟨p, hpq.pos⟩ :=
   (psdTraceHolderUnitBall_isGreatest hM hpq).csSup_eq
 
 /-- To prove a PSD Schatten `p`-norm bound from the Holder variational formula,
@@ -5250,8 +5464,10 @@ theorem psdSchattenPNorm_le_of_traceHolderUnitBall_le
     {M : CMatrix a} {N : CMatrix b} (hM : M.PosSemidef) (hN : N.PosSemidef)
     {p q : ℝ} (hpq : p.HolderConjugate q)
     (hbound : ∀ B : CMatrix a, ∀ hB : B.PosSemidef,
-      psdTracePower B hB q ≤ 1 → ((M * B).trace).re ≤ psdSchattenPNorm N hN p) :
-    psdSchattenPNorm M hM p ≤ psdSchattenPNorm N hN p := by
+      psdTracePower B hB q ≤ 1 →
+        ((M * B).trace).re ≤ psdSchattenPNorm N hN ⟨p, hpq.pos⟩) :
+    psdSchattenPNorm M hM ⟨p, hpq.pos⟩ ≤
+      psdSchattenPNorm N hN ⟨p, hpq.pos⟩ := by
   rcases (psdTraceHolderUnitBall_isGreatest hM hpq).1 with ⟨B, hB, hBq, hval⟩
   rw [hval]
   exact hbound B hB hBq
@@ -5294,7 +5510,8 @@ operator no more than with the larger one. -/
 theorem psdSchattenPNorm_mono_of_le
     {A B : CMatrix a} (hA : A.PosSemidef) (hB : B.PosSemidef)
     {p : ℝ} (hp : 1 < p) (hAB : A ≤ B) :
-    psdSchattenPNorm A hA p ≤ psdSchattenPNorm B hB p := by
+    psdSchattenPNorm A hA ⟨p, lt_trans zero_lt_one hp⟩ ≤
+      psdSchattenPNorm B hB ⟨p, lt_trans zero_lt_one hp⟩ := by
   let q : ℝ := Real.conjExponent p
   have hpq : p.HolderConjugate q := by
     simpa [q] using Real.HolderConjugate.conjExponent hp
@@ -5303,7 +5520,7 @@ theorem psdSchattenPNorm_mono_of_le
   calc
     ((A * C).trace).re ≤ ((B * C).trace).re :=
       cMatrix_trace_mul_le_of_le_posSemidef_right hC hAB
-    _ ≤ psdSchattenPNorm B hB p :=
+    _ ≤ psdSchattenPNorm B hB ⟨p, lt_trans zero_lt_one hp⟩ :=
       posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
         hB hC hpq (le_of_lt hpq.symm.lt) hCq
 
@@ -5311,8 +5528,9 @@ theorem psdSchattenPNorm_mono_of_le
 theorem psdSchattenPNorm_mul_comm
     {A B : CMatrix a} (hAB : (A * B).PosSemidef) (hBA : (B * A).PosSemidef)
     {p : ℝ} (hp : 0 < p) :
-    psdSchattenPNorm (A * B) hAB p = psdSchattenPNorm (B * A) hBA p := by
-  unfold psdSchattenPNorm
+    psdSchattenPNorm (A * B) hAB ⟨p, hp⟩ =
+      psdSchattenPNorm (B * A) hBA ⟨p, hp⟩ := by
+  unfold psdSchattenPNorm Internal.psdSchattenExpression
   rw [psdTracePower_mul_comm hAB hBA hp]
 
 /-- PSD Schatten `p`-norm expressions are convex on the positive cone for
@@ -5326,8 +5544,9 @@ theorem psdSchattenPNorm_convex_combo_le
     psdSchattenPNorm (s • A + t • B)
         (Matrix.PosSemidef.add
           (Matrix.PosSemidef.smul hA hs)
-          (Matrix.PosSemidef.smul hB ht)) p ≤
-      s * psdSchattenPNorm A hA p + t * psdSchattenPNorm B hB p := by
+          (Matrix.PosSemidef.smul hB ht)) ⟨p, lt_trans zero_lt_one hp⟩ ≤
+      s * psdSchattenPNorm A hA ⟨p, lt_trans zero_lt_one hp⟩ +
+        t * psdSchattenPNorm B hB ⟨p, lt_trans zero_lt_one hp⟩ := by
   let q : ℝ := Real.conjExponent p
   have hpq : p.HolderConjugate q := by
     simpa [q] using Real.HolderConjugate.conjExponent hp
@@ -5340,11 +5559,13 @@ theorem psdSchattenPNorm_convex_combo_le
     ⟨C, hC, hCq, hval⟩
   rw [hval]
   have hAtrace :
-      ((A * C).trace).re ≤ psdSchattenPNorm A hA p :=
+      ((A * C).trace).re ≤
+        psdSchattenPNorm A hA ⟨p, lt_trans zero_lt_one hp⟩ :=
     posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
       hA hC hpq (le_of_lt hpq.symm.lt) hCq
   have hBtrace :
-      ((B * C).trace).re ≤ psdSchattenPNorm B hB p :=
+      ((B * C).trace).re ≤
+        psdSchattenPNorm B hB ⟨p, lt_trans zero_lt_one hp⟩ :=
     posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
       hB hC hpq (le_of_lt hpq.symm.lt) hCq
   have htrace :
@@ -5365,8 +5586,9 @@ theorem psdSchattenPNorm_le_of_psdTracePower_le
     {M : CMatrix a} {N : CMatrix b} (hM : M.PosSemidef) (hN : N.PosSemidef)
     {p : ℝ} (hp : 0 < p)
     (hpower : psdTracePower M hM p ≤ psdTracePower N hN p) :
-    psdSchattenPNorm M hM p ≤ psdSchattenPNorm N hN p := by
-  rw [psdSchattenPNorm, psdSchattenPNorm]
+    psdSchattenPNorm M hM ⟨p, hp⟩ ≤ psdSchattenPNorm N hN ⟨p, hp⟩ := by
+  rw [psdSchattenPNorm, psdSchattenPNorm,
+    Internal.psdSchattenExpression, Internal.psdSchattenExpression]
   exact Real.rpow_le_rpow
     (psdTracePower_nonneg M hM p) hpower
     (one_div_nonneg.mpr (le_of_lt hp))
@@ -5379,9 +5601,9 @@ theorem psdTracePower_le_of_psdSchattenPNorm_le
     {p : ℝ} (hp : 0 < p)
     (hMpos : 0 < psdTracePower M hM p)
     (hNpos : 0 < psdTracePower N hN p)
-    (hnorm : psdSchattenPNorm M hM p ≤ psdSchattenPNorm N hN p) :
+    (hnorm : psdSchattenPNorm M hM ⟨p, hp⟩ ≤ psdSchattenPNorm N hN ⟨p, hp⟩) :
     psdTracePower M hM p ≤ psdTracePower N hN p := by
-  rw [psdSchattenPNorm] at hnorm
+  rw [psdSchattenPNorm, Internal.psdSchattenExpression] at hnorm
   exact (Real.rpow_le_rpow_iff (le_of_lt hMpos) (le_of_lt hNpos)
     (one_div_pos.2 hp)).mp hnorm
 

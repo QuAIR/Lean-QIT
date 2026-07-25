@@ -55,6 +55,19 @@
       "url": "https://arxiv.org/abs/0912.3805"
     },
     {
+      "key": "Berta2009SingleShotStateMerging",
+      "source_id": "berta-2009-single-shot-state-merging",
+      "title": "Single-shot Quantum State Merging",
+      "authors": [
+        "Mario Berta"
+      ],
+      "year": 2009,
+      "kind": "preprint",
+      "arxiv_id": "0912.4495",
+      "doi": null,
+      "url": "https://arxiv.org/abs/0912.4495"
+    },
+    {
       "key": "HorodeckiOppenheimWinter2005StateMerging",
       "source_id": "horodecki-oppenheim-winter-2005-state-merging",
       "title": "Quantum state merging and negative information",

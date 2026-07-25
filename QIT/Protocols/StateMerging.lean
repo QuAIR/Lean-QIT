@@ -7,6 +7,10 @@ Authors: QuAIR Team
 module
 
 public import QIT.Protocols.StateMerging.Converse
+public import QIT.Protocols.StateMerging.InputSource
+public import QIT.Protocols.StateMerging.RecordedOutcome
+public import QIT.Protocols.StateMerging.OneShotConverse
+public import QIT.Protocols.StateMerging.SmoothMinConverse
 public import QIT.Protocols.StateMerging.DirectRates
 public import QIT.Protocols.StateMerging.DirectProtocol
 public import QIT.Protocols.StateMerging.DirectOperational

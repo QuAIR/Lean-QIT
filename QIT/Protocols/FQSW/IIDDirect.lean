@@ -926,7 +926,7 @@ def normalizedTypicalTargetState
       (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
       (Prod e e)) :=
   T.normalizedTypicalSource.prod
-    (maximallyEntangledPureVector H.toOneShotProtocol.ebitPairing).state
+    (State.maximallyEntangled H.toOneShotProtocol.ebitPairing)
 
 omit [Nonempty btyp] in
 /-- Decoding the one-shot ideal target produces the normalized simultaneous-
@@ -937,12 +937,12 @@ theorem decodedOneShotTargetState_eq_normalizedTypicalTargetState
     W.decodedOneShotTargetState H = W.normalizedTypicalTargetState H := by
   have hid :
       (Channel.idChannel (Prod e e)).applyState
-          (maximallyEntangledPureVector H.toOneShotProtocol.ebitPairing).state =
-        (maximallyEntangledPureVector H.toOneShotProtocol.ebitPairing).state := by
+          (State.maximallyEntangled H.toOneShotProtocol.ebitPairing) =
+        State.maximallyEntangled H.toOneShotProtocol.ebitPairing := by
     apply State.ext
     change (Channel.idChannel (Prod e e)).map
-      (maximallyEntangledPureVector H.toOneShotProtocol.ebitPairing).state.matrix =
-        (maximallyEntangledPureVector H.toOneShotProtocol.ebitPairing).state.matrix
+      (State.maximallyEntangled H.toOneShotProtocol.ebitPairing).matrix =
+        (State.maximallyEntangled H.toOneShotProtocol.ebitPairing).matrix
     simp [Channel.idChannel, MatrixMap.ofKraus]
   unfold decodedOneShotTargetState normalizedTypicalTargetState
   rw [FQSWOneShotProtocol.targetState, Channel.applyState_prod]
@@ -1296,7 +1296,7 @@ theorem toFQSWBlockProtocol_output_traceDistance_le_sourceRoute
   let C := W.toFQSWBlockProtocol H
   let source := adhwFQSWIidSourceState ψ n
   let typical := T.normalizedTypicalSource
-  let ebit := (maximallyEntangledPureVector H.toOneShotProtocol.ebitPairing).state
+  let ebit := State.maximallyEntangled H.toOneShotProtocol.ebitPairing
   have hsource : traceDistance source.matrix typical.matrix ≤ ε := by
     rw [traceDistance_comm]
     exact W.source_traceNorm_le_original

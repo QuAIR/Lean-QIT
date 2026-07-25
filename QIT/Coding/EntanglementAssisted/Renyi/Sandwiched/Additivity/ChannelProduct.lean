@@ -44,19 +44,22 @@ theorem sandwichedRenyiMutualInformationE_prod_le_fullRankProductCB_sInf
       BddBelow (Set.range fun
           p : {sigma : State b1 // sigma.matrix.PosDef} ×
               {sigma : State b2 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) alpha)) :
+        sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1)
+          (SchattenOrder.ofOneLt halpha))) :
     (N1.prod N2).sandwichedRenyiMutualInformationE alpha ≤
       ((sInf (Set.range fun
           p : {sigma : State b1 // sigma.matrix.PosDef} ×
               {sigma : State b2 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) alpha) :
+        sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1)
+          (SchattenOrder.ofOneLt halpha)) :
           ℝ) : EReal) := by
   let S1 := {sigma : State b1 // sigma.matrix.PosDef}
   let S2 := {sigma : State b2 // sigma.matrix.PosDef}
   haveI : Nonempty S1 := ⟨⟨State.maximallyMixed b1, State.maximallyMixed_posDef⟩⟩
   haveI : Nonempty S2 := ⟨⟨State.maximallyMixed b2, State.maximallyMixed_posDef⟩⟩
   let f : S1 × S2 → ℝ := fun p =>
-    sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) alpha
+    sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1)
+      (SchattenOrder.ofOneLt halpha)
   have hInf :
       sInf (Set.range fun p : S1 × S2 => ((f p : ℝ) : EReal)) =
         ((sInf (Set.range f) : ℝ) : EReal) :=
@@ -91,13 +94,14 @@ theorem sandwichedRenyiMutualInformationE_prod_le_fullRankProductCB_sInf_EReal
           p : Prod {sigma : State b1 // sigma.matrix.PosDef}
               {sigma : State b2 // sigma.matrix.PosDef} =>
         ((sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1)
-          alpha : ℝ) : EReal)) := by
+          (SchattenOrder.ofOneLt halpha) : ℝ) : EReal)) := by
   let S1 := {sigma : State b1 // sigma.matrix.PosDef}
   let S2 := {sigma : State b2 // sigma.matrix.PosDef}
   haveI : Nonempty S1 := ⟨⟨State.maximallyMixed b1, State.maximallyMixed_posDef⟩⟩
   haveI : Nonempty S2 := ⟨⟨State.maximallyMixed b2, State.maximallyMixed_posDef⟩⟩
   let f : Prod S1 S2 → ℝ := fun p =>
-    sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) alpha
+    sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1)
+      (SchattenOrder.ofOneLt halpha)
   rw [(N1.prod N2).sandwichedRenyiMutualInformationE_eq_sSup]
   refine csSup_le ((N1.prod N2).sandwichedRenyiMutualInformationEValueSet_nonempty alpha) ?_
   rintro y ⟨psi, rfl⟩
@@ -123,7 +127,7 @@ theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_maximallyMixed_pos_o
           trace_le_one := by
             rw [(State.maximallyMixed a1).trace_eq_one]
             norm_num }
-        alpha := by
+        (SchattenOrder.ofPositive halpha) := by
   let Y0 : MatrixMap.CBOneToAlphaOriginalDomain a1 :=
     { matrix := (State.maximallyMixed a1).matrix,
       pos := (State.maximallyMixed a1).pos,
@@ -142,7 +146,8 @@ theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_maximallyMixed_pos_o
   unfold MatrixMap.cbOneToAlphaOriginalValue
   change 0 <
     psdSchattenPNorm
-      (MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha) X) _ alpha
+      (MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha) X) _
+      (SchattenOrder.ofPositive halpha)
   exact psdSchattenPNorm_pos_of_ne_zero
     (MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha) X) _ hPhiXne
 
@@ -155,7 +160,7 @@ theorem cbOneToAlphaNorm_sandwichedSideWeightedMap_pos_of_posDef
       MatrixMap.cbOneToAlphaNorm
         (sandwichedSideWeightedMap N sigma alpha)
         (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
-        alpha := by
+        (SchattenOrder.ofOneLt halpha) := by
   let Y0 : MatrixMap.CBOneToAlphaOriginalDomain a1 :=
     { matrix := (State.maximallyMixed a1).matrix,
       pos := (State.maximallyMixed a1).pos,
@@ -168,7 +173,7 @@ theorem cbOneToAlphaNorm_sandwichedSideWeightedMap_pos_of_posDef
           (sandwichedSideWeightedMap N sigma alpha)
           (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
           Y0
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
     simpa [Y0] using
       cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_maximallyMixed_pos_of_posDef
         N sigma hsigma (lt_trans zero_lt_one halpha)
@@ -177,11 +182,11 @@ theorem cbOneToAlphaNorm_sandwichedSideWeightedMap_pos_of_posDef
           (sandwichedSideWeightedMap N sigma alpha)
           (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
           Y0
-          alpha ≤
+          (SchattenOrder.ofOneLt halpha) ≤
         MatrixMap.cbOneToAlphaNorm
           (sandwichedSideWeightedMap N sigma alpha)
           (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
     exact MatrixMap.cbOneToAlphaOriginalValue_le_cbOneToAlphaNorm_of_one_lt
       (sandwichedSideWeightedMap N sigma alpha)
       (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
@@ -198,7 +203,7 @@ theorem cbOneToAlphaAlternateExpression_sandwichedSideWeightedMap_pos_of_posDef
       MatrixMap.cbOneToAlphaAlternateExpression
         (sandwichedSideWeightedMap N sigma alpha)
         (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
-        alpha := by
+        (SchattenOrder.ofOneLt halpha) := by
   rw [← MatrixMap.cbOneToAlphaNorm_eq_cbOneToAlphaAlternateExpression
     (sandwichedSideWeightedMap N sigma alpha)
     (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
@@ -401,9 +406,9 @@ theorem cbOneToAlphaNorm_prod_map_eq_mul
     [Nonempty a1] [Nonempty a2] [Nonempty b2]
     (N1 : Channel a1 b1) (N2 : Channel a2 b2)
     {alpha : ℝ} (halpha : 1 < alpha) :
-    MatrixMap.cbOneToAlphaNorm (N1.prod N2).map (N1.prod N2).completelyPositive alpha =
-      MatrixMap.cbOneToAlphaNorm N1.map N1.completelyPositive alpha *
-        MatrixMap.cbOneToAlphaNorm N2.map N2.completelyPositive alpha := by
+    MatrixMap.cbOneToAlphaNorm (N1.prod N2).map (N1.prod N2).completelyPositive (SchattenOrder.ofOneLt halpha) =
+      MatrixMap.cbOneToAlphaNorm N1.map N1.completelyPositive (SchattenOrder.ofOneLt halpha) *
+        MatrixMap.cbOneToAlphaNorm N2.map N2.completelyPositive (SchattenOrder.ofOneLt halpha) := by
   simpa [Channel.prod] using
     (MatrixMap.cbOneToAlphaNorm_kron_eq_mul
       N1.map N1.completelyPositive N2.map N2.completelyPositive halpha)
@@ -452,19 +457,19 @@ theorem cbOneToAlphaNorm_sandwichedSideWeightMap_prod_map_eq_mul_posDef
           (MatrixMap.sandwichedSideWeightMap_completelyPositive
             (sigma1.prod sigma2) alpha)
           (N1.prod N2).completelyPositive)
-        alpha =
+        (SchattenOrder.ofOneLt halpha) =
       MatrixMap.cbOneToAlphaNorm
           ((MatrixMap.sandwichedSideWeightMap sigma1 alpha).comp N1.map)
           (MatrixMap.isCompletelyPositive_comp _ _
             (MatrixMap.sandwichedSideWeightMap_completelyPositive sigma1 alpha)
             N1.completelyPositive)
-          alpha *
+          (SchattenOrder.ofOneLt halpha) *
         MatrixMap.cbOneToAlphaNorm
           ((MatrixMap.sandwichedSideWeightMap sigma2 alpha).comp N2.map)
           (MatrixMap.isCompletelyPositive_comp _ _
             (MatrixMap.sandwichedSideWeightMap_completelyPositive sigma2 alpha)
             N2.completelyPositive)
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
   simpa [Channel.prod] using
     MatrixMap.cbOneToAlphaNorm_sandwichedSideWeightMap_prod_comp_kron_eq_mul_posDef
       sigma1 sigma2 N1.map N1.completelyPositive N2.map N2.completelyPositive
@@ -482,15 +487,15 @@ theorem cbOneToAlphaNorm_sandwichedSideWeightedMap_prod_eq_mul_posDef
         (sandwichedSideWeightedMap (N1.prod N2) (sigma1.prod sigma2) alpha)
         (sandwichedSideWeightedMap_completelyPositive (N1.prod N2)
           (sigma1.prod sigma2) alpha)
-        alpha =
+        (SchattenOrder.ofOneLt halpha) =
       MatrixMap.cbOneToAlphaNorm
           (sandwichedSideWeightedMap N1 sigma1 alpha)
           (sandwichedSideWeightedMap_completelyPositive N1 sigma1 alpha)
-          alpha *
+          (SchattenOrder.ofOneLt halpha) *
         MatrixMap.cbOneToAlphaNorm
           (sandwichedSideWeightedMap N2 sigma2 alpha)
           (sandwichedSideWeightedMap_completelyPositive N2 sigma2 alpha)
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
   simpa [sandwichedSideWeightedMap, sandwichedSideWeightedMap_completelyPositive] using
     cbOneToAlphaNorm_sandwichedSideWeightMap_prod_map_eq_mul_posDef
       N1 N2 sigma1 sigma2 hsigma1 hsigma2 halpha
@@ -508,15 +513,15 @@ theorem cbOneToAlphaAlternateExpression_sandwichedSideWeightedMap_prod_eq_mul_po
         (sandwichedSideWeightedMap (N1.prod N2) (sigma1.prod sigma2) alpha)
         (sandwichedSideWeightedMap_completelyPositive (N1.prod N2)
           (sigma1.prod sigma2) alpha)
-        alpha =
+        (SchattenOrder.ofOneLt halpha) =
       MatrixMap.cbOneToAlphaAlternateExpression
           (sandwichedSideWeightedMap N1 sigma1 alpha)
           (sandwichedSideWeightedMap_completelyPositive N1 sigma1 alpha)
-          alpha *
+          (SchattenOrder.ofOneLt halpha) *
         MatrixMap.cbOneToAlphaAlternateExpression
           (sandwichedSideWeightedMap N2 sigma2 alpha)
           (sandwichedSideWeightedMap_completelyPositive N2 sigma2 alpha)
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
   rw [← MatrixMap.cbOneToAlphaNorm_eq_cbOneToAlphaAlternateExpression
     (sandwichedSideWeightedMap (N1.prod N2) (sigma1.prod sigma2) alpha)
     (sandwichedSideWeightedMap_completelyPositive (N1.prod N2)
@@ -547,17 +552,17 @@ theorem sandwichedRenyiCBAlternateExpression_prod_posDef
           (sandwichedSideWeightedMap (N1.prod N2) (sigma1.prod sigma2) alpha)
           (sandwichedSideWeightedMap_completelyPositive (N1.prod N2)
             (sigma1.prod sigma2) alpha)
-          alpha) =
+          (SchattenOrder.ofOneLt halpha)) =
       alpha / (alpha - 1) *
           log2 (MatrixMap.cbOneToAlphaAlternateExpression
             (sandwichedSideWeightedMap N1 sigma1 alpha)
             (sandwichedSideWeightedMap_completelyPositive N1 sigma1 alpha)
-            alpha) +
+            (SchattenOrder.ofOneLt halpha)) +
         alpha / (alpha - 1) *
           log2 (MatrixMap.cbOneToAlphaAlternateExpression
             (sandwichedSideWeightedMap N2 sigma2 alpha)
             (sandwichedSideWeightedMap_completelyPositive N2 sigma2 alpha)
-            alpha) := by
+            (SchattenOrder.ofOneLt halpha)) := by
   rw [cbOneToAlphaAlternateExpression_sandwichedSideWeightedMap_prod_eq_mul_posDef
     N1 N2 sigma1 sigma2 hsigma1 hsigma2 halpha]
   rw [log2_mul
@@ -583,14 +588,14 @@ theorem sandwichedRenyiCBAlternateExpression_fullRankProduct_sInf_eq_add
           log2 (MatrixMap.cbOneToAlphaAlternateExpression
             (sandwichedSideWeightedMap N1 sigma1.1 alpha)
             (sandwichedSideWeightedMap_completelyPositive N1 sigma1.1 alpha)
-            alpha)))
+            (SchattenOrder.ofOneLt halpha))))
     (hN2 :
       BddBelow (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
         alpha / (alpha - 1) *
           log2 (MatrixMap.cbOneToAlphaAlternateExpression
             (sandwichedSideWeightedMap N2 sigma2.1 alpha)
             (sandwichedSideWeightedMap_completelyPositive N2 sigma2.1 alpha)
-            alpha))) :
+            (SchattenOrder.ofOneLt halpha)))) :
     sInf (Set.range fun
         p : {sigma : State b1 // sigma.matrix.PosDef} ×
             {sigma : State b2 // sigma.matrix.PosDef} =>
@@ -599,19 +604,19 @@ theorem sandwichedRenyiCBAlternateExpression_fullRankProduct_sInf_eq_add
           (sandwichedSideWeightedMap (N1.prod N2) (p.1.1.prod p.2.1) alpha)
           (sandwichedSideWeightedMap_completelyPositive (N1.prod N2)
             (p.1.1.prod p.2.1) alpha)
-          alpha)) =
+          (SchattenOrder.ofOneLt halpha))) =
       sInf (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
         alpha / (alpha - 1) *
           log2 (MatrixMap.cbOneToAlphaAlternateExpression
             (sandwichedSideWeightedMap N1 sigma1.1 alpha)
             (sandwichedSideWeightedMap_completelyPositive N1 sigma1.1 alpha)
-            alpha)) +
+            (SchattenOrder.ofOneLt halpha))) +
       sInf (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
         alpha / (alpha - 1) *
           log2 (MatrixMap.cbOneToAlphaAlternateExpression
             (sandwichedSideWeightedMap N2 sigma2.1 alpha)
             (sandwichedSideWeightedMap_completelyPositive N2 sigma2.1 alpha)
-            alpha)) := by
+            (SchattenOrder.ofOneLt halpha))) := by
   let S1 := {sigma : State b1 // sigma.matrix.PosDef}
   let S2 := {sigma : State b2 // sigma.matrix.PosDef}
   haveI : Nonempty S1 := ⟨⟨State.maximallyMixed b1, State.maximallyMixed_posDef⟩⟩
@@ -621,13 +626,13 @@ theorem sandwichedRenyiCBAlternateExpression_fullRankProduct_sInf_eq_add
       log2 (MatrixMap.cbOneToAlphaAlternateExpression
         (sandwichedSideWeightedMap N1 sigma1.1 alpha)
         (sandwichedSideWeightedMap_completelyPositive N1 sigma1.1 alpha)
-        alpha)
+        (SchattenOrder.ofOneLt halpha))
   let g : S2 → ℝ := fun sigma2 =>
     alpha / (alpha - 1) *
       log2 (MatrixMap.cbOneToAlphaAlternateExpression
         (sandwichedSideWeightedMap N2 sigma2.1 alpha)
         (sandwichedSideWeightedMap_completelyPositive N2 sigma2.1 alpha)
-        alpha)
+        (SchattenOrder.ofOneLt halpha))
   have hpoint :
       (fun p : S1 × S2 =>
         alpha / (alpha - 1) *
@@ -635,7 +640,7 @@ theorem sandwichedRenyiCBAlternateExpression_fullRankProduct_sInf_eq_add
             (sandwichedSideWeightedMap (N1.prod N2) (p.1.1.prod p.2.1) alpha)
             (sandwichedSideWeightedMap_completelyPositive (N1.prod N2)
               (p.1.1.prod p.2.1) alpha)
-            alpha)) =
+            (SchattenOrder.ofOneLt halpha))) =
         (fun p : S1 × S2 => f p.1 + g p.2) := by
     funext p
     exact sandwichedRenyiCBAlternateExpression_prod_posDef
@@ -657,16 +662,17 @@ theorem sandwichedRenyiCBNormExpression_prod_posDef_of_ne
       MatrixMap.cbOneToAlphaNorm
           (sandwichedSideWeightedMap N1 sigma1 alpha)
           (sandwichedSideWeightedMap_completelyPositive N1 sigma1 alpha)
-          alpha ≠ 0)
+          (SchattenOrder.ofOneLt halpha) ≠ 0)
     (hN2 :
       MatrixMap.cbOneToAlphaNorm
           (sandwichedSideWeightedMap N2 sigma2 alpha)
           (sandwichedSideWeightedMap_completelyPositive N2 sigma2 alpha)
-          alpha ≠ 0) :
-    sandwichedRenyiCBNormExpression (N1.prod N2) (sigma1.prod sigma2) alpha =
-      sandwichedRenyiCBNormExpression N1 sigma1 alpha +
-        sandwichedRenyiCBNormExpression N2 sigma2 alpha := by
+          (SchattenOrder.ofOneLt halpha) ≠ 0) :
+    sandwichedRenyiCBNormExpression (N1.prod N2) (sigma1.prod sigma2) (SchattenOrder.ofOneLt halpha) =
+      sandwichedRenyiCBNormExpression N1 sigma1 (SchattenOrder.ofOneLt halpha) +
+        sandwichedRenyiCBNormExpression N2 sigma2 (SchattenOrder.ofOneLt halpha) := by
   unfold sandwichedRenyiCBNormExpression
+  simp only [SchattenOrder.coe_ofOneLt]
   rw [cbOneToAlphaNorm_sandwichedSideWeightedMap_prod_eq_mul_posDef
     N1 N2 sigma1 sigma2 hsigma1 hsigma2 halpha]
   rw [log2_mul hN1 hN2]
@@ -681,9 +687,9 @@ theorem sandwichedRenyiCBNormExpression_prod_posDef
     (sigma1 : State b1) (sigma2 : State b2)
     (hsigma1 : sigma1.matrix.PosDef) (hsigma2 : sigma2.matrix.PosDef)
     {alpha : ℝ} (halpha : 1 < alpha) :
-    sandwichedRenyiCBNormExpression (N1.prod N2) (sigma1.prod sigma2) alpha =
-      sandwichedRenyiCBNormExpression N1 sigma1 alpha +
-        sandwichedRenyiCBNormExpression N2 sigma2 alpha := by
+    sandwichedRenyiCBNormExpression (N1.prod N2) (sigma1.prod sigma2) (SchattenOrder.ofOneLt halpha) =
+      sandwichedRenyiCBNormExpression N1 sigma1 (SchattenOrder.ofOneLt halpha) +
+        sandwichedRenyiCBNormExpression N2 sigma2 (SchattenOrder.ofOneLt halpha) := by
   exact sandwichedRenyiCBNormExpression_prod_posDef_of_ne
     N1 N2 sigma1 sigma2 hsigma1 hsigma2 halpha
     (ne_of_gt (cbOneToAlphaNorm_sandwichedSideWeightedMap_pos_of_posDef
@@ -704,27 +710,27 @@ theorem sandwichedRenyiCBNormExpression_fullRankProduct_sInf_eq_add
     (N1 : Channel a1 b1) (N2 : Channel a2 b2) {alpha : ℝ} (halpha : 1 < alpha)
     (hN1 :
       BddBelow (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N1 sigma1.1 alpha))
+        sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)))
     (hN2 :
       BddBelow (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N2 sigma2.1 alpha)) :
+        sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha))) :
     sInf (Set.range fun
         p : {sigma : State b1 // sigma.matrix.PosDef} ×
             {sigma : State b2 // sigma.matrix.PosDef} =>
-      sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) alpha) =
+      sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) (SchattenOrder.ofOneLt halpha)) =
       sInf (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N1 sigma1.1 alpha) +
+        sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)) +
       sInf (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N2 sigma2.1 alpha) := by
+        sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)) := by
   let S1 := {sigma : State b1 // sigma.matrix.PosDef}
   let S2 := {sigma : State b2 // sigma.matrix.PosDef}
   haveI : Nonempty S1 := ⟨⟨State.maximallyMixed b1, State.maximallyMixed_posDef⟩⟩
   haveI : Nonempty S2 := ⟨⟨State.maximallyMixed b2, State.maximallyMixed_posDef⟩⟩
-  let f : S1 → ℝ := fun sigma1 => sandwichedRenyiCBNormExpression N1 sigma1.1 alpha
-  let g : S2 → ℝ := fun sigma2 => sandwichedRenyiCBNormExpression N2 sigma2.1 alpha
+  let f : S1 → ℝ := fun sigma1 => sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)
+  let g : S2 → ℝ := fun sigma2 => sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)
   have hpoint :
       (fun p : S1 × S2 =>
-        sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) alpha) =
+        sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) (SchattenOrder.ofOneLt halpha)) =
         (fun p : S1 × S2 => f p.1 + g p.2) := by
     funext p
     exact sandwichedRenyiCBNormExpression_prod_posDef
@@ -743,20 +749,20 @@ theorem sandwichedRenyiCBNormExpression_fullRankProduct_bddBelow
     (N1 : Channel a1 b1) (N2 : Channel a2 b2) {alpha : ℝ} (halpha : 1 < alpha)
     (hN1 :
       BddBelow (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N1 sigma1.1 alpha))
+        sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)))
     (hN2 :
       BddBelow (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N2 sigma2.1 alpha)) :
+        sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha))) :
     BddBelow (Set.range fun
         p : Prod {sigma : State b1 // sigma.matrix.PosDef}
             {sigma : State b2 // sigma.matrix.PosDef} =>
-      sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) alpha) := by
+      sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) (SchattenOrder.ofOneLt halpha)) := by
   rcases hN1 with ⟨l1, hl1⟩
   rcases hN2 with ⟨l2, hl2⟩
   refine ⟨l1 + l2, ?_⟩
   rintro y ⟨p, rfl⟩
   change l1 + l2 ≤
-    sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) alpha
+    sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) (SchattenOrder.ofOneLt halpha)
   rw [sandwichedRenyiCBNormExpression_prod_posDef N1 N2
     p.1.1 p.2.1 p.1.2 p.2.2 halpha]
   exact add_le_add (hl1 ⟨p.1, rfl⟩) (hl2 ⟨p.2, rfl⟩)
@@ -775,16 +781,16 @@ theorem sandwichedRenyiMutualInformationE_prod_le_fullRankProductCB_sInf_of_outp
       ((sInf (Set.range fun
           p : {sigma : State b1 // sigma.matrix.PosDef} ×
               {sigma : State b2 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) alpha) :
+        sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) (SchattenOrder.ofOneLt halpha)) :
           ℝ) : EReal) := by
   have hN1Below :
       BddBelow (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N1 sigma1.1 alpha) :=
+        sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)) :=
     sandwichedRenyiCBNormExpression_fullRank_bddBelow_of_outputs_posDef
       N1 halpha hOut1
   have hN2Below :
       BddBelow (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N2 sigma2.1 alpha) :=
+        sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)) :=
     sandwichedRenyiCBNormExpression_fullRank_bddBelow_of_outputs_posDef
       N2 halpha hOut2
   exact sandwichedRenyiMutualInformationE_prod_le_fullRankProductCB_sInf
@@ -808,36 +814,36 @@ theorem sandwichedRenyiMutualInformationE_prod_le_add_of_cb_fullRankAlternate
     (N1 : Channel a1 b1) (N2 : Channel a2 b2) {alpha : ℝ} (halpha : 1 < alpha)
     (hN1Below :
       BddBelow (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N1 sigma1.1 alpha))
+        sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)))
     (hN2Below :
       BddBelow (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N2 sigma2.1 alpha))
+        sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)))
     (hprodAltLe :
       (N1.prod N2).sandwichedRenyiMutualInformationE alpha ≤
         ((sInf (Set.range fun
             p : Prod {sigma : State b1 // sigma.matrix.PosDef}
                 {sigma : State b2 // sigma.matrix.PosDef} =>
           sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1)
-            alpha) : ℝ) : EReal))
+            (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal))
     (hN1Alt :
       N1.sandwichedRenyiMutualInformationE alpha =
         ((sInf (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-          sandwichedRenyiCBNormExpression N1 sigma1.1 alpha) : ℝ) : EReal))
+          sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal))
     (hN2Alt :
       N2.sandwichedRenyiMutualInformationE alpha =
         ((sInf (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-          sandwichedRenyiCBNormExpression N2 sigma2.1 alpha) : ℝ) : EReal)) :
+          sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal)) :
     (N1.prod N2).sandwichedRenyiMutualInformationE alpha ≤
       N1.sandwichedRenyiMutualInformationE alpha +
         N2.sandwichedRenyiMutualInformationE alpha := by
   let S1 := {sigma : State b1 // sigma.matrix.PosDef}
   let S2 := {sigma : State b2 // sigma.matrix.PosDef}
   let f : S1 → ℝ := fun sigma1 =>
-    sandwichedRenyiCBNormExpression N1 sigma1.1 alpha
+    sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)
   let g : S2 → ℝ := fun sigma2 =>
-    sandwichedRenyiCBNormExpression N2 sigma2.1 alpha
+    sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)
   let prodF : Prod S1 S2 → ℝ := fun p =>
-    sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) alpha
+    sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1) (SchattenOrder.ofOneLt halpha)
   have hsplit :
       sInf (Set.range prodF) = sInf (Set.range f) + sInf (Set.range g) := by
     simpa [S1, S2, f, g, prodF] using
@@ -880,18 +886,18 @@ theorem sandwichedRenyiMutualInformationE_prod_le_add_of_single_cb_fullRankAlter
     (N1 : Channel a1 b1) (N2 : Channel a2 b2) {alpha : ℝ} (halpha : 1 < alpha)
     (hN1Below :
       BddBelow (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N1 sigma1.1 alpha))
+        sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)))
     (hN2Below :
       BddBelow (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N2 sigma2.1 alpha))
+        sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)))
     (hN1Alt :
       N1.sandwichedRenyiMutualInformationE alpha =
         ((sInf (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-          sandwichedRenyiCBNormExpression N1 sigma1.1 alpha) : ℝ) : EReal))
+          sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal))
     (hN2Alt :
       N2.sandwichedRenyiMutualInformationE alpha =
         ((sInf (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-          sandwichedRenyiCBNormExpression N2 sigma2.1 alpha) : ℝ) : EReal)) :
+          sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal)) :
     (N1.prod N2).sandwichedRenyiMutualInformationE alpha ≤
       N1.sandwichedRenyiMutualInformationE alpha +
         N2.sandwichedRenyiMutualInformationE alpha := by
@@ -900,7 +906,7 @@ theorem sandwichedRenyiMutualInformationE_prod_le_add_of_single_cb_fullRankAlter
           p : Prod {sigma : State b1 // sigma.matrix.PosDef}
               {sigma : State b2 // sigma.matrix.PosDef} =>
         sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1)
-          alpha) :=
+          (SchattenOrder.ofOneLt halpha)) :=
     sandwichedRenyiCBNormExpression_fullRankProduct_bddBelow
       N1 N2 halpha hN1Below hN2Below
   have hprodAltLe :
@@ -909,7 +915,7 @@ theorem sandwichedRenyiMutualInformationE_prod_le_add_of_single_cb_fullRankAlter
             p : Prod {sigma : State b1 // sigma.matrix.PosDef}
                 {sigma : State b2 // sigma.matrix.PosDef} =>
           sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1)
-            alpha) : ℝ) : EReal) :=
+            (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) :=
     sandwichedRenyiMutualInformationE_prod_le_fullRankProductCB_sInf
       N1 N2 halpha hProdBelow
   exact sandwichedRenyiMutualInformationE_prod_le_add_of_cb_fullRankAlternate
@@ -929,11 +935,11 @@ theorem sandwichedRenyiMutualInformationE_prod_le_add
         N2.sandwichedRenyiMutualInformationE alpha := by
   have hN1Below :
       BddBelow (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N1 sigma1.1 alpha) := by
+        sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)) := by
     simpa using sandwichedRenyiCBNormExpression_fullRank_bddBelow N1 halpha
   have hN2Below :
       BddBelow (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N2 sigma2.1 alpha) := by
+        sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)) := by
     simpa using sandwichedRenyiCBNormExpression_fullRank_bddBelow N2 halpha
   exact sandwichedRenyiMutualInformationE_prod_le_add_of_single_cb_fullRankAlternate
     N1 N2 halpha hN1Below hN2Below
@@ -961,26 +967,26 @@ theorem sandwichedRenyiMutualInformationE_prod_eq_add_of_output_posDef_cb_fullRa
             p : Prod {sigma : State b1 // sigma.matrix.PosDef}
                 {sigma : State b2 // sigma.matrix.PosDef} =>
           sandwichedRenyiCBNormExpression (N1.prod N2) (p.1.1.prod p.2.1)
-            alpha) : ℝ) : EReal))
+            (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal))
     (hN1Alt :
       N1.sandwichedRenyiMutualInformationE alpha =
         ((sInf (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-          sandwichedRenyiCBNormExpression N1 sigma1.1 alpha) : ℝ) : EReal))
+          sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal))
     (hN2Alt :
       N2.sandwichedRenyiMutualInformationE alpha =
         ((sInf (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-          sandwichedRenyiCBNormExpression N2 sigma2.1 alpha) : ℝ) : EReal)) :
+          sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal)) :
     (N1.prod N2).sandwichedRenyiMutualInformationE alpha =
       N1.sandwichedRenyiMutualInformationE alpha +
         N2.sandwichedRenyiMutualInformationE alpha := by
   have hN1Below :
       BddBelow (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N1 sigma1.1 alpha) :=
+        sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)) :=
     sandwichedRenyiCBNormExpression_fullRank_bddBelow_of_outputs_posDef
       N1 halpha hOut1
   have hN2Below :
       BddBelow (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N2 sigma2.1 alpha) :=
+        sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)) :=
     sandwichedRenyiCBNormExpression_fullRank_bddBelow_of_outputs_posDef
       N2 halpha hOut2
   exact le_antisymm
@@ -1008,22 +1014,22 @@ theorem sandwichedRenyiMutualInformationE_prod_eq_add_of_fullSupport_cb_fullRank
     (hN1Alt :
       N1.sandwichedRenyiMutualInformationE alpha =
         ((sInf (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-          sandwichedRenyiCBNormExpression N1 sigma1.1 alpha) : ℝ) : EReal))
+          sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal))
     (hN2Alt :
       N2.sandwichedRenyiMutualInformationE alpha =
         ((sInf (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-          sandwichedRenyiCBNormExpression N2 sigma2.1 alpha) : ℝ) : EReal)) :
+          sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal)) :
     (N1.prod N2).sandwichedRenyiMutualInformationE alpha =
       N1.sandwichedRenyiMutualInformationE alpha +
         N2.sandwichedRenyiMutualInformationE alpha := by
   have hN1Below :
       BddBelow (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N1 sigma1.1 alpha) :=
+        sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)) :=
     sandwichedRenyiCBNormExpression_fullRank_bddBelow_of_outputs_posDef
       N1 halpha hOut1
   have hN2Below :
       BddBelow (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N2 sigma2.1 alpha) :=
+        sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)) :=
     sandwichedRenyiCBNormExpression_fullRank_bddBelow_of_outputs_posDef
       N2 halpha hOut2
   exact le_antisymm
@@ -1049,21 +1055,21 @@ theorem sandwichedRenyiMutualInformationE_prod_eq_add_of_fullSupport_sionExchang
       (N1.hypothesisTestingOutputState psi).matrix.PosDef)
     (hOut2 : ∀ phi : PureVector (Prod a2 a2),
       (N2.hypothesisTestingOutputState phi).matrix.PosDef)
-    (hSion1 : N1.sandwichedChannelAlternateSionExchange alpha)
-    (hSion2 : N2.sandwichedChannelAlternateSionExchange alpha) :
+    (hSion1 : N1.sandwichedChannelAlternateSionExchange alpha halpha)
+    (hSion2 : N2.sandwichedChannelAlternateSionExchange alpha halpha) :
     (N1.prod N2).sandwichedRenyiMutualInformationE alpha =
       N1.sandwichedRenyiMutualInformationE alpha +
         N2.sandwichedRenyiMutualInformationE alpha := by
   have hN1Alt :
       N1.sandwichedRenyiMutualInformationE alpha =
         ((sInf (Set.range fun sigma1 : {sigma : State b1 // sigma.matrix.PosDef} =>
-          sandwichedRenyiCBNormExpression N1 sigma1.1 alpha) : ℝ) : EReal) :=
+          sandwichedRenyiCBNormExpression N1 sigma1.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) :=
     sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_of_outputs_posDef_sionExchange
       N1 halpha hOut1 hSion1
   have hN2Alt :
       N2.sandwichedRenyiMutualInformationE alpha =
         ((sInf (Set.range fun sigma2 : {sigma : State b2 // sigma.matrix.PosDef} =>
-          sandwichedRenyiCBNormExpression N2 sigma2.1 alpha) : ℝ) : EReal) :=
+          sandwichedRenyiCBNormExpression N2 sigma2.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) :=
     sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_of_outputs_posDef_sionExchange
       N2 halpha hOut2 hSion2
   exact sandwichedRenyiMutualInformationE_prod_eq_add_of_fullSupport_cb_fullRankAlternate

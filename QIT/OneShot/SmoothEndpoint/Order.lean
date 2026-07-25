@@ -261,48 +261,6 @@ theorem exists_complex_phase_mul_re_eq_abs (z : ℂ) :
       rw [hmul]
       simp
 
-theorem psdSqrt_real_smul_one {a : Type u} [Fintype a] [DecidableEq a]
-    {r : ℝ} (hr : 0 ≤ r) :
-    psdSqrt (((r : ℂ) • (1 : CMatrix a))) =
-      ((Real.sqrt r : ℝ) : ℂ) • (1 : CMatrix a) := by
-  let rr : NNReal := ⟨r, hr⟩
-  have hscalar : ((r : ℂ) • (1 : CMatrix a)) = algebraMap NNReal (CMatrix a) rr := by
-    ext i j
-    by_cases hij : i = j
-    · subst hij
-      simp [Matrix.algebraMap_matrix_apply, rr]
-      rfl
-    · simp [Matrix.algebraMap_matrix_apply, rr, hij]
-  have hsqrt := (CFC.sqrt_algebraMap (A := CMatrix a) (r := rr))
-  rw [hscalar]
-  rw [show ((Real.sqrt r : ℝ) : ℂ) • (1 : CMatrix a) =
-      algebraMap NNReal (CMatrix a) (NNReal.sqrt rr) by
-    ext i j
-    by_cases hij : i = j
-    · subst hij
-      simp [Matrix.algebraMap_matrix_apply, rr]
-      rw [Real.sqrt, Real.toNNReal_of_nonneg hr]
-      rfl
-    · simp [Matrix.algebraMap_matrix_apply, hij]]
-  simp [psdSqrt] at hsqrt ⊢
-
-theorem psdSqrt_real_smul {a : Type u} [Fintype a] [DecidableEq a]
-    {r : ℝ} (hr : 0 ≤ r) {M : CMatrix a} (hM : M.PosSemidef) :
-    psdSqrt (((r : ℂ) • M)) =
-      ((Real.sqrt r : ℝ) : ℂ) • psdSqrt M := by
-  let S : CMatrix a := ((Real.sqrt r : ℝ) : ℂ) • psdSqrt M
-  have hSsq : S * S = ((r : ℂ) • M) := by
-    dsimp [S]
-    rw [Matrix.smul_mul, Matrix.mul_smul, smul_smul, Real.mul_self_sqrt hr,
-      psdSqrt_mul_self_of_posSemidef hM]
-  have hSpos : S.PosSemidef := by
-    have hscalar : (0 : ℂ) ≤ ((Real.sqrt r : ℝ) : ℂ) := by
-      exact_mod_cast Real.sqrt_nonneg r
-    exact Matrix.PosSemidef.smul (psdSqrt_pos M) hscalar
-  change psdSqrt (((r : ℂ) • M)) = S
-  simpa [psdSqrt, S] using
-    (CFC.sqrt_unique (a := ((r : ℂ) • M)) (b := S) hSsq hSpos.nonneg)
-
 theorem psdSqrt_kronecker {a : Type u} {b : Type v}
     [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
     {A : CMatrix a} {B : CMatrix b}

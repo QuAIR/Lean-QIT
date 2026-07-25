@@ -46,7 +46,7 @@ private theorem maximallyMixed_matrix_ne_zero [Nonempty r] :
   rw [hzero, Matrix.trace_zero] at htrace
   norm_num at htrace
 
-theorem maximallyMixed_schatten_norm_pos [Nonempty r] (alpha : Real) :
+theorem maximallyMixed_schatten_norm_pos [Nonempty r] (alpha : SchattenOrder) :
     0 < psdSchattenPNorm (maximallyMixed r).matrix (maximallyMixed r).pos alpha :=
   psdSchattenPNorm_pos_of_ne_zero (maximallyMixed r).matrix
     (maximallyMixed r).pos (maximallyMixed_matrix_ne_zero (r := r))
@@ -68,26 +68,27 @@ theorem cMatrix_rpow_unitary_conj_forward
 theorem psdSchattenPNorm_unitary_conj_forward
     {n : Type x} [Fintype n] [DecidableEq n]
     {A : CMatrix n} (hA : A.PosSemidef) (U : Matrix.unitaryGroup n ℂ)
-    {p : Real} (hp : 0 <= p) :
+    (p : SchattenOrder) :
     psdSchattenPNorm ((U : CMatrix n) * A * star (U : CMatrix n))
         (posSemidef_unitary_conj_forward hA U) p =
       psdSchattenPNorm A hA p := by
-  rw [psdSchattenPNorm, psdSchattenPNorm]
+  rw [psdSchattenPNorm, psdSchattenPNorm, Internal.psdSchattenExpression,
+    Internal.psdSchattenExpression]
   rw [show
       psdTracePower ((U : CMatrix n) * A * star (U : CMatrix n))
           (posSemidef_unitary_conj_forward hA U) p =
         psdTracePower A hA p by
-        simpa using psdTracePower_unitary_conj U⁻¹ hA hp]
+        simpa using psdTracePower_unitary_conj U⁻¹ hA p.property.le]
 
 def cpValueOnPSD
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : Real) (X : CMatrix a) : Real := by
+    (alpha : SchattenOrder) (X : CMatrix a) : Real := by
   classical
   exact if hX : X.PosSemidef then cpPsdSchattenRpowValue Phi hPhi alpha X hX else 0
 
 theorem cpValueOnPSD_of_pos
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : Real) {X : CMatrix a} (hX : X.PosSemidef) :
+    (alpha : SchattenOrder) {X : CMatrix a} (hX : X.PosSemidef) :
     cpValueOnPSD Phi hPhi alpha X =
       cpPsdSchattenRpowValue Phi hPhi alpha X hX := by
   classical
@@ -103,7 +104,7 @@ private theorem posSemidefSet_convex :
 
 private theorem cpValueOnPSD_concaveOn
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha) :
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real)) :
     ConcaveOn Real ({X : CMatrix a | X.PosSemidef})
       (cpValueOnPSD Phi hPhi alpha) := by
   refine ⟨posSemidefSet_convex (n := a), ?_⟩
@@ -123,7 +124,7 @@ private theorem cpValueOnPSD_concaveOn
 theorem cpValueOnPSD_uniform_average_le
     {ι : Type x} [Fintype ι] [Nonempty ι]
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
     (X : ι → CMatrix a) (hX : ∀ i, (X i).PosSemidef) :
     (∑ i : ι, (Fintype.card ι : Real)⁻¹ *
         cpValueOnPSD Phi hPhi alpha (X i)) <=
@@ -462,7 +463,7 @@ private theorem id_kron_signPermutation_conj
 
 private theorem id_kron_signPermutation_cpValue_eq
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
     (ε : r → Bool) (π : Equiv.Perm r)
     (Y : CMatrix (Prod r a)) (hY : Y.PosSemidef) :
     cpValueOnPSD
@@ -494,8 +495,9 @@ private theorem id_kron_signPermutation_cpValue_eq
     collapseLocalReferenceUnitary (a := a) (permutationUnitary π * diagonalSignUnitary ε)
   let Uout : Matrix.unitaryGroup (Prod r b) ℂ :=
     collapseLocalReferenceUnitary (a := b) (permutationUnitary π * diagonalSignUnitary ε)
-  have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
-  have hinv_nonneg : 0 <= 1 / alpha := one_div_nonneg.mpr (le_of_lt halpha_pos)
+  have halpha_pos : 0 < (alpha : Real) := lt_trans zero_lt_one halpha
+  have hinv_nonneg : 0 <= 1 / (alpha : Real) :=
+    one_div_nonneg.mpr (le_of_lt halpha_pos)
   have hconj_pos : ((Uin : CMatrix (Prod r a)) * Y * star (Uin : CMatrix (Prod r a))).PosSemidef :=
     posSemidef_unitary_conj_forward hY Uin
   rw [cpValueOnPSD_of_pos K hK alpha hconj_pos,
@@ -503,41 +505,41 @@ private theorem id_kron_signPermutation_cpValue_eq
   unfold cpPsdSchattenRpowValue
   have hrpow :
       CFC.rpow ((Uin : CMatrix (Prod r a)) * Y * star (Uin : CMatrix (Prod r a)))
-          (1 / alpha) =
-        (Uin : CMatrix (Prod r a)) * CFC.rpow Y (1 / alpha) *
+          (1 / (alpha : Real)) =
+        (Uin : CMatrix (Prod r a)) * CFC.rpow Y (1 / (alpha : Real)) *
           star (Uin : CMatrix (Prod r a)) :=
     cMatrix_rpow_unitary_conj_forward hY Uin hinv_nonneg
   have hmap :
       K (CFC.rpow ((Uin : CMatrix (Prod r a)) * Y * star (Uin : CMatrix (Prod r a)))
-          (1 / alpha)) =
-        (Uout : CMatrix (Prod r b)) * K (CFC.rpow Y (1 / alpha)) *
+          (1 / (alpha : Real))) =
+        (Uout : CMatrix (Prod r b)) * K (CFC.rpow Y (1 / (alpha : Real))) *
           star (Uout : CMatrix (Prod r b)) := by
     rw [hrpow]
     simpa [K, Uin, Uout] using
       id_kron_signPermutation_conj (r := r) (a := a) (b := b)
-        Phi ε π (CFC.rpow Y (1 / alpha))
-  have hKY : (K (CFC.rpow Y (1 / alpha))).PosSemidef :=
+        Phi ε π (CFC.rpow Y (1 / (alpha : Real)))
+  have hKY : (K (CFC.rpow Y (1 / (alpha : Real)))).PosSemidef :=
     MatrixMap.isCompletelyPositive_mapsPositive K hK
-      (CFC.rpow Y (1 / alpha))
-      (cMatrix_rpow_posSemidef (A := Y) (s := 1 / alpha) hY)
+      (CFC.rpow Y (1 / (alpha : Real)))
+      (cMatrix_rpow_posSemidef (A := Y) (s := 1 / (alpha : Real)) hY)
   have hKYconj :
-      ((Uout : CMatrix (Prod r b)) * K (CFC.rpow Y (1 / alpha)) *
+      ((Uout : CMatrix (Prod r b)) * K (CFC.rpow Y (1 / (alpha : Real))) *
         star (Uout : CMatrix (Prod r b))).PosSemidef :=
     posSemidef_unitary_conj_forward hKY Uout
   calc
     psdSchattenPNorm
         (K (CFC.rpow ((Uin : CMatrix (Prod r a)) * Y * star (Uin : CMatrix (Prod r a)))
-          (1 / alpha))) _ alpha =
+          (1 / (alpha : Real)))) _ alpha =
       psdSchattenPNorm
-        ((Uout : CMatrix (Prod r b)) * K (CFC.rpow Y (1 / alpha)) *
+        ((Uout : CMatrix (Prod r b)) * K (CFC.rpow Y (1 / (alpha : Real))) *
           star (Uout : CMatrix (Prod r b)))
         hKYconj alpha := by
           exact psdSchattenPNorm_congr hmap _ hKYconj alpha
-    _ = psdSchattenPNorm (K (CFC.rpow Y (1 / alpha))) hKY alpha :=
-          psdSchattenPNorm_unitary_conj_forward hKY Uout (le_of_lt halpha_pos)
+    _ = psdSchattenPNorm (K (CFC.rpow Y (1 / (alpha : Real)))) hKY alpha :=
+          psdSchattenPNorm_unitary_conj_forward hKY Uout alpha
 
 private def AlphaToAlphaTraceDomain.partialTraceReference
-    {alpha : Real}
+    {alpha : SchattenOrder}
     (Y : AlphaToAlphaTraceDomain (Prod r a) alpha) :
     AlphaToAlphaTraceDomain a alpha where
   matrix := partialTraceA (a := r) (b := a) Y.matrix
@@ -548,26 +550,27 @@ private def AlphaToAlphaTraceDomain.partialTraceReference
     simpa [htrace] using Y.trace_le_one
 
 theorem maximallyMixed_rpow_schatten_norm_eq_one
-    [Nonempty r] {alpha : Real} (halpha : 1 < alpha) :
+    [Nonempty r] {alpha : SchattenOrder} (halpha : 1 < (alpha : Real)) :
     psdSchattenPNorm
-        (CFC.rpow (maximallyMixed r).matrix (1 / alpha))
+        (CFC.rpow (maximallyMixed r).matrix (1 / (alpha : Real)))
         (cMatrix_rpow_posSemidef
-          (A := (maximallyMixed r).matrix) (s := 1 / alpha)
+          (A := (maximallyMixed r).matrix) (s := 1 / (alpha : Real))
           (maximallyMixed r).pos)
         alpha = 1 := by
-  have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
-  have halpha_nonneg : 0 <= alpha := le_of_lt halpha_pos
-  have hinv_nonneg : 0 <= 1 / alpha := one_div_nonneg.mpr halpha_nonneg
+  have halpha_pos : 0 < (alpha : Real) := lt_trans zero_lt_one halpha
+  have halpha_nonneg : 0 <= (alpha : Real) := le_of_lt halpha_pos
+  have hinv_nonneg : 0 <= 1 / (alpha : Real) := one_div_nonneg.mpr halpha_nonneg
   have hpower :
       psdTracePower
-          (CFC.rpow (maximallyMixed r).matrix (1 / alpha))
+          (CFC.rpow (maximallyMixed r).matrix (1 / (alpha : Real)))
           (cMatrix_rpow_posSemidef
-            (A := (maximallyMixed r).matrix) (s := 1 / alpha)
+            (A := (maximallyMixed r).matrix) (s := 1 / (alpha : Real))
             (maximallyMixed r).pos)
           alpha = 1 := by
     rw [psdTracePower_eq]
     have hpow :
-        CFC.rpow (CFC.rpow (maximallyMixed r).matrix (1 / alpha)) alpha =
+        CFC.rpow (CFC.rpow (maximallyMixed r).matrix (1 / (alpha : Real)))
+            (alpha : Real) =
           CFC.rpow (maximallyMixed r).matrix 1 := by
       exact cMatrix_rpow_rpow_of_nonneg (maximallyMixed r).pos
         hinv_nonneg halpha_nonneg (by field_simp [ne_of_gt halpha_pos])
@@ -578,13 +581,13 @@ theorem maximallyMixed_rpow_schatten_norm_eq_one
         (ha := Matrix.nonneg_iff_posSemidef.mpr (maximallyMixed r).pos)
     rw [hone]
     exact congrArg Complex.re (maximallyMixed r).trace_eq_one
-  rw [psdSchattenPNorm, hpower]
+  rw [psdSchattenPNorm, Internal.psdSchattenExpression, hpower]
   exact Real.one_rpow _
 
 private theorem id_kron_traceValue_maximallyMixed_tensor
     [Nonempty r]
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
     (Y : AlphaToAlphaTraceDomain a alpha) :
     cpValueOnPSD
         (MatrixMap.kron (Channel.idChannel r).map Phi)
@@ -602,29 +605,32 @@ private theorem id_kron_traceValue_maximallyMixed_tensor
       (Channel.idChannel r).completelyPositive hPhi
   have hprod : (Matrix.kronecker (maximallyMixed r).matrix Y.matrix).PosSemidef :=
     (maximallyMixed r).pos.kronecker Y.pos
-  have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
-  have hinv_nonneg : 0 <= 1 / alpha := one_div_nonneg.mpr (le_of_lt halpha_pos)
+  have halpha_pos : 0 < (alpha : Real) := lt_trans zero_lt_one halpha
+  have hinv_nonneg : 0 <= 1 / (alpha : Real) :=
+    one_div_nonneg.mpr (le_of_lt halpha_pos)
   rw [cpValueOnPSD_of_pos K hK alpha hprod]
   unfold cpPsdSchattenRpowValue alphaToAlphaTraceValue
   have hpow :
       CFC.rpow (Matrix.kronecker (maximallyMixed r).matrix Y.matrix)
-          (1 / alpha) =
+          (1 / (alpha : Real)) =
         Matrix.kronecker
-          (CFC.rpow (maximallyMixed r).matrix (1 / alpha))
-          (CFC.rpow Y.matrix (1 / alpha)) :=
+          (CFC.rpow (maximallyMixed r).matrix (1 / (alpha : Real)))
+          (CFC.rpow Y.matrix (1 / (alpha : Real))) :=
     cMatrix_rpow_kronecker_nonneg (maximallyMixed r).pos Y.pos hinv_nonneg
-  let Rpow : CMatrix r := CFC.rpow (maximallyMixed r).matrix (1 / alpha)
-  let Ypow : CMatrix a := CFC.rpow Y.matrix (1 / alpha)
+  let Rpow : CMatrix r :=
+    CFC.rpow (maximallyMixed r).matrix (1 / (alpha : Real))
+  let Ypow : CMatrix a := CFC.rpow Y.matrix (1 / (alpha : Real))
   have hRpow : Rpow.PosSemidef :=
     cMatrix_rpow_posSemidef
-      (A := (maximallyMixed r).matrix) (s := 1 / alpha) (maximallyMixed r).pos
+      (A := (maximallyMixed r).matrix) (s := 1 / (alpha : Real))
+      (maximallyMixed r).pos
   have hYpow : Ypow.PosSemidef :=
-    cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos
+    cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos
   have hPhiYpow : (Phi Ypow).PosSemidef :=
     MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi Ypow hYpow
   have hmap :
       K (CFC.rpow (Matrix.kronecker (maximallyMixed r).matrix Y.matrix)
-          (1 / alpha)) =
+          (1 / (alpha : Real))) =
         Matrix.kronecker Rpow (Phi Ypow) := by
     rw [hpow]
     change MatrixMap.kron (Channel.idChannel r).map Phi
@@ -632,17 +638,17 @@ private theorem id_kron_traceValue_maximallyMixed_tensor
       Matrix.kronecker Rpow (Phi Ypow)
     rw [MatrixMap.kron_apply_kronecker, Channel.idChannel_map]
   have hKpow : (K (CFC.rpow (Matrix.kronecker (maximallyMixed r).matrix Y.matrix)
-          (1 / alpha))).PosSemidef :=
+          (1 / (alpha : Real)))).PosSemidef :=
     MatrixMap.isCompletelyPositive_mapsPositive K hK
       (CFC.rpow (Matrix.kronecker (maximallyMixed r).matrix Y.matrix)
-          (1 / alpha))
+          (1 / (alpha : Real)))
       (cMatrix_rpow_posSemidef
         (A := Matrix.kronecker (maximallyMixed r).matrix Y.matrix)
-        (s := 1 / alpha) hprod)
+        (s := 1 / (alpha : Real)) hprod)
   calc
     psdSchattenPNorm
         (K (CFC.rpow (Matrix.kronecker (maximallyMixed r).matrix Y.matrix)
-          (1 / alpha))) _ alpha =
+          (1 / (alpha : Real)))) _ alpha =
       psdSchattenPNorm (Matrix.kronecker Rpow (Phi Ypow))
         (hRpow.kronecker hPhiYpow) alpha := by
           exact psdSchattenPNorm_congr hmap hKpow
@@ -650,7 +656,7 @@ private theorem id_kron_traceValue_maximallyMixed_tensor
     _ =
       psdSchattenPNorm Rpow hRpow alpha *
         psdSchattenPNorm (Phi Ypow) hPhiYpow alpha := by
-          rw [psdSchattenPNorm_kronecker hRpow hPhiYpow halpha_pos]
+          rw [psdSchattenPNorm_kronecker hRpow hPhiYpow alpha]
     _ = psdSchattenPNorm (Phi Ypow) hPhiYpow alpha := by
           rw [maximallyMixed_rpow_schatten_norm_eq_one (r := r) halpha]
           simp
@@ -658,7 +664,7 @@ private theorem id_kron_traceValue_maximallyMixed_tensor
 private theorem id_kron_traceValue_le_partialTrace_traceValue
     [Nonempty r]
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
     (Y : AlphaToAlphaTraceDomain (Prod r a) alpha) :
     alphaToAlphaTraceValue
         (MatrixMap.kron (Channel.idChannel r).map Phi)
@@ -774,18 +780,19 @@ private theorem id_kron_traceValue_le_partialTrace_traceValue
 
 theorem alphaToAlphaTraceValue_eq_zero_or_le_positiveValue
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha) (Y : AlphaToAlphaTraceDomain a alpha) :
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
+    (Y : AlphaToAlphaTraceDomain a alpha) :
     alphaToAlphaTraceValue Phi hPhi Y = 0 ∨
       ∃ p ∈ alphaToAlphaPositiveValueSet Phi hPhi alpha,
         alphaToAlphaTraceValue Phi hPhi Y <= p := by
-  let Z : CMatrix a := CFC.rpow Y.matrix (1 / alpha)
+  let Z : CMatrix a := CFC.rpow Y.matrix (1 / (alpha : Real))
   let hZ : Z.PosSemidef :=
-    cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos
+    cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos
   let normZ : Real := psdSchattenPNorm Z hZ alpha
   have hnormZ_nonneg : 0 <= normZ := psdSchattenPNorm_nonneg Z hZ alpha
   by_cases hnormZ_zero : normZ = 0
   · left
-    have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
+    have halpha_pos : 0 < (alpha : Real) := lt_trans zero_lt_one halpha
     have hZzero : Z = 0 := by
       by_contra hZne
       have hZnorm_pos : 0 < psdSchattenPNorm Z hZ alpha :=
@@ -803,7 +810,7 @@ theorem alphaToAlphaTraceValue_eq_zero_or_le_positiveValue
           psdSchattenPNorm (0 : CMatrix b) Matrix.PosSemidef.zero alpha := by
             exact psdSchattenPNorm_congr hPhiZzero hPhiZpos
               Matrix.PosSemidef.zero alpha
-      _ = 0 := psdSchattenPNorm_zero alpha (ne_of_gt halpha_pos)
+      _ = 0 := psdSchattenPNorm_zero alpha
   · right
     have hnormZ_pos : 0 < normZ :=
       lt_of_le_of_ne hnormZ_nonneg (Ne.symm hnormZ_zero)
@@ -830,7 +837,7 @@ theorem alphaToAlphaTraceValue_eq_zero_or_le_positiveValue
 private theorem alphaToAlphaPositiveValueSet_subset_id_kron
     [Nonempty r]
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha) :
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real)) :
     alphaToAlphaPositiveValueSet Phi hPhi alpha ⊆
       alphaToAlphaPositiveValueSet
         (MatrixMap.kron (Channel.idChannel r).map Phi)
@@ -847,14 +854,14 @@ private theorem alphaToAlphaPositiveValueSet_subset_id_kron
       (Channel.idChannel r).completelyPositive hPhi
   let R : CMatrix r := (maximallyMixed r).matrix
   let hR : R.PosSemidef := (maximallyMixed r).pos
-  have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
+  have halpha_pos : 0 < (alpha : Real) := lt_trans zero_lt_one halpha
   have hRnorm_pos : 0 < psdSchattenPNorm R hR alpha := by
     simpa [R, hR] using maximallyMixed_schatten_norm_pos (r := r) alpha
   let X : AlphaToAlphaPositiveDomain (Prod r a) alpha :=
     { matrix := Matrix.kronecker R Z.matrix,
       pos := hR.kronecker Z.pos,
       norm_pos := by
-        rw [psdSchattenPNorm_kronecker hR Z.pos halpha_pos]
+        rw [psdSchattenPNorm_kronecker hR Z.pos alpha]
         exact mul_pos hRnorm_pos Z.norm_pos }
   refine ⟨X, ?_⟩
   have hPhiZ : (Phi Z.matrix).PosSemidef :=
@@ -883,14 +890,14 @@ private theorem alphaToAlphaPositiveValueSet_subset_id_kron
         alpha /
       psdSchattenPNorm Z.matrix Z.pos alpha
   rw [hnum]
-  rw [psdSchattenPNorm_kronecker hR hPhiZ halpha_pos,
-    psdSchattenPNorm_kronecker hR Z.pos halpha_pos]
+  rw [psdSchattenPNorm_kronecker hR hPhiZ alpha,
+    psdSchattenPNorm_kronecker hR Z.pos alpha]
   field_simp [ne_of_gt hRnorm_pos]
 
 private theorem id_kron_positiveValue_eq_zero_or_le_positiveValue
     [Nonempty r]
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha) :
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real)) :
     ∀ x ∈
       alphaToAlphaPositiveValueSet
         (MatrixMap.kron (Channel.idChannel r).map Phi)
@@ -929,7 +936,7 @@ private theorem id_kron_positiveValue_eq_zero_or_le_positiveValue
 private theorem alphaToAlphaNorm_id_kron_compare
     [Nonempty r]
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha) :
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real)) :
     alphaToAlphaNorm Phi hPhi alpha <=
         alphaToAlphaNorm
           (MatrixMap.kron (Channel.idChannel r).map Phi)
@@ -1003,13 +1010,13 @@ theorem alphaToAlphaNorm_le_id_kron
     [Nonempty r]
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
     {alpha : Real} (halpha : 1 < alpha) :
-    alphaToAlphaNorm Phi hPhi alpha <=
+    alphaToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha) <=
       alphaToAlphaNorm
         (MatrixMap.kron (Channel.idChannel r).map Phi)
         (MatrixMap.isCompletelyPositive_kron
           (Channel.idChannel r).map Phi
           (Channel.idChannel r).completelyPositive hPhi)
-        alpha :=
+        (SchattenOrder.ofOneLt halpha) :=
   (alphaToAlphaNorm_id_kron_compare (r := r) Phi hPhi halpha).1
 
 /-- Reference twirling gives the nontrivial direction of the source collapse
@@ -1023,8 +1030,8 @@ theorem id_kron_alphaToAlphaNorm_le
         (MatrixMap.isCompletelyPositive_kron
           (Channel.idChannel r).map Phi
           (Channel.idChannel r).completelyPositive hPhi)
-        alpha <=
-      alphaToAlphaNorm Phi hPhi alpha := by
+        (SchattenOrder.ofOneLt halpha) <=
+      alphaToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha) := by
   exact (alphaToAlphaNorm_id_kron_compare (r := r) Phi hPhi halpha).2
 
 /-- Tensoring a completely positive map with an identity reference does not
@@ -1038,8 +1045,8 @@ theorem alphaToAlphaNorm_id_kron_eq
         (MatrixMap.isCompletelyPositive_kron
           (Channel.idChannel r).map Phi
           (Channel.idChannel r).completelyPositive hPhi)
-        alpha =
-      alphaToAlphaNorm Phi hPhi alpha := by
+        (SchattenOrder.ofOneLt halpha) =
+      alphaToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha) := by
   exact le_antisymm
     (id_kron_alphaToAlphaNorm_le (r := r) Phi hPhi halpha)
     (alphaToAlphaNorm_le_id_kron (r := r) Phi hPhi halpha)

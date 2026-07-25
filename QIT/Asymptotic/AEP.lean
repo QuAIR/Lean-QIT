@@ -1142,19 +1142,19 @@ theorem SmoothMinRateUpperFromContinuity.afw_of_tensorPower_ordering
     simpa using hε1
   have hne :
       ({h : ℝ |
-        SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := TensorPower a n)
+        SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := TensorPower a n)
           center ε h}).Nonempty :=
-    center.SmoothConditionalMinEntropyCandidate_set_nonempty_of_nonneg
+    center.SmoothConditionalMinEntropyCandidateRaw_set_nonempty_of_nonneg
       (a := TensorPower a n) (le_of_lt hε0)
   have hbdd :
       BddAbove {h : ℝ |
-        SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := TensorPower a n)
+        SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := TensorPower a n)
           center ε h} :=
-    center.SmoothConditionalMinEntropyCandidate_bddAbove_of_lt_sqrt_trace
+    center.SmoothConditionalMinEntropyCandidateRaw_bddAbove_of_lt_sqrt_trace
       (a := TensorPower a n) hε_sqrt
   have hcand_le :
       ∀ h : ℝ,
-        SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := TensorPower a n)
+        SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := TensorPower a n)
           center ε h →
         h ≤ B := by
     intro h hh
@@ -1166,7 +1166,7 @@ theorem SmoothMinRateUpperFromContinuity.afw_of_tensorPower_ordering
     let τhat : State (Prod (TensorPower a n) (TensorPower b n)) :=
       τ.normalize hτ_trace_pos.ne'
     have hmin_norm :
-        τ.conditionalMinEntropy ≤ τhat.conditionalEntropy - log2 τ.matrix.trace.re := by
+        τ.conditionalMinEntropyRaw ≤ τhat.conditionalEntropy - log2 τ.matrix.trace.re := by
       rw [SubnormalizedState.conditionalMinEntropy_eq_normalize_sub_log2_trace
         (a := TensorPower a n) (b := TensorPower b n) τ hτ_trace_pos]
       exact sub_le_sub_right (horder n τhat) _

@@ -407,7 +407,7 @@ theorem conditionalSandwichedRenyiUpSourceValueSet_bddAbove_of_one_lt
       (lt_trans (by norm_num) halpha)
   let p : Real := PureVector.upwardRenyiDualityParameter alpha
   let high : {sigma : State b // sigma.matrix.PosDef} → Real := fun sigma =>
-    psi.upwardRenyiDualityHighNorm sigma.1 alpha
+    psi.upwardRenyiDualityHighNorm sigma.1 (SchattenOrder.ofOneLt halpha)
   have hp : 0 < p := PureVector.upwardRenyiDualityParameter_pos halpha
   have hhigh_bdd : BddBelow (Set.range high) := by
     refine ⟨0, ?_⟩
@@ -431,7 +431,8 @@ theorem conditionalSandwichedRenyiUpSourceValueSet_bddAbove_of_one_lt
   have hlog : log2 (sInf (Set.range high)) ≤ log2 (high ⟨sigma, hsigma⟩) :=
     conditionalRenyi_log2_mono hinf_pos hinf_le
   have hlog' : log2 (sInf (Set.range high)) ≤
-      log2 (psi.upwardRenyiDualityHighNorm sigma alpha) := by
+      log2 (psi.upwardRenyiDualityHighNorm sigma
+        (SchattenOrder.ofOneLt halpha)) := by
     simpa only [high] using hlog
   have hcoeff : -(1 / p) ≤ 0 :=
     neg_nonpos.mpr (one_div_nonneg.mpr hp.le)
@@ -463,7 +464,8 @@ theorem conditionalSandwichedRenyiUpSourceValueSet_bddAbove_of_half_lt_lt_one
     simpa [gamma] using conditionalRenyiConjugateOrder_conjugate hhalf
   let p : Real := PureVector.upwardRenyiDualityParameter gamma
   let low : State b → Real := fun omega =>
-    psi.upwardRenyiDualityLowNorm omega gamma alpha
+    psi.upwardRenyiDualityLowNorm omega gamma
+      ⟨alpha, lt_trans (by norm_num) hhalf⟩
   have hp : 0 < p := PureVector.upwardRenyiDualityParameter_pos hgamma
   have hlow_bdd : BddAbove (Set.range low) := by
     simpa [low] using psi.upwardRenyiDualityLowNorm_range_bddAbove
@@ -471,7 +473,7 @@ theorem conditionalSandwichedRenyiUpSourceValueSet_bddAbove_of_half_lt_lt_one
   rcases hlow_bdd with ⟨upper, hupper⟩
   let omega0 : State b := State.maximallyMixed b
   have homega0 : omega0.matrix.PosDef :=
-    State.maximallyMixed_posDef_of_nonempty
+    State.maximallyMixed_posDef
   have hlow0 : 0 < low omega0 := by
     simpa [low] using psi.upwardRenyiDualityLowNorm_pos_of_posDef
       omega0 homega0 hgamma hhalf hone hconj
@@ -498,7 +500,8 @@ theorem conditionalSandwichedRenyiUpSourceValueSet_bddAbove_of_half_lt_lt_one
   have hlog : log2 (low omega) ≤ log2 upper :=
     conditionalRenyi_log2_mono hlow_pos hlow_le
   have hlog' :
-      log2 (psi.upwardRenyiDualityLowNorm omega gamma alpha) ≤ log2 upper := by
+      log2 (psi.upwardRenyiDualityLowNorm omega gamma
+        ⟨alpha, lt_trans (by norm_num) hhalf⟩) ≤ log2 upper := by
     simpa only [low] using hlog
   have hcoeff : 0 ≤ 1 / p := by positivity
   simpa only [p] using mul_le_mul_of_nonneg_left hlog' hcoeff
@@ -508,7 +511,7 @@ theorem conditionalSandwichedRenyiUpSourceValueSet_nonempty
     (hpos : 0 < alpha) (hone : alpha ≠ 1) :
     (rho.conditionalSandwichedRenyiUpSourceValueSet alpha hpos hone).Nonempty := by
   let sigma : State b := State.maximallyMixed b
-  have hsigma : sigma.matrix.PosDef := State.maximallyMixed_posDef_of_nonempty
+  have hsigma : sigma.matrix.PosDef := State.maximallyMixed_posDef
   exact ⟨rho.conditionalSandwichedRenyiUpSourceCandidate sigma hsigma alpha hpos hone,
     sigma, hsigma, rfl⟩
 

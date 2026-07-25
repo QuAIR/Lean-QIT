@@ -169,7 +169,7 @@ theorem referenceKron_sandwichedSideWeightMap_apply_ne_zero_of_posDef
 of nonnegative admissible values. -/
 theorem cbOneToAlphaNorm_nonneg
     (Phi : MatrixMap a1 b1) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : ℝ) :
+    (alpha : SchattenOrder) :
     0 ≤ MatrixMap.cbOneToAlphaNorm Phi hPhi alpha := by
   unfold MatrixMap.cbOneToAlphaNorm MatrixMap.cbOneToAlphaOriginalValueSet
   exact Real.sSup_nonneg (by
@@ -258,13 +258,17 @@ theorem cbOneToAlphaOriginalInput_ne_zero_of_state
     exact hpartial_zero
   have hnorm_zero :
       psdSchattenPNorm (CFC.rpow tau.matrix (1 / alpha))
-          (tau.rpowMatrix_posSemidef (1 / alpha)) alpha = 0 := by
+          (tau.rpowMatrix_posSemidef (1 / alpha))
+          (SchattenOrder.ofPositive halpha) = 0 := by
     calc
       psdSchattenPNorm (CFC.rpow tau.matrix (1 / alpha))
-          (tau.rpowMatrix_posSemidef (1 / alpha)) alpha =
-        psdSchattenPNorm (0 : CMatrix a1) Matrix.PosSemidef.zero alpha := by
-          exact psdSchattenPNorm_congr hrpow_zero _ Matrix.PosSemidef.zero alpha
-      _ = 0 := psdSchattenPNorm_zero alpha (ne_of_gt halpha)
+          (tau.rpowMatrix_posSemidef (1 / alpha))
+          (SchattenOrder.ofPositive halpha) =
+        psdSchattenPNorm (0 : CMatrix a1) Matrix.PosSemidef.zero
+          (SchattenOrder.ofPositive halpha) := by
+          exact psdSchattenPNorm_congr hrpow_zero _ Matrix.PosSemidef.zero
+            (SchattenOrder.ofPositive halpha)
+      _ = 0 := psdSchattenPNorm_zero (SchattenOrder.ofPositive halpha)
   have hone :=
     State.state_rpow_one_div_psdSchattenPNorm_eq_one_psd tau halpha
   rw [hone] at hnorm_zero
@@ -275,7 +279,7 @@ theorem cbOneToAlphaOriginalInput_maximallyMixed_ne_zero
     [Nonempty a1] {alpha : ℝ} (halpha : 0 < alpha) :
     cbOneToAlphaOriginalInput (State.maximallyMixed a1).matrix alpha ≠ 0 :=
   cbOneToAlphaOriginalInput_ne_zero_of_posDef
-    (State.maximallyMixed_posDef_of_nonempty (a := a1)) halpha
+    (State.maximallyMixed_posDef (a := a1)) halpha
 
 /-- The maximally mixed source-side CB candidate has strictly positive value
 for any trace-preserving completely positive map. -/
@@ -291,7 +295,7 @@ theorem cbOneToAlphaOriginalValue_maximallyMixed_pos_of_tracePreserving
           trace_le_one := by
             rw [(State.maximallyMixed a1).trace_eq_one]
             norm_num }
-        alpha := by
+        (SchattenOrder.ofPositive halpha) := by
   let Y0 : CBOneToAlphaOriginalDomain a1 :=
     { matrix := (State.maximallyMixed a1).matrix,
       pos := (State.maximallyMixed a1).pos,
@@ -306,7 +310,8 @@ theorem cbOneToAlphaOriginalValue_maximallyMixed_pos_of_tracePreserving
   have hPhiXne : Phi.referenceLift X ≠ 0 :=
     referenceLift_apply_ne_zero_of_tracePreserving Phi hPhiTP hX hXne
   unfold cbOneToAlphaOriginalValue
-  change 0 < psdSchattenPNorm (Phi.referenceLift X) _ alpha
+  change 0 < psdSchattenPNorm (Phi.referenceLift X) _
+    (SchattenOrder.ofPositive halpha)
   exact psdSchattenPNorm_pos_of_ne_zero (Phi.referenceLift X) _ hPhiXne
 
 /-- A zero-trace PSD source-side input gives the zero Choi/Gamma CB input.
@@ -341,7 +346,7 @@ theorem cbOneToAlphaOriginalValue_eq_zero_of_trace_zero
     (Y : CBOneToAlphaOriginalDomain a1)
     {alpha : ℝ} (halpha : 0 < alpha)
     (htrace : Y.matrix.trace.re = 0) :
-    cbOneToAlphaOriginalValue Phi hPhi Y alpha = 0 := by
+    cbOneToAlphaOriginalValue Phi hPhi Y (SchattenOrder.ofPositive halpha) = 0 := by
   let X : CMatrix (Prod a1 a1) := cbOneToAlphaOriginalInput Y.matrix alpha
   let hX : X.PosSemidef := cbOneToAlphaOriginalInput_posSemidef Y.pos alpha
   have hXzero : X = 0 := by
@@ -353,14 +358,15 @@ theorem cbOneToAlphaOriginalValue_eq_zero_of_trace_zero
     rw [hXzero]
     exact map_zero Phi.referenceLift
   unfold cbOneToAlphaOriginalValue
-  change psdSchattenPNorm (Phi.referenceLift X) _ alpha = 0
+  change psdSchattenPNorm (Phi.referenceLift X) _
+    (SchattenOrder.ofPositive halpha) = 0
   calc
-    psdSchattenPNorm (Phi.referenceLift X) _ alpha =
+    psdSchattenPNorm (Phi.referenceLift X) _ (SchattenOrder.ofPositive halpha) =
         psdSchattenPNorm (0 : CMatrix (Prod a1 b1))
-          Matrix.PosSemidef.zero alpha := by
+          Matrix.PosSemidef.zero (SchattenOrder.ofPositive halpha) := by
           exact psdSchattenPNorm_congr hPhiXzero hPhiXpos
-            Matrix.PosSemidef.zero alpha
-    _ = 0 := psdSchattenPNorm_zero alpha (ne_of_gt halpha)
+            Matrix.PosSemidef.zero (SchattenOrder.ofPositive halpha)
+    _ = 0 := psdSchattenPNorm_zero (SchattenOrder.ofPositive halpha)
 
 /-- A trace-one state as a source-side CB original-domain point. -/
 def CBOneToAlphaOriginalDomain.ofState (tau : State a1) :
@@ -438,10 +444,11 @@ theorem cbOneToAlphaOriginalValue_eq_rpow_mul_of_matrix_eq_pos_real_smul
     (Y : CBOneToAlphaOriginalDomain a1) (tau : State a1)
     {t alpha : ℝ} (ht : 0 < t) (halpha : 0 < alpha)
     (hY : Y.matrix = t • tau.matrix) :
-    cbOneToAlphaOriginalValue Phi hPhi Y alpha =
+    cbOneToAlphaOriginalValue Phi hPhi Y (SchattenOrder.ofPositive halpha) =
       t ^ (1 / alpha) *
         cbOneToAlphaOriginalValue Phi hPhi
-          (CBOneToAlphaOriginalDomain.ofState tau) alpha := by
+          (CBOneToAlphaOriginalDomain.ofState tau)
+          (SchattenOrder.ofPositive halpha) := by
   let lambda : ℝ := t ^ (1 / alpha)
   let Xtau : CMatrix (Prod a1 a1) := cbOneToAlphaOriginalInput tau.matrix alpha
   let hXtau : Xtau.PosSemidef := cbOneToAlphaOriginalInput_posSemidef tau.pos alpha
@@ -465,19 +472,23 @@ theorem cbOneToAlphaOriginalValue_eq_rpow_mul_of_matrix_eq_pos_real_smul
     exact LinearMap.map_smul_of_tower Phi.referenceLift lambda Xtau
   unfold cbOneToAlphaOriginalValue
   calc
-    psdSchattenPNorm (Phi.referenceLift XY) _ alpha =
-        psdSchattenPNorm (lambda • Phi.referenceLift Xtau) hPhiScaled alpha := by
-          exact psdSchattenPNorm_congr hPhiXY _ hPhiScaled alpha
+    psdSchattenPNorm (Phi.referenceLift XY) _ (SchattenOrder.ofPositive halpha) =
+        psdSchattenPNorm (lambda • Phi.referenceLift Xtau) hPhiScaled
+          (SchattenOrder.ofPositive halpha) := by
+          exact psdSchattenPNorm_congr hPhiXY _ hPhiScaled
+            (SchattenOrder.ofPositive halpha)
     _ =
-        lambda * psdSchattenPNorm (Phi.referenceLift Xtau) hPhiXtau alpha := by
-          rw [psdSchattenPNorm_real_smul hPhiXtau hlambda_nonneg halpha]
+        lambda * psdSchattenPNorm (Phi.referenceLift Xtau) hPhiXtau
+          (SchattenOrder.ofPositive halpha) := by
+          rw [psdSchattenPNorm_real_smul hPhiXtau hlambda_nonneg
+            (SchattenOrder.ofPositive halpha)]
     _ =
         t ^ (1 / alpha) *
           psdSchattenPNorm
             (Phi.referenceLift
               (cbOneToAlphaOriginalInput
                 (CBOneToAlphaOriginalDomain.ofState tau).matrix alpha))
-            _ alpha := by
+            _ (SchattenOrder.ofPositive halpha) := by
           simp [lambda, Xtau, CBOneToAlphaOriginalDomain.ofState]
 
 /-- Source concavity for the trace-normalized induced `alpha -> alpha` value.
@@ -491,10 +502,10 @@ theorem alphaToAlphaTraceValue_mix_le
     (Phi : MatrixMap a1 b1) (hPhi : MatrixMap.IsCompletelyPositive Phi)
     {alpha lambda : ℝ} (halpha : 1 < alpha)
     (hlambda0 : 0 ≤ lambda) (hlambda1 : lambda ≤ 1)
-    (Y0 Y1 : AlphaToAlphaTraceDomain a1 alpha) :
-    lambda * alphaToAlphaTraceValue (alpha := alpha) Phi hPhi Y0 +
-        (1 - lambda) * alphaToAlphaTraceValue (alpha := alpha) Phi hPhi Y1 ≤
-      alphaToAlphaTraceValue (alpha := alpha) Phi hPhi
+    (Y0 Y1 : AlphaToAlphaTraceDomain a1 (SchattenOrder.ofOneLt halpha)) :
+    lambda * alphaToAlphaTraceValue Phi hPhi Y0 +
+        (1 - lambda) * alphaToAlphaTraceValue Phi hPhi Y1 ≤
+      alphaToAlphaTraceValue (alpha := SchattenOrder.ofOneLt halpha) Phi hPhi
         { matrix := lambda • Y0.matrix + (1 - lambda) • Y1.matrix,
           pos :=
             Matrix.PosSemidef.add
@@ -530,10 +541,12 @@ theorem cbOneToAlphaOriginalValue_ofState_mix_le
     (tau0 tau1 : State a1) :
     lambda *
         cbOneToAlphaOriginalValue Phi hPhi
-          (CBOneToAlphaOriginalDomain.ofState tau0) alpha +
+          (CBOneToAlphaOriginalDomain.ofState tau0)
+          (SchattenOrder.ofOneLt halpha) +
       (1 - lambda) *
         cbOneToAlphaOriginalValue Phi hPhi
-          (CBOneToAlphaOriginalDomain.ofState tau1) alpha ≤
+          (CBOneToAlphaOriginalDomain.ofState tau1)
+          (SchattenOrder.ofOneLt halpha) ≤
         cbOneToAlphaOriginalValue Phi hPhi
           (CBOneToAlphaOriginalDomain.ofState
             { matrix := lambda • tau0.matrix + (1 - lambda) • tau1.matrix,
@@ -544,7 +557,7 @@ theorem cbOneToAlphaOriginalValue_ofState_mix_le
               trace_eq_one := by
                 rw [Matrix.trace_add, Matrix.trace_smul, Matrix.trace_smul,
                   tau0.trace_eq_one, tau1.trace_eq_one]
-                norm_num }) alpha := by
+                norm_num }) (SchattenOrder.ofOneLt halpha) := by
   let tauMix : State a1 :=
     { matrix := lambda • tau0.matrix + (1 - lambda) • tau1.matrix,
       pos :=
@@ -558,17 +571,18 @@ theorem cbOneToAlphaOriginalValue_ofState_mix_le
   let PhiC : MatrixMap a1 (Prod a1 b1) := MatrixMap.cpComplement Phi hPhi
   let hPhiC : MatrixMap.IsCompletelyPositive PhiC :=
     MatrixMap.cpComplement_isCompletelyPositive Phi hPhi
-  let Y0 : AlphaToAlphaTraceDomain a1 alpha :=
+  let Y0 : AlphaToAlphaTraceDomain a1 (SchattenOrder.ofOneLt halpha) :=
     (CBOneToAlphaOriginalDomain.ofState tau0).toTransposeTraceDomain
       (alpha := alpha) (lt_trans zero_lt_one halpha)
-  let Y1 : AlphaToAlphaTraceDomain a1 alpha :=
+  let Y1 : AlphaToAlphaTraceDomain a1 (SchattenOrder.ofOneLt halpha) :=
     (CBOneToAlphaOriginalDomain.ofState tau1).toTransposeTraceDomain
       (alpha := alpha) (lt_trans zero_lt_one halpha)
   have hconc := alphaToAlphaTraceValue_mix_le
     PhiC hPhiC halpha hlambda0 hlambda1 Y0 Y1
   have h0 :
       cbOneToAlphaOriginalValue Phi hPhi
-          (CBOneToAlphaOriginalDomain.ofState tau0) alpha =
+          (CBOneToAlphaOriginalDomain.ofState tau0)
+          (SchattenOrder.ofOneLt halpha) =
         alphaToAlphaTraceValue PhiC hPhiC Y0 := by
     simpa [PhiC, hPhiC, Y0] using
       cbOneToAlphaOriginalValue_eq_cpComplement_alphaToAlphaTraceValue_transpose
@@ -576,7 +590,8 @@ theorem cbOneToAlphaOriginalValue_ofState_mix_le
         (CBOneToAlphaOriginalDomain.ofState tau0)
   have h1 :
       cbOneToAlphaOriginalValue Phi hPhi
-          (CBOneToAlphaOriginalDomain.ofState tau1) alpha =
+          (CBOneToAlphaOriginalDomain.ofState tau1)
+          (SchattenOrder.ofOneLt halpha) =
         alphaToAlphaTraceValue PhiC hPhiC Y1 := by
     simpa [PhiC, hPhiC, Y1] using
       cbOneToAlphaOriginalValue_eq_cpComplement_alphaToAlphaTraceValue_transpose
@@ -584,8 +599,9 @@ theorem cbOneToAlphaOriginalValue_ofState_mix_le
         (CBOneToAlphaOriginalDomain.ofState tau1)
   have hmix :
       cbOneToAlphaOriginalValue Phi hPhi
-          (CBOneToAlphaOriginalDomain.ofState tauMix) alpha =
-        alphaToAlphaTraceValue (alpha := alpha) PhiC hPhiC
+          (CBOneToAlphaOriginalDomain.ofState tauMix)
+          (SchattenOrder.ofOneLt halpha) =
+        alphaToAlphaTraceValue (alpha := SchattenOrder.ofOneLt halpha) PhiC hPhiC
           { matrix := lambda • Y0.matrix + (1 - lambda) • Y1.matrix,
             pos :=
               Matrix.PosSemidef.add
@@ -612,12 +628,15 @@ theorem cbOneToAlphaOriginalValue_ofState_mix_le
   have hgoal :
       lambda *
           cbOneToAlphaOriginalValue Phi hPhi
-            (CBOneToAlphaOriginalDomain.ofState tau0) alpha +
+            (CBOneToAlphaOriginalDomain.ofState tau0)
+            (SchattenOrder.ofOneLt halpha) +
         (1 - lambda) *
           cbOneToAlphaOriginalValue Phi hPhi
-            (CBOneToAlphaOriginalDomain.ofState tau1) alpha ≤
+            (CBOneToAlphaOriginalDomain.ofState tau1)
+            (SchattenOrder.ofOneLt halpha) ≤
           cbOneToAlphaOriginalValue Phi hPhi
-            (CBOneToAlphaOriginalDomain.ofState tauMix) alpha := by
+            (CBOneToAlphaOriginalDomain.ofState tauMix)
+            (SchattenOrder.ofOneLt halpha) := by
     rw [h0, h1, hmix]
     exact hconc
   simpa [tauMix] using hgoal
@@ -635,9 +654,9 @@ theorem cbOneToAlphaOriginalValue_ofState_min_le_mix
     (tau0 tau1 : State a1) :
     min
         (cbOneToAlphaOriginalValue Phi hPhi
-          (CBOneToAlphaOriginalDomain.ofState tau0) alpha)
+          (CBOneToAlphaOriginalDomain.ofState tau0) (SchattenOrder.ofOneLt halpha))
         (cbOneToAlphaOriginalValue Phi hPhi
-          (CBOneToAlphaOriginalDomain.ofState tau1) alpha) ≤
+          (CBOneToAlphaOriginalDomain.ofState tau1) (SchattenOrder.ofOneLt halpha)) ≤
       cbOneToAlphaOriginalValue Phi hPhi
         (CBOneToAlphaOriginalDomain.ofState
           { matrix := lambda • tau0.matrix + (1 - lambda) • tau1.matrix,
@@ -648,13 +667,13 @@ theorem cbOneToAlphaOriginalValue_ofState_min_le_mix
             trace_eq_one := by
               rw [Matrix.trace_add, Matrix.trace_smul, Matrix.trace_smul,
                 tau0.trace_eq_one, tau1.trace_eq_one]
-              norm_num }) alpha := by
+              norm_num }) (SchattenOrder.ofOneLt halpha) := by
   let v0 : ℝ :=
     cbOneToAlphaOriginalValue Phi hPhi
-      (CBOneToAlphaOriginalDomain.ofState tau0) alpha
+      (CBOneToAlphaOriginalDomain.ofState tau0) (SchattenOrder.ofOneLt halpha)
   let v1 : ℝ :=
     cbOneToAlphaOriginalValue Phi hPhi
-      (CBOneToAlphaOriginalDomain.ofState tau1) alpha
+      (CBOneToAlphaOriginalDomain.ofState tau1) (SchattenOrder.ofOneLt halpha)
   let tauMix : State a1 :=
     { matrix := lambda • tau0.matrix + (1 - lambda) • tau1.matrix,
       pos :=
@@ -691,14 +710,16 @@ theorem exists_state_cbOneToAlphaOriginalValue_ge
     (Phi : MatrixMap a1 b1) (hPhi : MatrixMap.IsCompletelyPositive Phi)
     {alpha : ℝ} (halpha : 0 < alpha) (Y : CBOneToAlphaOriginalDomain a1) :
     ∃ tau : State a1,
-      cbOneToAlphaOriginalValue Phi hPhi Y alpha ≤
+      cbOneToAlphaOriginalValue Phi hPhi Y (SchattenOrder.ofPositive halpha) ≤
         cbOneToAlphaOriginalValue Phi hPhi
-          (CBOneToAlphaOriginalDomain.ofState tau) alpha := by
+          (CBOneToAlphaOriginalDomain.ofState tau)
+          (SchattenOrder.ofPositive halpha) := by
   by_cases htrace : Y.matrix.trace.re = 0
   · refine ⟨State.maximallyMixed a1, ?_⟩
     rw [cbOneToAlphaOriginalValue_eq_zero_of_trace_zero Phi hPhi Y halpha htrace]
     exact cbOneToAlphaOriginalValue_nonneg Phi hPhi
-      (CBOneToAlphaOriginalDomain.ofState (State.maximallyMixed a1)) alpha
+      (CBOneToAlphaOriginalDomain.ofState (State.maximallyMixed a1))
+      (SchattenOrder.ofPositive halpha)
   · let ρ : SubnormalizedState a1 :=
       { matrix := Y.matrix, pos := Y.pos, trace_le_one := Y.trace_le_one }
     let tau : State a1 := ρ.normalize htrace
@@ -710,10 +731,11 @@ theorem exists_state_cbOneToAlphaOriginalValue_ge
       simpa [ρ, tau] using
         cbOneToAlphaOriginalDomain_matrix_eq_trace_smul_normalize Y htrace
     have hvalue :
-        cbOneToAlphaOriginalValue Phi hPhi Y alpha =
+        cbOneToAlphaOriginalValue Phi hPhi Y (SchattenOrder.ofPositive halpha) =
           Y.matrix.trace.re ^ (1 / alpha) *
             cbOneToAlphaOriginalValue Phi hPhi
-              (CBOneToAlphaOriginalDomain.ofState tau) alpha := by
+              (CBOneToAlphaOriginalDomain.ofState tau)
+              (SchattenOrder.ofPositive halpha) := by
       exact cbOneToAlphaOriginalValue_eq_rpow_mul_of_matrix_eq_pos_real_smul
         Phi hPhi Y tau ht halpha hY
     have hscale :
@@ -726,27 +748,31 @@ theorem exists_state_cbOneToAlphaOriginalValue_ge
     have hstate_nonneg :
         0 ≤
           cbOneToAlphaOriginalValue Phi hPhi
-            (CBOneToAlphaOriginalDomain.ofState tau) alpha :=
+            (CBOneToAlphaOriginalDomain.ofState tau)
+            (SchattenOrder.ofPositive halpha) :=
       cbOneToAlphaOriginalValue_nonneg Phi hPhi
-        (CBOneToAlphaOriginalDomain.ofState tau) alpha
+        (CBOneToAlphaOriginalDomain.ofState tau) (SchattenOrder.ofPositive halpha)
     rw [hvalue]
     calc
       Y.matrix.trace.re ^ (1 / alpha) *
           cbOneToAlphaOriginalValue Phi hPhi
-            (CBOneToAlphaOriginalDomain.ofState tau) alpha ≤
+            (CBOneToAlphaOriginalDomain.ofState tau)
+            (SchattenOrder.ofPositive halpha) ≤
         1 *
           cbOneToAlphaOriginalValue Phi hPhi
-            (CBOneToAlphaOriginalDomain.ofState tau) alpha := by
+            (CBOneToAlphaOriginalDomain.ofState tau)
+            (SchattenOrder.ofPositive halpha) := by
           exact mul_le_mul_of_nonneg_right hscale hstate_nonneg
       _ =
           cbOneToAlphaOriginalValue Phi hPhi
-            (CBOneToAlphaOriginalDomain.ofState tau) alpha := by
+            (CBOneToAlphaOriginalDomain.ofState tau)
+            (SchattenOrder.ofPositive halpha) := by
           rw [one_mul]
 
 /-- Source CB original values restricted to trace-one state candidates. -/
 def cbOneToAlphaStateOriginalValueSet
     (Phi : MatrixMap a1 b1) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : ℝ) : Set ℝ :=
+    (alpha : SchattenOrder) : Set ℝ :=
   Set.range fun tau : State a1 =>
     cbOneToAlphaOriginalValue Phi hPhi
       (CBOneToAlphaOriginalDomain.ofState tau) alpha
@@ -760,12 +786,14 @@ theorem cbOneToAlphaNorm_eq_sSup_stateOriginalValueSet_of_one_lt
     [Nonempty a1]
     (Phi : MatrixMap a1 b1) (hPhi : MatrixMap.IsCompletelyPositive Phi)
     {alpha : ℝ} (halpha : 1 < alpha) :
-    cbOneToAlphaNorm Phi hPhi alpha =
-      sSup (cbOneToAlphaStateOriginalValueSet Phi hPhi alpha) := by
+    cbOneToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha) =
+      sSup (cbOneToAlphaStateOriginalValueSet Phi hPhi
+        (SchattenOrder.ofOneLt halpha)) := by
   have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
   have hbddState :
-      BddAbove (cbOneToAlphaStateOriginalValueSet Phi hPhi alpha) := by
-    refine ⟨cbOneToAlphaNorm Phi hPhi alpha, ?_⟩
+      BddAbove (cbOneToAlphaStateOriginalValueSet Phi hPhi
+        (SchattenOrder.ofOneLt halpha)) := by
+    refine ⟨cbOneToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha), ?_⟩
     rintro y ⟨tau, rfl⟩
     exact cbOneToAlphaOriginalValue_le_cbOneToAlphaNorm_of_one_lt
       Phi hPhi halpha (CBOneToAlphaOriginalDomain.ofState tau)
@@ -1120,7 +1148,7 @@ private theorem cbOneToAlphaNorm_congr_map_additivity
     (hmap : Phi = Psi)
     (hPhi : MatrixMap.IsCompletelyPositive Phi)
     (hPsi : MatrixMap.IsCompletelyPositive Psi)
-    (alpha : ℝ) :
+    (alpha : SchattenOrder) :
     MatrixMap.cbOneToAlphaNorm Phi hPhi alpha =
       MatrixMap.cbOneToAlphaNorm Psi hPsi alpha := by
   subst hmap
@@ -1141,17 +1169,17 @@ theorem cbOneToAlphaNorm_sandwichedSideWeightMap_prod_comp_kron_eq_mul_posDef
         (MatrixMap.isCompletelyPositive_comp _ _
           (sandwichedSideWeightMap_completelyPositive (sigma1.prod sigma2) alpha)
           (MatrixMap.isCompletelyPositive_kron Phi1 Phi2 hPhi1 hPhi2))
-        alpha =
+        (SchattenOrder.ofOneLt halpha) =
       MatrixMap.cbOneToAlphaNorm
           ((sandwichedSideWeightMap sigma1 alpha).comp Phi1)
           (MatrixMap.isCompletelyPositive_comp _ _
             (sandwichedSideWeightMap_completelyPositive sigma1 alpha) hPhi1)
-          alpha *
+          (SchattenOrder.ofOneLt halpha) *
         MatrixMap.cbOneToAlphaNorm
           ((sandwichedSideWeightMap sigma2 alpha).comp Phi2)
           (MatrixMap.isCompletelyPositive_comp _ _
             (sandwichedSideWeightMap_completelyPositive sigma2 alpha) hPhi2)
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
   let Tprod : MatrixMap (Prod a1 a2) (Prod b1 b2) :=
     (sandwichedSideWeightMap (sigma1.prod sigma2) alpha).comp
       (MatrixMap.kron Phi1 Phi2)
@@ -1171,17 +1199,19 @@ theorem cbOneToAlphaNorm_sandwichedSideWeightMap_prod_comp_kron_eq_mul_posDef
     dsimp [Tprod, T1, T2]
     exact sandwichedSideWeightMap_prod_comp_kron_posDef
       sigma1 sigma2 Phi1 Phi2 hsigma1 hsigma2 alpha
-  change MatrixMap.cbOneToAlphaNorm Tprod hTprod alpha =
-    MatrixMap.cbOneToAlphaNorm T1 hT1 alpha *
-      MatrixMap.cbOneToAlphaNorm T2 hT2 alpha
+  change MatrixMap.cbOneToAlphaNorm Tprod hTprod (SchattenOrder.ofOneLt halpha) =
+    MatrixMap.cbOneToAlphaNorm T1 hT1 (SchattenOrder.ofOneLt halpha) *
+      MatrixMap.cbOneToAlphaNorm T2 hT2 (SchattenOrder.ofOneLt halpha)
   calc
-    MatrixMap.cbOneToAlphaNorm Tprod hTprod alpha =
+    MatrixMap.cbOneToAlphaNorm Tprod hTprod (SchattenOrder.ofOneLt halpha) =
       MatrixMap.cbOneToAlphaNorm (MatrixMap.kron T1 T2)
-        (MatrixMap.isCompletelyPositive_kron T1 T2 hT1 hT2) alpha := by
+        (MatrixMap.isCompletelyPositive_kron T1 T2 hT1 hT2)
+        (SchattenOrder.ofOneLt halpha) := by
           exact cbOneToAlphaNorm_congr_map_additivity hTprod_eq hTprod
-            (MatrixMap.isCompletelyPositive_kron T1 T2 hT1 hT2) alpha
-    _ = MatrixMap.cbOneToAlphaNorm T1 hT1 alpha *
-        MatrixMap.cbOneToAlphaNorm T2 hT2 alpha := by
+            (MatrixMap.isCompletelyPositive_kron T1 T2 hT1 hT2)
+            (SchattenOrder.ofOneLt halpha)
+    _ = MatrixMap.cbOneToAlphaNorm T1 hT1 (SchattenOrder.ofOneLt halpha) *
+        MatrixMap.cbOneToAlphaNorm T2 hT2 (SchattenOrder.ofOneLt halpha) := by
           exact MatrixMap.cbOneToAlphaNorm_kron_eq_mul T1 hT1 T2 hT2 halpha
 
 end MatrixMap
@@ -1763,7 +1793,7 @@ theorem weightedRankOne_denominator_eq_one
     psdSchattenPNorm
         (partialTraceB (a := a1) (b := a1) (rankOneMatrix weighted))
         (partialTraceB_posSemidef (rankOneMatrix_pos weighted))
-        alpha =
+        (SchattenOrder.ofPositive halpha) =
       1 := by
   intro s weighted
   let tau : State a1 := psi.state.marginalA
@@ -1819,12 +1849,12 @@ theorem weightedRankOne_denominator_eq_one
     psdSchattenPNorm
         (partialTraceB (a := a1) (b := a1) (rankOneMatrix weighted))
         (partialTraceB_posSemidef (rankOneMatrix_pos weighted))
-        alpha =
+        (SchattenOrder.ofPositive halpha) =
       psdSchattenPNorm
         (CFC.rpow tau.matrix (1 / alpha))
         (tau.rpowMatrix_posSemidef (1 / alpha))
-        alpha := by
-          exact psdSchattenPNorm_congr hmatrix _ _ alpha
+        (SchattenOrder.ofPositive halpha) := by
+          exact psdSchattenPNorm_congr hmatrix _ _ (SchattenOrder.ofPositive halpha)
     _ = 1 := State.state_rpow_one_div_psdSchattenPNorm_eq_one tau hA alpha halpha
 
 /-- Support-convention version of
@@ -1844,7 +1874,7 @@ theorem weightedRankOne_denominator_eq_one_psd
     psdSchattenPNorm
         (partialTraceB (a := a1) (b := a1) (rankOneMatrix weighted))
         (partialTraceB_posSemidef (rankOneMatrix_pos weighted))
-        alpha =
+        (SchattenOrder.ofOneLt halpha) =
       1 := by
   intro s weighted
   let tau : State a1 := psi.state.marginalA
@@ -1877,12 +1907,12 @@ theorem weightedRankOne_denominator_eq_one_psd
     psdSchattenPNorm
         (partialTraceB (a := a1) (b := a1) (rankOneMatrix weighted))
         (partialTraceB_posSemidef (rankOneMatrix_pos weighted))
-        alpha =
+        (SchattenOrder.ofOneLt halpha) =
       psdSchattenPNorm
         (CFC.rpow tau.matrix (1 / alpha))
         (tau.rpowMatrix_posSemidef (1 / alpha))
-        alpha := by
-          exact psdSchattenPNorm_congr hmatrix _ _ alpha
+        (SchattenOrder.ofOneLt halpha) := by
+          exact psdSchattenPNorm_congr hmatrix _ _ (SchattenOrder.ofOneLt halpha)
     _ = 1 := State.state_rpow_one_div_psdSchattenPNorm_eq_one_psd tau halpha_pos
 
 /-- The reference lift of a full-rank KW weighted channel map preserves
@@ -1903,7 +1933,7 @@ theorem sandwichedSideWeightedMap_referenceLift_apply_ne_zero_of_posDef
 /-- Real-valued CB-norm expression from the KW alternate expression before
 identifying it with optimized sandwiched EA mutual information. -/
 def sandwichedRenyiCBNormExpression
-    (N : Channel a1 b1) (sigma : State b1) (alpha : ℝ) : ℝ :=
+    (N : Channel a1 b1) (sigma : State b1) (alpha : SchattenOrder) : ℝ :=
   alpha / (alpha - 1) *
     log2 (MatrixMap.cbOneToAlphaNorm
       (sandwichedSideWeightedMap N sigma alpha)
@@ -1918,13 +1948,14 @@ side-weighted channel map used in the EA sandwiched mutual information proof. -/
 theorem sandwichedRenyiCBNormExpression_eq_cbAlternateExpression
     [Nonempty a1] (N : Channel a1 b1) (sigma : State b1)
     {alpha : ℝ} (halpha : 1 < alpha) :
-    sandwichedRenyiCBNormExpression N sigma alpha =
+    sandwichedRenyiCBNormExpression N sigma (SchattenOrder.ofOneLt halpha) =
       alpha / (alpha - 1) *
         log2 (MatrixMap.cbOneToAlphaAlternateExpression
           (sandwichedSideWeightedMap N sigma alpha)
           (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
-          alpha) := by
+          (SchattenOrder.ofOneLt halpha)) := by
   unfold sandwichedRenyiCBNormExpression
+  simp only [SchattenOrder.coe_ofOneLt]
   rw [MatrixMap.cbOneToAlphaNorm_eq_cbOneToAlphaAlternateExpression
     (sandwichedSideWeightedMap N sigma alpha)
     (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
@@ -1940,7 +1971,7 @@ input sandwiched-Renyi objective is bounded by the corresponding weighted
 CB expression. -/
 theorem sandwichedRenyiMutualInformationE_le_fullRankCB_sInf_of_input_le
     [Nonempty a1] [Nonempty b1]
-    (N : Channel a1 b1) (alpha : ℝ)
+    (N : Channel a1 b1) (alpha : SchattenOrder)
     (hBelow :
       BddBelow (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
         sandwichedRenyiCBNormExpression N sigma.1 alpha))
@@ -1985,7 +2016,7 @@ theorem sandwichedPureRankOneLogQuotient_le_CBNormExpression
         psdSchattenPNorm
           (partialTraceB (a := a1) (b := a1) (rankOneMatrix psi))
           (partialTraceB_posSemidef (rankOneMatrix_pos psi))
-          alpha)
+          (SchattenOrder.ofOneLt halpha))
     (hnum :
       0 <
         psdSchattenPNorm
@@ -1995,7 +2026,7 @@ theorem sandwichedPureRankOneLogQuotient_le_CBNormExpression
             (sandwichedSideWeightedMap N sigma alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
             (rankOneMatrix_pos psi))
-          alpha) :
+          (SchattenOrder.ofOneLt halpha)) :
     alpha / (alpha - 1) *
         log2
           (psdSchattenPNorm
@@ -2005,12 +2036,12 @@ theorem sandwichedPureRankOneLogQuotient_le_CBNormExpression
                 (sandwichedSideWeightedMap N sigma alpha)
                 (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
                 (rankOneMatrix_pos psi))
-              alpha /
+              (SchattenOrder.ofOneLt halpha) /
             psdSchattenPNorm
               (partialTraceB (a := a1) (b := a1) (rankOneMatrix psi))
               (partialTraceB_posSemidef (rankOneMatrix_pos psi))
-              alpha) ≤
-      sandwichedRenyiCBNormExpression N sigma alpha := by
+              (SchattenOrder.ofOneLt halpha)) ≤
+      sandwichedRenyiCBNormExpression N sigma (SchattenOrder.ofOneLt halpha) := by
   let Phi : MatrixMap a1 b1 := sandwichedSideWeightedMap N sigma alpha
   let hPhi : MatrixMap.IsCompletelyPositive Phi :=
     sandwichedSideWeightedMap_completelyPositive N sigma alpha
@@ -2018,14 +2049,14 @@ theorem sandwichedPureRankOneLogQuotient_le_CBNormExpression
     psdSchattenPNorm
       (MatrixMap.referenceLift Phi (rankOneMatrix psi))
       (MatrixMap.referenceLift_mapsPositive Phi hPhi (rankOneMatrix_pos psi))
-      alpha
+      (SchattenOrder.ofOneLt halpha)
   let den : ℝ :=
     psdSchattenPNorm
       (partialTraceB (a := a1) (b := a1) (rankOneMatrix psi))
       (partialTraceB_posSemidef (rankOneMatrix_pos psi))
-      alpha
+      (SchattenOrder.ofOneLt halpha)
   have hquot_le :
-      num / den ≤ MatrixMap.cbOneToAlphaNorm Phi hPhi alpha := by
+      num / den ≤ MatrixMap.cbOneToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha) := by
     simpa [Phi, hPhi, num, den] using
       MatrixMap.cbOneToAlphaPureRankOneValue_le_cbOneToAlphaNorm
         Phi hPhi halpha psi hden
@@ -2033,7 +2064,8 @@ theorem sandwichedPureRankOneLogQuotient_le_CBNormExpression
     simpa [Phi, hPhi, num] using hnum
   have hquot_pos : 0 < num / den := div_pos hnum' hden
   have hlog_le :
-      log2 (num / den) ≤ log2 (MatrixMap.cbOneToAlphaNorm Phi hPhi alpha) := by
+      log2 (num / den) ≤
+        log2 (MatrixMap.cbOneToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha)) := by
     unfold log2
     exact div_le_div_of_nonneg_right
       (Real.log_le_log hquot_pos hquot_le)
@@ -2055,7 +2087,7 @@ theorem cbOneToAlphaOriginalInput_state_denominator_eq_one
           (MatrixMap.cbOneToAlphaOriginalInput tau.matrix alpha))
         (partialTraceB_posSemidef
           (MatrixMap.cbOneToAlphaOriginalInput_posSemidef tau.pos alpha))
-        alpha =
+        (SchattenOrder.ofPositive halpha) =
       1 := by
   have htrace :
       partialTraceB (a := a1) (b := a1)
@@ -2068,12 +2100,12 @@ theorem cbOneToAlphaOriginalInput_state_denominator_eq_one
           (MatrixMap.cbOneToAlphaOriginalInput tau.matrix alpha))
         (partialTraceB_posSemidef
           (MatrixMap.cbOneToAlphaOriginalInput_posSemidef tau.pos alpha))
-        alpha =
+        (SchattenOrder.ofPositive halpha) =
       psdSchattenPNorm
         (CFC.rpow tau.matrix (1 / alpha))
         (tau.rpowMatrix_posSemidef (1 / alpha))
-        alpha := by
-          exact psdSchattenPNorm_congr htrace _ _ alpha
+        (SchattenOrder.ofPositive halpha) := by
+          exact psdSchattenPNorm_congr htrace _ _ (SchattenOrder.ofPositive halpha)
     _ = 1 := State.state_rpow_one_div_psdSchattenPNorm_eq_one_psd tau halpha
 
 /-- Full-rank original CB candidates have strictly positive weighted-channel
@@ -2090,7 +2122,7 @@ theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_posDef
         (sandwichedSideWeightedMap N sigma alpha)
         (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
         Y
-        alpha := by
+        (SchattenOrder.ofPositive halpha) := by
   let X : CMatrix (Prod a1 a1) := MatrixMap.cbOneToAlphaOriginalInput Y.matrix alpha
   let hX : X.PosSemidef := MatrixMap.cbOneToAlphaOriginalInput_posSemidef Y.pos alpha
   have hXne : X ≠ 0 := by
@@ -2103,7 +2135,8 @@ theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_posDef
   unfold MatrixMap.cbOneToAlphaOriginalValue
   change 0 <
     psdSchattenPNorm
-      (MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha) X) _ alpha
+      (MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha) X) _
+      (SchattenOrder.ofPositive halpha)
   exact psdSchattenPNorm_pos_of_ne_zero
     (MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha) X) _ hPhiXne
 
@@ -2121,7 +2154,7 @@ theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
         (sandwichedSideWeightedMap N sigma alpha)
         (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
         (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-        alpha := by
+        (SchattenOrder.ofPositive halpha) := by
   let X : CMatrix (Prod a1 a1) := MatrixMap.cbOneToAlphaOriginalInput tau.matrix alpha
   let hX : X.PosSemidef := MatrixMap.cbOneToAlphaOriginalInput_posSemidef tau.pos alpha
   have hXne : X ≠ 0 := by
@@ -2134,7 +2167,8 @@ theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
   unfold MatrixMap.cbOneToAlphaOriginalValue
   change 0 <
     psdSchattenPNorm
-      (MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha) X) _ alpha
+      (MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha) X) _
+      (SchattenOrder.ofPositive halpha)
   exact psdSchattenPNorm_pos_of_ne_zero
     (MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha) X) _ hPhiXne
 
@@ -2159,14 +2193,14 @@ theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_log_mix_min_le
               (sandwichedSideWeightedMap N sigma alpha)
               (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
               (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau0)
-              alpha))
+              (SchattenOrder.ofOneLt halpha)))
         (alpha / (alpha - 1) *
           log2
             (MatrixMap.cbOneToAlphaOriginalValue
               (sandwichedSideWeightedMap N sigma alpha)
               (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
               (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau1)
-              alpha)) ≤
+              (SchattenOrder.ofOneLt halpha))) ≤
       alpha / (alpha - 1) *
         log2
           (MatrixMap.cbOneToAlphaOriginalValue
@@ -2182,7 +2216,7 @@ theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_log_mix_min_le
                   rw [Matrix.trace_add, Matrix.trace_smul, Matrix.trace_smul,
                     tau0.trace_eq_one, tau1.trace_eq_one]
                   norm_num })
-            alpha) := by
+            (SchattenOrder.ofOneLt halpha)) := by
   let Phi : MatrixMap a1 b1 := sandwichedSideWeightedMap N sigma alpha
   let hPhi : MatrixMap.IsCompletelyPositive Phi :=
     sandwichedSideWeightedMap_completelyPositive N sigma alpha
@@ -2199,13 +2233,16 @@ theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_log_mix_min_le
         norm_num }
   let v0 : ℝ :=
     MatrixMap.cbOneToAlphaOriginalValue Phi hPhi
-      (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau0) alpha
+      (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau0)
+      (SchattenOrder.ofOneLt halpha)
   let v1 : ℝ :=
     MatrixMap.cbOneToAlphaOriginalValue Phi hPhi
-      (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau1) alpha
+      (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau1)
+      (SchattenOrder.ofOneLt halpha)
   let vmix : ℝ :=
     MatrixMap.cbOneToAlphaOriginalValue Phi hPhi
-      (MatrixMap.CBOneToAlphaOriginalDomain.ofState tauMix) alpha
+      (MatrixMap.CBOneToAlphaOriginalDomain.ofState tauMix)
+      (SchattenOrder.ofOneLt halpha)
   have hraw : min v0 v1 ≤ vmix := by
     simpa [Phi, hPhi, tauMix, v0, v1, vmix] using
       MatrixMap.cbOneToAlphaOriginalValue_ofState_min_le_mix
@@ -2257,7 +2294,7 @@ theorem works over compact convex matrix domains.  This wrapper is equal to
 the state expression on `State.densityMatrixSet a`; outside that domain its
 value is irrelevant. -/
 def sandwichedChannelOriginalValueLogDensity
-    (N : Channel a1 b1) (sigma : State b1) (alpha : ℝ)
+    (N : Channel a1 b1) (sigma : State b1) (alpha : SchattenOrder)
     (M : CMatrix a1) : ℝ := by
   classical
   exact
@@ -2275,9 +2312,10 @@ def sandwichedChannelOriginalValueLogDensity
 
 @[simp]
 theorem sandwichedChannelOriginalValueLogDensity_of_mem
-    (N : Channel a1 b1) (sigma : State b1) (alpha : ℝ)
+    (N : Channel a1 b1) (sigma : State b1) {alpha : ℝ} (halpha : 1 < alpha)
     {M : CMatrix a1} (hM : M ∈ State.densityMatrixSet a1) :
-    sandwichedChannelOriginalValueLogDensity N sigma alpha M =
+    sandwichedChannelOriginalValueLogDensity N sigma
+        (SchattenOrder.ofOneLt halpha) M =
       alpha / (alpha - 1) *
         log2
           (MatrixMap.cbOneToAlphaOriginalValue
@@ -2285,7 +2323,7 @@ theorem sandwichedChannelOriginalValueLogDensity_of_mem
             (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
             (MatrixMap.CBOneToAlphaOriginalDomain.ofState
               (State.densityMatrixSetState M hM))
-            alpha) := by
+            (SchattenOrder.ofOneLt halpha)) := by
   classical
   simp [sandwichedChannelOriginalValueLogDensity, hM]
 
@@ -2318,13 +2356,13 @@ private theorem cbOneToAlphaOriginalInput_continuousOn_posSemidef
   have hleft :
       ContinuousOn
         (fun M : CMatrix a1 =>
-          W M * MatrixMap.maximallyEntangledProjector a1)
+          W M * MatrixMap.unnormalizedMaximallyEntangledProjector a1)
         ({M : CMatrix a1 | M.PosSemidef} : Set (CMatrix a1)) :=
     hW.mul continuousOn_const
   have hall :
       ContinuousOn
         (fun M : CMatrix a1 =>
-          (W M * MatrixMap.maximallyEntangledProjector a1) * W M)
+          (W M * MatrixMap.unnormalizedMaximallyEntangledProjector a1) * W M)
         ({M : CMatrix a1 | M.PosSemidef} : Set (CMatrix a1)) :=
     hleft.mul hW
   simpa [MatrixMap.cbOneToAlphaOriginalInput, W, Matrix.mul_assoc] using hall
@@ -2338,7 +2376,8 @@ private theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_log_continuo
     [Nonempty a1] (N : Channel a1 b1) (sigma : State b1)
     (hsigma : sigma.matrix.PosDef) {alpha : ℝ} (halpha : 1 < alpha) :
     ContinuousOn
-      (sandwichedChannelOriginalValueLogDensity N sigma alpha)
+      (sandwichedChannelOriginalValueLogDensity N sigma
+        (SchattenOrder.ofOneLt halpha))
       (State.densityMatrixSet a1) := by
   rw [continuousOn_iff_continuous_restrict]
   let S := {M : CMatrix a1 // M ∈ State.densityMatrixSet a1}
@@ -2365,12 +2404,13 @@ private theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_log_continuo
     exact Phi.referenceLift_mapsPositive hPhi
       (MatrixMap.cbOneToAlphaOriginalInput_posSemidef
         ((State.mem_densityMatrixSet_iff.mp M.2).1) alpha)
-  let normValue : S → ℝ := fun M => psdSchattenPNorm (Y M) (hYpsd M) alpha
+  let normValue : S → ℝ := fun M =>
+    psdSchattenPNorm (Y M) (hYpsd M) (SchattenOrder.ofOneLt halpha)
   have hnorm_cont : Continuous normValue := by
     rw [continuous_iff_continuousAt]
     intro M
     exact psdSchattenPNorm_tendsto_of_tendsto_posSemidef
-      (a := Prod a1 b1) (lt_trans zero_lt_one halpha) hYcont.continuousAt hYpsd
+      (a := Prod a1 b1) (SchattenOrder.ofOneLt halpha) hYcont.continuousAt hYpsd
       (hYpsd M)
   have hnorm_pos : ∀ M : S, 0 < normValue M := by
     intro M
@@ -2391,14 +2431,17 @@ private theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_log_continuo
         alpha / (alpha - 1) * log2 (normValue M) :=
     continuous_const.mul hlog_cont
   have hfun :
-      (fun M : S => sandwichedChannelOriginalValueLogDensity N sigma alpha M.1) =
+      (fun M : S => sandwichedChannelOriginalValueLogDensity N sigma
+          (SchattenOrder.ofOneLt halpha) M.1) =
         fun M : S => alpha / (alpha - 1) * log2 (normValue M) := by
     funext M
-    rw [sandwichedChannelOriginalValueLogDensity_of_mem N sigma alpha M.2]
+    rw [sandwichedChannelOriginalValueLogDensity_of_mem N sigma
+      halpha M.2]
     unfold normValue Y X Phi MatrixMap.cbOneToAlphaOriginalValue
       MatrixMap.CBOneToAlphaOriginalDomain.ofState
     simp [State.densityMatrixSetState_matrix]
-  change Continuous fun M : S => sandwichedChannelOriginalValueLogDensity N sigma alpha M.1
+  change Continuous fun M : S => sandwichedChannelOriginalValueLogDensity N sigma
+    (SchattenOrder.ofOneLt halpha) M.1
   rw [hfun]
   exact hscaled
 
@@ -2413,7 +2456,8 @@ private theorem sandwichedChannelOriginalValueLogDensity_upperSemicontinuousOn_d
     [Nonempty a1] (N : Channel a1 b1) (sigma : State b1)
     (hsigma : sigma.matrix.PosDef) {alpha : ℝ} (halpha : 1 < alpha) :
     UpperSemicontinuousOn
-      (sandwichedChannelOriginalValueLogDensity N sigma alpha)
+      (sandwichedChannelOriginalValueLogDensity N sigma
+        (SchattenOrder.ofOneLt halpha))
       (State.densityMatrixSet a1) :=
   ContinuousOn.upperSemicontinuousOn
     (cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_log_continuousOn_density
@@ -2428,7 +2472,8 @@ theorem sandwichedChannelOriginalValueLogDensity_quasiconcaveOn
     [Nonempty a1] (N : Channel a1 b1) (sigma : State b1)
     (hsigma : sigma.matrix.PosDef) {alpha : ℝ} (halpha : 1 < alpha) :
     QuasiconcaveOn ℝ (State.densityMatrixSet a1)
-      (sandwichedChannelOriginalValueLogDensity N sigma alpha) := by
+      (sandwichedChannelOriginalValueLogDensity N sigma
+        (SchattenOrder.ofOneLt halpha)) := by
   rw [quasiconcaveOn_iff_min_le]
   refine ⟨State.densityMatrixSet_convex, ?_⟩
   intro X hX Y hY s t hs ht hst
@@ -2452,7 +2497,7 @@ The source proof optimizes over full-rank side states `sigma_B`.  This wrapper
 keeps that variable as a matrix so Sion can be applied on the matrix domain;
 outside the full-rank density domain its value is irrelevant. -/
 def sandwichedChannelOriginalValueLogReferenceDensity
-    (N : Channel a1 b1) (tau : State a1) (alpha : ℝ)
+    (N : Channel a1 b1) (tau : State a1) (alpha : SchattenOrder)
     (M : CMatrix b1) : ℝ := by
   classical
   exact
@@ -2471,9 +2516,10 @@ def sandwichedChannelOriginalValueLogReferenceDensity
 
 @[simp]
 theorem sandwichedChannelOriginalValueLogReferenceDensity_of_mem
-    (N : Channel a1 b1) (tau : State a1) (alpha : ℝ)
+    (N : Channel a1 b1) (tau : State a1) {alpha : ℝ} (halpha : 1 < alpha)
     {M : CMatrix b1} (hM : M ∈ State.fullRankDensityMatrixSet b1) :
-    sandwichedChannelOriginalValueLogReferenceDensity N tau alpha M =
+    sandwichedChannelOriginalValueLogReferenceDensity N tau
+        (SchattenOrder.ofOneLt halpha) M =
       let sigma : State b1 :=
         State.densityMatrixSetState M (State.fullRankDensityMatrixSet_subset_densityMatrixSet hM)
       alpha / (alpha - 1) *
@@ -2482,7 +2528,7 @@ theorem sandwichedChannelOriginalValueLogReferenceDensity_of_mem
             (sandwichedSideWeightedMap N sigma alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
             (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-            alpha) := by
+            (SchattenOrder.ofOneLt halpha)) := by
   classical
   simp [sandwichedChannelOriginalValueLogReferenceDensity, hM]
 
@@ -2494,7 +2540,7 @@ unlogged CB-norm expression before applying the positive logarithmic Renyi
 prefactor.  This wrapper isolates that raw value on the same full-rank matrix
 domain used in the Sion step. -/
 def sandwichedChannelOriginalValueReferenceDensity
-    (N : Channel a1 b1) (tau : State a1) (alpha : ℝ)
+    (N : Channel a1 b1) (tau : State a1) (alpha : SchattenOrder)
     (M : CMatrix b1) : ℝ := by
   classical
   exact
@@ -2599,16 +2645,17 @@ private theorem referenceWeight_mul_self_eq_referencePower
 
 @[simp]
 theorem sandwichedChannelOriginalValueReferenceDensity_of_mem
-    (N : Channel a1 b1) (tau : State a1) (alpha : ℝ)
+    (N : Channel a1 b1) (tau : State a1) {alpha : ℝ} (halpha : 1 < alpha)
     {M : CMatrix b1} (hM : M ∈ State.fullRankDensityMatrixSet b1) :
-    sandwichedChannelOriginalValueReferenceDensity N tau alpha M =
+    sandwichedChannelOriginalValueReferenceDensity N tau
+        (SchattenOrder.ofOneLt halpha) M =
       let sigma : State b1 :=
         State.densityMatrixSetState M (State.fullRankDensityMatrixSet_subset_densityMatrixSet hM)
       MatrixMap.cbOneToAlphaOriginalValue
         (sandwichedSideWeightedMap N sigma alpha)
         (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
         (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-        alpha := by
+        (SchattenOrder.ofOneLt halpha) := by
   classical
   simp [sandwichedChannelOriginalValueReferenceDensity, hM]
 
@@ -2616,10 +2663,11 @@ private theorem sandwichedChannelOriginalValueReferenceDensity_eq_kwMatrix_norm
     [Nonempty a1] (N : Channel a1 b1) (tau : State a1)
     {alpha : ℝ} (halpha : 1 < alpha)
     {M : CMatrix b1} (hM : M ∈ State.fullRankDensityMatrixSet b1) :
-    sandwichedChannelOriginalValueReferenceDensity N tau alpha M =
+    sandwichedChannelOriginalValueReferenceDensity N tau
+        (SchattenOrder.ofOneLt halpha) M =
       psdSchattenPNorm (sandwichedChannelReferenceKWMatrix N tau alpha M)
         (sandwichedChannelReferenceKWMatrix_posSemidef N tau alpha hM.1.posSemidef)
-        alpha := by
+        (SchattenOrder.ofOneLt halpha) := by
   let sigma : State b1 :=
     State.densityMatrixSetState M (State.fullRankDensityMatrixSet_subset_densityMatrixSet hM)
   let X : CMatrix (Prod a1 a1) := MatrixMap.cbOneToAlphaOriginalInput tau.matrix alpha
@@ -2685,21 +2733,24 @@ private theorem sandwichedChannelOriginalValueReferenceDensity_eq_kwMatrix_norm
       (Phi.referenceLift X).PosSemidef :=
     Phi.referenceLift_mapsPositive hPhi
       (MatrixMap.cbOneToAlphaOriginalInput_posSemidef tau.pos alpha)
-  rw [sandwichedChannelOriginalValueReferenceDensity_of_mem N tau alpha hM]
+  rw [sandwichedChannelOriginalValueReferenceDensity_of_mem N tau
+    halpha hM]
   unfold MatrixMap.cbOneToAlphaOriginalValue MatrixMap.CBOneToAlphaOriginalDomain.ofState
   calc
-    psdSchattenPNorm (Phi.referenceLift X) hPhiXpos alpha =
-        psdSchattenPNorm (A * B) hABpsd alpha := by
-          exact psdSchattenPNorm_congr hAB.symm hPhiXpos hABpsd alpha
-    _ = psdSchattenPNorm (B * A) hBApsd alpha :=
+    psdSchattenPNorm (Phi.referenceLift X) hPhiXpos
+        (SchattenOrder.ofOneLt halpha) =
+      psdSchattenPNorm (A * B) hABpsd (SchattenOrder.ofOneLt halpha) := by
+          exact psdSchattenPNorm_congr hAB.symm hPhiXpos hABpsd
+            (SchattenOrder.ofOneLt halpha)
+    _ = psdSchattenPNorm (B * A) hBApsd (SchattenOrder.ofOneLt halpha) :=
           psdSchattenPNorm_mul_comm hABpsd hBApsd (lt_trans zero_lt_one halpha)
     _ =
         psdSchattenPNorm (sandwichedChannelReferenceKWMatrix N tau alpha M)
           (sandwichedChannelReferenceKWMatrix_posSemidef N tau alpha hM.1.posSemidef)
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
           exact psdSchattenPNorm_congr hBA hBApsd
             (sandwichedChannelReferenceKWMatrix_posSemidef N tau alpha hM.1.posSemidef)
-            alpha
+            (SchattenOrder.ofOneLt halpha)
 
 private theorem cMatrix_conj_le_conj
     {A B S : CMatrix (Prod a1 b1)} (hAB : A ≤ B) :
@@ -2823,7 +2874,8 @@ private theorem sandwichedChannelOriginalValueReferenceDensity_quasiconvexOn
     [Nonempty a1] (N : Channel a1 b1) (tau : State a1)
     {alpha : ℝ} (halpha : 1 < alpha) :
     QuasiconvexOn ℝ (State.fullRankDensityMatrixSet b1)
-      (sandwichedChannelOriginalValueReferenceDensity N tau alpha) := by
+      (sandwichedChannelOriginalValueReferenceDensity N tau
+        (SchattenOrder.ofOneLt halpha)) := by
   rw [quasiconvexOn_iff_le_max]
   refine ⟨State.fullRankDensityMatrixSet_convex, ?_⟩
   intro X hX Y hY s t hs ht hst
@@ -2848,13 +2900,16 @@ private theorem sandwichedChannelOriginalValueReferenceDensity_quasiconvexOn
       sandwichedChannelReferenceKWMatrix_le_convex_combo
         N tau halpha hX hY hs ht hst
   have hnorm :
-      psdSchattenPNorm MM hMM alpha ≤
-        s * psdSchattenPNorm MX hMX alpha + t * psdSchattenPNorm MY hMY alpha := by
+      psdSchattenPNorm MM hMM (SchattenOrder.ofOneLt halpha) ≤
+        s * psdSchattenPNorm MX hMX (SchattenOrder.ofOneLt halpha) +
+          t * psdSchattenPNorm MY hMY (SchattenOrder.ofOneLt halpha) := by
     exact (psdSchattenPNorm_mono_of_le hMM hcombo halpha hle).trans
       (psdSchattenPNorm_convex_combo_le hMX hMY halpha hs ht hst)
   have hmax :
-      s * psdSchattenPNorm MX hMX alpha + t * psdSchattenPNorm MY hMY alpha ≤
-        max (psdSchattenPNorm MX hMX alpha) (psdSchattenPNorm MY hMY alpha) :=
+      s * psdSchattenPNorm MX hMX (SchattenOrder.ofOneLt halpha) +
+          t * psdSchattenPNorm MY hMY (SchattenOrder.ofOneLt halpha) ≤
+        max (psdSchattenPNorm MX hMX (SchattenOrder.ofOneLt halpha))
+          (psdSchattenPNorm MY hMY (SchattenOrder.ofOneLt halpha)) :=
     real_convex_combo_le_max hs ht hst
   rw [sandwichedChannelOriginalValueReferenceDensity_eq_kwMatrix_norm N tau halpha hmix,
     sandwichedChannelOriginalValueReferenceDensity_eq_kwMatrix_norm N tau halpha hX,
@@ -2865,40 +2920,46 @@ private theorem sandwichedChannelOriginalValueReferenceDensity_pos_of_mem
     [Nonempty a1] (N : Channel a1 b1) (tau : State a1)
     {alpha : ℝ} (halpha : 1 < alpha)
     {M : CMatrix b1} (hM : M ∈ State.fullRankDensityMatrixSet b1) :
-    0 < sandwichedChannelOriginalValueReferenceDensity N tau alpha M := by
+    0 < sandwichedChannelOriginalValueReferenceDensity N tau
+      (SchattenOrder.ofOneLt halpha) M := by
   let sigma : State b1 :=
     State.densityMatrixSetState M (State.fullRankDensityMatrixSet_subset_densityMatrixSet hM)
   have hsigma : sigma.matrix.PosDef := by
     simpa [sigma, State.densityMatrixSetState_matrix] using hM.1
-  rw [sandwichedChannelOriginalValueReferenceDensity_of_mem N tau alpha hM]
+  rw [sandwichedChannelOriginalValueReferenceDensity_of_mem N tau
+    halpha hM]
   exact cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
     N sigma hsigma tau (lt_trans zero_lt_one halpha)
 
 private theorem sandwichedChannelOriginalValueLogReferenceDensity_eq_coeff_log_raw_of_mem
-    (N : Channel a1 b1) (tau : State a1) (alpha : ℝ)
+    (N : Channel a1 b1) (tau : State a1) {alpha : ℝ} (halpha : 1 < alpha)
     {M : CMatrix b1} (hM : M ∈ State.fullRankDensityMatrixSet b1) :
-    sandwichedChannelOriginalValueLogReferenceDensity N tau alpha M =
+    sandwichedChannelOriginalValueLogReferenceDensity N tau (SchattenOrder.ofOneLt halpha) M =
       alpha / (alpha - 1) *
-        log2 (sandwichedChannelOriginalValueReferenceDensity N tau alpha M) := by
-  rw [sandwichedChannelOriginalValueLogReferenceDensity_of_mem N tau alpha hM,
-    sandwichedChannelOriginalValueReferenceDensity_of_mem N tau alpha hM]
+        log2 (sandwichedChannelOriginalValueReferenceDensity N tau (SchattenOrder.ofOneLt halpha) M) := by
+  rw [sandwichedChannelOriginalValueLogReferenceDensity_of_mem N tau halpha hM,
+    sandwichedChannelOriginalValueReferenceDensity_of_mem N tau halpha hM]
 
 private theorem sandwichedChannelOriginalValueLogReferenceDensity_quasiconvexOn_of_raw
     [Nonempty a1] (N : Channel a1 b1) (tau : State a1)
     {alpha : ℝ} (halpha : 1 < alpha)
     (hRawQ :
       QuasiconvexOn ℝ (State.fullRankDensityMatrixSet b1)
-        (sandwichedChannelOriginalValueReferenceDensity N tau alpha)) :
+        (sandwichedChannelOriginalValueReferenceDensity N tau
+          (SchattenOrder.ofOneLt halpha))) :
     QuasiconvexOn ℝ (State.fullRankDensityMatrixSet b1)
-      (sandwichedChannelOriginalValueLogReferenceDensity N tau alpha) := by
+      (sandwichedChannelOriginalValueLogReferenceDensity N tau
+        (SchattenOrder.ofOneLt halpha)) := by
   rw [quasiconvexOn_iff_le_max] at hRawQ ⊢
   refine ⟨hRawQ.1, ?_⟩
   intro X hX Y hY s t hs ht hst
   have hmix : s • X + t • Y ∈ State.fullRankDensityMatrixSet b1 :=
     hRawQ.1 hX hY hs ht hst
-  let raw : CMatrix b1 → ℝ := sandwichedChannelOriginalValueReferenceDensity N tau alpha
+  let raw : CMatrix b1 → ℝ := sandwichedChannelOriginalValueReferenceDensity N tau
+    (SchattenOrder.ofOneLt halpha)
   let logged : CMatrix b1 → ℝ :=
-    sandwichedChannelOriginalValueLogReferenceDensity N tau alpha
+    sandwichedChannelOriginalValueLogReferenceDensity N tau
+      (SchattenOrder.ofOneLt halpha)
   have hraw :
       raw (s • X + t • Y) ≤ max (raw X) (raw Y) := by
     simpa [raw] using hRawQ.2 hX hY hs ht hst
@@ -2951,15 +3012,15 @@ private theorem sandwichedChannelOriginalValueLogReferenceDensity_quasiconvexOn_
       logged (s • X + t • Y) = coeff * log2 (raw (s • X + t • Y)) := by
     simpa [logged, raw, coeff] using
       sandwichedChannelOriginalValueLogReferenceDensity_eq_coeff_log_raw_of_mem
-        N tau alpha hmix
+        N tau halpha hmix
   have hx_log : logged X = coeff * log2 (raw X) := by
     simpa [logged, raw, coeff] using
       sandwichedChannelOriginalValueLogReferenceDensity_eq_coeff_log_raw_of_mem
-        N tau alpha hX
+        N tau halpha hX
   have hy_log : logged Y = coeff * log2 (raw Y) := by
     simpa [logged, raw, coeff] using
       sandwichedChannelOriginalValueLogReferenceDensity_eq_coeff_log_raw_of_mem
-        N tau alpha hY
+        N tau halpha hY
   simpa [logged, hmix_log, hx_log, hy_log] using hscaled
 
 /-- Continuity of the KW channel Sion objective in the full-rank reference
@@ -2974,7 +3035,8 @@ private theorem sandwichedChannelOriginalValueLogReferenceDensity_continuousOn_f
     [Nonempty a1] (N : Channel a1 b1) (tau : State a1)
     {alpha : ℝ} (halpha : 1 < alpha) :
     ContinuousOn
-      (sandwichedChannelOriginalValueLogReferenceDensity N tau alpha)
+      (sandwichedChannelOriginalValueLogReferenceDensity N tau
+        (SchattenOrder.ofOneLt halpha))
       (State.fullRankDensityMatrixSet b1) := by
   rw [continuousOn_iff_continuous_restrict]
   let S := {M : CMatrix b1 // M ∈ State.fullRankDensityMatrixSet b1}
@@ -3049,12 +3111,13 @@ private theorem sandwichedChannelOriginalValueLogReferenceDensity_continuousOn_f
           (State.fullRankDensityMatrixSet_subset_densityMatrixSet M.2))
         alpha)
       hX
-  let normValue : S → ℝ := fun M => psdSchattenPNorm (Y M) (hYpsd M) alpha
+  let normValue : S → ℝ := fun M =>
+    psdSchattenPNorm (Y M) (hYpsd M) (SchattenOrder.ofOneLt halpha)
   have hnorm_cont : Continuous normValue := by
     rw [continuous_iff_continuousAt]
     intro M
     exact psdSchattenPNorm_tendsto_of_tendsto_posSemidef
-      (a := Prod a1 b1) (lt_trans zero_lt_one halpha) hYcont.continuousAt hYpsd
+      (a := Prod a1 b1) (SchattenOrder.ofOneLt halpha) hYcont.continuousAt hYpsd
       (hYpsd M)
   have hnorm_pos : ∀ M : S, 0 < normValue M := by
     intro M
@@ -3078,15 +3141,18 @@ private theorem sandwichedChannelOriginalValueLogReferenceDensity_continuousOn_f
     continuous_const.mul hlog_cont
   have hfun :
       (fun M : S =>
-        sandwichedChannelOriginalValueLogReferenceDensity N tau alpha M.1) =
+        sandwichedChannelOriginalValueLogReferenceDensity N tau
+          (SchattenOrder.ofOneLt halpha) M.1) =
         fun M : S => alpha / (alpha - 1) * log2 (normValue M) := by
     funext M
-    rw [sandwichedChannelOriginalValueLogReferenceDensity_of_mem N tau alpha M.2]
+    rw [sandwichedChannelOriginalValueLogReferenceDensity_of_mem N tau
+      halpha M.2]
     unfold normValue Y X
     simp [MatrixMap.cbOneToAlphaOriginalValue,
       MatrixMap.CBOneToAlphaOriginalDomain.ofState]
   change Continuous fun M : S =>
-    sandwichedChannelOriginalValueLogReferenceDensity N tau alpha M.1
+    sandwichedChannelOriginalValueLogReferenceDensity N tau
+      (SchattenOrder.ofOneLt halpha) M.1
   rw [hfun]
   exact hscaled
 
@@ -3096,7 +3162,8 @@ private theorem sandwichedChannelOriginalValueLogReferenceDensity_lowerSemiconti
     [Nonempty a1] (N : Channel a1 b1) (tau : State a1)
     {alpha : ℝ} (halpha : 1 < alpha) :
     LowerSemicontinuousOn
-      (sandwichedChannelOriginalValueLogReferenceDensity N tau alpha)
+      (sandwichedChannelOriginalValueLogReferenceDensity N tau
+        (SchattenOrder.ofOneLt halpha))
       (State.fullRankDensityMatrixSet b1) :=
   ContinuousOn.lowerSemicontinuousOn
     (sandwichedChannelOriginalValueLogReferenceDensity_continuousOn_fullRank
@@ -3109,7 +3176,8 @@ Sion to the full-rank reference density `sigma_B` and the input density
 `tau_A`.  This wrapper makes both variables matrix-valued so the local Sion API
 can be applied directly.  Outside the Sion domains its value is irrelevant. -/
 def sandwichedChannelOriginalValueLogMatrix
-    (N : Channel a1 b1) (alpha : ℝ) (sigmaM : CMatrix b1) (tauM : CMatrix a1) :
+    (N : Channel a1 b1) (alpha : SchattenOrder)
+    (sigmaM : CMatrix b1) (tauM : CMatrix a1) :
     ℝ := by
   classical
   exact
@@ -3133,10 +3201,11 @@ def sandwichedChannelOriginalValueLogMatrix
 
 @[simp]
 theorem sandwichedChannelOriginalValueLogMatrix_of_mem
-    (N : Channel a1 b1) (alpha : ℝ)
+    (N : Channel a1 b1) {alpha : ℝ} (halpha : 1 < alpha)
     {sigmaM : CMatrix b1} (hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1)
     {tauM : CMatrix a1} (hTau : tauM ∈ State.densityMatrixSet a1) :
-    sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM =
+    sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha)
+        sigmaM tauM =
       let sigma : State b1 :=
         State.densityMatrixSetState sigmaM
           (State.fullRankDensityMatrixSet_subset_densityMatrixSet hSigma)
@@ -3147,7 +3216,7 @@ theorem sandwichedChannelOriginalValueLogMatrix_of_mem
             (sandwichedSideWeightedMap N sigma alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
             (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-            alpha) := by
+            (SchattenOrder.ofOneLt halpha)) := by
   classical
   simp [sandwichedChannelOriginalValueLogMatrix, hSigma, hTau]
 
@@ -3193,35 +3262,35 @@ private theorem sandwichedChannelOriginalValueLogMatrix_sion_of_reference_quasic
     (hRefQ :
       ∀ tau : State a1,
         QuasiconvexOn ℝ (State.fullRankDensityMatrixSet b1)
-          (sandwichedChannelOriginalValueLogReferenceDensity N tau alpha)) :
+          (sandwichedChannelOriginalValueLogReferenceDensity N tau (SchattenOrder.ofOneLt halpha))) :
     (⨅ sigmaM : CMatrix b1,
       ⨅ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
         ⨆ tauM : CMatrix a1,
           ⨆ _hTau : tauM ∈ State.densityMatrixSet a1,
-            ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM : ℝ) :
+            ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tauM : ℝ) :
               EReal)) =
       ⨆ tauM : CMatrix a1,
         ⨆ _hTau : tauM ∈ State.densityMatrixSet a1,
           ⨅ sigmaM : CMatrix b1,
             ⨅ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
-              ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM : ℝ) :
+              ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tauM : ℝ) :
                 EReal) := by
   let F : {sigmaM : CMatrix b1 // sigmaM ∈ State.fullRankDensityMatrixSet b1} →
       {tauM : CMatrix a1 // tauM ∈ State.densityMatrixSet a1} → EReal :=
     fun sigma tau =>
-      ((sandwichedChannelOriginalValueLogMatrix N alpha sigma.1 tau.1 : ℝ) : EReal)
+      ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigma.1 tau.1 : ℝ) : EReal)
   have hnegMem :
       (⨅ tauM : CMatrix a1,
         ⨅ _hTau : tauM ∈ State.densityMatrixSet a1,
           ⨆ sigmaM : CMatrix b1,
             ⨆ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
-              -((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM : ℝ) :
+              -((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tauM : ℝ) :
                 EReal)) =
         ⨆ sigmaM : CMatrix b1,
           ⨆ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
             ⨅ tauM : CMatrix a1,
               ⨅ _hTau : tauM ∈ State.densityMatrixSet a1,
-                -((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM : ℝ) :
+                -((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tauM : ℝ) :
                   EReal) := by
     exact State.sion_iInf_iSup_eq_iSup_iInf
       (State.densityMatrixSet_nonempty (a := a1))
@@ -3233,12 +3302,12 @@ private theorem sandwichedChannelOriginalValueLogMatrix_sion_of_reference_quasic
             (State.fullRankDensityMatrixSet_subset_densityMatrixSet hSigma)
         have hcontE : ContinuousOn
             (fun tauM : CMatrix a1 =>
-              ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM : ℝ) :
+              ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tauM : ℝ) :
                 EReal))
             (State.densityMatrixSet a1) := by
           have hcontReal :
               ContinuousOn
-                (sandwichedChannelOriginalValueLogDensity N sigma alpha)
+                (sandwichedChannelOriginalValueLogDensity N sigma (SchattenOrder.ofOneLt halpha))
                 (State.densityMatrixSet a1) :=
             cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_log_continuousOn_density
               N sigma hSigma.1 halpha
@@ -3255,12 +3324,12 @@ private theorem sandwichedChannelOriginalValueLogMatrix_sion_of_reference_quasic
             (State.fullRankDensityMatrixSet_subset_densityMatrixSet hSigma)
         have hq :
             QuasiconcaveOn ℝ (State.densityMatrixSet a1)
-              (sandwichedChannelOriginalValueLogDensity N sigma alpha) :=
+              (sandwichedChannelOriginalValueLogDensity N sigma (SchattenOrder.ofOneLt halpha)) :=
           sandwichedChannelOriginalValueLogDensity_quasiconcaveOn N sigma hSigma.1 halpha
         have hqReal :
             QuasiconcaveOn ℝ (State.densityMatrixSet a1)
               (fun tauM : CMatrix a1 =>
-                sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM) := by
+                sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tauM) := by
           refine quasiconcaveOn_congr_on ?_ hq
           intro tauM hTau
           simp [sandwichedChannelOriginalValueLogDensity,
@@ -3272,12 +3341,12 @@ private theorem sandwichedChannelOriginalValueLogMatrix_sion_of_reference_quasic
         let tau : State a1 := State.densityMatrixSetState tauM hTau
         have hcontE : ContinuousOn
             (fun sigmaM : CMatrix b1 =>
-              ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM : ℝ) :
+              ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tauM : ℝ) :
                 EReal))
             (State.fullRankDensityMatrixSet b1) := by
           have hcontReal :
               ContinuousOn
-                (sandwichedChannelOriginalValueLogReferenceDensity N tau alpha)
+                (sandwichedChannelOriginalValueLogReferenceDensity N tau (SchattenOrder.ofOneLt halpha))
                 (State.fullRankDensityMatrixSet b1) :=
             sandwichedChannelOriginalValueLogReferenceDensity_continuousOn_fullRank
               N tau halpha
@@ -3292,12 +3361,12 @@ private theorem sandwichedChannelOriginalValueLogMatrix_sion_of_reference_quasic
         let tau : State a1 := State.densityMatrixSetState tauM hTau
         have hq :
             QuasiconvexOn ℝ (State.fullRankDensityMatrixSet b1)
-              (sandwichedChannelOriginalValueLogReferenceDensity N tau alpha) :=
+              (sandwichedChannelOriginalValueLogReferenceDensity N tau (SchattenOrder.ofOneLt halpha)) :=
           hRefQ tau
         have hqReal :
             QuasiconvexOn ℝ (State.fullRankDensityMatrixSet b1)
               (fun sigmaM : CMatrix b1 =>
-                sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM) := by
+                sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tauM) := by
           refine quasiconvexOn_congr_on ?_ hq
           intro sigmaM hSigma
           simp [sandwichedChannelOriginalValueLogReferenceDensity,
@@ -3335,8 +3404,8 @@ theorem cbOneToAlphaOriginalValue_state_log_le_CBNormExpression
               trace_le_one := by
                 rw [tau.trace_eq_one]
                 norm_num }
-            alpha) ≤
-      sandwichedRenyiCBNormExpression N sigma alpha := by
+            (SchattenOrder.ofOneLt halpha)) ≤
+      sandwichedRenyiCBNormExpression N sigma (SchattenOrder.ofOneLt halpha) := by
   let Y : MatrixMap.CBOneToAlphaOriginalDomain a1 :=
     { matrix := tau.matrix,
       pos := tau.pos,
@@ -3359,20 +3428,21 @@ theorem cbOneToAlphaOriginalValue_state_log_le_CBNormExpression
       psdSchattenPNorm
           (partialTraceB (a := a1) (b := a1) (rankOneMatrix psi))
           (partialTraceB_posSemidef (rankOneMatrix_pos psi))
-          alpha =
+          (SchattenOrder.ofOneLt halpha) =
         1 := by
     calc
       psdSchattenPNorm
           (partialTraceB (a := a1) (b := a1) (rankOneMatrix psi))
           (partialTraceB_posSemidef (rankOneMatrix_pos psi))
-          alpha =
+          (SchattenOrder.ofOneLt halpha) =
         psdSchattenPNorm
           (partialTraceB (a := a1) (b := a1)
             (MatrixMap.cbOneToAlphaOriginalInput Y.matrix alpha))
           (partialTraceB_posSemidef
             (MatrixMap.cbOneToAlphaOriginalInput_posSemidef Y.pos alpha))
-          alpha := by
-            exact psdSchattenPNorm_congr hden_matrix _ _ alpha
+          (SchattenOrder.ofOneLt halpha) := by
+            exact psdSchattenPNorm_congr hden_matrix _ _
+              (SchattenOrder.ofOneLt halpha)
       _ = 1 := by
             simpa [Y] using
               cbOneToAlphaOriginalInput_state_denominator_eq_one tau halpha_pos
@@ -3381,7 +3451,7 @@ theorem cbOneToAlphaOriginalValue_state_log_le_CBNormExpression
         psdSchattenPNorm
           (partialTraceB (a := a1) (b := a1) (rankOneMatrix psi))
           (partialTraceB_posSemidef (rankOneMatrix_pos psi))
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
     rw [hden_one]
     norm_num
   have hnum_eq :
@@ -3392,12 +3462,12 @@ theorem cbOneToAlphaOriginalValue_state_log_le_CBNormExpression
             (sandwichedSideWeightedMap N sigma alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
             (rankOneMatrix_pos psi))
-          alpha =
+          (SchattenOrder.ofOneLt halpha) =
         MatrixMap.cbOneToAlphaOriginalValue
           (sandwichedSideWeightedMap N sigma alpha)
           (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
           Y
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
     unfold MatrixMap.cbOneToAlphaOriginalValue
     have hnum_matrix :
         MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha)
@@ -3405,7 +3475,7 @@ theorem cbOneToAlphaOriginalValue_state_log_le_CBNormExpression
           MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha)
             (MatrixMap.cbOneToAlphaOriginalInput Y.matrix alpha) := by
       rw [← hinput]
-    exact psdSchattenPNorm_congr hnum_matrix _ _ alpha
+    exact psdSchattenPNorm_congr hnum_matrix _ _ (SchattenOrder.ofOneLt halpha)
   have hnum_pos :
       0 <
         psdSchattenPNorm
@@ -3415,7 +3485,7 @@ theorem cbOneToAlphaOriginalValue_state_log_le_CBNormExpression
             (sandwichedSideWeightedMap N sigma alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
             (rankOneMatrix_pos psi))
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
     rw [hnum_eq]
     simpa [Y, MatrixMap.CBOneToAlphaOriginalDomain.ofState] using
       cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
@@ -3436,7 +3506,7 @@ Sion exchange. -/
 theorem sandwichedRenyiCBNormExpression_eq_sSup_stateOriginalValue_log
     [Nonempty a1] (N : Channel a1 b1) (sigma : State b1)
     (hsigma : sigma.matrix.PosDef) {alpha : ℝ} (halpha : 1 < alpha) :
-    sandwichedRenyiCBNormExpression N sigma alpha =
+    sandwichedRenyiCBNormExpression N sigma (SchattenOrder.ofOneLt halpha) =
       sSup (Set.range fun tau : State a1 =>
         alpha / (alpha - 1) *
           log2
@@ -3444,23 +3514,24 @@ theorem sandwichedRenyiCBNormExpression_eq_sSup_stateOriginalValue_log
               (sandwichedSideWeightedMap N sigma alpha)
               (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
               (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-              alpha)) := by
+              (SchattenOrder.ofOneLt halpha))) := by
   let Phi : MatrixMap a1 b1 := sandwichedSideWeightedMap N sigma alpha
   let hPhi : MatrixMap.IsCompletelyPositive Phi :=
     sandwichedSideWeightedMap_completelyPositive N sigma alpha
   let coeff : ℝ := alpha / (alpha - 1)
   let v : State a1 → ℝ := fun tau =>
     MatrixMap.cbOneToAlphaOriginalValue Phi hPhi
-      (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau) alpha
+      (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
+      (SchattenOrder.ofOneLt halpha)
   haveI : Nonempty (State a1) := ⟨State.maximallyMixed a1⟩
   have hnorm :
-      MatrixMap.cbOneToAlphaNorm Phi hPhi alpha =
+      MatrixMap.cbOneToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha) =
         sSup (Set.range v) := by
     simpa [v] using
       MatrixMap.cbOneToAlphaNorm_eq_sSup_stateOriginalValueSet_of_one_lt
         (a1 := a1) Phi hPhi halpha
   have hbdd : BddAbove (Set.range v) := by
-    refine ⟨MatrixMap.cbOneToAlphaNorm Phi hPhi alpha, ?_⟩
+    refine ⟨MatrixMap.cbOneToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha), ?_⟩
     rintro y ⟨tau, rfl⟩
     exact MatrixMap.cbOneToAlphaOriginalValue_le_cbOneToAlphaNorm_of_one_lt
       Phi hPhi halpha (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
@@ -3489,7 +3560,8 @@ theorem sandwichedRenyiCBNormExpression_eq_sSup_stateOriginalValue_log
     exact Real.mul_iSup_of_nonneg hcoeff_nonneg
       (fun tau : State a1 => log2 (v tau))
   unfold sandwichedRenyiCBNormExpression
-  change coeff * log2 (MatrixMap.cbOneToAlphaNorm Phi hPhi alpha) =
+  change coeff * log2
+      (MatrixMap.cbOneToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha)) =
     sSup (Set.range fun tau : State a1 => coeff * log2 (v tau))
   rw [hnorm]
   calc
@@ -3509,7 +3581,8 @@ theorem fullRankCB_sInf_EReal_eq_iInf_stateOriginalValue_log_iSup
     [Nonempty a1] [Nonempty b1]
     (N : Channel a1 b1) {alpha : ℝ} (halpha : 1 < alpha) :
     sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-      ((sandwichedRenyiCBNormExpression N sigma.1 alpha : ℝ) : EReal)) =
+      ((sandwichedRenyiCBNormExpression N sigma.1
+        (SchattenOrder.ofOneLt halpha) : ℝ) : EReal)) =
       ⨅ sigma : {sigma : State b1 // sigma.matrix.PosDef},
         ((sSup (Set.range fun tau : State a1 =>
           alpha / (alpha - 1) *
@@ -3518,7 +3591,7 @@ theorem fullRankCB_sInf_EReal_eq_iInf_stateOriginalValue_log_iSup
                 (sandwichedSideWeightedMap N sigma.1 alpha)
                 (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
                 (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-                alpha)) : ℝ) : EReal) := by
+                (SchattenOrder.ofOneLt halpha))) : ℝ) : EReal) := by
   rw [sInf_range]
   apply iInf_congr
   intro sigma
@@ -3538,7 +3611,7 @@ theorem inputSandwichedRenyiMutualInformationE_le_CBNormExpression
     (hsigma : sigma.matrix.PosDef)
     {alpha : ℝ} (halpha : 1 < alpha) :
     N.inputSandwichedRenyiMutualInformationE psi alpha ≤
-      ((sandwichedRenyiCBNormExpression N sigma alpha : ℝ) : EReal) := by
+      ((sandwichedRenyiCBNormExpression N sigma (SchattenOrder.ofOneLt halpha) : ℝ) : EReal) := by
   let rho : State (Prod a1 b1) := N.hypothesisTestingOutputState psi
   let s : ℝ := (1 - alpha) / (2 * alpha)
   let weighted : Prod a1 a1 → ℂ :=
@@ -3570,7 +3643,7 @@ theorem inputSandwichedRenyiMutualInformationE_le_CBNormExpression
       referenceInner_eq_referenceLift_weightedRankOne
         N sigma psi hsigma halpha
   have hnorm_eq :
-      psdSchattenPNorm inner hinner alpha =
+      psdSchattenPNorm inner hinner (SchattenOrder.ofOneLt halpha) =
         psdSchattenPNorm
           (MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha)
             (rankOneMatrix weighted))
@@ -3578,8 +3651,8 @@ theorem inputSandwichedRenyiMutualInformationE_le_CBNormExpression
             (sandwichedSideWeightedMap N sigma alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
             (rankOneMatrix_pos weighted))
-          alpha := by
-    exact psdSchattenPNorm_congr hinner_eq hinner _ alpha
+          (SchattenOrder.ofOneLt halpha) := by
+    exact psdSchattenPNorm_congr hinner_eq hinner _ (SchattenOrder.ofOneLt halpha)
   have hcandidate_eq :
       rho.sandwichedRenyiMutualInformationCandidateE sigma alpha =
         ((alpha / (alpha - 1) *
@@ -3591,10 +3664,11 @@ theorem inputSandwichedRenyiMutualInformationE_le_CBNormExpression
                 (sandwichedSideWeightedMap N sigma alpha)
                 (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
                 (rankOneMatrix_pos weighted))
-              alpha) : ℝ) : EReal) := by
+              (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
     calc
       rho.sandwichedRenyiMutualInformationCandidateE sigma alpha =
-          ((alpha / (alpha - 1) * log2 (psdSchattenPNorm inner hinner alpha) : ℝ) :
+          ((alpha / (alpha - 1) *
+            log2 (psdSchattenPNorm inner hinner (SchattenOrder.ofOneLt halpha)) : ℝ) :
             EReal) := by
             simpa [inner, hinner] using
               State.sandwichedRenyiMutualInformationCandidateE_eq_coe_schattenNorm_of_supports
@@ -3609,13 +3683,13 @@ theorem inputSandwichedRenyiMutualInformationE_le_CBNormExpression
                   (sandwichedSideWeightedMap N sigma alpha)
                   (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
                   (rankOneMatrix_pos weighted))
-                alpha) : ℝ) : EReal) := by
+                (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
             rw [hnorm_eq]
   have hden_one :
       psdSchattenPNorm
           (partialTraceB (a := a1) (b := a1) (rankOneMatrix weighted))
           (partialTraceB_posSemidef (rankOneMatrix_pos weighted))
-          alpha =
+          (SchattenOrder.ofOneLt halpha) =
         1 := by
     simpa [s, weighted] using
       weightedRankOne_denominator_eq_one_psd psi halpha
@@ -3624,7 +3698,7 @@ theorem inputSandwichedRenyiMutualInformationE_le_CBNormExpression
         psdSchattenPNorm
           (partialTraceB (a := a1) (b := a1) (rankOneMatrix weighted))
           (partialTraceB_posSemidef (rankOneMatrix_pos weighted))
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
     rw [hden_one]
     norm_num
   have hweighted_ne : rankOneMatrix weighted ≠ 0 := by
@@ -3638,16 +3712,18 @@ theorem inputSandwichedRenyiMutualInformationE_le_CBNormExpression
         psdSchattenPNorm
             (partialTraceB (a := a1) (b := a1) (rankOneMatrix weighted))
             (partialTraceB_posSemidef (rankOneMatrix_pos weighted))
-            alpha =
+            (SchattenOrder.ofOneLt halpha) =
           0 := by
       calc
         psdSchattenPNorm
             (partialTraceB (a := a1) (b := a1) (rankOneMatrix weighted))
             (partialTraceB_posSemidef (rankOneMatrix_pos weighted))
-            alpha =
-          psdSchattenPNorm (0 : CMatrix a1) Matrix.PosSemidef.zero alpha := by
-            exact psdSchattenPNorm_congr hpartial_zero _ _ alpha
-        _ = 0 := psdSchattenPNorm_zero alpha (ne_of_gt halpha_pos)
+            (SchattenOrder.ofOneLt halpha) =
+          psdSchattenPNorm (0 : CMatrix a1) Matrix.PosSemidef.zero
+            (SchattenOrder.ofOneLt halpha) := by
+            exact psdSchattenPNorm_congr hpartial_zero _ _
+              (SchattenOrder.ofOneLt halpha)
+        _ = 0 := psdSchattenPNorm_zero (SchattenOrder.ofOneLt halpha)
     have hcontr : (0 : ℝ) = 1 := by
       rw [← hden_one, hden_zero]
     norm_num at hcontr
@@ -3660,7 +3736,7 @@ theorem inputSandwichedRenyiMutualInformationE_le_CBNormExpression
             (sandwichedSideWeightedMap N sigma alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
             (rankOneMatrix_pos weighted))
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
     have hPhi_ne :
         MatrixMap.referenceLift (sandwichedSideWeightedMap N sigma alpha)
           (rankOneMatrix weighted) ≠ 0 :=
@@ -3680,12 +3756,12 @@ theorem inputSandwichedRenyiMutualInformationE_le_CBNormExpression
                   (sandwichedSideWeightedMap N sigma alpha)
                   (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
                   (rankOneMatrix_pos weighted))
-                alpha /
+                (SchattenOrder.ofOneLt halpha) /
               psdSchattenPNorm
                 (partialTraceB (a := a1) (b := a1) (rankOneMatrix weighted))
                 (partialTraceB_posSemidef (rankOneMatrix_pos weighted))
-                alpha) ≤
-        sandwichedRenyiCBNormExpression N sigma alpha :=
+                (SchattenOrder.ofOneLt halpha)) ≤
+        sandwichedRenyiCBNormExpression N sigma (SchattenOrder.ofOneLt halpha) :=
     sandwichedPureRankOneLogQuotient_le_CBNormExpression
       N sigma halpha weighted hden_pos hnum_pos
   rw [hden_one, div_one] at hmain
@@ -3705,8 +3781,8 @@ theorem inputSandwichedRenyiMutualInformationE_le_CBNormExpression
                 (sandwichedSideWeightedMap N sigma alpha)
                 (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
                 (rankOneMatrix_pos weighted))
-              alpha) : ℝ) : EReal) := hcandidate_eq
-    _ ≤ ((sandwichedRenyiCBNormExpression N sigma alpha : ℝ) : EReal) :=
+              (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := hcandidate_eq
+    _ ≤ ((sandwichedRenyiCBNormExpression N sigma (SchattenOrder.ofOneLt halpha) : ℝ) : EReal) :=
         EReal.coe_le_coe_iff.mpr hmain
 
 /-- Full-rank input-marginal canonical branch of the KW CB upper bound.
@@ -3720,7 +3796,7 @@ theorem inputSandwichedRenyiMutualInformationE_canonical_marginalB_le_CBNormExpr
     (hsigma : sigma.matrix.PosDef)
     {alpha : ℝ} (halpha : 1 < alpha) :
     N.inputSandwichedRenyiMutualInformationE tau.canonicalPurification alpha ≤
-      ((sandwichedRenyiCBNormExpression N sigma alpha : ℝ) : EReal) := by
+      ((sandwichedRenyiCBNormExpression N sigma (SchattenOrder.ofOneLt halpha) : ℝ) : EReal) := by
   exact inputSandwichedRenyiMutualInformationE_le_CBNormExpression
     N sigma tau.canonicalPurification hsigma halpha
 
@@ -3736,7 +3812,7 @@ theorem inputSandwichedRenyiMutualInformationE_le_CBNormExpression_of_marginalB_
     (hsigma : sigma.matrix.PosDef)
     {alpha : ℝ} (halpha : 1 < alpha) :
     N.inputSandwichedRenyiMutualInformationE psi alpha ≤
-      ((sandwichedRenyiCBNormExpression N sigma alpha : ℝ) : EReal) := by
+      ((sandwichedRenyiCBNormExpression N sigma (SchattenOrder.ofOneLt halpha) : ℝ) : EReal) := by
   exact inputSandwichedRenyiMutualInformationE_le_CBNormExpression
     N sigma psi hsigma halpha
 
@@ -3764,7 +3840,7 @@ theorem swappedCanonical_sandwichedRenyiMutualInformationCandidateE_eq_cbOrigina
               trace_le_one := by
                 rw [tau.trace_eq_one]
                 norm_num }
-            alpha) : ℝ) : EReal) := by
+            (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
   let psi : PureVector (Prod a1 a1) :=
     tau.canonicalPurification.reindex (Equiv.prodComm a1 a1)
   let rho : State (Prod a1 b1) := N.hypothesisTestingOutputState psi
@@ -3781,7 +3857,7 @@ theorem swappedCanonical_sandwichedRenyiMutualInformationCandidateE_eq_cbOrigina
           (sandwichedSideWeightedMap N sigma alpha)
           (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
           Y
-          alpha) : ℝ) : EReal)
+          (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal)
   have hmarg : rho.marginalA = tau := by
     calc
       rho.marginalA = psi.state.marginalA := by
@@ -3804,17 +3880,18 @@ theorem swappedCanonical_sandwichedRenyiMutualInformationCandidateE_eq_cbOrigina
       swappedCanonical_referenceInner_eq_referenceLift_cbOneToAlphaOriginalInput
         N sigma tau halpha
   have hnorm_eq :
-      psdSchattenPNorm inner hinner alpha =
+      psdSchattenPNorm inner hinner (SchattenOrder.ofOneLt halpha) =
         MatrixMap.cbOneToAlphaOriginalValue
           (sandwichedSideWeightedMap N sigma alpha)
           (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
           Y
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
     unfold MatrixMap.cbOneToAlphaOriginalValue
-    exact psdSchattenPNorm_congr hinner_eq hinner _ alpha
+    exact psdSchattenPNorm_congr hinner_eq hinner _ (SchattenOrder.ofOneLt halpha)
   calc
     rho.sandwichedRenyiMutualInformationCandidateE sigma alpha =
-        ((alpha / (alpha - 1) * log2 (psdSchattenPNorm inner hinner alpha) : ℝ) :
+        ((alpha / (alpha - 1) *
+          log2 (psdSchattenPNorm inner hinner (SchattenOrder.ofOneLt halpha)) : ℝ) :
           EReal) := by
           simpa [inner, hinner] using
             State.sandwichedRenyiMutualInformationCandidateE_eq_coe_schattenNorm_of_supports
@@ -3826,7 +3903,7 @@ theorem swappedCanonical_sandwichedRenyiMutualInformationCandidateE_eq_cbOrigina
               (sandwichedSideWeightedMap N sigma alpha)
               (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
               Y
-              alpha) : ℝ) : EReal) := by
+              (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
           rw [hnorm_eq]
 
 theorem inputSandwichedRenyiMutualInformationE_swappedCanonical_le_CBNormExpression
@@ -3835,7 +3912,7 @@ theorem inputSandwichedRenyiMutualInformationE_swappedCanonical_le_CBNormExpress
     {alpha : ℝ} (halpha : 1 < alpha) :
     N.inputSandwichedRenyiMutualInformationE
         (tau.canonicalPurification.reindex (Equiv.prodComm a1 a1)) alpha ≤
-      ((sandwichedRenyiCBNormExpression N sigma alpha : ℝ) : EReal) := by
+      ((sandwichedRenyiCBNormExpression N sigma (SchattenOrder.ofOneLt halpha) : ℝ) : EReal) := by
   exact inputSandwichedRenyiMutualInformationE_le_CBNormExpression
     N sigma (tau.canonicalPurification.reindex (Equiv.prodComm a1 a1)) hsigma halpha
 
@@ -3917,7 +3994,7 @@ theorem inputSandwichedRenyiMutualInformationE_swappedCanonical_eq_coe_fullRankC
               (sandwichedSideWeightedMap N sigma.1 alpha)
               (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
               (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-              alpha)) : ℝ) : EReal) := by
+              (SchattenOrder.ofOneLt halpha))) : ℝ) : EReal) := by
   let psi : PureVector (Prod a1 a1) :=
     tau.canonicalPurification.reindex (Equiv.prodComm a1 a1)
   let rho : State (Prod a1 b1) := N.hypothesisTestingOutputState psi
@@ -3953,7 +4030,7 @@ theorem inputSandwichedRenyiMutualInformationE_swappedCanonical_eq_coe_fullRankC
           (sandwichedSideWeightedMap N sigma.1 alpha)
           (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
           (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-          alpha)
+          (SchattenOrder.ofOneLt halpha))
   have hfg : f = g := by
     funext sigma
     have hcandidate :
@@ -3994,7 +4071,7 @@ theorem inputSandwichedRenyiMutualInformationE_swappedCanonical_eq_coe_fullRankC
                 (sandwichedSideWeightedMap N sigma.1 alpha)
                 (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
                 (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-                alpha)) : ℝ) : EReal) := by
+                (SchattenOrder.ofOneLt halpha))) : ℝ) : EReal) := by
           rfl
 
 /-- Fixed full-rank input form of the KW channel alternate expression using the
@@ -4019,7 +4096,7 @@ theorem inputSandwichedRenyiMutualInformationE_swappedCanonical_eq_iInf_fullRank
               (sandwichedSideWeightedMap N sigma.1 alpha)
               (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
               (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-              alpha) : ℝ) : EReal) := by
+              (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
   let psi : PureVector (Prod a1 a1) :=
     tau.canonicalPurification.reindex (Equiv.prodComm a1 a1)
   let rho : State (Prod a1 b1) := N.hypothesisTestingOutputState psi
@@ -4045,7 +4122,7 @@ theorem inputSandwichedRenyiMutualInformationE_swappedCanonical_eq_iInf_fullRank
                 (sandwichedSideWeightedMap N sigma.1 alpha)
                 (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
                 (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-                alpha) : ℝ) : EReal) := by
+                (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
           apply iInf_congr
           intro sigma
           simpa [rho, psi, MatrixMap.CBOneToAlphaOriginalDomain.ofState] using
@@ -4065,7 +4142,7 @@ theorem fullRankCBOriginalValue_iInf_swappedCanonical_le_sandwichedRenyiMutualIn
             (sandwichedSideWeightedMap N sigma.1 alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
             (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-            alpha) : ℝ) : EReal)) ≤
+            (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal)) ≤
       N.sandwichedRenyiMutualInformationE alpha := by
   let psi : PureVector (Prod a1 a1) :=
     tau.canonicalPurification.reindex (Equiv.prodComm a1 a1)
@@ -4078,7 +4155,7 @@ theorem fullRankCBOriginalValue_iInf_swappedCanonical_le_sandwichedRenyiMutualIn
                 (sandwichedSideWeightedMap N sigma.1 alpha)
                 (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
                 (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-                alpha) : ℝ) : EReal) := by
+                (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
     simpa [psi] using
       inputSandwichedRenyiMutualInformationE_swappedCanonical_eq_iInf_fullRankCBOriginalValue
         N tau halpha
@@ -4103,7 +4180,7 @@ theorem fullRankCBOriginalValue_iSup_iInf_swappedCanonical_le_sandwichedRenyiMut
             (sandwichedSideWeightedMap N sigma.1 alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
             (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-            alpha) : ℝ) : EReal)) ≤
+            (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal)) ≤
       N.sandwichedRenyiMutualInformationE alpha := by
   refine iSup_le ?_
   intro tau
@@ -4118,7 +4195,7 @@ readable; proving this predicate, rather than assuming it, is one of the
 remaining mathematical obligations for the unconditional channel additivity
 theorem. -/
 def sandwichedChannelAlternateSionExchange
-    (N : Channel a1 b1) (alpha : ℝ) : Prop :=
+    (N : Channel a1 b1) (alpha : ℝ) (halpha : 1 < alpha) : Prop :=
   (⨅ sigma : {sigma : State b1 // sigma.matrix.PosDef},
     ((sSup (Set.range fun tau : State a1 =>
       alpha / (alpha - 1) *
@@ -4127,7 +4204,7 @@ def sandwichedChannelAlternateSionExchange
             (sandwichedSideWeightedMap N sigma.1 alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
             (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-            alpha)) : ℝ) : EReal)) =
+            (SchattenOrder.ofOneLt halpha))) : ℝ) : EReal)) =
     (⨆ tau : State a1,
       ⨅ sigma : {sigma : State b1 // sigma.matrix.PosDef},
         ((alpha / (alpha - 1) *
@@ -4136,7 +4213,7 @@ def sandwichedChannelAlternateSionExchange
               (sandwichedSideWeightedMap N sigma.1 alpha)
               (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
               (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-              alpha) : ℝ) : EReal))
+              (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal))
 
 /-- The fixed full-rank `sigma_B` source-side logarithmic channel objective is
 bounded above by the corresponding CB-norm expression.
@@ -4154,8 +4231,8 @@ private theorem sandwichedChannelOriginalValueLogDensity_bddAbove
             (sandwichedSideWeightedMap N sigma alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma alpha)
             (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-            alpha)) := by
-  refine ⟨sandwichedRenyiCBNormExpression N sigma alpha, ?_⟩
+            (SchattenOrder.ofOneLt halpha))) := by
+  refine ⟨sandwichedRenyiCBNormExpression N sigma (SchattenOrder.ofOneLt halpha), ?_⟩
   rintro y ⟨tau, rfl⟩
   exact cbOneToAlphaOriginalValue_state_log_le_CBNormExpression
     N sigma tau hsigma halpha
@@ -4174,8 +4251,8 @@ theorem sandwichedChannelAlternateSionExchange_of_reference_quasiconvexOn
     (hRefQ :
       ∀ tau : State a1,
         QuasiconvexOn ℝ (State.fullRankDensityMatrixSet b1)
-          (sandwichedChannelOriginalValueLogReferenceDensity N tau alpha)) :
-    N.sandwichedChannelAlternateSionExchange alpha := by
+          (sandwichedChannelOriginalValueLogReferenceDensity N tau (SchattenOrder.ofOneLt halpha))) :
+    N.sandwichedChannelAlternateSionExchange alpha halpha := by
   haveI : Nonempty (State a1) := ⟨State.maximallyMixed a1⟩
   let stateLog : {sigma : State b1 // sigma.matrix.PosDef} → State a1 → ℝ :=
     fun sigma tau =>
@@ -4185,7 +4262,7 @@ theorem sandwichedChannelAlternateSionExchange_of_reference_quasiconvexOn
             (sandwichedSideWeightedMap N sigma.1 alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
             (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-            alpha)
+            (SchattenOrder.ofOneLt halpha))
   have hleftSup :
       (⨅ sigma : {sigma : State b1 // sigma.matrix.PosDef},
         ((sSup (Set.range fun tau : State a1 => stateLog sigma tau) : ℝ) :
@@ -4210,7 +4287,7 @@ theorem sandwichedChannelAlternateSionExchange_of_reference_quasiconvexOn
         (⨅ sigmaM : CMatrix b1,
           ⨅ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
             ⨆ tau : State a1,
-              ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tau.matrix :
+              ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tau.matrix :
                 ℝ) : EReal)) := by
     calc
       (⨅ sigma : {sigma : State b1 // sigma.matrix.PosDef},
@@ -4218,7 +4295,7 @@ theorem sandwichedChannelAlternateSionExchange_of_reference_quasiconvexOn
           =
         (⨅ sigma : {sigma : State b1 // sigma.matrix.PosDef},
           ⨆ tau : State a1,
-            ((sandwichedChannelOriginalValueLogMatrix N alpha sigma.1.matrix tau.matrix :
+            ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigma.1.matrix tau.matrix :
               ℝ) : EReal)) := by
           apply iInf_congr
           intro sigma
@@ -4245,18 +4322,18 @@ theorem sandwichedChannelAlternateSionExchange_of_reference_quasiconvexOn
         (⨅ sigmaM : CMatrix b1,
           ⨅ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
             ⨆ tau : State a1,
-              ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tau.matrix :
+              ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tau.matrix :
                 ℝ) : EReal)) := by
           exact fullRankState_iInf_matrix_eq_fullRankDensityMatrixSet_iInf
             (fun sigmaM : CMatrix b1 =>
               ⨆ tau : State a1,
-                ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tau.matrix :
+                ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tau.matrix :
                   ℝ) : EReal))
   have hrightFromMatrix :
       (⨆ tau : State a1,
           ⨅ sigmaM : CMatrix b1,
             ⨅ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
-              ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tau.matrix : ℝ) :
+              ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tau.matrix : ℝ) :
                 EReal)) =
         (⨆ tau : State a1,
           ⨅ sigma : {sigma : State b1 // sigma.matrix.PosDef},
@@ -4266,15 +4343,15 @@ theorem sandwichedChannelAlternateSionExchange_of_reference_quasiconvexOn
     calc
       (⨅ sigmaM : CMatrix b1,
           ⨅ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
-            ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tau.matrix : ℝ) :
+            ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tau.matrix : ℝ) :
               EReal))
           =
         (⨅ sigma : {sigma : State b1 // sigma.matrix.PosDef},
-          ((sandwichedChannelOriginalValueLogMatrix N alpha sigma.1.matrix tau.matrix :
+          ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigma.1.matrix tau.matrix :
             ℝ) : EReal)) := by
           exact (fullRankState_iInf_matrix_eq_fullRankDensityMatrixSet_iInf
             (fun sigmaM : CMatrix b1 =>
-              ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tau.matrix :
+              ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tau.matrix :
                 ℝ) : EReal))).symm
       _ =
         (⨅ sigma : {sigma : State b1 // sigma.matrix.PosDef},
@@ -4311,14 +4388,14 @@ theorem sandwichedChannelAlternateSionExchange_of_reference_quasiconvexOn
         (⨅ sigmaM : CMatrix b1,
           ⨅ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
             ⨆ tau : State a1,
-              ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tau.matrix :
+              ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tau.matrix :
                 ℝ) : EReal)) := hleftToMatrix
       _ =
         (⨅ sigmaM : CMatrix b1,
           ⨅ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
             ⨆ tauM : CMatrix a1,
               ⨆ _hTau : tauM ∈ State.densityMatrixSet a1,
-                ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM : ℝ) :
+                ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tauM : ℝ) :
                   EReal)) := by
           apply iInf_congr
           intro sigmaM
@@ -4326,26 +4403,26 @@ theorem sandwichedChannelAlternateSionExchange_of_reference_quasiconvexOn
           intro hSigma
           exact state_iSup_matrix_eq_densityMatrixSet_iSup
             (fun tauM : CMatrix a1 =>
-              ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM : ℝ) :
+              ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tauM : ℝ) :
                 EReal))
       _ =
         (⨆ tauM : CMatrix a1,
           ⨆ _hTau : tauM ∈ State.densityMatrixSet a1,
             ⨅ sigmaM : CMatrix b1,
               ⨅ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
-                ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM : ℝ) :
+                ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tauM : ℝ) :
                   EReal)) := hmatrix
       _ =
         (⨆ tau : State a1,
           ⨅ sigmaM : CMatrix b1,
             ⨅ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
-              ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tau.matrix : ℝ) :
+              ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tau.matrix : ℝ) :
                 EReal)) := by
           exact (state_iSup_matrix_eq_densityMatrixSet_iSup
             (fun tauM : CMatrix a1 =>
               ⨅ sigmaM : CMatrix b1,
                 ⨅ _hSigma : sigmaM ∈ State.fullRankDensityMatrixSet b1,
-                  ((sandwichedChannelOriginalValueLogMatrix N alpha sigmaM tauM : ℝ) :
+                  ((sandwichedChannelOriginalValueLogMatrix N (SchattenOrder.ofOneLt halpha) sigmaM tauM : ℝ) :
                     EReal))).symm
       _ =
         (⨆ tau : State a1,
@@ -4365,7 +4442,7 @@ alternate expression. -/
 theorem sandwichedChannelAlternateSionExchange_proved
     [Nonempty a1] [Nonempty b1] (N : Channel a1 b1)
     {alpha : ℝ} (halpha : 1 < alpha) :
-    N.sandwichedChannelAlternateSionExchange alpha := by
+    N.sandwichedChannelAlternateSionExchange alpha halpha := by
   refine sandwichedChannelAlternateSionExchange_of_reference_quasiconvexOn
     N halpha ?_
   intro tau
@@ -4393,7 +4470,7 @@ theorem fullRankCB_sInf_EReal_le_sandwichedRenyiMutualInformationE_of_sion
                 (sandwichedSideWeightedMap N sigma.1 alpha)
                 (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
                 (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-                alpha)) : ℝ) : EReal)) =
+                (SchattenOrder.ofOneLt halpha))) : ℝ) : EReal)) =
         (⨆ tau : State a1,
           ⨅ sigma : {sigma : State b1 // sigma.matrix.PosDef},
             ((alpha / (alpha - 1) *
@@ -4402,9 +4479,9 @@ theorem fullRankCB_sInf_EReal_le_sandwichedRenyiMutualInformationE_of_sion
                   (sandwichedSideWeightedMap N sigma.1 alpha)
                   (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
                   (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-                  alpha) : ℝ) : EReal))) :
+                  (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal))) :
     sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-      ((sandwichedRenyiCBNormExpression N sigma.1 alpha : ℝ) : EReal)) ≤
+      ((sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha) : ℝ) : EReal)) ≤
       N.sandwichedRenyiMutualInformationE alpha := by
   rw [fullRankCB_sInf_EReal_eq_iInf_stateOriginalValue_log_iSup N halpha]
   rw [hSion]
@@ -4416,9 +4493,9 @@ theorem fullRankCB_sInf_EReal_le_sandwichedRenyiMutualInformationE_of_sion
 theorem fullRankCB_sInf_EReal_le_sandwichedRenyiMutualInformationE_of_sionExchange
     [Nonempty a1] [Nonempty b1]
     (N : Channel a1 b1) {alpha : ℝ} (halpha : 1 < alpha)
-    (hSion : N.sandwichedChannelAlternateSionExchange alpha) :
+    (hSion : N.sandwichedChannelAlternateSionExchange alpha halpha) :
     sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-      ((sandwichedRenyiCBNormExpression N sigma.1 alpha : ℝ) : EReal)) ≤
+      ((sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha) : ℝ) : EReal)) ≤
       N.sandwichedRenyiMutualInformationE alpha := by
   exact fullRankCB_sInf_EReal_le_sandwichedRenyiMutualInformationE_of_sion
     N halpha (by simpa [sandwichedChannelAlternateSionExchange] using hSion)
@@ -4431,7 +4508,7 @@ theorem fullRankCB_sInf_EReal_le_sandwichedRenyiMutualInformationE
     [Nonempty a1] [Nonempty b1]
     (N : Channel a1 b1) {alpha : ℝ} (halpha : 1 < alpha) :
     sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-      ((sandwichedRenyiCBNormExpression N sigma.1 alpha : ℝ) : EReal)) ≤
+      ((sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha) : ℝ) : EReal)) ≤
       N.sandwichedRenyiMutualInformationE alpha := by
   exact fullRankCB_sInf_EReal_le_sandwichedRenyiMutualInformationE_of_sionExchange
     N halpha (sandwichedChannelAlternateSionExchange_proved N halpha)
@@ -4454,7 +4531,7 @@ theorem fullRankCBOriginalValue_sInf_swappedCanonical_le_sandwichedRenyiMutualIn
             (sandwichedSideWeightedMap N sigma.1 alpha)
             (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
             (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-            alpha)) : ℝ) : EReal) ≤
+            (SchattenOrder.ofOneLt halpha))) : ℝ) : EReal) ≤
       N.sandwichedRenyiMutualInformationE alpha := by
   let psi : PureVector (Prod a1 a1) :=
     tau.canonicalPurification.reindex (Equiv.prodComm a1 a1)
@@ -4467,7 +4544,7 @@ theorem fullRankCBOriginalValue_sInf_swappedCanonical_le_sandwichedRenyiMutualIn
                 (sandwichedSideWeightedMap N sigma.1 alpha)
                 (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
                 (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-                alpha)) : ℝ) : EReal) := by
+                (SchattenOrder.ofOneLt halpha))) : ℝ) : EReal) := by
     simpa [psi] using
       inputSandwichedRenyiMutualInformationE_swappedCanonical_eq_coe_fullRankCBOriginalValue_sInf
         N tau htau hOut halpha
@@ -4488,7 +4565,7 @@ theorem sandwichedRenyiCBNormExpression_fullRank_bddBelow_of_input_output_posDef
     (hOutA : (N.hypothesisTestingOutputState psi).marginalA.matrix.PosDef)
     {alpha : ℝ} (halpha : 1 < alpha) :
     BddBelow (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-      sandwichedRenyiCBNormExpression N sigma.1 alpha) := by
+      sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha)) := by
   haveI : Nonempty {sigma : State b1 // sigma.matrix.PosDef} :=
     ⟨⟨State.maximallyMixed b1, State.maximallyMixed_posDef⟩⟩
   let lower : ℝ :=
@@ -4506,12 +4583,12 @@ theorem sandwichedRenyiCBNormExpression_fullRank_bddBelow_of_input_output_posDef
         N psi hOut hOutA halpha
   have hpoint :
       N.inputSandwichedRenyiMutualInformationE psi alpha ≤
-        ((sandwichedRenyiCBNormExpression N sigma.1 alpha : ℝ) : EReal) :=
+        ((sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha) : ℝ) : EReal) :=
     inputSandwichedRenyiMutualInformationE_le_CBNormExpression
       N sigma.1 psi sigma.2 halpha
   have hreal :
       ((lower : ℝ) : EReal) ≤
-        ((sandwichedRenyiCBNormExpression N sigma.1 alpha : ℝ) : EReal) := by
+        ((sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha) : ℝ) : EReal) := by
     simpa [hinput_eq] using hpoint
   exact EReal.coe_le_coe_iff.mp hreal
 
@@ -4523,7 +4600,7 @@ theorem sandwichedRenyiCBNormExpression_fullRank_bddBelow_of_outputs_posDef
     (hOut : ∀ psi : PureVector (Prod a1 a1),
       (N.hypothesisTestingOutputState psi).matrix.PosDef) :
     BddBelow (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-      sandwichedRenyiCBNormExpression N sigma.1 alpha) := by
+      sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha)) := by
   let psi0 : PureVector (Prod a1 a1) := PureVector.basisPureVector
   have hpsi0 : (N.hypothesisTestingOutputState psi0).matrix.PosDef := hOut psi0
   have hpsi0A : (N.hypothesisTestingOutputState psi0).marginalA.matrix.PosDef :=
@@ -4542,7 +4619,7 @@ theorem sandwichedRenyiCBNormExpression_fullRank_bddBelow
     [Nonempty a1] [Nonempty b1]
     (N : Channel a1 b1) {alpha : ℝ} (halpha : 1 < alpha) :
     BddBelow (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-      sandwichedRenyiCBNormExpression N sigma.1 alpha) := by
+      sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha)) := by
   let psi0 : PureVector (Prod a1 a1) := PureVector.basisPureVector
   let rho : State (Prod a1 b1) := N.hypothesisTestingOutputState psi0
   let chi : PureVector (Prod (Prod a1 b1) (Prod a1 b1)) :=
@@ -4556,7 +4633,7 @@ theorem sandwichedRenyiCBNormExpression_fullRank_bddBelow
               chi.state.marginalAB.marginalA chi τC alpha)
             (PureVector.sandwichedMutualInformationACTraceMatrix_posSemidef
               chi.state.marginalAB.marginalA chi τC alpha)
-            (alpha / (2 * alpha - 1))))
+            (PureVector.sandwichedAlternateSchattenOrder halpha)))
   refine ⟨lower, ?_⟩
   rintro y ⟨sigma, rfl⟩
   have hchiAB : chi.state.marginalAB = rho := by
@@ -4570,12 +4647,12 @@ theorem sandwichedRenyiCBNormExpression_fullRank_bddBelow
         chi halpha
   have hpoint :
       N.inputSandwichedRenyiMutualInformationE psi0 alpha ≤
-        ((sandwichedRenyiCBNormExpression N sigma.1 alpha : ℝ) : EReal) :=
+        ((sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha) : ℝ) : EReal) :=
     inputSandwichedRenyiMutualInformationE_le_CBNormExpression
       N sigma.1 psi0 sigma.2 halpha
   have hreal :
       (lower : EReal) ≤
-        ((sandwichedRenyiCBNormExpression N sigma.1 alpha : ℝ) : EReal) := by
+        ((sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha) : ℝ) : EReal) := by
     simpa [hinput_eq] using hpoint
   exact EReal.coe_le_coe_iff.mp hreal
 
@@ -4590,12 +4667,12 @@ theorem sandwichedRenyiMutualInformationE_le_fullRankCB_sInf
     (N : Channel a1 b1) {alpha : ℝ} (halpha : 1 < alpha)
     (hBelow :
       BddBelow (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N sigma.1 alpha)) :
+        sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha))) :
     N.sandwichedRenyiMutualInformationE alpha ≤
       ((sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N sigma.1 alpha) : ℝ) : EReal) := by
+        sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
   refine sandwichedRenyiMutualInformationE_le_fullRankCB_sInf_of_input_le
-    N alpha hBelow ?_
+    N (SchattenOrder.ofOneLt halpha) hBelow ?_
   intro psi sigma
   exact inputSandwichedRenyiMutualInformationE_le_CBNormExpression
     N sigma.1 psi sigma.2 halpha
@@ -4612,7 +4689,7 @@ theorem sandwichedRenyiMutualInformationE_le_fullRankCB_sInf_EReal
     (N : Channel a1 b1) {alpha : ℝ} (halpha : 1 < alpha) :
     N.sandwichedRenyiMutualInformationE alpha ≤
       sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-        ((sandwichedRenyiCBNormExpression N sigma.1 alpha : ℝ) : EReal)) := by
+        ((sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha) : ℝ) : EReal)) := by
   rw [N.sandwichedRenyiMutualInformationE_eq_sSup]
   refine csSup_le (N.sandwichedRenyiMutualInformationEValueSet_nonempty alpha) ?_
   rintro y ⟨psi, rfl⟩
@@ -4641,7 +4718,7 @@ theorem sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_EReal_of_sion
                 (sandwichedSideWeightedMap N sigma.1 alpha)
                 (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
                 (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-                alpha)) : ℝ) : EReal)) =
+                (SchattenOrder.ofOneLt halpha))) : ℝ) : EReal)) =
         (⨆ tau : State a1,
           ⨅ sigma : {sigma : State b1 // sigma.matrix.PosDef},
             ((alpha / (alpha - 1) *
@@ -4650,10 +4727,10 @@ theorem sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_EReal_of_sion
                   (sandwichedSideWeightedMap N sigma.1 alpha)
                   (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
                   (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-                  alpha) : ℝ) : EReal))) :
+                  (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal))) :
     N.sandwichedRenyiMutualInformationE alpha =
       sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-        ((sandwichedRenyiCBNormExpression N sigma.1 alpha : ℝ) : EReal)) := by
+        ((sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha) : ℝ) : EReal)) := by
   exact le_antisymm
     (sandwichedRenyiMutualInformationE_le_fullRankCB_sInf_EReal N halpha)
     (fullRankCB_sInf_EReal_le_sandwichedRenyiMutualInformationE_of_sion
@@ -4664,10 +4741,10 @@ theorem sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_EReal_of_sion
 theorem sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_EReal_of_sionExchange
     [Nonempty a1] [Nonempty b1]
     (N : Channel a1 b1) {alpha : ℝ} (halpha : 1 < alpha)
-    (hSion : N.sandwichedChannelAlternateSionExchange alpha) :
+    (hSion : N.sandwichedChannelAlternateSionExchange alpha halpha) :
     N.sandwichedRenyiMutualInformationE alpha =
       sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-        ((sandwichedRenyiCBNormExpression N sigma.1 alpha : ℝ) : EReal)) := by
+        ((sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha) : ℝ) : EReal)) := by
   exact sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_EReal_of_sion
     N halpha (by simpa [sandwichedChannelAlternateSionExchange] using hSion)
 
@@ -4681,7 +4758,7 @@ theorem sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_EReal
     (N : Channel a1 b1) {alpha : ℝ} (halpha : 1 < alpha) :
     N.sandwichedRenyiMutualInformationE alpha =
       sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-        ((sandwichedRenyiCBNormExpression N sigma.1 alpha : ℝ) : EReal)) := by
+        ((sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha) : ℝ) : EReal)) := by
   exact sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_EReal_of_sionExchange
     N halpha (sandwichedChannelAlternateSionExchange_proved N halpha)
 
@@ -4696,10 +4773,10 @@ theorem sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf
     (N : Channel a1 b1) {alpha : ℝ} (halpha : 1 < alpha) :
     N.sandwichedRenyiMutualInformationE alpha =
       ((sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N sigma.1 alpha) : ℝ) : EReal) := by
+        sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
   let S := {sigma : State b1 // sigma.matrix.PosDef}
   let f : S → ℝ := fun sigma =>
-    sandwichedRenyiCBNormExpression N sigma.1 alpha
+    sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha)
   have hBelow : BddBelow (Set.range f) := by
     simpa [S, f] using sandwichedRenyiCBNormExpression_fullRank_bddBelow N halpha
   rw [sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_EReal N halpha]
@@ -4730,7 +4807,7 @@ theorem sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_of_outputs_posDef_s
                 (sandwichedSideWeightedMap N sigma.1 alpha)
                 (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
                 (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-                alpha)) : ℝ) : EReal)) =
+                (SchattenOrder.ofOneLt halpha))) : ℝ) : EReal)) =
         (⨆ tau : State a1,
           ⨅ sigma : {sigma : State b1 // sigma.matrix.PosDef},
             ((alpha / (alpha - 1) *
@@ -4739,12 +4816,12 @@ theorem sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_of_outputs_posDef_s
                   (sandwichedSideWeightedMap N sigma.1 alpha)
                   (sandwichedSideWeightedMap_completelyPositive N sigma.1 alpha)
                   (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
-                  alpha) : ℝ) : EReal))) :
+                  (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal))) :
     N.sandwichedRenyiMutualInformationE alpha =
       ((sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N sigma.1 alpha) : ℝ) : EReal) := by
+        sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
   let S := {sigma : State b1 // sigma.matrix.PosDef}
-  let f : S → ℝ := fun sigma => sandwichedRenyiCBNormExpression N sigma.1 alpha
+  let f : S → ℝ := fun sigma => sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha)
   have hBelow : BddBelow (Set.range f) := by
     simpa [S, f] using
       sandwichedRenyiCBNormExpression_fullRank_bddBelow_of_outputs_posDef N halpha hOut
@@ -4767,10 +4844,10 @@ theorem sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_of_outputs_posDef_s
     (N : Channel a1 b1) {alpha : ℝ} (halpha : 1 < alpha)
     (hOut : ∀ psi : PureVector (Prod a1 a1),
       (N.hypothesisTestingOutputState psi).matrix.PosDef)
-    (hSion : N.sandwichedChannelAlternateSionExchange alpha) :
+    (hSion : N.sandwichedChannelAlternateSionExchange alpha halpha) :
     N.sandwichedRenyiMutualInformationE alpha =
       ((sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N sigma.1 alpha) : ℝ) : EReal) := by
+        sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
   exact sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_of_outputs_posDef_sion
     N halpha hOut (by simpa [sandwichedChannelAlternateSionExchange] using hSion)
 
@@ -4783,7 +4860,7 @@ theorem sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_of_outputs_posDef
       (N.hypothesisTestingOutputState psi).matrix.PosDef) :
     N.sandwichedRenyiMutualInformationE alpha =
       ((sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N sigma.1 alpha) : ℝ) : EReal) := by
+        sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
   exact sandwichedRenyiMutualInformationE_eq_fullRankCB_sInf_of_outputs_posDef_sionExchange
     N halpha hOut (sandwichedChannelAlternateSionExchange_proved N halpha)
 
@@ -4796,7 +4873,7 @@ theorem sandwichedRenyiMutualInformationE_le_fullRankCB_sInf_of_outputs_posDef
       (N.hypothesisTestingOutputState psi).matrix.PosDef) :
     N.sandwichedRenyiMutualInformationE alpha ≤
       ((sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
-        sandwichedRenyiCBNormExpression N sigma.1 alpha) : ℝ) : EReal) := by
+        sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha)) : ℝ) : EReal) := by
   exact sandwichedRenyiMutualInformationE_le_fullRankCB_sInf N halpha
     (sandwichedRenyiCBNormExpression_fullRank_bddBelow_of_outputs_posDef
       N halpha hOut)

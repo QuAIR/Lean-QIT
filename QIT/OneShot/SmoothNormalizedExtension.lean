@@ -317,7 +317,7 @@ theorem exists_normalizedExtension_smoothConditionalMinEntropy
     ρ.epsilon_lt_sqrt_toSubnormalized_trace hε1
   rcases ρ.toSubnormalized.smoothConditionalMinEntropy_exists_scale_optimizer
       (a := a) hε0 hεsub with
-    ⟨ρmin, Tmin, hρmin_ball, hTmin_feas, hscale_eq, hsmooth_eq, _hoptimizer⟩
+    ⟨ρmin, Tmin, hρmin, hρmin_ball, hTmin_feas, hscale_eq, hsmooth_eq, _hoptimizer⟩
   have hρmin_trace_pos : 0 < ρmin.matrix.trace.re :=
     SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace
       ρ.toSubnormalized ρmin hεsub hρmin_ball
@@ -375,7 +375,7 @@ theorem exists_normalizedExtension_smoothConditionalMinEntropy
       exact ρhat.conditionalMinEntropyNormalizedScaleValueSet_bddBelow
         (a := Sum extra a)
     exact csInf_le hbdd ⟨Tmin, hρhat_feas, rfl⟩
-  have hmin_lower : ρmin.conditionalMinEntropy ≤ ρhat.conditionalMinEntropy := by
+  have hmin_lower : ρmin.conditionalMinEntropyRaw ≤ ρhat.conditionalMinEntropy := by
     rw [ρmin.conditionalMinEntropy_eq_neg_log2_scale_of_trace_pos
       (a := a) hρmin_trace_pos]
     rw [ρhat.conditionalMinEntropy_eq_neg_log2_scale_of_nonempty
@@ -388,26 +388,27 @@ theorem exists_normalizedExtension_smoothConditionalMinEntropy
           ρhat.conditionalMinEntropyNormalizedScale_inf_pos (a := Sum extra a))
         hscale_hat_le)
       (le_of_lt (Real.log_pos one_lt_two)))
-  have hmin_upper : ρhat.conditionalMinEntropy ≤ ρmin.conditionalMinEntropy := by
+  have hmin_upper : ρhat.conditionalMinEntropy ≤ ρmin.conditionalMinEntropyRaw := by
     have hcand :
-        SubnormalizedState.SmoothConditionalMinEntropyCandidate
+        SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw
           (a := Sum extra a)
           (ρ.toSubnormalized.sourceIsometryApply
             (ReferenceIsometry.sumInr extra a)) ε
-          ρhat.toSubnormalized.conditionalMinEntropy :=
-      ⟨ρhat.toSubnormalized, hball_sub, rfl⟩
+          ρhat.conditionalMinEntropy :=
+      ⟨ρhat.toSubnormalized, hball_sub,
+        (State.toSubnormalized_conditionalMinEntropyRaw_eq ρhat).symm⟩
     have hle :=
       SubnormalizedState.le_smoothConditionalMinEntropy_of_candidate_of_lt_sqrt_trace
         (a := Sum extra a) hε0 (by
           rwa [SubnormalizedState.sourceIsometryApply_trace_re]) hcand
-    rw [State.toSubnormalized_conditionalMinEntropy_eq] at hle
     rw [ρ.toSubnormalized.smoothConditionalMinEntropy_sourceIsometryApply
       (a := a) (ReferenceIsometry.sumInr extra a) hε0 hεsub] at hle
-    rwa [hsmooth_eq] at hle
+    rw [hsmooth_eq] at hle
+    exact hle
   refine ⟨n, Tmin, σB, ρhat, hTmin_trace_pos, hnormalize, ?_, hball_sub, ?_, ?_⟩
   · simpa [extra, n] using hρhat_feas
   · calc
-      ρhat.conditionalMinEntropy = ρmin.conditionalMinEntropy :=
+      ρhat.conditionalMinEntropy = ρmin.conditionalMinEntropyRaw :=
         le_antisymm hmin_upper hmin_lower
       _ = -log2 Tmin.trace.re := by
         rw [ρmin.conditionalMinEntropy_eq_neg_log2_scale_of_trace_pos
@@ -490,16 +491,16 @@ theorem traceNorm_sourceIsometryApply_sumInr_mul_sqrt_identityTensorStateMatrix
 
 /-- Unsmoothed subnormalized conditional max-entropy is invariant under the
 concrete source padding used by the normalized-extension proof. -/
-theorem conditionalMaxEntropy_sourceIsometryApply_sumInr
+theorem conditionalMaxEntropyRaw_sourceIsometryApply_sumInr
     {extra : Type w} {a : Type u} {b : Type v}
     [Fintype extra] [DecidableEq extra] [Fintype a] [DecidableEq a]
     [Fintype b] [DecidableEq b]
     (ρ : SubnormalizedState (Prod a b)) :
     (ρ.sourceIsometryApply
-      (ReferenceIsometry.sumInr extra a)).conditionalMaxEntropy =
-        ρ.conditionalMaxEntropy := by
-  rw [SubnormalizedState.conditionalMaxEntropy_eq,
-    SubnormalizedState.conditionalMaxEntropy_eq]
+      (ReferenceIsometry.sumInr extra a)).conditionalMaxEntropyRaw =
+        ρ.conditionalMaxEntropyRaw := by
+  rw [SubnormalizedState.conditionalMaxEntropyRaw_eq,
+    SubnormalizedState.conditionalMaxEntropyRaw_eq]
   congr 1
   ext h
   constructor

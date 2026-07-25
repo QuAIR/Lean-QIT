@@ -9,6 +9,7 @@ module
 public import QIT.Information.Entropy.Entropy
 public import QIT.States.Schatten
 public import Mathlib.Data.EReal.Basic
+import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.ExpLog.Order
 
 /-!
 # Trace-log quantum relative entropy
@@ -67,7 +68,7 @@ namespace State
 
 variable {a : Type u} [Fintype a] [DecidableEq a]
 
-private theorem relativeEntropyTraceLog_vonNeumann_psdSupportCompressedState_eq
+theorem relativeEntropyTraceLog_vonNeumann_psdSupportCompressedState_eq
     (rho : State a) {sigma : CMatrix a} (hSigma : sigma.PosSemidef)
     (hSupport : Matrix.Supports rho.matrix sigma) :
     (_root_.QIT.psdSupportCompressedState rho hSigma hSupport).vonNeumann =
@@ -165,7 +166,7 @@ private theorem relativeEntropyTraceLog_psdSupportLog_embedding_eq_cfc_logZero
       exact le_antisymm (not_lt.mp hxpos) (hSigma.eigenvalues_nonneg x)
     simp [g, hzero]
 
-private theorem relativeEntropyTraceLog_trace_mul_psdSupportLog_eq_trace_mul_cfc_logZero
+theorem relativeEntropyTraceLog_trace_mul_psdSupportLog_eq_trace_mul_cfc_logZero
     (rho : State a) {sigma : CMatrix a} (hSigma : sigma.PosSemidef)
     (hSupport : Matrix.Supports rho.matrix sigma) :
     ((psdSupportCompress sigma hSigma rho.matrix *
@@ -214,7 +215,7 @@ private theorem relativeEntropyTraceLog_trace_mul_psdSupportLog_eq_trace_mul_cfc
     _ = ((rho.matrix * cfc (fun x : ℝ => if x = 0 then 0 else Real.log x) sigma).trace).re := by
           rfl
 
-private theorem relativeEntropyTraceLog_cfc_logZero_eq_psdLog_of_posDef
+theorem relativeEntropyTraceLog_cfc_logZero_eq_psdLog_of_posDef
     (sigma : CMatrix a) (hSigma : sigma.PosDef) :
     cfc (fun x : ℝ => if x = 0 then 0 else Real.log x) sigma =
       State.psdLog sigma hSigma := by
@@ -276,6 +277,74 @@ theorem relativeEntropyPSDReferenceTraceLogE_eq_coe_of_supports
     relativeEntropyPSDReferenceTraceLogE rho sigma hSigma =
       (relativeEntropyPSDReferenceTraceLogFinite rho sigma hSigma hSupport : EReal) := by
   simp [relativeEntropyPSDReferenceTraceLogE, hSupport]
+
+/-- The finite trace-log branch against a positive-definite matrix reference
+can be evaluated without assuming that the input state is full rank. -/
+theorem relativeEntropyPSDReferenceTraceLogFinite_eq_posDef_formula
+    (rho : State a) {sigma : CMatrix a} (hSigma : sigma.PosDef)
+    (hSupport : Matrix.Supports rho.matrix sigma) :
+    relativeEntropyPSDReferenceTraceLogFinite rho sigma hSigma.posSemidef hSupport =
+      -rho.vonNeumann -
+        ((rho.matrix * State.psdLog sigma hSigma).trace.re / Real.log 2) := by
+  have hEntropy :
+      (_root_.QIT.psdSupportCompressedState rho hSigma.posSemidef hSupport).vonNeumann =
+        rho.vonNeumann :=
+    relativeEntropyTraceLog_vonNeumann_psdSupportCompressedState_eq
+      rho hSigma.posSemidef hSupport
+  have hTrace :
+      ((psdSupportCompress sigma hSigma.posSemidef rho.matrix *
+        State.psdLog (psdSupportCompress sigma hSigma.posSemidef sigma)
+          (psdSupportCompress_self_posDef sigma hSigma.posSemidef)).trace).re =
+        ((rho.matrix *
+          cfc (fun x : Real => if x = 0 then 0 else Real.log x) sigma).trace).re :=
+    relativeEntropyTraceLog_trace_mul_psdSupportLog_eq_trace_mul_cfc_logZero
+      rho hSigma.posSemidef hSupport
+  have hLog :
+      cfc (fun x : Real => if x = 0 then 0 else Real.log x) sigma =
+        State.psdLog sigma hSigma :=
+    relativeEntropyTraceLog_cfc_logZero_eq_psdLog_of_posDef sigma hSigma
+  have hTrace' :
+      (((_root_.QIT.psdSupportCompressedState rho hSigma.posSemidef hSupport).matrix *
+        State.psdLog (psdSupportCompress sigma hSigma.posSemidef sigma)
+          (psdSupportCompress_self_posDef sigma hSigma.posSemidef)).trace).re =
+        ((rho.matrix *
+          cfc (fun x : Real => if x = 0 then 0 else Real.log x) sigma).trace).re := by
+    simpa [_root_.QIT.psdSupportCompressedState] using hTrace
+  rw [relativeEntropyPSDReferenceTraceLogFinite]
+  rw [hEntropy, hTrace', hLog]
+
+/-- Multiplying a positive-definite reference by a positive scalar shifts
+support-aware Umegaki relative entropy by `-log2 scale`. -/
+theorem relativeEntropyPSDReferenceTraceLogE_real_smul_reference
+    (rho : State a) {sigma : CMatrix a} (hSigma : sigma.PosDef)
+    {scale : Real} (hScale : 0 < scale) :
+    relativeEntropyPSDReferenceTraceLogE rho (scale • sigma)
+        (Matrix.PosDef.smul hSigma hScale).posSemidef =
+      relativeEntropyPSDReferenceTraceLogE rho sigma hSigma.posSemidef -
+        (log2 scale : EReal) := by
+  let hSupport : Matrix.Supports rho.matrix sigma :=
+    Matrix.Supports.of_right_posDef rho.matrix sigma hSigma
+  let hSupportScaled : Matrix.Supports rho.matrix (scale • sigma) :=
+    Matrix.Supports.of_right_posDef rho.matrix (scale • sigma)
+      (Matrix.PosDef.smul hSigma hScale)
+  rw [relativeEntropyPSDReferenceTraceLogE_eq_coe_of_supports
+      rho (Matrix.PosDef.smul hSigma hScale).posSemidef hSupportScaled,
+    relativeEntropyPSDReferenceTraceLogE_eq_coe_of_supports
+      rho hSigma.posSemidef hSupport]
+  rw [relativeEntropyPSDReferenceTraceLogFinite_eq_posDef_formula
+      rho (Matrix.PosDef.smul hSigma hScale) hSupportScaled,
+    relativeEntropyPSDReferenceTraceLogFinite_eq_posDef_formula
+      rho hSigma hSupport]
+  have hLog :
+      State.psdLog (scale • sigma) (Matrix.PosDef.smul hSigma hScale) =
+        algebraMap Real (CMatrix a) (Real.log scale) + State.psdLog sigma hSigma := by
+    exact CFC.log_smul' sigma hScale
+      (ha := by exact Matrix.PosDef.isStrictlyPositive hSigma)
+  rw [hLog]
+  simp [Matrix.mul_add, Matrix.trace_add, Algebra.algebraMap_eq_smul_one,
+    Matrix.trace_smul, rho.trace_eq_one, log2]
+  norm_cast
+  ring
 
 @[simp]
 theorem relativeEntropy_eq_top_of_not_supports

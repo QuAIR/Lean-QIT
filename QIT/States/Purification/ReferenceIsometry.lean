@@ -159,6 +159,21 @@ theorem partialTraceA_applyMatrix (X : CMatrix (Prod r₁ a)) :
   ext x y
   exact V.trace_apply_block (targetBlock X x y)
 
+/-- Applying a reference isometry to the left/reference side conjugates the
+left marginal by that isometry. -/
+theorem partialTraceB_applyMatrix_of_referenceIsometry [Fintype a]
+    (X : CMatrix (Prod r₁ a)) :
+    partialTraceB (a := r₂) (b := a) (V.applyMatrix X) =
+      V.matrix * partialTraceB (a := r₁) (b := a) X *
+        Matrix.conjTranspose V.matrix := by
+  ext i j
+  simp [partialTraceB, applyMatrix, targetBlock, Matrix.mul_apply,
+    Finset.sum_mul, Finset.mul_sum, mul_assoc]
+  rw [Finset.sum_comm]
+  apply Finset.sum_congr rfl
+  intro k _
+  rw [Finset.sum_comm]
+
 /-- Applying a right-reference isometry does not change the left/input marginal. -/
 theorem partialTraceB_applyMatrixRight [Fintype a] (X : CMatrix (Prod a r₁)) :
     partialTraceB (a := a) (b := r₂) (V.applyMatrixRight X) =
@@ -190,6 +205,19 @@ def applyPureVector [Fintype a] [DecidableEq a] (Ψ : PureVector (Prod r₁ a)) 
 /-- The amplitude of `applyPureVector` unfolds to `applyAmp`. -/
 theorem applyPureVector_amp [Fintype a] [DecidableEq a] (Ψ : PureVector (Prod r₁ a)) :
     (V.applyPureVector Ψ).amp = V.applyAmp Ψ.amp :=
+  rfl
+
+/-- Applying a reference isometry to the left/reference side conjugates the
+left marginal of a pure state by that isometry. -/
+theorem marginalA_applyPureVector [Fintype a] [DecidableEq a]
+    (Ψ : PureVector (Prod r₁ a)) :
+    (V.applyPureVector Ψ).state.marginalA.matrix =
+      V.matrix * Ψ.state.marginalA.matrix * Matrix.conjTranspose V.matrix := by
+  rw [State.marginalA_matrix]
+  rw [PureVector.state_matrix]
+  rw [applyPureVector_amp]
+  rw [V.rankOne_applyAmp]
+  rw [V.partialTraceB_applyMatrix_of_referenceIsometry]
   rfl
 
 /-- Apply a reference isometry to the right factor of a bipartite pure vector. -/

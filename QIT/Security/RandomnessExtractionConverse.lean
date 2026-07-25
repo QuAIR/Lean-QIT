@@ -920,9 +920,9 @@ theorem deterministicGraphCqState_marginalSE_smoothCandidate_of_purifiedBall
     {τ : SubnormalizedState (Prod Z (Prod S e))} {ε : ℝ}
     (hτ : ((E.deterministicGraphCqState g).reindex
         (Equiv.prodAssoc Z S e)).toSubnormalized.purifiedBall ε τ) :
-    SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := S)
+    SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := S)
       (E.deterministicPostprocessCqState g).toSubnormalized ε
-      τ.marginalB.conditionalMinEntropy :=
+      τ.marginalB.conditionalMinEntropyRaw :=
   ⟨τ.marginalB, E.deterministicGraphCqState_purifiedBall_marginalSE_of_purifiedBall g hτ,
     rfl⟩
 
@@ -947,8 +947,8 @@ theorem deterministicGraphCqState_marginalZE_smoothCandidate_of_purifiedBall
     {τ : SubnormalizedState (Prod S (Prod Z e))} {ε : ℝ}
     (hτ : ((E.deterministicGraphCqState g).reindex
         (deterministicGraphSourceMarginalEquiv Z S e)).toSubnormalized.purifiedBall ε τ) :
-    SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := Z)
-      E.cqState.toSubnormalized ε τ.marginalB.conditionalMinEntropy :=
+    SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := Z)
+      E.cqState.toSubnormalized ε τ.marginalB.conditionalMinEntropyRaw :=
   ⟨τ.marginalB, E.deterministicGraphCqState_purifiedBall_marginalZE_of_purifiedBall g hτ,
     rfl⟩
 
@@ -1596,8 +1596,8 @@ theorem subnormalizedConditionalMinEntropyFeasible_of_deterministicPostprocessCq
 min-entropy after embedding the normalized cq states. -/
 theorem subnormalizedConditionalMinEntropy_deterministicPostprocessCqState_le
     (E : Ensemble Z e) (g : Z → S) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.conditionalMinEntropy ≤
-      E.cqState.toSubnormalized.conditionalMinEntropy := by
+    (E.deterministicPostprocessCqState g).toSubnormalized.conditionalMinEntropyRaw ≤
+      E.cqState.toSubnormalized.conditionalMinEntropyRaw := by
   classical
   have hsource_prod : Nonempty (Prod Z e) := E.cqState.nonempty
   letI : Nonempty Z := ⟨(Classical.choice hsource_prod).1⟩
@@ -1622,11 +1622,11 @@ theorem subnormalizedConditionalMinEntropy_deterministicPostprocessCqState_le
       subnormalizedConditionalMinEntropyFeasibleExponentValueSet_toSubnormalized_bddAbove
         (a := Z) E.cqState
   have hpost_eq :
-      (E.deterministicPostprocessCqState g).toSubnormalized.conditionalMinEntropy = sSup spost := by
-    simp [spost, SubnormalizedState.conditionalMinEntropy_eq]
+      (E.deterministicPostprocessCqState g).toSubnormalized.conditionalMinEntropyRaw = sSup spost := by
+    simp [spost, SubnormalizedState.conditionalMinEntropyRaw_eq]
   have hsource_eq :
-      E.cqState.toSubnormalized.conditionalMinEntropy = sSup ssource := by
-    simp [ssource, SubnormalizedState.conditionalMinEntropy_eq]
+      E.cqState.toSubnormalized.conditionalMinEntropyRaw = sSup ssource := by
+    simp [ssource, SubnormalizedState.conditionalMinEntropyRaw_eq]
   rw [hpost_eq, hsource_eq]
   refine csSup_le hpost_nonempty ?_
   intro lam hlam
@@ -1652,8 +1652,8 @@ theorem conditionalMinEntropy_deterministicPostprocessCqState_le_deterministicGr
 `conditionalMinEntropy_deterministicPostprocessCqState_le_deterministicGraphCqState`. -/
 theorem subnormalizedConditionalMinEntropy_deterministicPostprocessCqState_le_deterministicGraphCqState
     (E : Ensemble Z e) (g : Z → S) :
-    (E.deterministicPostprocessCqState g).toSubnormalized.conditionalMinEntropy ≤
-      (E.deterministicGraphCqState g).toSubnormalized.conditionalMinEntropy := by
+    (E.deterministicPostprocessCqState g).toSubnormalized.conditionalMinEntropyRaw ≤
+      (E.deterministicGraphCqState g).toSubnormalized.conditionalMinEntropyRaw := by
   have h :=
     (E.deterministicGraphEnsemble g).subnormalizedConditionalMinEntropy_deterministicPostprocessCqState_le
       Prod.snd
@@ -1682,8 +1682,8 @@ theorem conditionalMinEntropy_deterministicGraphCqState_eq_cqState
 `conditionalMinEntropy_deterministicGraphCqState_eq_cqState`. -/
 theorem subnormalizedConditionalMinEntropy_deterministicGraphCqState_eq_cqState
     (E : Ensemble Z e) (g : Z → S) :
-    (E.deterministicGraphCqState g).toSubnormalized.conditionalMinEntropy =
-      E.cqState.toSubnormalized.conditionalMinEntropy := by
+    (E.deterministicGraphCqState g).toSubnormalized.conditionalMinEntropyRaw =
+      E.cqState.toSubnormalized.conditionalMinEntropyRaw := by
   apply le_antisymm
   · simpa [deterministicGraphCqState] using
       E.subnormalizedConditionalMinEntropy_deterministicPostprocessCqState_le
@@ -1706,7 +1706,7 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
       (E.deterministicPostprocessCqState g).toSubnormalized.purifiedBall ε ρSE' →
         ∃ τ : SubnormalizedState (Prod (Prod Z S) e),
           (E.deterministicGraphCqState g).toSubnormalized.purifiedBall ε τ ∧
-          ρSE'.conditionalMinEntropy ≤ τ.conditionalMinEntropy) :
+          ρSE'.conditionalMinEntropyRaw ≤ τ.conditionalMinEntropyRaw) :
     (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
         ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
       (E.deterministicGraphCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
@@ -1739,10 +1739,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicGraphCqState_le_cq
     (E : Ensemble Z e) (g : Z → S) {ε : ℝ}
     (hε0 : 0 ≤ ε) (hε1 : ε < 1)
     (hlift : ∀ h,
-      SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := Prod Z S)
+      SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := Prod Z S)
         (E.deterministicGraphCqState g).toSubnormalized ε h →
         ∃ h',
-          SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := Z)
+          SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := Z)
             E.cqState.toSubnormalized ε h' ∧ h ≤ h') :
     (E.deterministicGraphCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
         ((E.deterministicGraphCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
@@ -1771,10 +1771,10 @@ theorem deterministicGraphCqState_smoothCandidate_lift_to_cqState
     (E : Ensemble Z e) (g : Z → S) {ε h : ℝ}
     (hε1 : ε < 1)
     (hcand :
-      SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := Prod Z S)
+      SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := Prod Z S)
         (E.deterministicGraphCqState g).toSubnormalized ε h) :
     ∃ h',
-      SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := Z)
+      SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := Z)
         E.cqState.toSubnormalized ε h' ∧ h ≤ h' := by
   classical
   have hsource_prod : Nonempty (Prod Z e) := E.cqState.nonempty
@@ -1789,12 +1789,12 @@ theorem deterministicGraphCqState_smoothCandidate_lift_to_cqState
     rw [htrace]
     simpa using hε1
   have hcandIso :
-      SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := Prod Z S)
+      SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := Prod Z S)
         (E.cqState.toSubnormalized.sourceIsometryApply
           (deterministicGraphSourceIsometry g)) ε h := by
     simpa [E.deterministicGraphCqState_toSubnormalized_eq_sourceIsometryApply g] using hcand
   exact
-    SubnormalizedState.SmoothConditionalMinEntropyCandidate.sourceIsometryApply_compress
+    SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw.sourceIsometryApply_compress
       (a := Z) E.cqState.toSubnormalized
       (deterministicGraphSourceIsometry g) hεsource hcandIso
 
@@ -1850,12 +1850,12 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
       (E.deterministicPostprocessCqState g).toSubnormalized.purifiedBall ε ρSE' →
         ∃ τ : SubnormalizedState (Prod (Prod Z S) e),
           (E.deterministicGraphCqState g).toSubnormalized.purifiedBall ε τ ∧
-          ρSE'.conditionalMinEntropy ≤ τ.conditionalMinEntropy)
+          ρSE'.conditionalMinEntropyRaw ≤ τ.conditionalMinEntropyRaw)
     (hsource : ∀ h,
-      SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := Prod Z S)
+      SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := Prod Z S)
         (E.deterministicGraphCqState g).toSubnormalized ε h →
         ∃ h',
-          SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := Z)
+          SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := Z)
             E.cqState.toSubnormalized ε h' ∧ h ≤ h') :
     (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
         ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
@@ -1874,10 +1874,10 @@ theorem deterministicPostprocessCqState_smoothCandidate_sourceCoordinatePinch
     (E : Ensemble Z e) (g : Z → S) {ε h : ℝ}
     (hε1 : ε < 1)
     (hcand :
-      SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := S)
+      SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := S)
         (E.deterministicPostprocessCqState g).toSubnormalized ε h) :
     ∃ h',
-      SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := S)
+      SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := S)
         (E.deterministicPostprocessCqState g).toSubnormalized ε h' ∧ h ≤ h' := by
   classical
   have hpost_prod : Nonempty (Prod S e) :=
@@ -1895,7 +1895,7 @@ theorem deterministicPostprocessCqState_smoothCandidate_sourceCoordinatePinch
     rw [htrace]
     simpa using hε1
   exact
-    SubnormalizedState.SmoothConditionalMinEntropyCandidate.sourceCoordinatePinch_of_fixed
+    SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw.sourceCoordinatePinch_of_fixed
       (E.deterministicPostprocessCqState_toSubnormalized_sourceCoordinatePinch g)
       hεpost hcand
 
@@ -1907,10 +1907,10 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
     (E : Ensemble Z e) (g : Z → S) {ε : ℝ}
     (hε0 : 0 ≤ ε) (hε1 : ε < 1)
     (hlift : ∀ h,
-      SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := S)
+      SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := S)
         (E.deterministicPostprocessCqState g).toSubnormalized ε h →
         ∃ h',
-          SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := Z)
+          SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := Z)
             E.cqState.toSubnormalized ε h' ∧ h ≤ h') :
     (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
         ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
@@ -1943,7 +1943,7 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
       (E.deterministicPostprocessCqState g).toSubnormalized.purifiedBall ε ρSE' →
         ∃ ρZE',
           E.cqState.toSubnormalized.purifiedBall ε ρZE' ∧
-          ρSE'.conditionalMinEntropy ≤ ρZE'.conditionalMinEntropy) :
+          ρSE'.conditionalMinEntropyRaw ≤ ρZE'.conditionalMinEntropyRaw) :
     (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
         ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
       E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
@@ -1977,8 +1977,8 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
         ε ρSE'.sourceCoordinatePinch →
         ∃ ρZE',
           E.cqState.toSubnormalized.purifiedBall ε ρZE' ∧
-          ρSE'.sourceCoordinatePinch.conditionalMinEntropy ≤
-            ρZE'.conditionalMinEntropy) :
+          ρSE'.sourceCoordinatePinch.conditionalMinEntropyRaw ≤
+            ρZE'.conditionalMinEntropyRaw) :
     (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
         ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
       E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
@@ -2062,14 +2062,14 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
     SubnormalizedState.purifiedBall_trace_pos_of_lt_sqrt_trace
       E.cqState.toSubnormalized ρZE'.sourceCoordinatePinch hεsource hρZE_pinch
   have hentropy_raw :
-      (ρZE'.sourceCoordinatePinch.sourceDeterministicPostprocess g).conditionalMinEntropy ≤
-        ρZE'.sourceCoordinatePinch.sourceCoordinatePinch.conditionalMinEntropy :=
+      (ρZE'.sourceCoordinatePinch.sourceDeterministicPostprocess g).conditionalMinEntropyRaw ≤
+        ρZE'.sourceCoordinatePinch.sourceCoordinatePinch.conditionalMinEntropyRaw :=
     ρZE'.sourceCoordinatePinch
       |>.conditionalMinEntropy_sourceDeterministicPostprocess_le_sourceCoordinatePinch_of_trace_pos
         g hρZE_pinch_pos
   have hentropy :
-      (ρZE'.sourceCoordinatePinch.sourceDeterministicPostprocess g).conditionalMinEntropy ≤
-        ρZE'.sourceCoordinatePinch.conditionalMinEntropy :=
+      (ρZE'.sourceCoordinatePinch.sourceDeterministicPostprocess g).conditionalMinEntropyRaw ≤
+        ρZE'.sourceCoordinatePinch.conditionalMinEntropyRaw :=
     by simpa using hentropy_raw
   exact ⟨ρZE'.sourceCoordinatePinch, hρZE_pinch, by
     simpa [hcoarse] using hentropy⟩
@@ -2152,12 +2152,12 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
     rw [SubnormalizedState.sourceCoordinatePinch_trace_re]
     exact hρSE'_pos
   have hpost_le_pinch :
-      ρSE'.conditionalMinEntropy ≤
-        ρSE'.sourceCoordinatePinch.conditionalMinEntropy :=
+      ρSE'.conditionalMinEntropyRaw ≤
+        ρSE'.sourceCoordinatePinch.conditionalMinEntropyRaw :=
     ρSE'.conditionalMinEntropy_le_sourceCoordinatePinch_of_trace_pos
       (a := S) hρSE'_pos
   have hpinch_le_filter :
-      ρSE'.sourceCoordinatePinch.conditionalMinEntropy ≤ σSE.conditionalMinEntropy := by
+      ρSE'.sourceCoordinatePinch.conditionalMinEntropyRaw ≤ σSE.conditionalMinEntropyRaw := by
     simpa [σSE, imagePred] using
       (ρSE'.sourceCoordinatePinch
         |>.conditionalMinEntropy_le_sourceBlockFilter_of_trace_pos
@@ -2177,13 +2177,13 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
       ρZE'.sourceCoordinatePinch.sourceDeterministicPostprocess g = σSE := by
     simp [σSE, imagePred, hcoarse]
   have hentropy_raw :
-      (ρZE'.sourceCoordinatePinch.sourceDeterministicPostprocess g).conditionalMinEntropy ≤
-        ρZE'.sourceCoordinatePinch.sourceCoordinatePinch.conditionalMinEntropy :=
+      (ρZE'.sourceCoordinatePinch.sourceDeterministicPostprocess g).conditionalMinEntropyRaw ≤
+        ρZE'.sourceCoordinatePinch.sourceCoordinatePinch.conditionalMinEntropyRaw :=
     ρZE'.sourceCoordinatePinch
       |>.conditionalMinEntropy_sourceDeterministicPostprocess_le_sourceCoordinatePinch_of_trace_pos
         g hρZE_pinch_pos
   have hentropy_source :
-      σSE.conditionalMinEntropy ≤ ρZE'.sourceCoordinatePinch.conditionalMinEntropy := by
+      σSE.conditionalMinEntropyRaw ≤ ρZE'.sourceCoordinatePinch.conditionalMinEntropyRaw := by
     simpa [hcoarse_pinch] using hentropy_raw
   exact ⟨ρZE'.sourceCoordinatePinch, hρZE_pinch,
     (hpost_le_pinch.trans hpinch_le_filter).trans hentropy_source⟩
@@ -2494,8 +2494,8 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
         ∃ τ : SubnormalizedState (Prod S (Prod Z e)),
           ((E.deterministicGraphCqState g).reindex
             (deterministicGraphSourceMarginalEquiv Z S e)).toSubnormalized.purifiedBall ε τ ∧
-          ρSE'.sourceCoordinatePinch.conditionalMinEntropy ≤
-            τ.marginalB.conditionalMinEntropy) :
+          ρSE'.sourceCoordinatePinch.conditionalMinEntropyRaw ≤
+            τ.marginalB.conditionalMinEntropyRaw) :
     (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
         ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
       E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
@@ -2560,8 +2560,8 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
     rw [SubnormalizedState.marginalB_matrix, partialTraceA_trace]
     exact hτpos
   have hentropy :
-      (τ.marginalB.sourceDeterministicPostprocess g).conditionalMinEntropy ≤
-        τ.marginalB.sourceCoordinatePinch.conditionalMinEntropy :=
+      (τ.marginalB.sourceDeterministicPostprocess g).conditionalMinEntropyRaw ≤
+        τ.marginalB.sourceCoordinatePinch.conditionalMinEntropyRaw :=
     τ.marginalB
       |>.conditionalMinEntropy_sourceDeterministicPostprocess_le_sourceCoordinatePinch_of_trace_pos
         g hτmarg_pos
@@ -2579,7 +2579,7 @@ theorem subnormalizedSmoothConditionalMinEntropy_deterministicPostprocessCqState
         ∃ τ : SubnormalizedState (Prod S (Prod Z e)),
           ((E.deterministicGraphCqState g).reindex
             (deterministicGraphSourceMarginalEquiv Z S e)).toSubnormalized.purifiedBall ε τ ∧
-          ρSE'.conditionalMinEntropy ≤ τ.marginalB.conditionalMinEntropy) :
+          ρSE'.conditionalMinEntropyRaw ≤ τ.marginalB.conditionalMinEntropyRaw) :
     (E.deterministicPostprocessCqState g).toSubnormalized.smoothConditionalMinEntropy ε hε0
         ((E.deterministicPostprocessCqState g).epsilon_lt_sqrt_toSubnormalized_trace hε1) ≤
       E.cqState.toSubnormalized.smoothConditionalMinEntropy ε hε0
@@ -2856,8 +2856,8 @@ conditioning system does not increase subnormalized cq conditional min-entropy
 after embedding the normalized cq states. -/
 theorem subnormalizedConditionalMinEntropy_seededSourceEnsemble_le_source
     (H : QIT.Security.HashFamily F Z S) (E : Ensemble Z e) :
-    (H.seededSourceEnsemble E).cqState.toSubnormalized.conditionalMinEntropy ≤
-      E.cqState.toSubnormalized.conditionalMinEntropy := by
+    (H.seededSourceEnsemble E).cqState.toSubnormalized.conditionalMinEntropyRaw ≤
+      E.cqState.toSubnormalized.conditionalMinEntropyRaw := by
   classical
   have hsource_prod : Nonempty (Prod Z e) := E.cqState.nonempty
   letI : Nonempty Z := ⟨(Classical.choice hsource_prod).1⟩
@@ -2884,12 +2884,12 @@ theorem subnormalizedConditionalMinEntropy_seededSourceEnsemble_le_source
       Ensemble.subnormalizedConditionalMinEntropyFeasibleExponentValueSet_toSubnormalized_bddAbove
         (a := Z) E.cqState
   have hseed_eq :
-      (H.seededSourceEnsemble E).cqState.toSubnormalized.conditionalMinEntropy =
+      (H.seededSourceEnsemble E).cqState.toSubnormalized.conditionalMinEntropyRaw =
         sSup sseed := by
-    simp [sseed, SubnormalizedState.conditionalMinEntropy_eq]
+    simp [sseed, SubnormalizedState.conditionalMinEntropyRaw_eq]
   have hsource_eq :
-      E.cqState.toSubnormalized.conditionalMinEntropy = sSup ssource := by
-    simp [ssource, SubnormalizedState.conditionalMinEntropy_eq]
+      E.cqState.toSubnormalized.conditionalMinEntropyRaw = sSup ssource := by
+    simp [ssource, SubnormalizedState.conditionalMinEntropyRaw_eq]
   rw [hseed_eq, hsource_eq]
   refine csSup_le hseed_nonempty ?_
   intro lam hlam
@@ -3186,8 +3186,8 @@ private theorem conditionalMinEntropy_le_matchedSeedSourceState_of_trace_pos
     (hτ : 0 < τ.matrix.trace.re)
     (hmatched :
       0 < (matchedSeedSourceState (Z := Z) (F := F) (e := e) τ).matrix.trace.re) :
-    τ.conditionalMinEntropy ≤
-      (matchedSeedSourceState (Z := Z) (F := F) (e := e) τ).conditionalMinEntropy := by
+    τ.conditionalMinEntropyRaw ≤
+      (matchedSeedSourceState (Z := Z) (F := F) (e := e) τ).conditionalMinEntropyRaw := by
   classical
   have hseed_source_nonempty : Nonempty (Prod Z F) := ⟨(Classical.choice inferInstance, Classical.choice inferInstance)⟩
   have hseed_side_nonempty : Nonempty (Prod F e) := ⟨(Classical.choice inferInstance, Classical.choice inferInstance)⟩
@@ -3524,7 +3524,7 @@ theorem log2_outputLength_le_toSubnormalized_smoothConditionalMinEntropy_of_isEp
     exact State.purifiedDistance_le_sqrt_two_mul_sub_sq_of_normalizedTraceDistance_le
       ρout ρideal hε1.le hD
   have hideal_sub_entropy :
-      log2 (Fintype.card S : ℝ) = ρideal.toSubnormalized.conditionalMinEntropy := by
+      log2 (Fintype.card S : ℝ) = ρideal.toSubnormalized.conditionalMinEntropyRaw := by
     have hscale :
         ρideal.toSubnormalized =
           SubnormalizedState.ofStateScale ρideal 1 (by norm_num) (by norm_num) := by
@@ -3537,7 +3537,7 @@ theorem log2_outputLength_le_toSubnormalized_smoothConditionalMinEntropy_of_isEp
       (S := S) (F := F) (e := e) (ρ := ρout)]
     simp [log2]
   have hsubcand :
-      SubnormalizedState.SmoothConditionalMinEntropyCandidate (a := S)
+      SubnormalizedState.SmoothConditionalMinEntropyCandidateRaw (a := S)
         ρout.toSubnormalized (Real.sqrt (2 * ε - ε ^ 2))
         (log2 (Fintype.card S : ℝ)) := by
     exact State.toSubnormalized_SmoothConditionalMinEntropyCandidate_of

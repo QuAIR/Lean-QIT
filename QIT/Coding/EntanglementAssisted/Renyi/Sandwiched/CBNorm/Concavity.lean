@@ -48,24 +48,24 @@ This is the function whose concavity is invoked in
 KhatriWilde2024Principles, Chapters/EA_capacity.tex lines 2283-2399. -/
 def cpPsdSchattenRpowValue
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : ℝ) (X : CMatrix a) (hX : X.PosSemidef) : ℝ :=
+    (alpha : SchattenOrder) (X : CMatrix a) (hX : X.PosSemidef) : ℝ :=
   psdSchattenPNorm
-    (Phi (CFC.rpow X (1 / alpha)))
+    (Phi (CFC.rpow X (1 / (alpha : ℝ))))
     (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi
-      (CFC.rpow X (1 / alpha))
-      (cMatrix_rpow_posSemidef (A := X) (s := 1 / alpha) hX))
+      (CFC.rpow X (1 / (alpha : ℝ)))
+      (cMatrix_rpow_posSemidef (A := X) (s := 1 / (alpha : ℝ)) hX))
     alpha
 
 /-- The CP/Schatten rpow value is nonnegative. -/
 theorem cpPsdSchattenRpowValue_nonneg
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : ℝ) (X : CMatrix a) (hX : X.PosSemidef) :
+    (alpha : SchattenOrder) (X : CMatrix a) (hX : X.PosSemidef) :
     0 ≤ cpPsdSchattenRpowValue Phi hPhi alpha X hX :=
   psdSchattenPNorm_nonneg
-    (Phi (CFC.rpow X (1 / alpha)))
+    (Phi (CFC.rpow X (1 / (alpha : ℝ))))
     (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi
-      (CFC.rpow X (1 / alpha))
-      (cMatrix_rpow_posSemidef (A := X) (s := 1 / alpha) hX))
+      (CFC.rpow X (1 / (alpha : ℝ)))
+      (cMatrix_rpow_posSemidef (A := X) (s := 1 / (alpha : ℝ)) hX))
     alpha
 
 omit [Fintype a] [DecidableEq a] in
@@ -295,14 +295,14 @@ theorem cp_psdSchatten_rpow_value_concave
           (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi
             (CFC.rpow X0 (1 / alpha))
             (cMatrix_rpow_posSemidef hX0))
-          alpha +
+          (SchattenOrder.ofOneLt halpha) +
       (1 - lambda) *
         psdSchattenPNorm
           (Phi (CFC.rpow X1 (1 / alpha)))
           (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi
             (CFC.rpow X1 (1 / alpha))
             (cMatrix_rpow_posSemidef hX1))
-          alpha <=
+          (SchattenOrder.ofOneLt halpha) <=
     psdSchattenPNorm
       (Phi (CFC.rpow (lambda • X0 + (1 - lambda) • X1) (1 / alpha)))
       (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi
@@ -311,7 +311,7 @@ theorem cp_psdSchatten_rpow_value_concave
           (Matrix.PosSemidef.add
             (Matrix.PosSemidef.smul hX0 hlambda0)
             (Matrix.PosSemidef.smul hX1 (sub_nonneg.mpr hlambda1)))))
-      alpha := by
+      (SchattenOrder.ofOneLt halpha) := by
   let p : ℝ := 1 / alpha
   have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
   have hp0 : 0 < p := by
@@ -436,19 +436,28 @@ theorem cp_psdSchatten_rpow_value_concave
     have htrace' := htrace
     rw [hY0pow, hY1pow] at htrace'
     simpa [N0, N1, Nt, Bt, Yt] using htrace'
-  have hholder_t : (((Nt * Bt).trace).re) ≤ psdSchattenPNorm Nt hNt alpha :=
+  have hholder_t : (((Nt * Bt).trace).re) ≤
+      psdSchattenPNorm Nt hNt (SchattenOrder.ofOneLt halpha) :=
     posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
       hNt hBt hpq hq_ge_one hBtq
   have hleft :
-      lambda * psdSchattenPNorm N0 hN0 alpha +
-          (1 - lambda) * psdSchattenPNorm N1 hN1 alpha =
+      lambda * psdSchattenPNorm N0 hN0 (SchattenOrder.ofOneLt halpha) +
+          (1 - lambda) * psdSchattenPNorm N1 hN1 (SchattenOrder.ofOneLt halpha) =
         lambda * (((N0 * B0).trace).re) +
           (1 - lambda) * (((N1 * B1).trace).re) := by
-    rw [hval0, hval1]
+    have hval0' :
+        psdSchattenPNorm N0 hN0 (SchattenOrder.ofOneLt halpha) =
+          ((N0 * B0).trace).re := by
+      simpa [SchattenOrder.ofOneLt] using hval0
+    have hval1' :
+        psdSchattenPNorm N1 hN1 (SchattenOrder.ofOneLt halpha) =
+          ((N1 * B1).trace).re := by
+      simpa [SchattenOrder.ofOneLt] using hval1
+    rw [hval0', hval1']
   have hmain :
-      lambda * psdSchattenPNorm N0 hN0 alpha +
-          (1 - lambda) * psdSchattenPNorm N1 hN1 alpha ≤
-        psdSchattenPNorm Nt hNt alpha := by
+      lambda * psdSchattenPNorm N0 hN0 (SchattenOrder.ofOneLt halpha) +
+          (1 - lambda) * psdSchattenPNorm N1 hN1 (SchattenOrder.ofOneLt halpha) ≤
+        psdSchattenPNorm Nt hNt (SchattenOrder.ofOneLt halpha) := by
     rw [hleft]
     exact le_trans htrace_concave hholder_t
   simpa [N0, N1, Nt, p] using hmain

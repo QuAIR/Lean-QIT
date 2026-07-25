@@ -300,7 +300,7 @@ private theorem fqswTeleportation_liftedResource_preserves
     (rho : State (Prod ref q)) :
     ((Channel.reindex (fqswTeleportationResourceOutputEquiv q ref)).applyState
       (((teleportationLOCC q).prodIdRight (R := ref)).toChannel.applyState
-        ((rho.prod (teleportationEntanglementResource q).state.state).reindex
+        ((rho.prod (teleportationEntanglementResource q).state).reindex
           (fqswTeleportationResourceInputEquiv q ref)))) = rho := by
   have htele := teleportationLOCCResourceChannel_preserves_reference q ref rho
   calc
@@ -334,7 +334,7 @@ private theorem fqswTeleportation_liftedResource_preserves
               ((Matrix.kroneckerMap (fun x1 x2 => x1 * x2)
                 (Matrix.single m m' (1 : Complex))
                 (rankOneMatrix
-                  (teleportationEntanglementResource q).state.amp)).submatrix
+                  (teleportationEntanglementResource q).pureVector.amp)).submatrix
                     (fun x => (x.1.1, x.1.2, x.2))
                     (fun x => (x.1.1, x.1.2, x.2)))
               (PUnit.unit, qi) (PUnit.unit, qj) =
@@ -342,7 +342,7 @@ private theorem fqswTeleportation_liftedResource_preserves
               (Matrix.kroneckerMap (fun x1 x2 => x1 * x2)
                 (Matrix.single m m' (1 : Complex))
                 (rankOneMatrix
-                  (teleportationEntanglementResource q).state.amp)).submatrix
+                  (teleportationEntanglementResource q).pureVector.amp)).submatrix
                     (fun x => (x.1.1, x.1.2, x.2))
                     (fun x => (x.1.1, x.1.2, x.2)) full full' *
                 (∑ result : TeleportationOutcome q,
@@ -359,15 +359,14 @@ private theorem fqswTeleportation_liftedResource_preserves
           (Matrix.kroneckerMap (fun x1 x2 => x1 * x2)
             (Matrix.single m m' (1 : Complex))
             (rankOneMatrix
-              (teleportationEntanglementResource q).state.amp)).submatrix
+              (teleportationEntanglementResource q).pureVector.amp)).submatrix
                 (fun x => (x.1.1, x.1.2, x.2))
                 (fun x => (x.1.1, x.1.2, x.2)) full full' =
             if m = full.1.1 ∧ m' = full'.1.1 then
-              (teleportationEntanglementResource q).state.amp
+              (teleportationEntanglementResource q).pureVector.amp
                   (full.1.2, full.2) *
-                (starRingEnd Complex)
-                  ((teleportationEntanglementResource q).state.amp
-                    (full'.1.2, full'.2))
+                star ((teleportationEntanglementResource q).pureVector.amp
+                  (full'.1.2, full'.2))
             else 0 := by
         simp [Matrix.kroneckerMap_apply, Matrix.submatrix_apply,
           rankOneMatrix_apply, Matrix.single_apply]
@@ -379,7 +378,7 @@ private theorem fqswTeleportation_liftedResource_preserves
                   (Matrix.kroneckerMap (fun x1 x2 => x1 * x2)
                     (Matrix.single m m' (1 : Complex))
                     (rankOneMatrix
-                      (teleportationEntanglementResource q).state.amp)).submatrix
+                      (teleportationEntanglementResource q).pureVector.amp)).submatrix
                         (fun x => (x.1.1, x.1.2, x.2))
                         (fun x => (x.1.1, x.1.2, x.2)) full full' *
                     (∑ result : TeleportationOutcome q,
@@ -403,11 +402,10 @@ private theorem fqswTeleportation_liftedResource_preserves
             _ = ∑ full : Prod (Prod q q) q,
                   ∑ full' : Prod (Prod q q) q,
                     rho.matrix (ri, full.1.1) (rj, full'.1.1) *
-                      (((teleportationEntanglementResource q).state.amp
+                      (((teleportationEntanglementResource q).pureVector.amp
                           (full.1.2, full.2) *
-                        (starRingEnd Complex)
-                          ((teleportationEntanglementResource q).state.amp
-                            (full'.1.2, full'.2))) *
+                        star ((teleportationEntanglementResource q).pureVector.amp
+                          (full'.1.2, full'.2))) *
                         (∑ c : TeleportationOutcome q,
                             MatrixMap.kron
                               (MatrixMap.traceEffectToUnit
@@ -420,11 +418,10 @@ private theorem fqswTeleportation_liftedResource_preserves
                   (fun full : Prod (Prod q q) q => full.1.1)
                   (fun m m' full full' =>
                     rho.matrix (ri, m) (rj, m') *
-                      (((teleportationEntanglementResource q).state.amp
+                      (((teleportationEntanglementResource q).pureVector.amp
                           (full.1.2, full.2) *
-                        (starRingEnd Complex)
-                          ((teleportationEntanglementResource q).state.amp
-                            (full'.1.2, full'.2))) *
+                        star ((teleportationEntanglementResource q).pureVector.amp
+                          (full'.1.2, full'.2))) *
                         (∑ c : TeleportationOutcome q,
                             MatrixMap.kron
                               (MatrixMap.traceEffectToUnit
@@ -437,7 +434,8 @@ private theorem fqswTeleportation_liftedResource_preserves
               intro full _
               apply Finset.sum_congr rfl
               intro full' _
-              simp only [LinearMap.sum_apply, mul_assoc]
+              simp only [teleportationEntanglementResource_state, PureVector.state_matrix,
+                rankOneMatrix_apply, LinearMap.sum_apply, mul_assoc]
     _ = rho := htele
 
 private def fqswTeleportationCoreToLiftInputEquiv (q : Type x) (e : Type y) (s : Type v) (r : Type w) :
@@ -555,15 +553,15 @@ private theorem fqswTeleportation_core_preserves
     (rho : State (Prod (Prod q e) (Prod s r))) :
     (((fqswStateMergingTeleportationLOCC q e s).toChannel.prod
           (Channel.idChannel r)).applyState
-      ((rho.prod (teleportationEntanglementResource q).state.state).reindex
+      ((rho.prod (teleportationEntanglementResource q).state).reindex
         (fqswTeleportationCoreInputEquiv q e s r))) =
       rho.reindex (fqswTeleportationCoreOutputEquiv q e s r) := by
   have hinput :
-      (((rho.prod (teleportationEntanglementResource q).state.state).reindex
+      (((rho.prod (teleportationEntanglementResource q).state).reindex
           (fqswTeleportationCoreInputEquiv q e s r)).reindex
             (fqswTeleportationCoreToLiftInputEquiv q e s r)) =
         (((rho.reindex (fqswTeleportationToReferenceEquiv q e s r)).prod
-            (teleportationEntanglementResource q).state.state).reindex
+            (teleportationEntanglementResource q).state).reindex
               (fqswTeleportationResourceInputEquiv q (Prod e (Prod s r)))) := by
     apply State.ext
     rfl
@@ -576,7 +574,7 @@ private theorem fqswTeleportation_core_preserves
     _ = (((((teleportationLOCC q).prodIdRight
           (R := Prod e (Prod s r))).toChannel.applyState
             (((rho.reindex (fqswTeleportationToReferenceEquiv q e s r)).prod
-              (teleportationEntanglementResource q).state.state).reindex
+              (teleportationEntanglementResource q).state).reindex
                 (fqswTeleportationResourceInputEquiv q (Prod e (Prod s r))))).reindex
           (fqswTeleportationResourceOutputEquiv q (Prod e (Prod s r)))).reindex
             (fqswTeleportationFromReferenceEquiv q e s r)) := by
@@ -818,19 +816,19 @@ theorem FQSWBlockProtocol.toStateMergingProtocol_outputState_eq_reindex
             (Channel.idChannel (Prod (TensorPower b n) q))).prod
           (Channel.idChannel (TensorPower r n))).applyState
         C.toStateMergingProtocol.initialState) =
-        ((rhoU.prod (teleportationEntanglementResource q).state.state).reindex
+        ((rhoU.prod (teleportationEntanglementResource q).state).reindex
           (fqswTeleportationCoreInputEquiv q e (TensorPower b n) (TensorPower r n))) := by
     have hinitial :
         C.toStateMergingProtocol.initialState =
           (((stateMergingBlockSource psi n).state.reindex
               (fqswSourceToAliceInputEquiv
                 (TensorPower a n) (TensorPower b n) (TensorPower r n))).prod
-            (teleportationEntanglementResource q).state.state).reindex
+            (teleportationEntanglementResource q).state).reindex
               (fqswStateMergingPreparationInputEquiv
                 (TensorPower a n) (TensorPower b n) (TensorPower r n) q) := by
       simp [FQSWBlockProtocol.toStateMergingProtocol,
         StateMergingBlockProtocol.initialState,
-        PureVector.prod_state, fqswStateMergingPreparationInputEquiv, stateMergingInputEquiv,
+        fqswStateMergingPreparationInputEquiv, stateMergingInputEquiv,
         fqswSourceToAliceInputEquiv,
         teleportationEntanglementResource_state]
       apply State.ext
@@ -850,8 +848,8 @@ theorem FQSWBlockProtocol.toStateMergingProtocol_outputState_eq_reindex
       Channel.applyState_prod]
     have hresource :
         (Channel.idChannel (Prod q q)).applyState
-            (teleportationEntanglementResource q).state.state =
-          (teleportationEntanglementResource q).state.state := by
+            (teleportationEntanglementResource q).state =
+          (teleportationEntanglementResource q).state := by
       apply State.ext
       change (Channel.idChannel (Prod q q)).map _ = _
       simp [Channel.idChannel, MatrixMap.ofKraus]

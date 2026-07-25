@@ -139,8 +139,8 @@ private theorem log2_rpow_pos_source {x y : Real} (hx : 0 < x) :
 private theorem psdSchattenPNorm_rpow_eq_psdTracePower_source
     {d : Type*} [Fintype d] [DecidableEq d]
     (A : CMatrix d) (hA : A.PosSemidef) {p : Real} (hp : 0 < p) :
-    Real.rpow (psdSchattenPNorm A hA p) p = psdTracePower A hA p := by
-  rw [psdSchattenPNorm]
+    Real.rpow (psdSchattenPNorm A hA ⟨p, hp⟩) p = psdTracePower A hA p := by
+  rw [psdSchattenPNorm, Internal.psdSchattenExpression]
   have htrace_nonneg : 0 <= psdTracePower A hA p :=
     psdTracePower_nonneg A hA p
   have hp_ne : p ≠ 0 := ne_of_gt hp
@@ -307,14 +307,14 @@ theorem conditionalSandwichedRenyiUpSourceCandidate_eq_schattenLog
             (identityTensorStateMatrix (a := a) sigma) alpha)
           (sandwichedRenyiReferenceInner_posSemidef rho
             (identityTensorStateMatrix_posSemidef (a := a) sigma) alpha)
-          alpha) := by
+          ⟨alpha, halpha_pos⟩) := by
   let reference : CMatrix (Prod a b) := identityTensorStateMatrix (a := a) sigma
   let inner : CMatrix (Prod a b) :=
     sandwichedRenyiReferenceInner rho reference alpha
   let hinner : inner.PosSemidef :=
     sandwichedRenyiReferenceInner_posSemidef rho
       (identityTensorStateMatrix_posSemidef (a := a) sigma) alpha
-  let norm : Real := psdSchattenPNorm inner hinner alpha
+  let norm : Real := psdSchattenPNorm inner hinner ⟨alpha, halpha_pos⟩
   have href : reference.PosDef :=
     identityTensorStateMatrix_posDef_of_posDef (a := a) sigma hsigma
   have hinner_ne : inner ≠ 0 := by
@@ -413,7 +413,7 @@ theorem upwardRenyiDualityHighCMatrix_posSemidef
 /-- High-order Schatten value attached to a full-rank `B` side state. -/
 def upwardRenyiDualityHighNorm
     (psi : PureVector (Prod (Prod a b) c))
-    (sigma : State b) (alpha : Real) : Real :=
+    (sigma : State b) (alpha : SchattenOrder) : Real :=
   psdSchattenPNorm
     (psi.upwardRenyiDualityHighCMatrix sigma.matrix
       (upwardRenyiDualityParameter alpha))
@@ -423,7 +423,7 @@ def upwardRenyiDualityHighNorm
 /-- Low-order Schatten value attached to a normalized `C` side state. -/
 def upwardRenyiDualityLowNorm
     (psi : PureVector (Prod (Prod a b) c))
-    (tau : State c) (alpha beta : Real) : Real :=
+    (tau : State c) (alpha : Real) (beta : SchattenOrder) : Real :=
   psdSchattenPNorm
     (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix
       (upwardRenyiDualityParameter alpha))
@@ -462,7 +462,12 @@ private theorem kronecker_left_one_mulVec_apply_source
   rw [← Finset.univ_product_univ, Finset.sum_product]
   simp [Matrix.one_apply]
 
-private theorem partialTraceB_rankOne_kron_left_mulVec_eq_source
+/-- Partial trace of a rank-one vector after a left Kronecker weight.
+
+This is the finite-dimensional rank-one identity behind source arguments that
+write a weighted pure projector as `(W ⊗ I)|ψ⟩⟨ψ|(W† ⊗ I)` and then trace out
+the purifying register. -/
+theorem partialTraceB_rankOne_kron_left_mulVec_eq_source
     {d : Type*} {e : Type*} [Fintype d] [DecidableEq d]
     [Fintype e] [DecidableEq e]
     (W : CMatrix d) (v : Prod d e -> Complex) :
@@ -652,7 +657,8 @@ theorem upwardRenyiDualityHighBracket_isGreatest
         (psi.upwardRenyiDualityHighCMatrix sigma.matrix
           (upwardRenyiDualityParameter alpha))
         (psi.upwardRenyiDualityHighCMatrix_posSemidef sigma.matrix
-          (upwardRenyiDualityParameter alpha)) alpha) := by
+          (upwardRenyiDualityParameter alpha))
+        ⟨alpha, lt_trans zero_lt_one halpha⟩) := by
   let p := upwardRenyiDualityParameter alpha
   let M := psi.upwardRenyiDualityHighCMatrix sigma.matrix p
   let hM : M.PosSemidef :=
@@ -713,7 +719,8 @@ theorem upwardRenyiDualityLowBracket_isLeast
         (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix
           (upwardRenyiDualityParameter alpha))
         (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix
-          (upwardRenyiDualityParameter alpha)) beta) := by
+          (upwardRenyiDualityParameter alpha))
+        ⟨beta, lt_trans (by norm_num) hbeta_half⟩) := by
   let p := upwardRenyiDualityParameter alpha
   let M := psi.upwardRenyiDualityEffectiveBMatrix tau.matrix p
   let hM : M.PosSemidef :=
@@ -815,18 +822,20 @@ theorem psdSchattenPNorm_lowReferenceInner_eq_effectiveBMatrix
         (State.sandwichedRenyiReferenceInner psi.state.marginalAC
           (State.identityTensorStateMatrix (a := a) tau) beta)
         (State.sandwichedRenyiReferenceInner_posSemidef psi.state.marginalAC
-          (State.identityTensorStateMatrix_posSemidef (a := a) tau) beta) beta =
+          (State.identityTensorStateMatrix_posSemidef (a := a) tau) beta)
+        ⟨beta, lt_trans (by norm_num) hbeta_half⟩ =
       psdSchattenPNorm
         (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix
           (upwardRenyiDualityParameter alpha))
         (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix
-          (upwardRenyiDualityParameter alpha)) beta := by
+          (upwardRenyiDualityParameter alpha))
+        ⟨beta, lt_trans (by norm_num) hbeta_half⟩ := by
   have hbeta_pos : 0 < beta := lt_trans (by norm_num) hbeta_half
   let v := psi.upwardRenyiDualityACWeightedAmplitude tau.matrix
     (upwardRenyiDualityParameter alpha)
   have hcomp :=
     psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
-      v hbeta_pos
+      v ⟨beta, hbeta_pos⟩
   have hleft :=
     psi.partialTraceB_rankOne_upwardRenyiDualityACWeightedAmplitude_eq_referenceInner
       tau halpha hbeta_half hbeta_one hconj
@@ -835,19 +844,20 @@ theorem psdSchattenPNorm_lowReferenceInner_eq_effectiveBMatrix
         (State.sandwichedRenyiReferenceInner psi.state.marginalAC
           (State.identityTensorStateMatrix (a := a) tau) beta)
         (State.sandwichedRenyiReferenceInner_posSemidef psi.state.marginalAC
-          (State.identityTensorStateMatrix_posSemidef (a := a) tau) beta) beta =
+          (State.identityTensorStateMatrix_posSemidef (a := a) tau) beta)
+        ⟨beta, hbeta_pos⟩ =
       psdSchattenPNorm
         (partialTraceB (a := Prod a c) (b := b) (rankOneMatrix v))
-        (partialTraceB_posSemidef (rankOneMatrix_pos v)) beta :=
-          psdSchattenPNorm_congr hleft.symm _ _ beta
+        (partialTraceB_posSemidef (rankOneMatrix_pos v)) ⟨beta, hbeta_pos⟩ :=
+          psdSchattenPNorm_congr hleft.symm _ _ ⟨beta, hbeta_pos⟩
     _ = psdSchattenPNorm
         (partialTraceA (a := Prod a c) (b := b) (rankOneMatrix v))
-        (partialTraceA_posSemidef (rankOneMatrix_pos v)) beta := hcomp
+        (partialTraceA_posSemidef (rankOneMatrix_pos v)) ⟨beta, hbeta_pos⟩ := hcomp
     _ = psdSchattenPNorm
         (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix
           (upwardRenyiDualityParameter alpha))
         (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix
-          (upwardRenyiDualityParameter alpha)) beta := by rfl
+          (upwardRenyiDualityParameter alpha)) ⟨beta, hbeta_pos⟩ := by rfl
 
 /-- The high-order reference inner and the complementary `C` matrix have the
 same Schatten `alpha` norm. -/
@@ -859,18 +869,20 @@ theorem psdSchattenPNorm_highReferenceInner_eq_highCMatrix
         (State.sandwichedRenyiReferenceInner psi.state.marginalAB
           (State.identityTensorStateMatrix (a := a) sigma) alpha)
         (State.sandwichedRenyiReferenceInner_posSemidef psi.state.marginalAB
-          (State.identityTensorStateMatrix_posSemidef (a := a) sigma) alpha) alpha =
+          (State.identityTensorStateMatrix_posSemidef (a := a) sigma) alpha)
+        ⟨alpha, lt_trans zero_lt_one halpha⟩ =
       psdSchattenPNorm
         (psi.upwardRenyiDualityHighCMatrix sigma.matrix
           (upwardRenyiDualityParameter alpha))
         (psi.upwardRenyiDualityHighCMatrix_posSemidef sigma.matrix
-          (upwardRenyiDualityParameter alpha)) alpha := by
+          (upwardRenyiDualityParameter alpha))
+        ⟨alpha, lt_trans zero_lt_one halpha⟩ := by
   have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
   let v := psi.upwardRenyiDualityABWeightedAmplitude sigma.matrix
     (upwardRenyiDualityParameter alpha)
   have hcomp :=
     psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
-      v halpha_pos
+      v ⟨alpha, halpha_pos⟩
   have hleft :=
     psi.partialTraceB_rankOne_upwardRenyiDualityABWeightedAmplitude_eq_referenceInner
       sigma hsigma halpha
@@ -879,19 +891,20 @@ theorem psdSchattenPNorm_highReferenceInner_eq_highCMatrix
         (State.sandwichedRenyiReferenceInner psi.state.marginalAB
           (State.identityTensorStateMatrix (a := a) sigma) alpha)
         (State.sandwichedRenyiReferenceInner_posSemidef psi.state.marginalAB
-          (State.identityTensorStateMatrix_posSemidef (a := a) sigma) alpha) alpha =
+          (State.identityTensorStateMatrix_posSemidef (a := a) sigma) alpha)
+        ⟨alpha, halpha_pos⟩ =
       psdSchattenPNorm
         (partialTraceB (a := Prod a b) (b := c) (rankOneMatrix v))
-        (partialTraceB_posSemidef (rankOneMatrix_pos v)) alpha :=
-          psdSchattenPNorm_congr hleft.symm _ _ alpha
+        (partialTraceB_posSemidef (rankOneMatrix_pos v)) ⟨alpha, halpha_pos⟩ :=
+          psdSchattenPNorm_congr hleft.symm _ _ ⟨alpha, halpha_pos⟩
     _ = psdSchattenPNorm
         (partialTraceA (a := Prod a b) (b := c) (rankOneMatrix v))
-        (partialTraceA_posSemidef (rankOneMatrix_pos v)) alpha := hcomp
+        (partialTraceA_posSemidef (rankOneMatrix_pos v)) ⟨alpha, halpha_pos⟩ := hcomp
     _ = psdSchattenPNorm
         (psi.upwardRenyiDualityHighCMatrix sigma.matrix
           (upwardRenyiDualityParameter alpha))
         (psi.upwardRenyiDualityHighCMatrix_posSemidef sigma.matrix
-          (upwardRenyiDualityParameter alpha)) alpha := by rfl
+          (upwardRenyiDualityParameter alpha)) ⟨alpha, halpha_pos⟩ := by rfl
 
 /-- State-language form of the full-rank Sion exchange proved at the matrix
 boundary in `ConditionalRenyiMinimaxBoundary`. -/
@@ -962,7 +975,8 @@ theorem upwardRenyiDualityHighBracket_iSup_EReal_eq
         (psi.upwardRenyiDualityHighCMatrix sigma.matrix
           (upwardRenyiDualityParameter alpha))
         (psi.upwardRenyiDualityHighCMatrix_posSemidef sigma.matrix
-          (upwardRenyiDualityParameter alpha)) alpha : EReal) := by
+          (upwardRenyiDualityParameter alpha))
+        ⟨alpha, lt_trans zero_lt_one halpha⟩ : EReal) := by
   letI : Nonempty (State c) := ⟨State.maximallyMixed c⟩
   let f : State c -> Real := fun tau =>
     State.abcSidePowerTraceRe (a := a) psi.state.matrix
@@ -971,7 +985,7 @@ theorem upwardRenyiDualityHighBracket_iSup_EReal_eq
     (psi.upwardRenyiDualityHighCMatrix sigma.matrix
       (upwardRenyiDualityParameter alpha))
     (psi.upwardRenyiDualityHighCMatrix_posSemidef sigma.matrix
-      (upwardRenyiDualityParameter alpha)) alpha
+      (upwardRenyiDualityParameter alpha)) ⟨alpha, lt_trans zero_lt_one halpha⟩
   have hgreatest : IsGreatest (Set.range f) target := by
     simpa [f, target] using
       psi.upwardRenyiDualityHighBracket_isGreatest sigma hsigma halpha
@@ -994,11 +1008,13 @@ theorem upwardRenyiDualityLowBracket_density_iInf_EReal_eq
         (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix
           (upwardRenyiDualityParameter alpha))
         (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix
-          (upwardRenyiDualityParameter alpha)) beta : EReal) := by
+          (upwardRenyiDualityParameter alpha))
+        ⟨beta, lt_trans (by norm_num) hbeta_half⟩ : EReal) := by
   let p := upwardRenyiDualityParameter alpha
   let target : Real := psdSchattenPNorm
     (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix p)
-    (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix p) beta
+    (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix p)
+    ⟨beta, lt_trans (by norm_num) hbeta_half⟩
   have hleast : IsLeast (psi.upwardRenyiDualityLowBracketValueSet tau p) target := by
     simpa [p, target] using
       psi.upwardRenyiDualityLowBracket_isLeast tau
@@ -1036,7 +1052,8 @@ theorem upwardRenyiDualityLowBracket_fullRank_iInf_EReal_eq
         (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix
           (upwardRenyiDualityParameter alpha))
         (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix
-          (upwardRenyiDualityParameter alpha)) beta : EReal) := by
+          (upwardRenyiDualityParameter alpha))
+        ⟨beta, lt_trans (by norm_num) hbeta_half⟩ : EReal) := by
   let p := upwardRenyiDualityParameter alpha
   calc
     (⨅ sigma : {sigma : State b // sigma.matrix.PosDef},
@@ -1060,7 +1077,8 @@ theorem upwardRenyiDualityLowBracket_fullRank_iInf_EReal_eq
               exact (state_iInf_matrix_eq_densityMatrixSet_iInf_source _).symm
     _ = (psdSchattenPNorm
         (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix p)
-        (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix p) beta :
+        (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix p)
+        ⟨beta, lt_trans (by norm_num) hbeta_half⟩ :
           EReal) := by
             simpa [p] using psi.upwardRenyiDualityLowBracket_density_iInf_EReal_eq
               tau halpha hbeta_half hbeta_one hconj
@@ -1079,28 +1097,32 @@ theorem upwardRenyiDuality_commonSchattenExtrema_eq
         (psi.upwardRenyiDualityHighCMatrix sigma.1.matrix
           (upwardRenyiDualityParameter alpha))
         (psi.upwardRenyiDualityHighCMatrix_posSemidef sigma.1.matrix
-          (upwardRenyiDualityParameter alpha)) alpha) =
+          (upwardRenyiDualityParameter alpha))
+        ⟨alpha, lt_trans zero_lt_one halpha⟩) =
       sSup (Set.range fun tau : State c =>
         psdSchattenPNorm
           (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix
             (upwardRenyiDualityParameter alpha))
           (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix
-            (upwardRenyiDualityParameter alpha)) beta) := by
+            (upwardRenyiDualityParameter alpha))
+          ⟨beta, lt_trans (by norm_num) hbeta_half⟩) := by
   let S := {sigma : State b // sigma.matrix.PosDef}
   let high : S -> Real := fun sigma =>
     psdSchattenPNorm
       (psi.upwardRenyiDualityHighCMatrix sigma.1.matrix
         (upwardRenyiDualityParameter alpha))
       (psi.upwardRenyiDualityHighCMatrix_posSemidef sigma.1.matrix
-        (upwardRenyiDualityParameter alpha)) alpha
+        (upwardRenyiDualityParameter alpha))
+      ⟨alpha, lt_trans zero_lt_one halpha⟩
   let low : State c -> Real := fun tau =>
     psdSchattenPNorm
       (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix
         (upwardRenyiDualityParameter alpha))
       (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix
-        (upwardRenyiDualityParameter alpha)) beta
+        (upwardRenyiDualityParameter alpha))
+      ⟨beta, lt_trans (by norm_num) hbeta_half⟩
   let sigma0 : S :=
-    ⟨State.maximallyMixed b, State.maximallyMixed_posDef_of_nonempty⟩
+    ⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩
   letI : Nonempty S := ⟨sigma0⟩
   letI : Nonempty (State c) := ⟨State.maximallyMixed c⟩
   have hhigh_bdd : BddBelow (Set.range high) := by
@@ -1159,7 +1181,8 @@ theorem upwardRenyiDualityABSourceCandidate_eq_highNormLog
           (psi.upwardRenyiDualityHighCMatrix sigma.matrix
             (upwardRenyiDualityParameter alpha))
           (psi.upwardRenyiDualityHighCMatrix_posSemidef sigma.matrix
-            (upwardRenyiDualityParameter alpha)) alpha) := by
+            (upwardRenyiDualityParameter alpha))
+          ⟨alpha, lt_trans zero_lt_one halpha⟩) := by
   have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
   have halpha_one : alpha ≠ 1 := ne_of_gt halpha
   rw [State.conditionalSandwichedRenyiUpSourceCandidate_eq_schattenLog
@@ -1185,7 +1208,8 @@ theorem upwardRenyiDualityACSourceCandidate_eq_lowNormLog
           (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix
             (upwardRenyiDualityParameter alpha))
           (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix
-            (upwardRenyiDualityParameter alpha)) beta) := by
+            (upwardRenyiDualityParameter alpha))
+          ⟨beta, lt_trans (by norm_num) hbeta_half⟩) := by
   have hbeta_pos : 0 < beta := lt_trans (by norm_num) hbeta_half
   have hbeta_one_ne : beta ≠ 1 := ne_of_lt hbeta_one
   rw [State.conditionalSandwichedRenyiUpSourceCandidate_eq_schattenLog
@@ -1270,12 +1294,14 @@ theorem upwardRenyiDualityLowNorm_densityIdentityRegularization_tendsto
           (psi.upwardRenyiDualityEffectiveBMatrix
             (State.densityIdentityRegularization tau epsilon).matrix p)
           (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef
-            (State.densityIdentityRegularization tau epsilon).matrix p) beta)
+            (State.densityIdentityRegularization tau epsilon).matrix p)
+          ⟨beta, hbeta⟩)
       (nhdsWithin (0 : Real) (Set.Ioi 0))
       (nhds (psdSchattenPNorm
         (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix p)
-        (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix p) beta)) := by
-  exact psdSchattenPNorm_tendsto_of_tendsto_posSemidef hbeta
+        (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix p)
+        ⟨beta, hbeta⟩)) := by
+  exact psdSchattenPNorm_tendsto_of_tendsto_posSemidef ⟨beta, hbeta⟩
     (psi.upwardRenyiDualityEffectiveBMatrix_densityIdentityRegularization_tendsto
       tau hp)
     (fun epsilon =>
@@ -1299,30 +1325,34 @@ theorem upwardRenyiDualityLowNorm_fullRank_sSup_eq_all
         (psi.upwardRenyiDualityEffectiveBMatrix tau.1.matrix
           (upwardRenyiDualityParameter alpha))
         (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.1.matrix
-          (upwardRenyiDualityParameter alpha)) beta) =
+          (upwardRenyiDualityParameter alpha))
+        ⟨beta, lt_trans (by norm_num) hbeta_half⟩) =
       sSup (Set.range fun tau : State c =>
         psdSchattenPNorm
           (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix
             (upwardRenyiDualityParameter alpha))
           (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix
-            (upwardRenyiDualityParameter alpha)) beta) := by
+            (upwardRenyiDualityParameter alpha))
+          ⟨beta, lt_trans (by norm_num) hbeta_half⟩) := by
   let T := {tau : State c // tau.matrix.PosDef}
   let full : T -> Real := fun tau =>
     psdSchattenPNorm
       (psi.upwardRenyiDualityEffectiveBMatrix tau.1.matrix
         (upwardRenyiDualityParameter alpha))
       (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.1.matrix
-        (upwardRenyiDualityParameter alpha)) beta
+        (upwardRenyiDualityParameter alpha))
+      ⟨beta, lt_trans (by norm_num) hbeta_half⟩
   let all : State c -> Real := fun tau =>
     psdSchattenPNorm
       (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix
         (upwardRenyiDualityParameter alpha))
       (psi.upwardRenyiDualityEffectiveBMatrix_posSemidef tau.matrix
-        (upwardRenyiDualityParameter alpha)) beta
+        (upwardRenyiDualityParameter alpha))
+      ⟨beta, lt_trans (by norm_num) hbeta_half⟩
   let sigma0 : {sigma : State b // sigma.matrix.PosDef} :=
-    ⟨State.maximallyMixed b, State.maximallyMixed_posDef_of_nonempty⟩
+    ⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩
   let tau0 : T :=
-    ⟨State.maximallyMixed c, State.maximallyMixed_posDef_of_nonempty⟩
+    ⟨State.maximallyMixed c, State.maximallyMixed_posDef⟩
   letI : Nonempty T := ⟨tau0⟩
   letI : Nonempty (State c) := ⟨tau0.1⟩
   have hall_bdd : BddAbove (Set.range all) := by
@@ -1330,7 +1360,8 @@ theorem upwardRenyiDualityLowNorm_fullRank_sSup_eq_all
       (psi.upwardRenyiDualityHighCMatrix sigma0.1.matrix
         (upwardRenyiDualityParameter alpha))
       (psi.upwardRenyiDualityHighCMatrix_posSemidef sigma0.1.matrix
-        (upwardRenyiDualityParameter alpha)) alpha
+        (upwardRenyiDualityParameter alpha))
+      ⟨alpha, lt_trans zero_lt_one halpha⟩
     refine ⟨high0, ?_⟩
     rintro x ⟨tau, rfl⟩
     have hleast := psi.upwardRenyiDualityLowBracket_isLeast tau
@@ -1371,7 +1402,8 @@ theorem upwardRenyiDualityHighNorm_pos
     (psi : PureVector (Prod (Prod a b) c))
     (sigma : State b) (hsigma : sigma.matrix.PosDef)
     {alpha : Real} (halpha : 1 < alpha) :
-    0 < psi.upwardRenyiDualityHighNorm sigma alpha := by
+    0 < psi.upwardRenyiDualityHighNorm sigma
+      ⟨alpha, lt_trans zero_lt_one halpha⟩ := by
   have href : (State.identityTensorStateMatrix (a := a) sigma).PosDef :=
     State.identityTensorStateMatrix_posDef_of_posDef (a := a) sigma hsigma
   have hne := State.sandwichedRenyiReferenceInner_ne_zero_of_reference_posDef
@@ -1381,7 +1413,7 @@ theorem upwardRenyiDualityHighNorm_pos
       (State.identityTensorStateMatrix (a := a) sigma) alpha)
     (State.sandwichedRenyiReferenceInner_posSemidef psi.state.marginalAB
       (State.identityTensorStateMatrix_posSemidef (a := a) sigma) alpha)
-    (p := alpha) hne
+    (p := ⟨alpha, lt_trans zero_lt_one halpha⟩) hne
   rw [psi.psdSchattenPNorm_highReferenceInner_eq_highCMatrix
     sigma hsigma halpha] at hpos
   exact hpos
@@ -1392,7 +1424,8 @@ theorem upwardRenyiDualityLowNorm_pos_of_posDef
     {alpha beta : Real} (halpha : 1 < alpha)
     (hbeta_half : 1 / 2 < beta) (hbeta_one : beta < 1)
     (hconj : 1 / alpha + 1 / beta = 2) :
-    0 < psi.upwardRenyiDualityLowNorm tau alpha beta := by
+    0 < psi.upwardRenyiDualityLowNorm tau alpha
+      ⟨beta, lt_trans (by norm_num) hbeta_half⟩ := by
   have href : (State.identityTensorStateMatrix (a := a) tau).PosDef :=
     State.identityTensorStateMatrix_posDef_of_posDef (a := a) tau htau
   have hne := State.sandwichedRenyiReferenceInner_ne_zero_of_reference_posDef
@@ -1402,7 +1435,7 @@ theorem upwardRenyiDualityLowNorm_pos_of_posDef
       (State.identityTensorStateMatrix (a := a) tau) beta)
     (State.sandwichedRenyiReferenceInner_posSemidef psi.state.marginalAC
       (State.identityTensorStateMatrix_posSemidef (a := a) tau) beta)
-    (p := beta) hne
+    (p := ⟨beta, lt_trans (by norm_num) hbeta_half⟩) hne
   rw [psi.psdSchattenPNorm_lowReferenceInner_eq_effectiveBMatrix
     tau halpha hbeta_half hbeta_one hconj] at hpos
   exact hpos
@@ -1414,10 +1447,12 @@ theorem upwardRenyiDualityLowNorm_range_bddAbove
     (hbeta_half : 1 / 2 < beta) (hbeta_one : beta < 1)
     (hconj : 1 / alpha + 1 / beta = 2) :
     BddAbove (Set.range fun tau : State c =>
-      psi.upwardRenyiDualityLowNorm tau alpha beta) := by
+      psi.upwardRenyiDualityLowNorm tau alpha
+        ⟨beta, lt_trans (by norm_num) hbeta_half⟩) := by
   let sigma0 : {sigma : State b // sigma.matrix.PosDef} :=
-    ⟨State.maximallyMixed b, State.maximallyMixed_posDef_of_nonempty⟩
-  refine ⟨psi.upwardRenyiDualityHighNorm sigma0.1 alpha, ?_⟩
+    ⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩
+  refine ⟨psi.upwardRenyiDualityHighNorm sigma0.1
+    ⟨alpha, lt_trans zero_lt_one halpha⟩, ?_⟩
   rintro x ⟨tau, rfl⟩
   have hleast := psi.upwardRenyiDualityLowBracket_isLeast tau
     halpha hbeta_half hbeta_one hconj
@@ -1425,7 +1460,8 @@ theorem upwardRenyiDualityLowNorm_range_bddAbove
       (psi.upwardRenyiDualityEffectiveBMatrix tau.matrix
         (upwardRenyiDualityParameter alpha)) sigma0.1.matrix :=
     Matrix.Supports.of_right_posDef _ _ sigma0.2
-  have hlow : psi.upwardRenyiDualityLowNorm tau alpha beta <=
+  have hlow : psi.upwardRenyiDualityLowNorm tau alpha
+      ⟨beta, lt_trans (by norm_num) hbeta_half⟩ <=
       State.abcSidePowerTraceRe (a := a) psi.state.matrix
         sigma0.1.matrix tau.matrix (upwardRenyiDualityParameter alpha) := by
     exact hleast.2 ⟨sigma0.1, hsupport, rfl⟩
@@ -1440,9 +1476,11 @@ private theorem upwardRenyiDuality_commonSchattenExtrema_eq_named
     (hbeta_half : 1 / 2 < beta) (hbeta_one : beta < 1)
     (hconj : 1 / alpha + 1 / beta = 2) :
     sInf (Set.range fun sigma : {sigma : State b // sigma.matrix.PosDef} =>
-      psi.upwardRenyiDualityHighNorm sigma.1 alpha) =
+      psi.upwardRenyiDualityHighNorm sigma.1
+        ⟨alpha, lt_trans zero_lt_one halpha⟩) =
       sSup (Set.range fun tau : State c =>
-        psi.upwardRenyiDualityLowNorm tau alpha beta) := by
+        psi.upwardRenyiDualityLowNorm tau alpha
+          ⟨beta, lt_trans (by norm_num) hbeta_half⟩) := by
   simpa [upwardRenyiDualityHighNorm, upwardRenyiDualityLowNorm] using
     psi.upwardRenyiDuality_commonSchattenExtrema_eq
       halpha hbeta_half hbeta_one hconj
@@ -1454,9 +1492,11 @@ private theorem upwardRenyiDualityLowNorm_fullRank_sSup_eq_all_named
     (hbeta_half : 1 / 2 < beta) (hbeta_one : beta < 1)
     (hconj : 1 / alpha + 1 / beta = 2) :
     sSup (Set.range fun tau : {tau : State c // tau.matrix.PosDef} =>
-      psi.upwardRenyiDualityLowNorm tau.1 alpha beta) =
+      psi.upwardRenyiDualityLowNorm tau.1 alpha
+        ⟨beta, lt_trans (by norm_num) hbeta_half⟩) =
       sSup (Set.range fun tau : State c =>
-        psi.upwardRenyiDualityLowNorm tau alpha beta) := by
+      psi.upwardRenyiDualityLowNorm tau alpha
+        ⟨beta, lt_trans (by norm_num) hbeta_half⟩) := by
   simpa [upwardRenyiDualityLowNorm] using
     psi.upwardRenyiDualityLowNorm_fullRank_sSup_eq_all
       halpha hbeta_half hbeta_one hconj
@@ -1468,18 +1508,20 @@ theorem upwardRenyiDuality_commonSchattenExtremum_pos
     (hbeta_half : 1 / 2 < beta) (hbeta_one : beta < 1)
     (hconj : 1 / alpha + 1 / beta = 2) :
     0 < sInf (Set.range fun sigma : {sigma : State b // sigma.matrix.PosDef} =>
-      psi.upwardRenyiDualityHighNorm sigma.1 alpha) := by
+      psi.upwardRenyiDualityHighNorm sigma.1
+        ⟨alpha, lt_trans zero_lt_one halpha⟩) := by
   rw [psi.upwardRenyiDuality_commonSchattenExtrema_eq_named
     halpha hbeta_half hbeta_one hconj]
   rw [← psi.upwardRenyiDualityLowNorm_fullRank_sSup_eq_all_named
     halpha hbeta_half hbeta_one hconj]
   let tau0 : {tau : State c // tau.matrix.PosDef} :=
-    ⟨State.maximallyMixed c, State.maximallyMixed_posDef_of_nonempty⟩
+    ⟨State.maximallyMixed c, State.maximallyMixed_posDef⟩
   have hall_bdd := psi.upwardRenyiDualityLowNorm_range_bddAbove
     halpha hbeta_half hbeta_one hconj
   have hfull_bdd : BddAbove (Set.range fun tau :
       {tau : State c // tau.matrix.PosDef} =>
-        psi.upwardRenyiDualityLowNorm tau.1 alpha beta) := by
+        psi.upwardRenyiDualityLowNorm tau.1 alpha
+          ⟨beta, lt_trans (by norm_num) hbeta_half⟩) := by
     rcases hall_bdd with ⟨upper, hupper⟩
     refine ⟨upper, ?_⟩
     rintro x ⟨tau, rfl⟩
@@ -1501,16 +1543,18 @@ theorem conditionalSandwichedRenyiUpSource_marginalAB_eq_commonLog
       -(1 / upwardRenyiDualityParameter alpha) *
         log2 (sInf (Set.range fun sigma :
           {sigma : State b // sigma.matrix.PosDef} =>
-            psi.upwardRenyiDualityHighNorm sigma.1 alpha)) := by
+            psi.upwardRenyiDualityHighNorm sigma.1
+              ⟨alpha, lt_trans zero_lt_one halpha⟩)) := by
   let S := {sigma : State b // sigma.matrix.PosDef}
   let high : S -> Real := fun sigma =>
-    psi.upwardRenyiDualityHighNorm sigma.1 alpha
+    psi.upwardRenyiDualityHighNorm sigma.1
+      ⟨alpha, lt_trans zero_lt_one halpha⟩
   let coeff : Real := 1 / upwardRenyiDualityParameter alpha
   let candidate : S -> Real := fun sigma =>
     psi.state.marginalAB.conditionalSandwichedRenyiUpSourceCandidate
       sigma.1 sigma.2 alpha (lt_trans zero_lt_one halpha) (ne_of_gt halpha)
   letI : Nonempty S :=
-    ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef_of_nonempty⟩⟩
+    ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   have hp : 0 < upwardRenyiDualityParameter alpha :=
     upwardRenyiDualityParameter_pos halpha
   have hcoeff : 0 <= coeff := (one_div_pos.mpr hp).le
@@ -1570,16 +1614,18 @@ theorem conditionalSandwichedRenyiUpSource_marginalAC_eq_commonLog
       (1 / upwardRenyiDualityParameter alpha) *
         log2 (sSup (Set.range fun tau :
           {tau : State c // tau.matrix.PosDef} =>
-            psi.upwardRenyiDualityLowNorm tau.1 alpha beta)) := by
+            psi.upwardRenyiDualityLowNorm tau.1 alpha
+              ⟨beta, lt_trans (by norm_num) hbeta_half⟩)) := by
   let T := {tau : State c // tau.matrix.PosDef}
   let low : T -> Real := fun tau =>
-    psi.upwardRenyiDualityLowNorm tau.1 alpha beta
+    psi.upwardRenyiDualityLowNorm tau.1 alpha
+      ⟨beta, lt_trans (by norm_num) hbeta_half⟩
   let coeff : Real := 1 / upwardRenyiDualityParameter alpha
   let candidate : T -> Real := fun tau =>
     psi.state.marginalAC.conditionalSandwichedRenyiUpSourceCandidate
       tau.1 tau.2 beta (lt_trans (by norm_num) hbeta_half) (ne_of_lt hbeta_one)
   letI : Nonempty T :=
-    ⟨⟨State.maximallyMixed c, State.maximallyMixed_posDef_of_nonempty⟩⟩
+    ⟨⟨State.maximallyMixed c, State.maximallyMixed_posDef⟩⟩
   have hp : 0 < upwardRenyiDualityParameter alpha :=
     upwardRenyiDualityParameter_pos halpha
   have hcoeff : 0 <= coeff := (one_div_pos.mpr hp).le

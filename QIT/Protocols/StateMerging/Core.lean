@@ -127,8 +127,8 @@ def initialState :
       (Prod
         (Prod (Prod (TensorPower a n) kA) (Prod (TensorPower b n) kB))
         (TensorPower r n)) :=
-  ((stateMergingBlockSource psi n).prod
-      (maximallyEntangledPureVector C.inputEbitPairing)).state.reindex
+  ((stateMergingBlockSource psi n).state.prod
+      (State.maximallyEntangled C.inputEbitPairing)).reindex
     (stateMergingInputEquiv
       (TensorPower a n) (TensorPower b n) (TensorPower r n) kA kB)
 
@@ -148,8 +148,8 @@ def targetState :
       (Prod
         (Prod lA (Prod (Prod (TensorPower a n) (TensorPower b n)) lB))
         (TensorPower r n)) :=
-  ((stateMergingBlockSource psi n).prod
-      (maximallyEntangledPureVector C.outputEbitPairing)).state.reindex
+  ((stateMergingBlockSource psi n).state.prod
+      (State.maximallyEntangled C.outputEbitPairing)).reindex
     (stateMergingTargetEquiv
       (TensorPower a n) (TensorPower b n) (TensorPower r n) lA lB)
 
@@ -183,12 +183,30 @@ end StateMergingBlockProtocol
 
 namespace PureVector
 
-/-- Achievable net entanglement rate for standard state merging.  Every
-positive rate slack and fidelity-error tolerance is met by concrete one-way
-LOCC block protocols at all sufficiently large blocklengths.  One exponent,
-uniform over both tolerances and all selected protocols, bounds the output
-ebit rank as required by the HOW converse. -/
+/-- Achievable net entanglement rate for standard state merging in the sense
+of HOW. Every positive rate slack and fidelity-error tolerance is met by
+concrete one-way LOCC block protocols at all sufficiently large blocklengths.
+No output-ebit-rank growth condition is imposed. -/
 def IsAchievableStateMergingRate
+    (psi : PureVector (Prod (Prod a b) r)) (R : ℝ) : Prop :=
+  ∀ delta : ℝ, 0 < delta → ∀ epsilon : ℝ, 0 < epsilon →
+    ∃ N : ℕ, ∀ n : ℕ, n ≥ N →
+      ∃ (kA : Type x), ∃ (_ : Fintype kA), ∃ (_ : DecidableEq kA),
+        ∃ (_ : Nonempty kA),
+      ∃ (kB : Type y), ∃ (_ : Fintype kB), ∃ (_ : DecidableEq kB),
+      ∃ (lA : Type z), ∃ (_ : Fintype lA), ∃ (_ : DecidableEq lA),
+        ∃ (_ : Nonempty lA),
+      ∃ (lB : Type p), ∃ (_ : Fintype lB), ∃ (_ : DecidableEq lB),
+      ∃ (outcome : Type q), ∃ (_ : Fintype outcome), ∃ (_ : DecidableEq outcome),
+        ∃ (_ : Nonempty outcome),
+      ∃ C : StateMergingBlockProtocol psi n kA kB lA lB outcome,
+        C.netEntanglementRate ≤ R + delta ∧
+        C.fidelityError ≤ epsilon
+
+/-- Exponent-restricted state-merging achievability used by the existing HOW
+converse. One nonnegative exponent uniformly bounds the output ebit rank over
+all tolerances and all sufficiently large selected protocols. -/
+def IsAchievableStateMergingRateWithOutputEbitExponent
     (psi : PureVector (Prod (Prod a b) r)) (R : ℝ) : Prop :=
   ∃ outputEbitExponent : ℝ, 0 ≤ outputEbitExponent ∧
   ∀ delta : ℝ, 0 < delta → ∀ epsilon : ℝ, 0 < epsilon →
@@ -205,6 +223,26 @@ def IsAchievableStateMergingRate
         C.netEntanglementRate ≤ R + delta ∧
         C.fidelityError ≤ epsilon ∧
         log2 (Fintype.card lA : ℝ) ≤ outputEbitExponent * (n : ℝ)
+
+/-- Exponent-restricted achievability implies canonical HOW achievability. -/
+theorem IsAchievableStateMergingRateWithOutputEbitExponent.toIsAchievableStateMergingRate
+    {psi : PureVector (Prod (Prod a b) r)} {R : ℝ}
+    (hR :
+      IsAchievableStateMergingRateWithOutputEbitExponent.{u, v, w, x, y, z, p, q} psi R) :
+    IsAchievableStateMergingRate.{u, v, w, x, y, z, p, q} psi R := by
+  obtain ⟨_, _, hrestricted⟩ := hR
+  intro delta hdelta epsilon hepsilon
+  obtain ⟨N, _, hblocks⟩ := hrestricted delta hdelta epsilon hepsilon
+  refine ⟨N, ?_⟩
+  intro n hn
+  obtain ⟨kA, hkAF, hkAD, hkAN, kB, hkBF, hkBD,
+      lA, hlAF, hlAD, hlAN, lB, hlBF, hlBD,
+      outcome, houtcomeF, houtcomeD, houtcomeN,
+      C, hrate, herror, _⟩ := hblocks n hn
+  exact ⟨kA, hkAF, hkAD, hkAN, kB, hkBF, hkBD,
+    lA, hlAF, hlAD, hlAN, lB, hlBF, hlBD,
+    outcome, houtcomeF, houtcomeD, houtcomeN,
+    C, hrate, herror⟩
 
 /-- Standard state-merging cost: the infimum of achievable net entanglement
 rates.  No sign restriction is imposed, so negative conditional-entropy

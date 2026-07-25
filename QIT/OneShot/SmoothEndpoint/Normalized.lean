@@ -7,6 +7,8 @@ Authors: QuAIR Team
 module
 
 public import QIT.OneShot.SmoothEndpoint.Order
+public import QIT.OneShot.SmoothEndpoint.MaximallyEntangledProjector
+public import QIT.States.MaximallyMixed
 
 @[expose] public section
 
@@ -28,7 +30,8 @@ variable {a : Type u} {b : Type v}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 variable {c : Type*} [Fintype c] [DecidableEq c]
 
-noncomputable local instance cMatrixCStarAlgebra : CStarAlgebra (CMatrix a) := {}
+noncomputable local instance normalizedCMatrixCStarAlgebra :
+    CStarAlgebra (CMatrix a) := {}
 
 local instance cMatrixNormedSpaceReal : NormedSpace ℝ (CMatrix b) :=
   inferInstance
@@ -193,6 +196,7 @@ theorem posSemidef_le_trace_re_smul_one {A : CMatrix a} (hA : A.PosSemidef) :
   intro i
   exact_mod_cast sub_nonneg.mpr (heig_le_trace i)
 
+set_option maxHeartbeats 900000 in
 /-- The operator norm of a PSD matrix is controlled by its trace. -/
 theorem norm_le_trace_re_mul_norm_one_of_posSemidef {A : CMatrix a} (hA : A.PosSemidef) :
     ‖A‖ ≤ A.trace.re * ‖(1 : CMatrix a)‖ := by
@@ -212,32 +216,6 @@ theorem norm_le_trace_re_mul_norm_one_of_posSemidef {A : CMatrix a} (hA : A.PosS
       rw [Complex.norm_of_nonneg htr_nonneg]
 
 /-- The maximally mixed state on a nonempty finite system. -/
-def maximallyMixed (a : Type u) [Fintype a] [DecidableEq a] [Nonempty a] : State a where
-  matrix := (((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ) • (1 : CMatrix a)
-  pos := by
-    have hscalar : (0 : ℂ) ≤ (((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ) := by
-      exact_mod_cast inv_nonneg.mpr (Nat.cast_nonneg (Fintype.card a : ℕ))
-    exact Matrix.PosSemidef.smul Matrix.PosSemidef.one hscalar
-  trace_eq_one := by
-    rw [Matrix.trace_smul, Matrix.trace_one]
-    have hcard : (Fintype.card a : ℂ) ≠ 0 := by
-      exact_mod_cast (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)
-    norm_num [hcard]
-
-@[simp]
-theorem maximallyMixed_matrix [Nonempty a] :
-    (maximallyMixed a).matrix =
-      (((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ) • (1 : CMatrix a) :=
-  rfl
-
-omit [Fintype a] in theorem identityTensorStateMatrix_maximallyMixed [Nonempty b] :
-    identityTensorStateMatrix (a := a) (maximallyMixed b) =
-      ((((Fintype.card b : ℝ)⁻¹ : ℝ) : ℂ) • (1 : CMatrix (Prod a b))) := by
-  ext x y
-  by_cases h1 : x.1 = y.1 <;> by_cases h2 : x.2 = y.2 <;>
-    simp [identityTensorStateMatrix, maximallyMixed, Matrix.kronecker,
-      Matrix.kroneckerMap_apply, Matrix.one_apply, Prod.ext_iff, h1, h2]
-
 theorem identityTensorStateMatrix_trace_re (σ : State b) :
     (identityTensorStateMatrix (a := a) σ).trace.re = (Fintype.card a : ℝ) := by
   change (Matrix.kroneckerMap (fun x y => x * y) (1 : CMatrix a) σ.matrix).trace.re =
@@ -363,53 +341,6 @@ theorem psdSqrt_identityTensorStateMatrix (σ : State b) :
     simpa using (psdSqrt_real_smul_one (a := a) (r := 1) (by norm_num))
   rw [hone]
   simp [State.sqrtMatrix]
-
-theorem maximallyMixed_sqrtMatrix [Nonempty a] :
-    (maximallyMixed a).sqrtMatrix =
-      (((Real.sqrt ((Fintype.card a : ℝ)⁻¹) : ℝ) : ℂ) •
-        (1 : CMatrix a)) := by
-  rw [State.sqrtMatrix, maximallyMixed_matrix]
-  exact psdSqrt_real_smul_one (a := a)
-    (inv_nonneg.mpr (Nat.cast_nonneg _))
-
-theorem maximallyMixed_prod_sqrtMatrix [Nonempty a] (σ : State b) :
-    ((maximallyMixed a).prod σ).sqrtMatrix =
-      ((Real.sqrt ((Fintype.card a : ℝ)⁻¹) : ℝ) : ℂ) •
-        Matrix.kronecker (1 : CMatrix a) σ.sqrtMatrix := by
-  rw [State.sqrtMatrix, State.prod]
-  rw [psdSqrt_kronecker (maximallyMixed a).pos σ.pos]
-  change Matrix.kronecker ((maximallyMixed a).sqrtMatrix) (σ.sqrtMatrix) =
-    ((Real.sqrt ((Fintype.card a : ℝ)⁻¹) : ℝ) : ℂ) •
-      Matrix.kronecker (1 : CMatrix a) σ.sqrtMatrix
-  rw [maximallyMixed_sqrtMatrix (a := a)]
-  ext x y
-  simp [Matrix.kroneckerMap_apply, mul_assoc]
-
-theorem sqrt_identityTensorStateMatrix_eq_sqrt_card_smul_maximallyMixed_prod_sqrtMatrix
-    [Nonempty a] (σ : State b) :
-    Matrix.kronecker (1 : CMatrix a) σ.sqrtMatrix =
-      ((Real.sqrt (Fintype.card a : ℝ) : ℂ) •
-        ((maximallyMixed a).prod σ).sqrtMatrix) := by
-  have hcard_pos : 0 < (Fintype.card a : ℝ) := by
-    exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
-  have hreal :
-      Real.sqrt (Fintype.card a : ℝ) *
-          Real.sqrt ((Fintype.card a : ℝ)⁻¹) = 1 := by
-    rw [← Real.sqrt_mul (le_of_lt hcard_pos)]
-    rw [mul_inv_cancel₀ hcard_pos.ne', Real.sqrt_one]
-  rw [maximallyMixed_prod_sqrtMatrix (a := a) σ]
-  ext x y
-  simp [Matrix.kroneckerMap_apply]
-
-theorem identityTensorStateMatrix_eq_card_smul_maximallyMixed_prod
-    [Nonempty a] (σ : State b) :
-    identityTensorStateMatrix (a := a) σ =
-      ((Fintype.card a : ℂ) • ((maximallyMixed a).prod σ).matrix) := by
-  have hcard_ne : (Fintype.card a : ℂ) ≠ 0 := by
-    exact_mod_cast (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)
-  ext x y
-  simp [identityTensorStateMatrix, State.prod, maximallyMixed_matrix, hcard_ne,
-    Matrix.kroneckerMap_apply, mul_assoc]
 
 theorem conditionalMaxEntropyExponentCandidate_eq_sqrt_identity
     (ρ : State (Prod a b)) (σ : State b) :
@@ -1976,302 +1907,6 @@ theorem exists_krausStack_contraction_conditionalMinEntropyDualEffectTransposeMa
     exact conditionalMinEntropyDualEffectTransposeMatrixMap_traceNonincreasing
       (a := a) (b := b) hM
   exact MatrixMap.smoothEndpointKrausStack_contraction_of_traceNonincreasing K hTNI
-
-/-- The maximally-entangled projector on the outer `A` registers, tensored
-with the identity on the middle `B` register.
-
-On `(A × B) × A`, this is
-`|Ω⟩⟨Ω|_{AA'} ⊗ I_B`, where
-`|Ω⟩ = |A|^{-1/2} ∑ᵢ |i⟩|i⟩`.  The concrete matrix form avoids introducing a
-separate maximally-entangled-vector API just for the endpoint SDP bridge. -/
-def maximallyEntangledProjectorWithMiddle [Nonempty a] (b : Type v) [Fintype b]
-    [DecidableEq b] :
-    CMatrix (Prod (Prod a b) a) :=
-  fun x y =>
-    if x.1.2 = y.1.2 ∧ x.1.1 = x.2 ∧ y.1.1 = y.2 then
-      (((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ)
-    else
-      0
-
-@[simp]
-theorem maximallyEntangledProjectorWithMiddle_apply [Nonempty a]
-    {b : Type v} [Fintype b] [DecidableEq b] (x y : Prod (Prod a b) a) :
-    maximallyEntangledProjectorWithMiddle (a := a) b x y =
-      if x.1.2 = y.1.2 ∧ x.1.1 = x.2 ∧ y.1.1 = y.2 then
-        (((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ)
-      else
-        0 :=
-  rfl
-
-private def maximallyEntangledMiddleVector [Nonempty a] (b0 : b) :
-    Prod (Prod a b) a → ℂ :=
-  fun x => if x.1.2 = b0 ∧ x.1.1 = x.2 then
-    (Real.sqrt ((Fintype.card a : ℝ)⁻¹) : ℂ) else 0
-
-private theorem maximallyEntangledProjectorWithMiddle_eq_sum_rankOne [Nonempty a] :
-    maximallyEntangledProjectorWithMiddle (a := a) b =
-      ∑ b0 : b, rankOneMatrix (maximallyEntangledMiddleVector (a := a) b0) := by
-  classical
-  ext x y
-  simp only [Matrix.sum_apply]
-  by_cases hb : x.1.2 = y.1.2
-  · have hsum :
-        (∑ b0 : b, rankOneMatrix (maximallyEntangledMiddleVector (a := a) b0) x y) =
-          rankOneMatrix (maximallyEntangledMiddleVector (a := a) x.1.2) x y := by
-      rw [Finset.sum_eq_single x.1.2]
-      · intro b0 _ hb0
-        have hx0 : x.1.2 ≠ b0 := by
-          intro h
-          exact hb0 (h.symm)
-        simp [maximallyEntangledMiddleVector, rankOneMatrix_apply, hx0]
-      · intro hnot
-        simp at hnot
-    rw [hsum]
-    by_cases hx : x.1.1 = x.2
-    · by_cases hy : y.1.1 = y.2
-      · have hcard_pos : 0 < (Fintype.card a : ℝ) := by
-          exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
-        have hsqrt_ne : Real.sqrt (Fintype.card a : ℝ) ≠ 0 := by
-          exact ne_of_gt (Real.sqrt_pos.mpr hcard_pos)
-        have hcoeff_real :
-            (((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ) =
-              (((Real.sqrt (Fintype.card a : ℝ))⁻¹ : ℝ) : ℂ) *
-                (((Real.sqrt (Fintype.card a : ℝ))⁻¹ : ℝ) : ℂ) := by
-          rw [← Complex.ofReal_mul]
-          congr 1
-          field_simp [hsqrt_ne]
-          rw [Real.sq_sqrt (le_of_lt hcard_pos)]
-        have hcoeff :
-            ((Fintype.card a : ℂ)⁻¹) =
-              ((Real.sqrt (Fintype.card a : ℝ) : ℂ)⁻¹) *
-                ((Real.sqrt (Fintype.card a : ℝ) : ℂ)⁻¹) := by
-          simpa [Complex.ofReal_inv] using hcoeff_real
-        simp [maximallyEntangledProjectorWithMiddle, maximallyEntangledMiddleVector,
-          rankOneMatrix_apply, hb, hx, hy]
-        exact hcoeff
-      · simp [maximallyEntangledProjectorWithMiddle, maximallyEntangledMiddleVector,
-          rankOneMatrix_apply, hb, hx, hy]
-    · simp [maximallyEntangledProjectorWithMiddle, maximallyEntangledMiddleVector,
-        rankOneMatrix_apply, hb, hx]
-  · have hsum :
-        (∑ b0 : b, rankOneMatrix (maximallyEntangledMiddleVector (a := a) b0) x y) = 0 := by
-      apply Finset.sum_eq_zero
-      intro b0 _
-      by_cases hx0 : x.1.2 = b0
-      · have hy0 : ¬ y.1.2 = b0 := by
-          intro hy0
-          exact hb (hx0.trans hy0.symm)
-        simp [maximallyEntangledMiddleVector, rankOneMatrix_apply, hx0, hy0]
-      · simp [maximallyEntangledMiddleVector, rankOneMatrix_apply, hx0]
-    simp [maximallyEntangledProjectorWithMiddle, hb]
-    exact hsum.symm
-
-theorem maximallyEntangledProjectorWithMiddle_posSemidef [Nonempty a] :
-    (maximallyEntangledProjectorWithMiddle (a := a) b).PosSemidef := by
-  classical
-  rw [maximallyEntangledProjectorWithMiddle_eq_sum_rankOne]
-  exact Matrix.posSemidef_sum Finset.univ fun b0 _ =>
-    rankOneMatrix_pos (maximallyEntangledMiddleVector (a := a) b0)
-
-private theorem sum_abab_delta_state {α : Type*} {β : Type*} {γ : Type*}
-    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
-    [AddCommMonoid γ] (p r : α) (q s : β) (f : α → β → α → β → γ) :
-    (∑ x₁ : α, ∑ y₁ : β, ∑ x₂ : α, ∑ y₂ : β,
-      if x₁ = p ∧ x₂ = r ∧ y₁ = q ∧ y₂ = s then f x₁ y₁ x₂ y₂ else 0) =
-      f p q r s := by
-  rw [Finset.sum_eq_single p]
-  · rw [Finset.sum_eq_single q]
-    · rw [Finset.sum_eq_single r]
-      · rw [Finset.sum_eq_single s]
-        · simp
-        · intro y _ hy
-          simp [hy]
-        · intro hnot
-          simp at hnot
-      · intro x _ hx
-        simp [hx]
-      · intro hnot
-        simp at hnot
-    · intro y _ hy
-      simp [hy]
-    · intro hnot
-      simp at hnot
-  · intro x _ hx
-    simp [hx]
-  · intro hnot
-    simp at hnot
-
-private theorem sum_projector_delta_state {α : Type*} {β : Type*}
-    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
-    (r : ℂ) (f : α → β → α → ℂ) :
-    (∑ x : α, ∑ y : β, ∑ u : α, ∑ z : α, ∑ v : β, ∑ w : α,
-      if x = u ∧ y = v ∧ z = w then r * f x y z else 0) =
-      r * (∑ x : α, ∑ z : α, ∑ y : β, f x y z) := by
-  calc
-    (∑ x : α, ∑ y : β, ∑ u : α, ∑ z : α, ∑ v : β, ∑ w : α,
-      if x = u ∧ y = v ∧ z = w then r * f x y z else 0) =
-        ∑ x : α, ∑ y : β, ∑ z : α, r * f x y z := by
-      apply Finset.sum_congr rfl
-      intro x _
-      apply Finset.sum_congr rfl
-      intro y _
-      calc
-        (∑ u : α, ∑ z : α, ∑ v : β, ∑ w : α,
-          if x = u ∧ y = v ∧ z = w then r * f x y z else 0) =
-            ∑ z : α, ∑ u : α, ∑ v : β, ∑ w : α,
-              if x = u ∧ y = v ∧ z = w then r * f x y z else 0 := by
-          rw [Finset.sum_comm]
-        _ = ∑ z : α, r * f x y z := by
-          apply Finset.sum_congr rfl
-          intro z _
-          rw [Finset.sum_eq_single x]
-          · rw [Finset.sum_eq_single y]
-            · rw [Finset.sum_eq_single z]
-              · simp
-              · intro w _ hw
-                have hzw : z ≠ w := hw.symm
-                simp [hzw]
-              · intro hnot
-                simp at hnot
-            · intro v _ hv
-              have hyv : y ≠ v := hv.symm
-              simp [hyv]
-            · intro hnot
-              simp at hnot
-          · intro u _ hu
-            have hxu : x ≠ u := hu.symm
-            simp [hxu]
-          · intro hnot
-            simp at hnot
-    _ = ∑ x : α, ∑ z : α, ∑ y : β, r * f x y z := by
-      apply Finset.sum_congr rfl
-      intro x _
-      rw [Finset.sum_comm]
-    _ = r * (∑ x : α, ∑ z : α, ∑ y : β, f x y z) := by
-      simp [Finset.mul_sum]
-
-private theorem sum_projector_delta_state_full {α : Type*} {β : Type*}
-    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
-    (r : ℂ) (f : α → β → α → α → β → α → ℂ) :
-    (∑ x : α, ∑ y : β, ∑ u : α, ∑ z : α, ∑ v : β, ∑ w : α,
-      if y = v ∧ x = u ∧ z = w then r * f x y u z v w else 0) =
-      r * (∑ x : α, ∑ z : α, ∑ y : β, f x y x z y z) := by
-  calc
-    (∑ x : α, ∑ y : β, ∑ u : α, ∑ z : α, ∑ v : β, ∑ w : α,
-      if y = v ∧ x = u ∧ z = w then r * f x y u z v w else 0) =
-        ∑ x : α, ∑ y : β, ∑ z : α, r * f x y x z y z := by
-      apply Finset.sum_congr rfl
-      intro x _
-      apply Finset.sum_congr rfl
-      intro y _
-      calc
-        (∑ u : α, ∑ z : α, ∑ v : β, ∑ w : α,
-          if y = v ∧ x = u ∧ z = w then r * f x y u z v w else 0) =
-            ∑ z : α, ∑ u : α, ∑ v : β, ∑ w : α,
-              if y = v ∧ x = u ∧ z = w then r * f x y u z v w else 0 := by
-          rw [Finset.sum_comm]
-        _ = ∑ z : α, r * f x y x z y z := by
-          apply Finset.sum_congr rfl
-          intro z _
-          rw [Finset.sum_eq_single x]
-          · rw [Finset.sum_eq_single y]
-            · rw [Finset.sum_eq_single z]
-              · simp
-              · intro w _ hw
-                have hzw : z ≠ w := hw.symm
-                simp [hzw]
-              · intro hnot
-                simp at hnot
-            · intro v _ hv
-              have hyv : y ≠ v := hv.symm
-              simp [hyv]
-            · intro hnot
-              simp at hnot
-          · intro u _ hu
-            have hxu : x ≠ u := hu.symm
-            simp [hxu]
-          · intro hnot
-            simp at hnot
-    _ = ∑ x : α, ∑ z : α, ∑ y : β, r * f x y x z y z := by
-      apply Finset.sum_congr rfl
-      intro x _
-      rw [Finset.sum_comm]
-    _ = r * (∑ x : α, ∑ z : α, ∑ y : β, f x y x z y z) := by
-      simp [Finset.mul_sum]
-
-private theorem sum_projector_delta_state_full_right {α : Type*} {β : Type*}
-    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
-    (r : ℂ) (f : α → β → α → α → β → α → ℂ) :
-    (∑ x : α, ∑ y : β, ∑ u : α, ∑ z : α, ∑ v : β, ∑ w : α,
-      if z = w ∧ v = y ∧ x = u then r * f x y u z v w else 0) =
-      r * (∑ x : α, ∑ z : α, ∑ y : β, f x y x z y z) := by
-  calc
-    (∑ x : α, ∑ y : β, ∑ u : α, ∑ z : α, ∑ v : β, ∑ w : α,
-      if z = w ∧ v = y ∧ x = u then r * f x y u z v w else 0) =
-        ∑ x : α, ∑ y : β, ∑ z : α, r * f x y x z y z := by
-      apply Finset.sum_congr rfl
-      intro x _
-      apply Finset.sum_congr rfl
-      intro y _
-      calc
-        (∑ u : α, ∑ z : α, ∑ v : β, ∑ w : α,
-          if z = w ∧ v = y ∧ x = u then r * f x y u z v w else 0) =
-            ∑ z : α, ∑ u : α, ∑ v : β, ∑ w : α,
-              if z = w ∧ v = y ∧ x = u then r * f x y u z v w else 0 := by
-          rw [Finset.sum_comm]
-        _ = ∑ z : α, r * f x y x z y z := by
-          apply Finset.sum_congr rfl
-          intro z _
-          rw [Finset.sum_eq_single x]
-          · rw [Finset.sum_eq_single y]
-            · rw [Finset.sum_eq_single z]
-              · simp
-              · intro w _ hw
-                have hzw : z ≠ w := hw.symm
-                simp [hzw]
-              · intro hnot
-                simp at hnot
-            · intro v _ hv
-              simp [hv]
-            · intro hnot
-              simp at hnot
-          · intro u _ hu
-            have hxu : x ≠ u := hu.symm
-            simp [hxu]
-          · intro hnot
-            simp at hnot
-    _ = ∑ x : α, ∑ z : α, ∑ y : β, r * f x y x z y z := by
-      apply Finset.sum_congr rfl
-      intro x _
-      rw [Finset.sum_comm]
-    _ = r * (∑ x : α, ∑ z : α, ∑ y : β, f x y x z y z) := by
-      simp [Finset.mul_sum]
-
-theorem trace_maximallyEntangledProjectorWithMiddle_mul [Nonempty a]
-    (O : CMatrix (Prod (Prod a b) a)) :
-    (((maximallyEntangledProjectorWithMiddle (a := a) b) * O).trace) =
-      (((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ) *
-        (∑ i : a, ∑ i' : a, ∑ j : b, O ((i', j), i') ((i, j), i)) := by
-  classical
-  simpa [maximallyEntangledProjectorWithMiddle, Matrix.trace, Matrix.mul_apply,
-    Fintype.sum_prod_type] using
-      sum_projector_delta_state_full
-        (α := a) (β := b)
-        ((((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ))
-        (fun x y u z v w => O ((z, v), w) ((x, y), u))
-
-theorem trace_mul_maximallyEntangledProjectorWithMiddle [Nonempty a]
-    (O : CMatrix (Prod (Prod a b) a)) :
-    ((O * (maximallyEntangledProjectorWithMiddle (a := a) b)).trace) =
-      (((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ) *
-        (∑ i : a, ∑ i' : a, ∑ j : b, O ((i, j), i) ((i', j), i')) := by
-  classical
-  simpa [maximallyEntangledProjectorWithMiddle, Matrix.trace, Matrix.mul_apply,
-    Fintype.sum_prod_type, mul_comm, and_assoc, and_left_comm, and_comm] using
-      sum_projector_delta_state_full_right
-        (α := a) (β := b)
-        ((((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ))
-        (fun x y u z v w => O ((x, y), u) ((z, v), w))
 
 theorem conditionalMinEntropyDualEffectValueSet_nonempty
     (ρ : State (Prod a b)) :

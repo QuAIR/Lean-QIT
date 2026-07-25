@@ -12,6 +12,8 @@ public import QIT.States.PosSqrt
 public import QIT.States.PosSqrtOrder
 public import QIT.States.Product
 public import QIT.States.Schatten
+public import QIT.States.MaximallyMixed
+public import QIT.States.MaximallyEntangled
 public import QIT.States.Subnormalized
 public import QIT.States.SubnormalizedTopology
 public import QIT.States.SubnormalizedConvexity

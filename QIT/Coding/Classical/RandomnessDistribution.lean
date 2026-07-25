@@ -12,6 +12,8 @@ public import QIT.Information.CQChannel
 public import QIT.Information.Entropy.EntropyTensorPower
 public import QIT.HypothesisTesting.ComparatorTest
 public import QIT.Information.Entropy.MutualInformationDPI
+public import QIT.States.MaximallyEntangled
+public import QIT.States.MaximallyMixed
 public import Mathlib.Analysis.SpecialFunctions.BinaryEntropy
 
 /-!
@@ -24,7 +26,9 @@ randomness-distribution task: a shared-randomness state
 inherited from the code's reliability.
 
 This module provides:
-- `maximallyCorrelated` — the shared-randomness state `Φ̄_{MM'}` (proved)
+- `maximallyCorrelated` — the classically correlated shared-randomness state
+  `Φ̄_{MM'}` (proved). It is a diagonal classical mixture, not a coherent
+  quantum maximally entangled state.
 - `mutualInformation_maximallyCorrelated_statement` — `I(M;M')_{Φ̄} = log₂ |M|` (proved)
 - `uniformProb` / `uniformEnsemble` / `cqChannelOutputState` — the cq state
   `τ_{MBⁿ} = (1/|M|) Σ_m |m⟩⟨m|_M ⊗ N^{⊗n}(C.encoder m)` induced by a uniform
@@ -163,6 +167,41 @@ theorem maximallyCorrelated_marginalB_matrix (M : Type u) [Fintype M]
         · rw [if_neg heq]
       rw [Finset.sum_congr rfl (fun i _ => h0 i), Finset.sum_const_zero, if_neg h]
   rw [hmarg, hsum, Matrix.diagonal_apply]
+
+/-- The first marginal of the classically correlated shared-randomness state is
+the canonical maximally mixed state. -/
+theorem maximallyCorrelated_marginalA (M : Type u) [Fintype M]
+    [DecidableEq M] [Nonempty M] :
+    (maximallyCorrelated M).marginalA = State.maximallyMixed M := by
+  apply State.ext
+  rw [maximallyCorrelated_marginalA_matrix, State.maximallyMixed_matrix]
+  ext i j
+  by_cases h : i = j
+  · subst j
+    simp
+  · simp [h]
+
+/-- The second marginal of the classically correlated shared-randomness state is
+the canonical maximally mixed state. -/
+theorem maximallyCorrelated_marginalB (M : Type u) [Fintype M]
+    [DecidableEq M] [Nonempty M] :
+    (maximallyCorrelated M).marginalB = State.maximallyMixed M := by
+  apply State.ext
+  rw [maximallyCorrelated_marginalB_matrix, State.maximallyMixed_matrix]
+  ext i j
+  by_cases h : i = j
+  · subst j
+    simp
+  · simp [h]
+
+/-- On `Bool`, the classically correlated shared-randomness state is not the
+canonical coherent maximally entangled two-qubit state. -/
+theorem maximallyCorrelated_bool_ne_maximallyEntangled :
+    maximallyCorrelated Bool ≠ State.maximallyEntangled (Equiv.refl Bool) := by
+  intro h
+  have hentry := congrArg (fun ρ => ρ.matrix (false, false) (true, true)) h
+  simp [maximallyCorrelated, State.maximallyEntangled, PureVector.maximallyEntangled,
+    PureVector.state, rankOneMatrix_apply] at hentry
 
 /-- `xlog2 x * Real.log 2 = x * Real.log x` for `0 ≤ x` (the `0 log 0` convention
 absorbs the zero case). Scaling by `Real.log 2 ≠ 0` eliminates the base-2

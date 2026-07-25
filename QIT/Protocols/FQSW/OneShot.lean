@@ -352,7 +352,7 @@ theorem adhwFQSWSigmaA2RStateOfIsometry_marginalB_eq_sigmaR
 target of fqsw.tex lines 580-841. -/
 def adhwFQSWMaximallyMixedA2State (e : Type y)
     [Fintype e] [DecidableEq e] [Nonempty e] : State e :=
-  adhwFQSWMaximallyMixedState e
+  State.maximallyMixed e
 
 /-- The source-route trace-norm decoupling integrand for a split Alice system
 and a concrete unitary on `A₁ × A₂`, matching the quantity controlled by the
@@ -1839,7 +1839,7 @@ def fqswIdealTargetToA2RPurificationEquiv
 def adhwFQSWIdealA2RPurification
     (ψ : PureVector (Prod (Prod a b) r)) (pairing : e ≃ et) :
     PureVector (Prod (Prod (Prod a b) et) (Prod e r)) :=
-  (ψ.prod (maximallyEntangledPureVector pairing)).reindex
+  (ψ.prod (PureVector.maximallyEntangled pairing)).reindex
     (fqswIdealTargetToA2RPurificationEquiv a b r e et)
 
 /-- The ideal ADHW target purifies the decoupling target
@@ -1858,19 +1858,19 @@ theorem adhwFQSWIdealA2RPurification_purifies
     Fintype.sum_prod_type]
   have hebit :
       (∑ k : et,
-        (maximallyEntangledPureVector pairing).amp (x.1, k) *
-          (starRingEnd ℂ) ((maximallyEntangledPureVector pairing).amp (y.1, k))) =
-        (adhwFQSWMaximallyMixedState e).matrix x.1 y.1 := by
+        (PureVector.maximallyEntangled pairing).amp (x.1, k) *
+          (starRingEnd ℂ) ((PureVector.maximallyEntangled pairing).amp (y.1, k))) =
+        (State.maximallyMixed e).matrix x.1 y.1 := by
     have h := congrArg (fun ρ : State e => ρ.matrix x.1 y.1)
-      (maximallyEntangledPureVector_marginalA pairing)
+      (PureVector.maximallyEntangled_marginalA pairing)
     simpa [State.marginalA, partialTraceB, PureVector.state, rankOneMatrix_apply] using h
   exact
     (fqsw_sum_sum_sum_mul_right
       (fun i : a => fun j : b =>
         ψ.amp ((i, j), x.2) * (starRingEnd ℂ) (ψ.amp ((i, j), y.2)))
       (fun k : et =>
-        (maximallyEntangledPureVector pairing).amp (x.1, k) *
-          (starRingEnd ℂ) ((maximallyEntangledPureVector pairing).amp (y.1, k)))).trans
+        (PureVector.maximallyEntangled pairing).amp (x.1, k) *
+          (starRingEnd ℂ) ((PureVector.maximallyEntangled pairing).amp (y.1, k)))).trans
       (by rw [hebit]; simp [PureVector.state, rankOneMatrix_apply])
 
 /-- Reindexing the computed FQSW output into `A₂R` purification order is the
@@ -1945,10 +1945,14 @@ theorem exists_fqswOneShotProtocol_traceNormError_le_of_decoupling
       C.targetState.reindex E = ideal.state := by
     calc
       C.targetState.reindex E =
-          (ψ.prod (maximallyEntangledPureVector pairing)).state.reindex E := by
-        simp [C, FQSWOneShotProtocol.targetState, PureVector.prod_state]
-      _ = ((ψ.prod (maximallyEntangledPureVector pairing)).reindex E).state := by
-        exact (PureVector.reindex_state (ψ.prod (maximallyEntangledPureVector pairing)) E).symm
+          (ψ.state.prod (State.maximallyEntangled pairing)).reindex E := by
+        simp [C, FQSWOneShotProtocol.targetState]
+      _ = (ψ.state.prod (PureVector.maximallyEntangled pairing).state).reindex E := by
+        rfl
+      _ = (ψ.prod (PureVector.maximallyEntangled pairing)).state.reindex E := by
+        rw [PureVector.prod_state]
+      _ = ((ψ.prod (PureVector.maximallyEntangled pairing)).reindex E).state := by
+        exact (PureVector.reindex_state (ψ.prod (PureVector.maximallyEntangled pairing)) E).symm
       _ = ideal.state := by
         simp [ideal, E, adhwFQSWIdealA2RPurification]
   have hnorm_eq :
@@ -3161,22 +3165,22 @@ theorem fqsw_A2R_square_trace_average_eq
 into the output purity minus `1/d`. -/
 theorem fqsw_hilbertSchmidtSq_sub_maximallyMixedState
     {e : Type y} [Fintype e] [DecidableEq e] [Nonempty e] (ρ : State e) :
-    hilbertSchmidtSq (ρ.matrix - (adhwFQSWMaximallyMixedState e).matrix) =
+    hilbertSchmidtSq (ρ.matrix - (State.maximallyMixed e).matrix) =
       (ρ.matrix * ρ.matrix).trace.re - (1 / (Fintype.card e : ℝ)) := by
   have hcard_ne : (Fintype.card e : ℝ) ≠ 0 := by positivity
   have hcross :
-      (ρ.matrix * (adhwFQSWMaximallyMixedState e).matrix).trace.re =
+      (ρ.matrix * (State.maximallyMixed e).matrix).trace.re =
         1 / (Fintype.card e : ℝ) := by
-    simp [adhwFQSWMaximallyMixedState, Matrix.trace_smul,
+    simp [State.maximallyMixed, Matrix.trace_smul,
       ρ.trace_eq_one, one_div]
   have hmm :
-      hilbertSchmidtSq (adhwFQSWMaximallyMixedState e).matrix =
+      hilbertSchmidtSq (State.maximallyMixed e).matrix =
         1 / (Fintype.card e : ℝ) := by
-    unfold hilbertSchmidtSq adhwFQSWMaximallyMixedState
+    unfold hilbertSchmidtSq State.maximallyMixed
     simp [Matrix.trace_smul, Matrix.trace_one, one_div]
   rw [fqsw_hilbertSchmidtSq_sub_of_isHermitian
-    ρ.matrix (adhwFQSWMaximallyMixedState e).matrix
-    ρ.pos.isHermitian (adhwFQSWMaximallyMixedState e).pos.isHermitian]
+    ρ.matrix (State.maximallyMixed e).matrix
+    ρ.pos.isHermitian (State.maximallyMixed e).pos.isHermitian]
   rw [hcross, hmm]
   ring
 
@@ -3355,7 +3359,8 @@ theorem adhwFQSWMaxMixedA2HilbertSchmidtAverage_le_of_nontrivial
         (adhwFQSWAliceIsometryOfSplitUnitary split U)
     have hσ :=
       fqsw_hilbertSchmidtSq_sub_maximallyMixedState (e := e) σ
-    simpa [adhwFQSWMaxMixedA2HilbertSchmidtIntegrandOfSplitUnitary, σ, f, ρA,
+    simpa [adhwFQSWMaxMixedA2HilbertSchmidtIntegrandOfSplitUnitary,
+      adhwFQSWMaximallyMixedA2State, σ, f, ρA,
       adhwFQSWSigmaA2StateOfSplitUnitary_matrix_eq_partialTraceA_applyMatrix_A]
       using hσ
   have hf_re_int : MeasureTheory.Integrable
@@ -3686,7 +3691,7 @@ theorem adhwFQSWMaxMixedA2HilbertSchmidtAverage_le
         fun _ => 0 := by
       funext U
       rw [adhwFQSWMaxMixedA2HilbertSchmidtIntegrandOfSplitUnitary]
-      rw [state_matrix_eq_maximallyMixed_of_subsingleton
+      rw [State.eq_maximallyMixed_of_subsingleton
         (adhwFQSWSigmaA2StateOfIsometry (q := q) (e := e) ψ
           (adhwFQSWAliceIsometryOfSplitUnitary split U))]
       unfold adhwFQSWMaximallyMixedA2State

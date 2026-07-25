@@ -159,6 +159,18 @@ def prod (rho : State a) (sigma : State b) : State (Prod a b) where
     rw [Matrix.trace_kronecker, rho.trace_eq_one, sigma.trace_eq_one]
     norm_num
 
+theorem prod_posDef {rho : State a} {sigma : State b}
+    (hρ : rho.matrix.PosDef) (hσ : sigma.matrix.PosDef) :
+    (rho.prod sigma).matrix.PosDef := by
+  change (Matrix.kronecker rho.matrix sigma.matrix).PosDef
+  exact hρ.kronecker hσ
+
+/-! The identity tensor matrix is a state-level building block used by
+conditional entropy definitions. -/
+
+def identityTensorStateMatrix (sigma : State b) : CMatrix (Prod a b) :=
+  Matrix.kronecker (1 : CMatrix a) sigma.matrix
+
 /-- `Tr_A (rho_A tensor sigma_B) = sigma_B`. -/
 theorem partialTraceA_prod (rho : State a) (sigma : State b) :
     partialTraceA (a := a) (b := b) (rho.prod sigma).matrix = sigma.matrix := by

@@ -341,11 +341,11 @@ theorem sandwichedRenyiQ_reverseHolder_norm_le_trace
   let hM : M.PosSemidef := by
     simpa [M] using sandwichedRenyiQInner_posSemidef hρ hσ α
   have hvar :
-      psdSchattenPNorm M hM α ≤
+      psdSchattenPNorm M hM ⟨α, hα_pos⟩ ≤
         ((M * CFC.rpow N (1 - 1 / α)).trace).re :=
     psd_trace_rpow_reverse_holder_variational
       hM hN hNtr (by simpa [M] using hSupport) hα_pos hα_lt_one rfl
-  simpa [M, psdSchattenPNorm, psdTracePower,
+  simpa [M, psdSchattenPNorm, Internal.psdSchattenExpression, psdTracePower,
     sandwichedRenyiQ, sandwichedRenyiQInner] using hvar
 
 /-- Exact reverse-Holder minimizer statement for the sandwiched Renyi `Q`
@@ -366,10 +366,11 @@ theorem sandwichedRenyiQ_reverseHolder_isLeast_of_inner_ne_zero
     simpa [M] using sandwichedRenyiQInner_posSemidef hρ hσ α
   have hleast :
       IsLeast (psdTraceReverseHolderStateValueSet M α)
-        (psdSchattenPNorm M hM α) :=
+        (psdSchattenPNorm M hM ⟨α, hα_pos⟩) :=
     psdTraceReverseHolderStateValueSet_isLeast_of_ne_zero
       hM hα_pos hα_lt_one (by simpa [M] using hinner_ne_zero)
   simpa [sandwichedRenyiQReverseHolderValueSet, M, psdSchattenPNorm,
+    Internal.psdSchattenExpression,
     psdTracePower, sandwichedRenyiQ, sandwichedRenyiQInner] using hleast
 
 /-- Exact `sInf` form of the reverse-Holder variational formula for the
@@ -2593,8 +2594,8 @@ theorem sandwichedRenyiQ_mem_fixedWeightValueSet_posDef
       ((M * CFC.rpow N (1 - 1 / α)).trace).re =
         Real.rpow Q (1 / α) := by
     have hnorm :
-        psdSchattenPNorm M hM α = Real.rpow Q (1 / α) := by
-      rw [psdSchattenPNorm, ← hQ_eq_power]
+        psdSchattenPNorm M hM ⟨α, hα_pos⟩ = Real.rpow Q (1 / α) := by
+      rw [psdSchattenPNorm, Internal.psdSchattenExpression, ← hQ_eq_power]
     exact hattain.symm.trans hnorm
   have hexp : -c = 1 - 1 / α := by
     dsimp [c]

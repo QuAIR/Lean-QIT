@@ -91,7 +91,7 @@ private theorem smoothConditionalMinEntropy_le_smoothConditionalMaxEntropy_add_d
     ρ.epsilon_lt_sqrt_toSubnormalized_trace hε'1
   rcases ρ.toSubnormalized.smoothConditionalMaxEntropy_exists_optimizer
       (a := a) hε'0 hε'sub with
-    ⟨ρmax, hρmax_ball, hmax_eq, _hmax_opt⟩
+    ⟨ρmax, hρmax, hρmax_ball, hmax_eq, _hmax_opt⟩
   let ρmaxPlus : SubnormalizedState (Prod (Sum extra a) b) :=
     ρmax.sourceIsometryApply V
   have hρmaxPlus_ball :
@@ -166,17 +166,18 @@ private theorem smoothConditionalMinEntropy_le_smoothConditionalMaxEntropy_add_d
   have hsdp := State.neg_log2_add_log2_fidelity_sq_le_conditionalMaxEntropy
     ω ρhat σB hTmin hfid_pos hρhat_bound
   have hmax_scale :
-      ρmaxPlus.conditionalMaxEntropy =
+      ρmaxPlus.conditionalMaxEntropyRaw =
         ω.conditionalMaxEntropy + log2 ρmaxPlus.matrix.trace.re := by
     calc
-      ρmaxPlus.conditionalMaxEntropy =
+      ρmaxPlus.conditionalMaxEntropyRaw =
           (SubnormalizedState.ofStateScale ω ρmaxPlus.matrix.trace.re
-            htrace_pos.le ρmaxPlus.trace_le_one).conditionalMaxEntropy := by rw [hscale]
+            htrace_pos.le ρmaxPlus.trace_le_one).conditionalMaxEntropyRaw := by rw [hscale]
       _ = ω.conditionalMaxEntropy + log2 ρmaxPlus.matrix.trace.re :=
         SubnormalizedState.conditionalMaxEntropy_ofStateScale
           (a := Sum extra a) (b := b) ω htrace_pos ρmaxPlus.trace_le_one
-  have hmax_isometry : ρmaxPlus.conditionalMaxEntropy = ρmax.conditionalMaxEntropy := by
-    exact SmoothNormalizedExtension.conditionalMaxEntropy_sourceIsometryApply_sumInr
+  have hmax_isometry :
+      ρmaxPlus.conditionalMaxEntropyRaw = ρmax.conditionalMaxEntropyRaw := by
+    exact SmoothNormalizedExtension.conditionalMaxEntropyRaw_sourceIsometryApply_sumInr
       (extra := extra) ρmax
   have hfid_product :
       1 - δ ^ 2 ≤
@@ -195,9 +196,10 @@ private theorem smoothConditionalMinEntropy_le_smoothConditionalMaxEntropy_add_d
     rw [Real.log_mul htrace_pos.ne' (sq_pos_of_pos hfid_pos).ne']
     ring
   rw [hlog_mul] at hlog_product
-  rw [← hmin_eq, State.smoothConditionalMaxEntropy_eq_toSubnormalized,
-    hmax_eq, ← hmax_isometry, hmax_scale, SmoothComparison.log2_one_div,
-    hρhat_value]
+  rw [← hmin_eq, State.smoothConditionalMaxEntropy_eq_toSubnormalized, hmax_eq]
+  change ρhat.conditionalMinEntropy ≤
+    ρmax.conditionalMaxEntropyRaw + log2 (1 / (1 - δ ^ 2))
+  rw [← hmax_isometry, hmax_scale, SmoothComparison.log2_one_div, hρhat_value]
   linarith
 
 /-- Smooth min/max comparison in the epsilon form used by the fixed-error

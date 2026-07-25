@@ -97,8 +97,8 @@ theorem highAlphaSubtype_mono_of_monotoneOn_Ioi {β : Type*} [Preorder β]
 power recovers the underlying PSD trace power. -/
 theorem psdSchattenPNorm_rpow_eq_psdTracePower
     (A : CMatrix a) (hA : A.PosSemidef) {p : Real} (hp : 0 < p) :
-    Real.rpow (psdSchattenPNorm A hA p) p = psdTracePower A hA p := by
-  rw [psdSchattenPNorm]
+    Real.rpow (psdSchattenPNorm A hA ⟨p, hp⟩) p = psdTracePower A hA p := by
+  rw [psdSchattenPNorm, Internal.psdSchattenExpression]
   have htrace_nonneg : 0 ≤ psdTracePower A hA p := psdTracePower_nonneg A hA p
   have hp_ne : p ≠ 0 := ne_of_gt hp
   have hmul : (1 / p) * p = 1 := by
@@ -695,7 +695,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_eq_log2_psdSchattenPNorm_rpow
             (psdSchattenPNorm
               (sandwichedRenyiReferenceInner rho sigma alpha)
               (sandwichedRenyiReferenceInner_posSemidef rho hsigma alpha)
-              alpha)
+              ⟨alpha, halpha_pos⟩)
             alpha) := by
   rw [sandwichedRenyiPSDReferenceHighAlphaFinite]
   rw [psdSchattenPNorm_rpow_eq_psdTracePower
@@ -716,7 +716,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_eq_schatten_log_of_supports
           (psdSchattenPNorm
             (sandwichedRenyiReferenceInner rho sigma alpha)
             (sandwichedRenyiReferenceInner_posSemidef rho hsigma alpha)
-            alpha) := by
+            ⟨alpha, lt_trans zero_lt_one halpha⟩) := by
   have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
   have htrace_pos :
       0 <
@@ -731,8 +731,8 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_eq_schatten_log_of_supports
         psdSchattenPNorm
           (sandwichedRenyiReferenceInner rho sigma alpha)
           (sandwichedRenyiReferenceInner_posSemidef rho hsigma alpha)
-          alpha := by
-    rw [psdSchattenPNorm]
+          ⟨alpha, halpha_pos⟩ := by
+    rw [psdSchattenPNorm, Internal.psdSchattenExpression]
     exact Real.rpow_pos_of_pos htrace_pos (1 / alpha)
   rw [sandwichedRenyiPSDReferenceHighAlphaFinite_eq_log2_psdSchattenPNorm_rpow
     rho hsigma halpha_pos]
@@ -743,14 +743,14 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_eq_schatten_log_of_supports
             (psdSchattenPNorm
               (sandwichedRenyiReferenceInner rho sigma alpha)
               (sandwichedRenyiReferenceInner_posSemidef rho hsigma alpha)
-              alpha)
+              ⟨alpha, halpha_pos⟩)
             alpha) =
         alpha *
           Real.log
             (psdSchattenPNorm
               (sandwichedRenyiReferenceInner rho sigma alpha)
               (sandwichedRenyiReferenceInner_posSemidef rho hsigma alpha)
-              alpha) := by
+              ⟨alpha, halpha_pos⟩) := by
     simpa using
       (Real.log_rpow hnorm_pos alpha)
   rw [hlog]
@@ -1279,7 +1279,7 @@ extension is the A1.2 deliverable. -/
 theorem psdSchattenPNorm_eq_iSup_posDef_fixedTrace_of_posDef
     {M : CMatrix a} (hM : M.PosSemidef) (hMPD : M.PosDef)
     {p q : ℝ} (hpq : p.HolderConjugate q) (hp1 : 1 < p) [Nonempty a] :
-    psdSchattenPNorm M hM p =
+    psdSchattenPNorm M hM ⟨p, lt_trans zero_lt_one hp1⟩ =
       ⨆ τ : {τ : CMatrix a // τ.PosDef ∧ τ.trace.re = 1},
         ((M * CFC.rpow τ.1 (1 / q)).trace).re := by
   classical
@@ -1287,7 +1287,8 @@ theorem psdSchattenPNorm_eq_iSup_posDef_fixedTrace_of_posDef
   -- Upper bound: every PD fixed-trace candidate value is ≤ Schatten norm.
   have hupper :
       ∀ τ : {τ : CMatrix a // τ.PosDef ∧ τ.trace.re = 1},
-        ((M * CFC.rpow τ.1 (1 / q)).trace).re ≤ psdSchattenPNorm M hM p := by
+        ((M * CFC.rpow τ.1 (1 / q)).trace).re ≤
+          psdSchattenPNorm M hM ⟨p, hp_pos⟩ := by
     intro τ
     exact psd_trace_rpow_holder_variational_upper hM τ.2.1.posSemidef τ.2.2 hpq rfl
   -- Lower bound: τ* = M^p / Tr M^p is positive-definite and attains the supremum.
@@ -1316,7 +1317,7 @@ theorem psdSchattenPNorm_eq_iSup_posDef_fixedTrace_of_posDef
     have hbdd : BddAbove (Set.range fun τ :
         {τ : CMatrix a // τ.PosDef ∧ τ.trace.re = 1} =>
           ((M * CFC.rpow τ.1 (1 / q)).trace).re) :=
-      ⟨psdSchattenPNorm M hM p, by
+      ⟨psdSchattenPNorm M hM ⟨p, hp_pos⟩, by
         rintro _ ⟨τ, rfl⟩
         exact hupper τ⟩
     rw [hτstar_val, ← h_one_div_q]
@@ -1475,7 +1476,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_mono_posDef_reference_posDef_
         (hM'pd γ).posSemidef γ).PosDef := by
     intro γ hγ
     exact psdTraceReverseHolderOptimizer_posDef_of_posDef _ (hM'pd γ) (hSpos γ hγ)
-  have hτstar_props : ∀ γ : ℝ, 1 < γ →
+  have hτstar_props : ∀ γ : ℝ, (hγ : 1 < γ) →
       ∃ _hN : (psdTraceReverseHolderOptimizer
         (ρ.sqrtMatrix * CFC.rpow σ ((1 - γ) / γ) * ρ.sqrtMatrix)
         (hM'pd γ).posSemidef γ).PosSemidef,
@@ -1488,7 +1489,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_mono_posDef_reference_posDef_
               (ρ.sqrtMatrix * CFC.rpow σ ((1 - γ) / γ) * ρ.sqrtMatrix)
               (hM'pd γ).posSemidef γ) ∧
             psdSchattenPNorm (ρ.sqrtMatrix * CFC.rpow σ ((1 - γ) / γ) * ρ.sqrtMatrix)
-              (hM'pd γ).posSemidef γ =
+              (hM'pd γ).posSemidef ⟨γ, lt_trans zero_lt_one hγ⟩ =
               ((ρ.sqrtMatrix * CFC.rpow σ ((1 - γ) / γ) * ρ.sqrtMatrix *
                 CFC.rpow (psdTraceReverseHolderOptimizer
                   (ρ.sqrtMatrix * CFC.rpow σ ((1 - γ) / γ) * ρ.sqrtMatrix)
@@ -1511,10 +1512,11 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_mono_posDef_reference_posDef_
     have htrace_eq := hiso γ.1 hγ
     have hnorm_eq :
         psdSchattenPNorm (sandwichedRenyiReferenceInner ρ σ γ.1)
-          (sandwichedRenyiReferenceInner_posSemidef ρ hσ.posSemidef γ.1) γ.1 =
+          (sandwichedRenyiReferenceInner_posSemidef ρ hσ.posSemidef γ.1)
+          ⟨γ.1, hγ_pos⟩ =
         psdSchattenPNorm (ρ.sqrtMatrix * CFC.rpow σ ((1 - γ.1) / γ.1) * ρ.sqrtMatrix)
-          hM'psd γ.1 := by
-      unfold psdSchattenPNorm
+          hM'psd ⟨γ.1, hγ_pos⟩ := by
+      unfold psdSchattenPNorm Internal.psdSchattenExpression
       rw [htrace_eq]
     rw [hnorm_eq]
     rw [psdSchattenPNorm_eq_iSup_posDef_fixedTrace_of_posDef
@@ -1543,7 +1545,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_mono_posDef_reference_posDef_
       have hstar_val : w τstar =
           psdSchattenPNorm
             (ρ.sqrtMatrix * CFC.rpow σ ((1 - γ.1) / γ.1) * ρ.sqrtMatrix)
-            hM'psd γ.1 := by
+            hM'psd ⟨γ.1, hγ_pos⟩ := by
         simp only [w]
         have hval := (hτstar_props γ.1 hγ).choose_spec.2.2
         have hq : 1 - 1 / γ.1 = (γ.1 - 1) / γ.1 := by field_simp
@@ -1603,7 +1605,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_mono_posDef_reference_posDef_
   refine ciSup_mono ?_ hper_tau
   refine ⟨(β / (β - 1)) * log2
       (psdSchattenPNorm (ρ.sqrtMatrix * CFC.rpow σ ((1 - β) / β) * ρ.sqrtMatrix)
-        (hM'pd β).posSemidef β), ?_⟩
+        (hM'pd β).posSemidef ⟨β, lt_trans zero_lt_one hβ⟩), ?_⟩
   rintro _ ⟨τ, rfl⟩
   have hpos : 0 < ((kwPurificationStateMatrix ρ *
       CFC.rpow (Matrix.kronecker τ.1⁻¹ σ.transpose) ((1 - β) / β)).trace).re := by

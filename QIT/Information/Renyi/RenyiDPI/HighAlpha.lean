@@ -1290,7 +1290,7 @@ theorem sandwichedRenyiBeigiNormalizedInputPath_holderTheta
 Schatten value on the `Re z = 0` boundary. -/
 theorem sandwichedRenyiBeigiNormalizedInputPath_traceNorm_le_of_re_eq_zero
     {A : CMatrix a} (hA : A.PosDef) {α C : ℝ} (hα : 0 < α)
-    (hC : C = psdSchattenPNorm A hA.posSemidef α) (hCpos : 0 < C)
+    (hC : C = psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩) (hCpos : 0 < C)
     {z : ℂ} (hz : z.re = 0) :
     traceNorm (sandwichedRenyiBeigiNormalizedInputPath A hA α C z) ≤ C := by
   let e : ℂ := (2 * (α : ℂ)) * z + (α : ℂ)
@@ -1319,7 +1319,7 @@ theorem sandwichedRenyiBeigiNormalizedInputPath_traceNorm_le_of_re_eq_zero
   have hQ_nonneg : 0 ≤ Q := by
     simpa [Q] using psdTracePower_nonneg A hA.posSemidef α
   have hC_def : C = Q ^ (1 / α) := by
-    simpa [Q, psdSchattenPNorm] using hC
+    simpa [Q, psdSchattenPNorm, Internal.psdSchattenExpression] using hC
   have hQ_eq_Cpow : Q = C ^ α := by
     calc
       Q = Q ^ ((1 / α) * α) := by
@@ -2034,16 +2034,16 @@ theorem sandwichedRenyiWeightedTraceFamily_normalizedBeigi_left_bound_of_pos
     (A : CMatrix a) (hA : A.PosDef)
     (B : CMatrix b) (hB : B.PosDef)
     {α q : ℝ} (hα : 0 < α)
-    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef α) :
+    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩) :
     ∀ z ∈ Complex.re ⁻¹' ({0} : Set ℝ),
       ‖sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K
           (sandwichedRenyiBeigiNormalizedInputPath A hA α
-            (psdSchattenPNorm A hA.posSemidef α))
+            (psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩))
           (sandwichedRenyiBeigiDualPath B hB q) z‖ ≤
-        psdSchattenPNorm A hA.posSemidef α := by
+        psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩ := by
   exact sandwichedRenyiWeightedTraceFamily_normalizedBeigi_left_bound
     σ hσ τ hτ K hTP A hA B hB α q
-    (psdSchattenPNorm A hA.posSemidef α)
+    (psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩)
     (fun z hz =>
       sandwichedRenyiBeigiNormalizedInputPath_traceNorm_le_of_re_eq_zero
         hA hα rfl hCpos hz)
@@ -2088,27 +2088,28 @@ theorem sandwichedRenyiWeightedTraceFamily_normalizedBeigi_right_bound_of_scaled
     {κ : Type*} [Fintype κ] (K : κ → Matrix b a ℂ)
     (A : CMatrix a) (hA : A.PosDef)
     (B : CMatrix b) (hB : B.PosDef)
-    {α q : ℝ} (hCpos : 0 < psdSchattenPNorm A hA.posSemidef α)
+    {α q : ℝ} (hα : 0 < α)
+    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩)
     (hBq : psdTracePower B hB.posSemidef q ≤ 1)
     (hW : ∀ z ∈ Complex.re ⁻¹' ({-(1 / 2 : ℝ)} : Set ℝ),
-      Matrix.conjTranspose (((psdSchattenPNorm A hA.posSemidef α : ℂ)⁻¹) •
+      Matrix.conjTranspose (((psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩ : ℂ)⁻¹) •
           sandwichedRenyiWeightedMapComplex σ hσ τ hτ K z
             (sandwichedRenyiBeigiNormalizedInputPath A hA α
-              (psdSchattenPNorm A hA.posSemidef α) z)) *
-        (((psdSchattenPNorm A hA.posSemidef α : ℂ)⁻¹) •
+              (psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩) z)) *
+        (((psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩ : ℂ)⁻¹) •
           sandwichedRenyiWeightedMapComplex σ hσ τ hτ K z
             (sandwichedRenyiBeigiNormalizedInputPath A hA α
-              (psdSchattenPNorm A hA.posSemidef α) z)) ≤ 1) :
+              (psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩) z)) ≤ 1) :
     ∀ z ∈ Complex.re ⁻¹' ({-(1 / 2 : ℝ)} : Set ℝ),
       ‖sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K
           (sandwichedRenyiBeigiNormalizedInputPath A hA α
-            (psdSchattenPNorm A hA.posSemidef α))
+            (psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩))
           (sandwichedRenyiBeigiDualPath B hB q) z‖ ≤
-        psdSchattenPNorm A hA.posSemidef α := by
+        psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩ := by
   exact sandwichedRenyiWeightedTraceFamily_right_bound_of_scaled_contraction
     σ hσ τ hτ K
     (sandwichedRenyiBeigiNormalizedInputPath A hA α
-      (psdSchattenPNorm A hA.posSemidef α))
+      (psdSchattenPNorm A hA.posSemidef ⟨α, hα⟩))
     (sandwichedRenyiBeigiDualPath B hB q)
     hCpos hW
     (fun z hz =>
@@ -2477,32 +2478,32 @@ theorem sandwichedRenyi_tracePairingBound_of_beigiInterpolationFamily
     (α q : ℝ) (hpq : α.HolderConjugate q)
     {A : CMatrix a} (hA : A.PosSemidef) {B : CMatrix b} (_hB : B.PosSemidef)
     (f : ℂ → ℂ)
-    (hCpos : 0 < psdSchattenPNorm A hA α)
+    (hCpos : 0 < psdSchattenPNorm A hA ⟨α, hpq.pos⟩)
     (hd : DiffContOnCl ℂ (fun w : ℂ => f (-(w / 2)))
       (Complex.HadamardThreeLines.verticalStrip 0 1))
     (hBounded : BddAbove ((norm ∘ (fun w : ℂ => f (-(w / 2)))) ''
       Complex.HadamardThreeLines.verticalClosedStrip 0 1))
     (hleft : ∀ z ∈ Complex.re ⁻¹' ({0} : Set ℝ),
-      ‖f z‖ ≤ psdSchattenPNorm A hA α)
+      ‖f z‖ ≤ psdSchattenPNorm A hA ⟨α, hpq.pos⟩)
     (hright : ∀ z ∈ Complex.re ⁻¹' ({-(1 / 2 : ℝ)} : Set ℝ),
-      ‖f z‖ ≤ psdSchattenPNorm A hA α)
+      ‖f z‖ ≤ psdSchattenPNorm A hA ⟨α, hpq.pos⟩)
     (htarget :
       f (-(((1 / q : ℝ) : ℂ) / 2)) =
         ((MatrixMap.ofKraus (sandwichedRenyiRotatedKraus σ τ K α) A) * B).trace) :
     (((MatrixMap.ofKraus (sandwichedRenyiRotatedKraus σ τ K α) A) * B).trace).re ≤
-      psdSchattenPNorm A hA α := by
+      psdSchattenPNorm A hA ⟨α, hpq.pos⟩ := by
   have hθ := holderConjugate_inv_right_mem_unit_interval hpq
   have hnorm :
-      ‖f (-(((1 / q : ℝ) : ℂ) / 2))‖ ≤ psdSchattenPNorm A hA α :=
+      ‖f (-(((1 / q : ℝ) : ℂ) / 2))‖ ≤ psdSchattenPNorm A hA ⟨α, hpq.pos⟩ :=
     complex_three_lines_const_bound_neg_half_strip
-      (f := f) (θ := 1 / q) (C := psdSchattenPNorm A hA α)
+      (f := f) (θ := 1 / q) (C := psdSchattenPNorm A hA ⟨α, hpq.pos⟩)
       hθ.1 hθ.2 hCpos hd hBounded hleft hright
   calc
     (((MatrixMap.ofKraus (sandwichedRenyiRotatedKraus σ τ K α) A) * B).trace).re =
         (f (-(((1 / q : ℝ) : ℂ) / 2))).re := by
           rw [htarget]
     _ ≤ ‖f (-(((1 / q : ℝ) : ℂ) / 2))‖ := Complex.re_le_norm _
-    _ ≤ psdSchattenPNorm A hA α := hnorm
+    _ ≤ psdSchattenPNorm A hA ⟨α, hpq.pos⟩ := hnorm
 
 /-- Source-faithful Beigi weighted-map version of the three-lines handoff.
 
@@ -2519,7 +2520,7 @@ theorem sandwichedRenyi_tracePairingBound_of_weightedInterpolationFamily
     (Apath : ℂ → CMatrix a) (Bpath : ℂ → CMatrix b)
     (hAθ : Apath (-(((1 / q : ℝ) : ℂ) / 2)) = A)
     (hBθ : Bpath (-(((1 / q : ℝ) : ℂ) / 2)) = B)
-    (hCpos : 0 < psdSchattenPNorm A hA α)
+    (hCpos : 0 < psdSchattenPNorm A hA ⟨α, hpq.pos⟩)
     (hd : DiffContOnCl ℂ
       (fun w : ℂ =>
         sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K Apath Bpath (-(w / 2)))
@@ -2531,12 +2532,12 @@ theorem sandwichedRenyi_tracePairingBound_of_weightedInterpolationFamily
         Complex.HadamardThreeLines.verticalClosedStrip 0 1))
     (hleft : ∀ z ∈ Complex.re ⁻¹' ({0} : Set ℝ),
       ‖sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K Apath Bpath z‖ ≤
-        psdSchattenPNorm A hA α)
+        psdSchattenPNorm A hA ⟨α, hpq.pos⟩)
     (hright : ∀ z ∈ Complex.re ⁻¹' ({-(1 / 2 : ℝ)} : Set ℝ),
       ‖sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K Apath Bpath z‖ ≤
-        psdSchattenPNorm A hA α) :
+        psdSchattenPNorm A hA ⟨α, hpq.pos⟩) :
     (((MatrixMap.ofKraus (sandwichedRenyiRotatedKraus σ τ K α) A) * B).trace).re ≤
-      psdSchattenPNorm A hA α := by
+      psdSchattenPNorm A hA ⟨α, hpq.pos⟩ := by
   exact sandwichedRenyi_tracePairingBound_of_beigiInterpolationFamily
     σ hσ τ hτ K α q hpq hA hB
     (sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K Apath Bpath)
@@ -2557,7 +2558,7 @@ theorem sandwichedRenyi_tracePairingBound_of_beigiPaths
     {κ : Type*} [Fintype κ] (K : κ → Matrix b a ℂ)
     (α q : ℝ) (hpq : α.HolderConjugate q)
     {A : CMatrix a} (hA : A.PosDef) {B : CMatrix b} (hB : B.PosDef)
-    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef α)
+    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩)
     (hBounded : BddAbove
       ((norm ∘
         (fun w : ℂ =>
@@ -2569,14 +2570,14 @@ theorem sandwichedRenyi_tracePairingBound_of_beigiPaths
       ‖sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K
           (sandwichedRenyiBeigiInputPath A hA α)
           (sandwichedRenyiBeigiDualPath B hB q) z‖ ≤
-        psdSchattenPNorm A hA.posSemidef α)
+        psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩)
     (hright : ∀ z ∈ Complex.re ⁻¹' ({-(1 / 2 : ℝ)} : Set ℝ),
       ‖sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K
           (sandwichedRenyiBeigiInputPath A hA α)
           (sandwichedRenyiBeigiDualPath B hB q) z‖ ≤
-        psdSchattenPNorm A hA.posSemidef α) :
+        psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩) :
     (((MatrixMap.ofKraus (sandwichedRenyiRotatedKraus σ τ K α) A) * B).trace).re ≤
-      psdSchattenPNorm A hA.posSemidef α := by
+      psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩ := by
   exact sandwichedRenyi_tracePairingBound_of_weightedInterpolationFamily
     σ hσ τ hτ K α q hpq hA.posSemidef hB.posSemidef
     (sandwichedRenyiBeigiInputPath A hA α)
@@ -2601,39 +2602,39 @@ theorem sandwichedRenyi_tracePairingBound_of_normalizedBeigiPaths
     {κ : Type*} [Fintype κ] (K : κ → Matrix b a ℂ)
     (α q : ℝ) (hpq : α.HolderConjugate q)
     {A : CMatrix a} (hA : A.PosDef) {B : CMatrix b} (hB : B.PosDef)
-    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef α)
+    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩)
     (hBounded : BddAbove
       ((norm ∘
         (fun w : ℂ =>
           sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K
             (sandwichedRenyiBeigiNormalizedInputPath A hA α
-              (psdSchattenPNorm A hA.posSemidef α))
+              (psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩))
             (sandwichedRenyiBeigiDualPath B hB q) (-(w / 2)))) ''
         Complex.HadamardThreeLines.verticalClosedStrip 0 1))
     (hleft : ∀ z ∈ Complex.re ⁻¹' ({0} : Set ℝ),
       ‖sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K
           (sandwichedRenyiBeigiNormalizedInputPath A hA α
-            (psdSchattenPNorm A hA.posSemidef α))
+            (psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩))
           (sandwichedRenyiBeigiDualPath B hB q) z‖ ≤
-        psdSchattenPNorm A hA.posSemidef α)
+        psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩)
     (hright : ∀ z ∈ Complex.re ⁻¹' ({-(1 / 2 : ℝ)} : Set ℝ),
       ‖sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K
           (sandwichedRenyiBeigiNormalizedInputPath A hA α
-            (psdSchattenPNorm A hA.posSemidef α))
+            (psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩))
           (sandwichedRenyiBeigiDualPath B hB q) z‖ ≤
-        psdSchattenPNorm A hA.posSemidef α) :
+        psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩) :
     (((MatrixMap.ofKraus (sandwichedRenyiRotatedKraus σ τ K α) A) * B).trace).re ≤
-      psdSchattenPNorm A hA.posSemidef α := by
+      psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩ := by
   exact sandwichedRenyi_tracePairingBound_of_weightedInterpolationFamily
     σ hσ τ hτ K α q hpq hA.posSemidef hB.posSemidef
     (sandwichedRenyiBeigiNormalizedInputPath A hA α
-      (psdSchattenPNorm A hA.posSemidef α))
+      (psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩))
     (sandwichedRenyiBeigiDualPath B hB q)
     (sandwichedRenyiBeigiNormalizedInputPath_holderTheta hA hpq)
     (sandwichedRenyiBeigiDualPath_holderTheta hB hpq)
     hCpos
     (sandwichedRenyiWeightedTraceFamily_diffContOnCl_normalizedBeigiPaths
-      σ hσ τ hτ K A hA B hB α q (psdSchattenPNorm A hA.posSemidef α))
+      σ hσ τ hτ K A hA B hB α q (psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩))
     hBounded hleft hright
 
 /-- Normalized Beigi trace-pairing bound from the two endpoint estimates, with
@@ -2650,34 +2651,34 @@ theorem sandwichedRenyi_tracePairingBound_of_normalizedBeigi_weightedEndpoint
     (hTP : MatrixMap.IsTracePreserving (MatrixMap.ofKraus K))
     (α q : ℝ) (hpq : α.HolderConjugate q)
     {A : CMatrix a} (hA : A.PosDef) {B : CMatrix b} (hB : B.PosDef)
-    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef α)
+    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩)
     (hBq : psdTracePower B hB.posSemidef q ≤ 1)
     (hBounded : BddAbove
       ((norm ∘
         (fun w : ℂ =>
           sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K
             (sandwichedRenyiBeigiNormalizedInputPath A hA α
-              (psdSchattenPNorm A hA.posSemidef α))
+              (psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩))
             (sandwichedRenyiBeigiDualPath B hB q) (-(w / 2)))) ''
         Complex.HadamardThreeLines.verticalClosedStrip 0 1))
     (hWeightedEndpoint :
       ∀ z ∈ Complex.re ⁻¹' ({-(1 / 2 : ℝ)} : Set ℝ),
-        Matrix.conjTranspose (((psdSchattenPNorm A hA.posSemidef α : ℂ)⁻¹) •
+        Matrix.conjTranspose (((psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩ : ℂ)⁻¹) •
             sandwichedRenyiWeightedMapComplex σ hσ τ hτ K z
               (sandwichedRenyiBeigiNormalizedInputPath A hA α
-                (psdSchattenPNorm A hA.posSemidef α) z)) *
-          (((psdSchattenPNorm A hA.posSemidef α : ℂ)⁻¹) •
+                (psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩) z)) *
+          (((psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩ : ℂ)⁻¹) •
             sandwichedRenyiWeightedMapComplex σ hσ τ hτ K z
               (sandwichedRenyiBeigiNormalizedInputPath A hA α
-                (psdSchattenPNorm A hA.posSemidef α) z)) ≤ 1) :
+                (psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩) z)) ≤ 1) :
     (((MatrixMap.ofKraus (sandwichedRenyiRotatedKraus σ τ K α) A) * B).trace).re ≤
-      psdSchattenPNorm A hA.posSemidef α := by
+      psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩ := by
   exact sandwichedRenyi_tracePairingBound_of_normalizedBeigiPaths
     σ hσ τ hτ K α q hpq hA hB hCpos hBounded
     (sandwichedRenyiWeightedTraceFamily_normalizedBeigi_left_bound_of_pos
       σ hσ τ hτ K hTP A hA B hB hpq.pos hCpos)
     (sandwichedRenyiWeightedTraceFamily_normalizedBeigi_right_bound_of_scaled_contraction
-      σ hσ τ hτ K A hA B hB hCpos hBq hWeightedEndpoint)
+      σ hσ τ hτ K A hA B hB hpq.pos hCpos hBq hWeightedEndpoint)
 
 /-- Normalized Beigi trace-pairing bound with the `p = ∞` weighted endpoint
 fully discharged.
@@ -2692,24 +2693,24 @@ theorem sandwichedRenyi_tracePairingBound_of_normalizedBeigi
     (hτK : MatrixMap.ofKraus K σ.matrix = τ.matrix)
     (α q : ℝ) (hpq : α.HolderConjugate q)
     {A : CMatrix a} (hA : A.PosDef) {B : CMatrix b} (hB : B.PosDef)
-    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef α)
+    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩)
     (hBq : psdTracePower B hB.posSemidef q ≤ 1)
     (hBounded : BddAbove
       ((norm ∘
         (fun w : ℂ =>
           sandwichedRenyiWeightedTraceFamily σ hσ τ hτ K
             (sandwichedRenyiBeigiNormalizedInputPath A hA α
-              (psdSchattenPNorm A hA.posSemidef α))
+              (psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩))
             (sandwichedRenyiBeigiDualPath B hB q) (-(w / 2)))) ''
         Complex.HadamardThreeLines.verticalClosedStrip 0 1)) :
     (((MatrixMap.ofKraus (sandwichedRenyiRotatedKraus σ τ K α) A) * B).trace).re ≤
-      psdSchattenPNorm A hA.posSemidef α := by
+      psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩ := by
   exact sandwichedRenyi_tracePairingBound_of_normalizedBeigi_weightedEndpoint
     σ hσ τ hτ K hTP α q hpq hA hB hCpos hBq hBounded
     (fun z hz =>
       sandwichedRenyiWeightedMapComplex_normalizedBeigi_scaled_contraction_of_re_eq_neg_half
         σ hσ τ hτ K hτK hA α
-        (psdSchattenPNorm A hA.posSemidef α) hCpos
+        (psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩) hCpos
         (by simpa using hz))
 
 /-- Normalized Beigi trace-pairing bound with all endpoint and closed-strip
@@ -2726,14 +2727,14 @@ theorem sandwichedRenyi_tracePairingBound_of_normalizedBeigi_closedStrip
     (hτK : MatrixMap.ofKraus K σ.matrix = τ.matrix)
     (α q : ℝ) (hpq : α.HolderConjugate q)
     {A : CMatrix a} (hA : A.PosDef) {B : CMatrix b} (hB : B.PosDef)
-    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef α)
+    (hCpos : 0 < psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩)
     (hBq : psdTracePower B hB.posSemidef q ≤ 1) :
     (((MatrixMap.ofKraus (sandwichedRenyiRotatedKraus σ τ K α) A) * B).trace).re ≤
-      psdSchattenPNorm A hA.posSemidef α := by
+      psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩ := by
   exact sandwichedRenyi_tracePairingBound_of_normalizedBeigi
     σ hσ τ hτ K hTP hτK α q hpq hA hB hCpos hBq
     (sandwichedRenyiWeightedTraceFamily_normalizedBeigi_bddAbove_closedStrip
-      σ hσ τ hτ K A hA B hB α q (psdSchattenPNorm A hA.posSemidef α))
+      σ hσ τ hτ K A hA B hB α q (psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩))
 
 omit [Fintype a] in
 private theorem cMatrix_real_smul_one_posDef_local {r : ℝ} (hr : 0 < r) :
@@ -2757,20 +2758,12 @@ private theorem cMatrix_le_add_pos_smul_one {A : CMatrix a}
     (cMatrix_real_smul_one_posDef_local (a := a) hε).posSemidef
   simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using hpos
 
-/-- The first marginal of white noise on a product system is white noise. -/
-theorem maximallyMixed_marginalA
-    [Nonempty a] [Nonempty b] :
-    (maximallyMixed (Prod a b)).marginalA = maximallyMixed a := by
-  apply State.ext
-  ext i j
-  simp [State.marginalA, partialTraceB, maximallyMixed_matrix, Matrix.one_apply]
-
 /-- The first marginal of white noise on a product system is full-rank. -/
 theorem maximallyMixed_marginalA_posDef
     [Nonempty a] [Nonempty b] :
     ((maximallyMixed (Prod a b)).marginalA).matrix.PosDef := by
-  simpa [maximallyMixed_marginalA] using
-    maximallyMixed_posDef_of_nonempty (a := a)
+  simpa [State.maximallyMixed_marginalA] using
+    State.maximallyMixed_posDef (a := a)
 
 /-- Affine regularization of a state matrix by a fixed noise state. -/
 def regularizedStateMatrix (ρ ω : State a) (ε : ℝ) : CMatrix a :=
@@ -2871,9 +2864,9 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_posDef
     (((MatrixMap.ofKraus
         (sandwichedRenyiRotatedKraus σ (Φ.applyState σ) K α) A) *
         B).trace).re ≤
-      psdSchattenPNorm A hA.posSemidef α := by
+      psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩ := by
   haveI : Nonempty a := σ.nonempty
-  have hCpos : 0 < psdSchattenPNorm A hA.posSemidef α :=
+  have hCpos : 0 < psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩ :=
     psdSchattenPNorm_pos_of_posDef hA
   have hTP : MatrixMap.IsTracePreserving (MatrixMap.ofKraus K) := by
     rw [← hK]
@@ -2910,7 +2903,7 @@ theorem regularizedStinespringLiftState_posDef
   letI : Nonempty (Prod b κ) := (stinespringLiftState K hTP ρ).nonempty
   exact regularizedWithState_posDef_of_noise
     (stinespringLiftState K hTP ρ) (maximallyMixed (Prod b κ))
-    maximallyMixed_posDef_of_nonempty hε0 hε1 hεpos
+    maximallyMixed_posDef hε0 hε1 hεpos
 
 /-- The regularized Stinespring lift converges back to the generally singular
 Stinespring lift as the regularization weight tends to zero. -/
@@ -3038,7 +3031,8 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_regularizedInput
         (sandwichedRenyiRotatedKraus σ (Φ.applyState σ) K α) A) *
         B).trace).re ≤
       psdSchattenPNorm (A + ε • (1 : CMatrix a))
-        (cMatrix_posSemidef_add_pos_smul_one_posDef hA hε).posSemidef α := by
+        (cMatrix_posSemidef_add_pos_smul_one_posDef hA hε).posSemidef
+        ⟨α, hpq.pos⟩ := by
   let L : κ → Matrix b a ℂ :=
     sandwichedRenyiRotatedKraus σ (Φ.applyState σ) K α
   let Aε : CMatrix a := A + ε • (1 : CMatrix a)
@@ -3071,7 +3065,7 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_regularizedInput
       (((MatrixMap.ofKraus
           (sandwichedRenyiRotatedKraus σ (Φ.applyState σ) K α) Aε) *
           B).trace).re ≤
-        psdSchattenPNorm Aε hAε.posSemidef α := by
+        psdSchattenPNorm Aε hAε.posSemidef ⟨α, hpq.pos⟩ := by
     simpa [L, Aε] using
       sandwichedRenyiRotatedKraus_tracePairingBound_of_posDef
         K σ Φ hK hσ hσΦ α q hpq hAε hB hBq
@@ -3100,7 +3094,8 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_regularizedInputOutput
         (sandwichedRenyiRotatedKraus σ (Φ.applyState σ) K α) A) *
         (scale • Bδ : CMatrix b)).trace).re ≤
       psdSchattenPNorm (A + ε • (1 : CMatrix a))
-        (cMatrix_posSemidef_add_pos_smul_one_posDef hA hε).posSemidef α := by
+        (cMatrix_posSemidef_add_pos_smul_one_posDef hA hε).posSemidef
+        ⟨α, hpq.pos⟩ := by
   haveI : Nonempty b := (Φ.applyState σ).nonempty
   intro Bδ scale
   have hBδ : Bδ.PosDef := by
@@ -3145,7 +3140,7 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_psdTracePower_eq_one
     (((MatrixMap.ofKraus
         (sandwichedRenyiRotatedKraus σ (Φ.applyState σ) K α) A) *
         B).trace).re ≤
-      psdSchattenPNorm A hA α := by
+      psdSchattenPNorm A hA ⟨α, lt_trans zero_lt_one hα_gt_one⟩ := by
   let L : κ → Matrix b a ℂ :=
     sandwichedRenyiRotatedKraus σ (Φ.applyState σ) K α
   let TA : CMatrix b := MatrixMap.ofKraus L A
@@ -3167,7 +3162,8 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_psdTracePower_eq_one
       {ε : ℝ} (hε : 0 < ε) :
       ((TA * B).trace).re ≤
         psdSchattenPNorm (A + ε • (1 : CMatrix a))
-          (cMatrix_posSemidef_add_pos_smul_one_posDef hA hε).posSemidef α := by
+          (cMatrix_posSemidef_add_pos_smul_one_posDef hA hε).posSemidef
+          ⟨α, hα_pos⟩ := by
     exact le_of_tendsto hδlimit (by
       filter_upwards [self_mem_nhdsWithin] with δ hδ
       have hreg :=
@@ -3180,7 +3176,7 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_psdTracePower_eq_one
       (fun ε : ℝ =>
         ((CFC.rpow (A + ε • (1 : CMatrix a)) α).trace.re) ^ (1 / α))
       (nhdsWithin (0 : ℝ) (Set.Ioi 0))
-      (nhds (psdSchattenPNorm A hA α)) := by
+      (nhds (psdSchattenPNorm A hA ⟨α, hα_pos⟩)) := by
     have hcont : ContinuousAt
         (fun x : ℝ => x ^ (1 / α))
         ((CFC.rpow A α).trace.re) :=
@@ -3188,11 +3184,11 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_psdTracePower_eq_one
         ((CFC.rpow A α).trace.re) (1 / α)
         (Or.inr (le_of_lt (one_div_pos.mpr hα_pos)))
     have h := hcont.tendsto.comp hRtrace
-    simpa [psdSchattenPNorm, psdTracePower] using h
+    simpa [psdSchattenPNorm, Internal.psdSchattenExpression, psdTracePower] using h
   exact ge_of_tendsto hR (by
     filter_upwards [self_mem_nhdsWithin] with ε hε
     have h := hleft_le_regularizedInput hε
-    simpa [psdSchattenPNorm, psdTracePower] using h)
+    simpa [psdSchattenPNorm, Internal.psdSchattenExpression, psdTracePower] using h)
 
 /-- PSD `q`-ball trace-pairing bound for the Beigi weighted rotated Kraus map.
 
@@ -3210,7 +3206,7 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_psdTracePower_le_one
     (((MatrixMap.ofKraus
         (sandwichedRenyiRotatedKraus σ (Φ.applyState σ) K α) A) *
         B).trace).re ≤
-      psdSchattenPNorm A hA α := by
+      psdSchattenPNorm A hA ⟨α, lt_trans zero_lt_one hα_gt_one⟩ := by
   classical
   let L : κ → Matrix b a ℂ :=
     sandwichedRenyiRotatedKraus σ (Φ.applyState σ) K α
@@ -3219,7 +3215,7 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_psdTracePower_le_one
   · have htrace_zero : ((TA * B).trace).re = 0 := by
       simp [hBzero]
     rw [htrace_zero]
-    exact psdSchattenPNorm_nonneg A hA α
+    exact psdSchattenPNorm_nonneg A hA ⟨α, lt_trans zero_lt_one hα_gt_one⟩
   · let scale : ℝ := (psdTracePower B hB q) ^ (-(1 / q))
     let Bn : CMatrix b := scale • B
     have hq_pos : 0 < q := hpq.symm.pos
@@ -3233,7 +3229,8 @@ theorem sandwichedRenyiRotatedKraus_tracePairingBound_of_psdTracePower_le_one
       simpa [scale, Bn] using
         psdTracePower_normalized_real_smul_eq_one_of_ne_zero hB hBzero hq_pos
     have hbound_Bn :
-        ((TA * Bn).trace).re ≤ psdSchattenPNorm A hA α := by
+        ((TA * Bn).trace).re ≤
+          psdSchattenPNorm A hA ⟨α, lt_trans zero_lt_one hα_gt_one⟩ := by
       simpa [L, TA, Bn] using
         sandwichedRenyiRotatedKraus_tracePairingBound_of_psdTracePower_eq_one
           K σ Φ hK hσ hσΦ α q hα_gt_one hpq hA hBn hBnq
@@ -3457,8 +3454,8 @@ PSD Schatten `α` expression. -/
 theorem state_rpow_one_div_psdSchattenPNorm_eq_one
     (σ : State a) (hσ : σ.matrix.PosDef) (α : ℝ) (hα_pos : 0 < α) :
     psdSchattenPNorm (CFC.rpow σ.matrix (1 / α))
-        (σ.rpowMatrix_posSemidef (1 / α)) α = 1 := by
-  rw [psdSchattenPNorm,
+        (σ.rpowMatrix_posSemidef (1 / α)) ⟨α, hα_pos⟩ = 1 := by
+  rw [psdSchattenPNorm, Internal.psdSchattenExpression,
     state_rpow_one_div_psdTracePower_eq_one σ hσ α hα_pos]
   exact Real.one_rpow (1 / α)
 
@@ -3597,11 +3594,13 @@ theorem sandwichedRenyiRotatedKraus_tracePairing_le_one_of_input_le_referencePow
     (Φ.applyState σ).rpowMatrix_posSemidef (1 / α)
   have hholder :
       ((CFC.rpow (Φ.applyState σ).matrix (1 / α) * B).trace).re ≤
-        psdSchattenPNorm (CFC.rpow (Φ.applyState σ).matrix (1 / α)) hRpos α :=
+        psdSchattenPNorm (CFC.rpow (Φ.applyState σ).matrix (1 / α)) hRpos
+          ⟨α, lt_trans zero_lt_one hα_gt_one⟩ :=
     posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
       hRpos hB hpq (le_of_lt hpq.symm.lt) hBq
   have hnorm :
-      psdSchattenPNorm (CFC.rpow (Φ.applyState σ).matrix (1 / α)) hRpos α = 1 := by
+      psdSchattenPNorm (CFC.rpow (Φ.applyState σ).matrix (1 / α)) hRpos
+          ⟨α, lt_trans zero_lt_one hα_gt_one⟩ = 1 := by
     simpa [hRpos] using
       state_rpow_one_div_psdSchattenPNorm_eq_one
         (Φ.applyState σ) hσΦ α (lt_trans zero_lt_one hα_gt_one)
@@ -3681,7 +3680,7 @@ theorem sandwichedRenyiRotatedKrausAdjoint_qBall_of_tracePairingBound
     {B : CMatrix b} (hB : B.PosSemidef)
     (hbound : ∀ A : CMatrix a, ∀ hA : A.PosSemidef,
       (((MatrixMap.ofKraus (sandwichedRenyiRotatedKraus σ τ K α) A) *
-          B).trace).re ≤ psdSchattenPNorm A hA α) :
+          B).trace).re ≤ psdSchattenPNorm A hA ⟨α, hpq.pos⟩) :
     psdTracePower
         (MatrixMap.krausAdjoint (sandwichedRenyiRotatedKraus σ τ K α) B)
         (MatrixMap.krausAdjoint_mapsPositive
@@ -3744,7 +3743,7 @@ theorem sandwichedRenyiRotatedKrausAdjoint_qBall_iff_tracePairingBound
       1 ↔
       ∀ A : CMatrix a, ∀ hA : A.PosSemidef,
         (((MatrixMap.ofKraus (sandwichedRenyiRotatedKraus σ τ K α) A) *
-            B).trace).re ≤ psdSchattenPNorm A hA α := by
+            B).trace).re ≤ psdSchattenPNorm A hA ⟨α, hpq.pos⟩ := by
   let L : κ → Matrix b a ℂ := sandwichedRenyiRotatedKraus σ τ K α
   have hdual_iff :=
     psdTracePower_le_one_iff_trace_mul_le_psdSchattenPNorm
@@ -3815,7 +3814,7 @@ theorem sandwichedRenyiRotatedKrausAdjoint_qBall_of_le_referenceDualPower
           cMatrix_trace_mul_le_of_le_posSemidef_left hA hW_le
         have hholder :
             ((A * CFC.rpow σ.matrix (1 - 1 / α)).trace).re ≤
-              psdSchattenPNorm A hA α :=
+              psdSchattenPNorm A hA ⟨α, hpq.pos⟩ :=
           psd_trace_rpow_holder_variational_upper
             hA σ.pos hσ_trace hpq hr
         exact htrace_le.trans hholder)
@@ -4041,7 +4040,7 @@ theorem sandwichedRenyi_traceHolderUnitBall_le_of_rotatedKrausAdjoint_qBall
     (hBq : psdTracePower B hB q ≤ 1) :
     ((sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α * B).trace).re ≤
       psdSchattenPNorm (sandwichedRenyiInner ρ σ α)
-        (sandwichedRenyiInner_posSemidef ρ σ α) α := by
+        (sandwichedRenyiInner_posSemidef ρ σ α) ⟨α, hpq.pos⟩ := by
   have htrace :=
     sandwichedRenyi_inner_trace_eq_inputWitness K ρ σ Φ hK hσ B α
   have hinput_eq :=
@@ -4071,7 +4070,8 @@ theorem sandwichedRenyi_referenceDualEndpoint_traceHolder_le
     ((sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α *
         CFC.rpow (Φ.applyState σ).matrix (1 - 1 / α)).trace).re ≤
       psdSchattenPNorm (sandwichedRenyiInner ρ σ α)
-        (sandwichedRenyiInner_posSemidef ρ σ α) α := by
+        (sandwichedRenyiInner_posSemidef ρ σ α)
+        ⟨α, lt_trans zero_lt_one hα_gt_one⟩ := by
   let B : CMatrix b := CFC.rpow (Φ.applyState σ).matrix (1 - 1 / α)
   have htrace :=
     sandwichedRenyi_inner_trace_eq_inputWitness K ρ σ Φ hK hσ B α
@@ -4112,7 +4112,8 @@ theorem sandwichedRenyi_traceHolder_le_of_outputWitness_le_referenceDualPower
     (hB_le : B ≤ CFC.rpow (Φ.applyState σ).matrix (1 - 1 / α)) :
     ((sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α * B).trace).re ≤
       psdSchattenPNorm (sandwichedRenyiInner ρ σ α)
-        (sandwichedRenyiInner_posSemidef ρ σ α) α := by
+        (sandwichedRenyiInner_posSemidef ρ σ α)
+        ⟨α, lt_trans zero_lt_one hα_gt_one⟩ := by
   let W : CMatrix a :=
     MatrixMap.krausAdjoint
       (sandwichedRenyiRotatedKraus σ (Φ.applyState σ) K α) B
@@ -4145,7 +4146,8 @@ theorem sandwichedRenyi_traceHolder_le_of_outputWitness_le_referenceDualPower
       ((sandwichedRenyiInner ρ σ α *
           CFC.rpow σ.matrix (1 - 1 / α)).trace).re ≤
         psdSchattenPNorm (sandwichedRenyiInner ρ σ α)
-          (sandwichedRenyiInner_posSemidef ρ σ α) α :=
+          (sandwichedRenyiInner_posSemidef ρ σ α)
+          ⟨α, lt_trans zero_lt_one hα_gt_one⟩ :=
     psd_trace_rpow_holder_variational_upper
       (sandwichedRenyiInner_posSemidef ρ σ α) σ.pos hσ_trace hpq hr
   rw [htrace, hinput_eq]
@@ -4724,9 +4726,11 @@ theorem sandwichedRenyi_dataProcessing_le_of_inner_schattenPNorm_le_of_one_lt
     (hnorm :
       psdSchattenPNorm
           (sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α)
-          (sandwichedRenyiInner_posSemidef (Φ.applyState ρ) (Φ.applyState σ) α) α ≤
+          (sandwichedRenyiInner_posSemidef (Φ.applyState ρ) (Φ.applyState σ) α)
+          ⟨α, lt_trans zero_lt_one hα_gt_one⟩ ≤
         psdSchattenPNorm (sandwichedRenyiInner ρ σ α)
-          (sandwichedRenyiInner_posSemidef ρ σ α) α) :
+          (sandwichedRenyiInner_posSemidef ρ σ α)
+          ⟨α, lt_trans zero_lt_one hα_gt_one⟩) :
     sandwichedRenyi (Φ.applyState ρ) (Φ.applyState σ) hρΦ hσΦ
         α (lt_trans zero_lt_one hα_gt_one) (ne_of_gt hα_gt_one) ≤
       sandwichedRenyi ρ σ hρ hσ α (lt_trans zero_lt_one hα_gt_one)
@@ -4807,7 +4811,8 @@ theorem sandwichedRenyi_dataProcessing_le_of_traceHolderUnitBall_le_of_one_lt
       psdTracePower B hB q ≤ 1 →
         ((sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α * B).trace).re ≤
           psdSchattenPNorm (sandwichedRenyiInner ρ σ α)
-            (sandwichedRenyiInner_posSemidef ρ σ α) α) :
+            (sandwichedRenyiInner_posSemidef ρ σ α)
+            ⟨α, lt_trans zero_lt_one hα_gt_one⟩) :
     sandwichedRenyi (Φ.applyState ρ) (Φ.applyState σ) hρΦ hσΦ
         α (lt_trans zero_lt_one hα_gt_one) (ne_of_gt hα_gt_one) ≤
       sandwichedRenyi ρ σ hρ hσ α (lt_trans zero_lt_one hα_gt_one)
@@ -4815,9 +4820,11 @@ theorem sandwichedRenyi_dataProcessing_le_of_traceHolderUnitBall_le_of_one_lt
   have hnorm :
       psdSchattenPNorm
           (sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α)
-          (sandwichedRenyiInner_posSemidef (Φ.applyState ρ) (Φ.applyState σ) α) α ≤
+          (sandwichedRenyiInner_posSemidef (Φ.applyState ρ) (Φ.applyState σ) α)
+          ⟨α, lt_trans zero_lt_one hα_gt_one⟩ ≤
         psdSchattenPNorm (sandwichedRenyiInner ρ σ α)
-          (sandwichedRenyiInner_posSemidef ρ σ α) α :=
+          (sandwichedRenyiInner_posSemidef ρ σ α)
+          ⟨α, lt_trans zero_lt_one hα_gt_one⟩ :=
     psdSchattenPNorm_le_of_traceHolderUnitBall_le
       (sandwichedRenyiInner_posSemidef (Φ.applyState ρ) (Φ.applyState σ) α)
       (sandwichedRenyiInner_posSemidef ρ σ α)
@@ -4885,9 +4892,11 @@ theorem sandwichedRenyiInner_tracePower_le_of_one_lt_channel
   have hnorm :
       psdSchattenPNorm
           (sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α)
-          (sandwichedRenyiInner_posSemidef (Φ.applyState ρ) (Φ.applyState σ) α) α ≤
+          (sandwichedRenyiInner_posSemidef (Φ.applyState ρ) (Φ.applyState σ) α)
+          ⟨α, lt_trans zero_lt_one hα_gt_one⟩ ≤
         psdSchattenPNorm (sandwichedRenyiInner ρ σ α)
-          (sandwichedRenyiInner_posSemidef ρ σ α) α :=
+          (sandwichedRenyiInner_posSemidef ρ σ α)
+          ⟨α, lt_trans zero_lt_one hα_gt_one⟩ :=
     psdSchattenPNorm_le_of_traceHolderUnitBall_le
       (sandwichedRenyiInner_posSemidef (Φ.applyState ρ) (Φ.applyState σ) α)
       (sandwichedRenyiInner_posSemidef ρ σ α)

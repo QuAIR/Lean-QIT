@@ -353,7 +353,8 @@ theorem singletObservableModel_correlator_zero_zero :
     singletObservableModel.correlator 0 0 = Real.sqrt 2 / 2 := by
   norm_num [Fintype.sum_prod_type, singletObservableModel, correlator, jointObservable,
     singletAlice, singletBob,
-    TwoQubit.singletState, TwoQubit.singletMatrix, rankOneMatrix, TwoQubit.singletAmp,
+    TwoQubit.singletState, TwoQubit.singletPureVector, TwoQubit.singletMatrix,
+    rankOneMatrix, TwoQubit.singletAmp,
     TwoQubit.sigmaX, TwoQubit.sigmaZ, Matrix.vecMulVec_apply, Matrix.kronecker,
     Matrix.mul_apply, Matrix.trace, TwoQubit.invSqrtTwo, TwoQubit.star_invSqrtTwo]
   ring_nf
@@ -363,7 +364,8 @@ theorem singletObservableModel_correlator_zero_one :
     singletObservableModel.correlator 0 1 = Real.sqrt 2 / 2 := by
   norm_num [Fintype.sum_prod_type, singletObservableModel, correlator, jointObservable,
     singletAlice, singletBob,
-    TwoQubit.singletState, TwoQubit.singletMatrix, rankOneMatrix, TwoQubit.singletAmp,
+    TwoQubit.singletState, TwoQubit.singletPureVector, TwoQubit.singletMatrix,
+    rankOneMatrix, TwoQubit.singletAmp,
     TwoQubit.sigmaX, TwoQubit.sigmaZ, Matrix.vecMulVec_apply, Matrix.kronecker,
     Matrix.mul_apply, Matrix.trace, TwoQubit.invSqrtTwo, TwoQubit.star_invSqrtTwo]
   ring_nf
@@ -373,7 +375,8 @@ theorem singletObservableModel_correlator_one_zero :
     singletObservableModel.correlator 1 0 = Real.sqrt 2 / 2 := by
   norm_num [Fintype.sum_prod_type, singletObservableModel, correlator, jointObservable,
     singletAlice, singletBob,
-    TwoQubit.singletState, TwoQubit.singletMatrix, rankOneMatrix, TwoQubit.singletAmp,
+    TwoQubit.singletState, TwoQubit.singletPureVector, TwoQubit.singletMatrix,
+    rankOneMatrix, TwoQubit.singletAmp,
     TwoQubit.sigmaX, TwoQubit.sigmaZ, Matrix.vecMulVec_apply, Matrix.kronecker,
     Matrix.mul_apply, Matrix.trace, TwoQubit.invSqrtTwo, TwoQubit.star_invSqrtTwo]
   ring_nf
@@ -383,7 +386,8 @@ theorem singletObservableModel_correlator_one_one :
     singletObservableModel.correlator 1 1 = -(Real.sqrt 2 / 2) := by
   norm_num [Fintype.sum_prod_type, singletObservableModel, correlator, jointObservable,
     singletAlice, singletBob,
-    TwoQubit.singletState, TwoQubit.singletMatrix, rankOneMatrix, TwoQubit.singletAmp,
+    TwoQubit.singletState, TwoQubit.singletPureVector, TwoQubit.singletMatrix,
+    rankOneMatrix, TwoQubit.singletAmp,
     TwoQubit.sigmaX, TwoQubit.sigmaZ, Matrix.vecMulVec_apply, Matrix.kronecker,
     Matrix.mul_apply, Matrix.trace, TwoQubit.invSqrtTwo, TwoQubit.star_invSqrtTwo]
   ring_nf

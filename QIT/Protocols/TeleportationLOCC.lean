@@ -94,7 +94,7 @@ def teleportationAppendResourceChannel
     Channel d (Prod d (Prod d d)) :=
   ((Channel.idChannel d).prod
       (Channel.prepare (fun _ : PUnit.{u + 1} =>
-        (teleportationEntanglementResource d).state.state))).comp
+        (teleportationEntanglementResource d).state))).comp
     (Channel.reindex (teleportationAppendRightUnitEquiv d))
 
 theorem teleportationAppendResourceChannel_map
@@ -102,7 +102,7 @@ theorem teleportationAppendResourceChannel_map
     (X : CMatrix d) :
     (teleportationAppendResourceChannel d).map X =
       Matrix.kronecker X
-        (teleportationEntanglementResource d).state.state.matrix := by
+        (teleportationEntanglementResource d).state.matrix := by
   have hunit :
       (Channel.reindex (teleportationAppendRightUnitEquiv d)).map X =
         Matrix.kronecker X (1 : CMatrix PUnit.{u + 1}) := by
@@ -131,7 +131,7 @@ theorem teleportationAppendResourceChannel_map
   change
     MatrixMap.kron (Channel.idChannel d).map
       (Channel.prepare (fun _ : PUnit.{u + 1} =>
-        (teleportationEntanglementResource d).state.state)).map
+        (teleportationEntanglementResource d).state)).map
       ((Channel.reindex (teleportationAppendRightUnitEquiv d)).map X) = _
   rw [hunit, MatrixMap.kron_apply_kronecker]
   have hid : (Channel.idChannel d).map X = X := by
@@ -139,9 +139,9 @@ theorem teleportationAppendResourceChannel_map
     simp [Channel.idChannel, MatrixMap.ofKraus]
   have hprepare :
       (Channel.prepare (fun _ : PUnit.{u + 1} =>
-        (teleportationEntanglementResource d).state.state)).map
+        (teleportationEntanglementResource d).state)).map
           (1 : CMatrix PUnit.{u + 1}) =
-        (teleportationEntanglementResource d).state.state.matrix := by
+        (teleportationEntanglementResource d).state.matrix := by
     rw [Channel.prepare_map]
     simp
   rw [hid, hprepare]
@@ -298,7 +298,8 @@ theorem teleportationLOCCResourceChannel_eq_teleportationChannel
   simp_rw [Fintype.sum_prod_type]
   simp_rw [Finset.sum_mul, Finset.mul_sum]
   rw [sum_six_teleportation_permute]
-  simp only [starRingEnd_apply, mul_assoc, mul_left_comm, mul_comm]
+  simp only [TeleportationEntanglementResource.state, PureVector.state_matrix,
+    rankOneMatrix_apply, mul_assoc, mul_left_comm, mul_comm]
 
 /-- The explicit finite one-way-LOCC protocol, after adjoining its shared
 maximally entangled resource, implements the identity channel. -/

@@ -289,7 +289,7 @@ theorem cbOneToAlphaOriginalInput_eq_rankOne_rpow
       ∑ x1 : a, R x1 r' * ∑ x2 : a,
         if x2 = x ∧ x1 = x' then R r x2 else 0 := by
           simp [cbOneToAlphaOriginalInput, cbOneToAlphaReferenceWeight,
-            maximallyEntangledProjector, MatrixMap.choi, Channel.idChannel_map,
+            unnormalizedMaximallyEntangledProjector, MatrixMap.choi, Channel.idChannel_map,
             Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.mul_apply,
             Matrix.one_apply, Matrix.single, Fintype.sum_prod_type, R,
             mul_comm]
@@ -371,7 +371,7 @@ theorem partialTraceA_rankOne_rpow_weight_eq_rpow_transpose
 power substitution. -/
 def CBOneToAlphaOriginalDomain.toTransposeTraceDomain
     (Y : CBOneToAlphaOriginalDomain a) {alpha : ℝ} (_halpha : 0 < alpha) :
-    AlphaToAlphaTraceDomain a alpha where
+    AlphaToAlphaTraceDomain a (SchattenOrder.ofPositive _halpha) where
   matrix := Y.matrix.transpose
   pos := Y.pos.transpose
   trace_le_one := by
@@ -388,7 +388,7 @@ theorem cbOneToAlphaOriginalValue_eq_krausComplement_alphaToAlphaTraceValue_tran
         (MatrixMap.ofKraus K)
         (MatrixMap.ofKraus_completelyPositive K)
         Y
-        alpha =
+        (SchattenOrder.ofPositive halpha) =
       alphaToAlphaTraceValue
         (MatrixMap.krausComplement K)
         (MatrixMap.krausComplement_isCompletelyPositive K)
@@ -427,27 +427,28 @@ theorem cbOneToAlphaOriginalValue_eq_krausComplement_alphaToAlphaTraceValue_tran
         ((MatrixMap.ofKraus K).referenceLift_mapsPositive
           (MatrixMap.ofKraus_completelyPositive K)
           (cbOneToAlphaOriginalInput_posSemidef Y.pos alpha))
-        alpha =
+        (SchattenOrder.ofPositive halpha) =
       psdSchattenPNorm
         (partialTraceB (a := Prod a b) (b := κ)
           (rankOneMatrix (krausStinespringReferenceVector K psi)))
         (partialTraceB_posSemidef (rankOneMatrix_pos (krausStinespringReferenceVector K psi)))
-        alpha := by
+        (SchattenOrder.ofPositive halpha) := by
           exact psdSchattenPNorm_congr hleft
             ((MatrixMap.ofKraus K).referenceLift_mapsPositive
               (MatrixMap.ofKraus_completelyPositive K)
               (cbOneToAlphaOriginalInput_posSemidef Y.pos alpha))
             (partialTraceB_posSemidef
               (rankOneMatrix_pos (krausStinespringReferenceVector K psi)))
-            alpha
+            (SchattenOrder.ofPositive halpha)
     _ =
       psdSchattenPNorm
         (partialTraceA (a := Prod a b) (b := κ)
           (rankOneMatrix (krausStinespringReferenceVector K psi)))
         (partialTraceA_posSemidef (rankOneMatrix_pos (krausStinespringReferenceVector K psi)))
-        alpha := by
+        (SchattenOrder.ofPositive halpha) := by
           exact psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
-            (krausStinespringReferenceVector K psi) halpha
+            (krausStinespringReferenceVector K psi)
+            (SchattenOrder.ofPositive halpha)
     _ =
       psdSchattenPNorm
         (MatrixMap.krausComplement K
@@ -461,7 +462,7 @@ theorem cbOneToAlphaOriginalValue_eq_krausComplement_alphaToAlphaTraceValue_tran
             (A := (CBOneToAlphaOriginalDomain.toTransposeTraceDomain Y halpha).matrix)
             (s := 1 / alpha)
             (CBOneToAlphaOriginalDomain.toTransposeTraceDomain Y halpha).pos))
-        alpha := by
+        (SchattenOrder.ofPositive halpha) := by
           simp only [CBOneToAlphaOriginalDomain.toTransposeTraceDomain]
           exact psdSchattenPNorm_congr hright
             (partialTraceA_posSemidef
@@ -471,7 +472,7 @@ theorem cbOneToAlphaOriginalValue_eq_krausComplement_alphaToAlphaTraceValue_tran
               (CFC.rpow Y.matrix.transpose (1 / alpha))
               (cMatrix_rpow_posSemidef
                 (A := Y.matrix.transpose) (s := 1 / alpha) Y.pos.transpose))
-            alpha
+            (SchattenOrder.ofPositive halpha)
 
 /-- Pointwise equality between the original CB `1 -> alpha` value and the
 trace-normalized `alpha -> alpha` value of the chosen complementary map. -/
@@ -479,19 +480,19 @@ theorem cbOneToAlphaOriginalValue_eq_cpComplement_alphaToAlphaTraceValue_transpo
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
     {alpha : ℝ} (halpha : 0 < alpha)
     (Y : CBOneToAlphaOriginalDomain a) :
-    cbOneToAlphaOriginalValue Phi hPhi Y alpha =
+    cbOneToAlphaOriginalValue Phi hPhi Y (SchattenOrder.ofPositive halpha) =
       alphaToAlphaTraceValue
         (MatrixMap.cpComplement Phi hPhi)
         (MatrixMap.cpComplement_isCompletelyPositive Phi hPhi)
         (Y.toTransposeTraceDomain (alpha := alpha) halpha) := by
   let K : (a × b) → Matrix b a ℂ := MatrixMap.cpKraus Phi hPhi
   have hcb :
-      cbOneToAlphaOriginalValue Phi hPhi Y alpha =
+      cbOneToAlphaOriginalValue Phi hPhi Y (SchattenOrder.ofPositive halpha) =
         cbOneToAlphaOriginalValue
           (MatrixMap.ofKraus K)
           (MatrixMap.ofKraus_completelyPositive K)
           Y
-          alpha := by
+          (SchattenOrder.ofPositive halpha) := by
     unfold cbOneToAlphaOriginalValue
     exact psdSchattenPNorm_congr
       (by rw [MatrixMap.cpKraus_spec Phi hPhi])
@@ -500,14 +501,14 @@ theorem cbOneToAlphaOriginalValue_eq_cpComplement_alphaToAlphaTraceValue_transpo
       ((MatrixMap.ofKraus K).referenceLift_mapsPositive
         (MatrixMap.ofKraus_completelyPositive K)
         (cbOneToAlphaOriginalInput_posSemidef Y.pos alpha))
-      alpha
+      (SchattenOrder.ofPositive halpha)
   calc
-    cbOneToAlphaOriginalValue Phi hPhi Y alpha =
+    cbOneToAlphaOriginalValue Phi hPhi Y (SchattenOrder.ofPositive halpha) =
       cbOneToAlphaOriginalValue
         (MatrixMap.ofKraus K)
         (MatrixMap.ofKraus_completelyPositive K)
         Y
-        alpha := hcb
+        (SchattenOrder.ofPositive halpha) := hcb
     _ =
       alphaToAlphaTraceValue
         (MatrixMap.krausComplement K)
@@ -530,11 +531,11 @@ private theorem cbOneToAlphaOriginalValueSet_eq_krausComplement_alphaToAlphaTrac
     cbOneToAlphaOriginalValueSet
         (MatrixMap.ofKraus K)
         (MatrixMap.ofKraus_completelyPositive K)
-        alpha =
+        (SchattenOrder.ofOneLt halpha) =
       alphaToAlphaTraceValueSet
         (MatrixMap.krausComplement K)
         (MatrixMap.krausComplement_isCompletelyPositive K)
-        alpha := by
+        (SchattenOrder.ofOneLt halpha) := by
   have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
   apply Set.ext
   intro x
@@ -552,8 +553,10 @@ private theorem cbOneToAlphaOriginalValueSet_eq_krausComplement_alphaToAlphaTrac
     refine ⟨Y, ?_⟩
     have hdomain :
         Y.toTransposeTraceDomain (alpha := alpha) halpha_pos = Z := by
-      cases Z
-      simp [Y, CBOneToAlphaOriginalDomain.toTransposeTraceDomain]
+      cases Z with
+      | mk matrix pos trace_le_one =>
+          simp [Y, CBOneToAlphaOriginalDomain.toTransposeTraceDomain]
+          congr
     rw [← hdomain]
     exact cbOneToAlphaOriginalValue_eq_krausComplement_alphaToAlphaTraceValue_transpose
       K halpha_pos Y
@@ -566,11 +569,11 @@ theorem cbOneToAlphaNorm_eq_krausComplement_alphaToAlphaNorm
     cbOneToAlphaNorm
         (MatrixMap.ofKraus K)
         (MatrixMap.ofKraus_completelyPositive K)
-        alpha =
+        (SchattenOrder.ofOneLt halpha) =
       alphaToAlphaNorm
         (MatrixMap.krausComplement K)
         (MatrixMap.krausComplement_isCompletelyPositive K)
-        alpha := by
+        (SchattenOrder.ofOneLt halpha) := by
   rw [cbOneToAlphaNorm_eq_sSup]
   rw [cbOneToAlphaOriginalValueSet_eq_krausComplement_alphaToAlphaTraceValueSet K halpha]
   exact (alphaToAlphaNorm_eq_tracePower_sSup_of_one_lt
@@ -583,20 +586,20 @@ theorem cbOneToAlphaNorm_eq_krausComplement_alphaToAlphaNorm
 theorem cbOneToAlphaNorm_eq_cpComplement_alphaToAlphaNorm
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
     {alpha : ℝ} (halpha : 1 < alpha) :
-    cbOneToAlphaNorm Phi hPhi alpha =
+    cbOneToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha) =
       alphaToAlphaNorm
         (MatrixMap.cpComplement Phi hPhi)
         (MatrixMap.cpComplement_isCompletelyPositive Phi hPhi)
-        alpha := by
+        (SchattenOrder.ofOneLt halpha) := by
   let K : (a × b) → Matrix b a ℂ := MatrixMap.cpKraus Phi hPhi
   have hvalue :
       ∀ Y : CBOneToAlphaOriginalDomain a,
-        cbOneToAlphaOriginalValue Phi hPhi Y alpha =
+        cbOneToAlphaOriginalValue Phi hPhi Y (SchattenOrder.ofOneLt halpha) =
           cbOneToAlphaOriginalValue
             (MatrixMap.ofKraus K)
             (MatrixMap.ofKraus_completelyPositive K)
             Y
-            alpha := by
+            (SchattenOrder.ofOneLt halpha) := by
     intro Y
     unfold cbOneToAlphaOriginalValue
     exact psdSchattenPNorm_congr
@@ -606,13 +609,13 @@ theorem cbOneToAlphaNorm_eq_cpComplement_alphaToAlphaNorm
       ((MatrixMap.ofKraus K).referenceLift_mapsPositive
         (MatrixMap.ofKraus_completelyPositive K)
         (cbOneToAlphaOriginalInput_posSemidef Y.pos alpha))
-      alpha
+      (SchattenOrder.ofOneLt halpha)
   have hnorm :
-      cbOneToAlphaNorm Phi hPhi alpha =
+      cbOneToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha) =
         cbOneToAlphaNorm
           (MatrixMap.ofKraus K)
           (MatrixMap.ofKraus_completelyPositive K)
-          alpha := by
+          (SchattenOrder.ofOneLt halpha) := by
     unfold cbOneToAlphaNorm cbOneToAlphaOriginalValueSet
     congr 1
     apply Set.ext
@@ -623,22 +626,22 @@ theorem cbOneToAlphaNorm_eq_cpComplement_alphaToAlphaNorm
     · rintro ⟨Y, rfl⟩
       exact ⟨Y, hvalue Y⟩
   calc
-    cbOneToAlphaNorm Phi hPhi alpha =
+    cbOneToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha) =
       cbOneToAlphaNorm
         (MatrixMap.ofKraus K)
         (MatrixMap.ofKraus_completelyPositive K)
-        alpha := hnorm
+        (SchattenOrder.ofOneLt halpha) := hnorm
     _ =
       alphaToAlphaNorm
         (MatrixMap.krausComplement K)
         (MatrixMap.krausComplement_isCompletelyPositive K)
-        alpha :=
+        (SchattenOrder.ofOneLt halpha) :=
         cbOneToAlphaNorm_eq_krausComplement_alphaToAlphaNorm K halpha
     _ =
       alphaToAlphaNorm
         (MatrixMap.cpComplement Phi hPhi)
         (MatrixMap.cpComplement_isCompletelyPositive Phi hPhi)
-        alpha := by
+        (SchattenOrder.ofOneLt halpha) := by
         rfl
 
 end MatrixMap

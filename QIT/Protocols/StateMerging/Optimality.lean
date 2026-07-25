@@ -6,19 +6,21 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Protocols.StateMerging.Converse
+public import QIT.Protocols.StateMerging.SmoothMinConverse
 public import QIT.Protocols.StateMerging.Direct
 
 /-!
 # Optimal entanglement cost of quantum state merging
 
 This module assembles the concrete ADHW FQSW-plus-teleportation direct
-construction with the Horodecki--Oppenheim--Winter converse.  The resulting
+construction with Berta's dimension-independent smooth-min-entropy converse
+for the unrestricted Horodecki--Oppenheim--Winter rate domain. The resulting
 optimal net entanglement cost is the conditional entropy, including its
 negative (net entanglement generation) regime.
 
-Source: HOW `swlong.6.2.tex:545-625,1071-1139,1143-1210` and the ADHW child
-protocol route `fqsw.tex:402-420`.
+Source: HOW `swlong.6.2.tex:545-625`, the ADHW child protocol route
+`fqsw.tex:402-420`, and Berta's one-shot/asymptotic converse
+`diploma_thesis_berta_08_v1.tex:729-798,840-902,910-942`.
 -/
 
 @[expose] public section
@@ -36,7 +38,8 @@ namespace PureVector
 
 /-- The conditional entropy is the least achievable standard state-merging
 net entanglement rate.  The membership half is the concrete ADHW
-FQSW-plus-teleportation construction; minimality is the HOW converse. -/
+FQSW-plus-teleportation construction; minimality follows from Berta's
+dimension-independent smooth-min-entropy converse on the HOW rate domain. -/
 theorem conditionalEntropy_isLeast_stateMergingRates
     (psi : PureVector (Prod (Prod a b) r)) :
     IsLeast

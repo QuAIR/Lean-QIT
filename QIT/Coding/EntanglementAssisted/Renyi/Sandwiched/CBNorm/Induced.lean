@@ -41,7 +41,7 @@ The source writes strict positive inputs `Z_C > 0`.  This finite-dimensional
 API works over the PSD closure and keeps the strict positive Schatten norm
 side condition exactly where the source divides by `||Z||_alpha`. -/
 structure AlphaToAlphaPositiveDomain (a : Type u) [Fintype a] [DecidableEq a]
-    (alpha : Real) where
+    (alpha : SchattenOrder) where
   matrix : CMatrix a
   pos : matrix.PosSemidef
   norm_pos : 0 < psdSchattenPNorm matrix pos alpha
@@ -50,7 +50,7 @@ structure AlphaToAlphaPositiveDomain (a : Type u) [Fintype a] [DecidableEq a]
 admissible input. -/
 def alphaToAlphaPositiveValue
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (Z : AlphaToAlphaPositiveDomain a alpha) : Real :=
+    {alpha : SchattenOrder} (Z : AlphaToAlphaPositiveDomain a alpha) : Real :=
   psdSchattenPNorm (Phi Z.matrix)
       (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi Z.matrix Z.pos)
       alpha /
@@ -59,14 +59,14 @@ def alphaToAlphaPositiveValue
 /-- Value set for the positive-input induced `alpha -> alpha` norm. -/
 def alphaToAlphaPositiveValueSet
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : Real) : Set Real :=
+    (alpha : SchattenOrder) : Set Real :=
   Set.range fun Z : AlphaToAlphaPositiveDomain a alpha =>
     alphaToAlphaPositiveValue Phi hPhi Z
 
 /-- Source positive-input induced `alpha -> alpha` norm. -/
 def alphaToAlphaNorm
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : Real) : Real :=
+    (alpha : SchattenOrder) : Real :=
   sSup (alphaToAlphaPositiveValueSet Phi hPhi alpha)
 
 /-- Trace-normalized domain for the source power-substitution surface
@@ -75,7 +75,7 @@ def alphaToAlphaNorm
 The source writes strict positive `Y_C > 0`; this API uses the PSD closure,
 which also includes the zero-boundary case needed by the supremum surface. -/
 structure AlphaToAlphaTraceDomain (a : Type u) [Fintype a] [DecidableEq a]
-    (alpha : Real) where
+    (alpha : SchattenOrder) where
   matrix : CMatrix a
   pos : matrix.PosSemidef
   trace_le_one : matrix.trace.re <= 1
@@ -83,25 +83,26 @@ structure AlphaToAlphaTraceDomain (a : Type u) [Fintype a] [DecidableEq a]
 /-- One source trace-normalized value `||P(Y^(1/alpha))||_alpha`. -/
 def alphaToAlphaTraceValue
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (Y : AlphaToAlphaTraceDomain a alpha) : Real :=
+    {alpha : SchattenOrder} (Y : AlphaToAlphaTraceDomain a alpha) : Real :=
   psdSchattenPNorm
-    (Phi (CFC.rpow Y.matrix (1 / alpha)))
+    (Phi (CFC.rpow Y.matrix (1 / (alpha : Real))))
     (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi
-      (CFC.rpow Y.matrix (1 / alpha))
-      (cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos))
+      (CFC.rpow Y.matrix (1 / (alpha : Real)))
+      (cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos))
     alpha
 
 /-- Value set for the trace-normalized power-substitution surface. -/
 def alphaToAlphaTraceValueSet
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : Real) : Set Real :=
+    (alpha : SchattenOrder) : Set Real :=
   Set.range fun Y : AlphaToAlphaTraceDomain a alpha =>
     alphaToAlphaTraceValue Phi hPhi Y
 
 /-- The source substitution `Y = Z^alpha / Tr[Z^alpha]` sends a positive-domain
 input to the trace-normalized power domain. -/
 def AlphaToAlphaPositiveDomain.toTraceDomain
-    {alpha : Real} (Y : AlphaToAlphaPositiveDomain a alpha) (halpha : 1 < alpha) :
+    {alpha : SchattenOrder} (Y : AlphaToAlphaPositiveDomain a alpha)
+    (halpha : 1 < (alpha : Real)) :
     AlphaToAlphaTraceDomain a alpha := by
   let R : Real := psdTracePower Y.matrix Y.pos alpha
   have hRpos : 0 < R :=
@@ -124,47 +125,48 @@ def AlphaToAlphaPositiveDomain.toTraceDomain
 /-- The source trace condition `Tr[Y] <= 1` implies
 `||Y^(1/alpha)||_alpha <= 1`. -/
 theorem AlphaToAlphaTraceDomain.rpow_schatten_norm_le_one
-    {alpha : Real} (Y : AlphaToAlphaTraceDomain a alpha) (halpha : 1 < alpha) :
-    psdSchattenPNorm (CFC.rpow Y.matrix (1 / alpha))
-        (cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos)
+    {alpha : SchattenOrder} (Y : AlphaToAlphaTraceDomain a alpha)
+    (halpha : 1 < (alpha : Real)) :
+    psdSchattenPNorm (CFC.rpow Y.matrix (1 / (alpha : Real)))
+        (cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos)
         alpha <= 1 := by
-  have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
-  have halpha_nonneg : 0 <= alpha := le_of_lt halpha_pos
-  have hinv_alpha_nonneg : 0 <= 1 / alpha := one_div_nonneg.mpr halpha_nonneg
+  have halpha_pos : 0 < (alpha : Real) := lt_trans zero_lt_one halpha
+  have halpha_nonneg : 0 <= (alpha : Real) := le_of_lt halpha_pos
+  have hinv_alpha_nonneg : 0 <= 1 / (alpha : Real) := one_div_nonneg.mpr halpha_nonneg
   have hpower :
-      psdTracePower (CFC.rpow Y.matrix (1 / alpha))
-          (cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos)
+      psdTracePower (CFC.rpow Y.matrix (1 / (alpha : Real)))
+          (cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos)
           alpha =
         Y.matrix.trace.re := by
     rw [psdTracePower_eq]
     have hpow :
-        CFC.rpow (CFC.rpow Y.matrix (1 / alpha)) alpha =
+        CFC.rpow (CFC.rpow Y.matrix (1 / (alpha : Real))) alpha =
           CFC.rpow Y.matrix 1 := by
       exact cMatrix_rpow_rpow_of_nonneg Y.pos hinv_alpha_nonneg halpha_nonneg (by
         field_simp [ne_of_gt halpha_pos])
     rw [hpow]
     exact congrArg (fun M : CMatrix a => M.trace.re)
       (CFC.rpow_one Y.matrix (ha := Matrix.nonneg_iff_posSemidef.mpr Y.pos))
-  rw [psdSchattenPNorm, hpower]
+  rw [psdSchattenPNorm, Internal.psdSchattenExpression, hpower]
   exact Real.rpow_le_one (Matrix.PosSemidef.trace_nonneg Y.pos).1
     Y.trace_le_one hinv_alpha_nonneg
 
 theorem alphaToAlphaTraceValue_toTraceDomain_eq_positiveValue
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
     (Y : AlphaToAlphaPositiveDomain a alpha) :
     alphaToAlphaTraceValue Phi hPhi (Y.toTraceDomain halpha) =
       alphaToAlphaPositiveValue Phi hPhi Y := by
   let R : Real := psdTracePower Y.matrix Y.pos alpha
-  have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
-  have halpha_nonneg : 0 <= alpha := le_of_lt halpha_pos
-  have hinv_alpha_nonneg : 0 <= 1 / alpha := one_div_nonneg.mpr halpha_nonneg
+  have halpha_pos : 0 < (alpha : Real) := lt_trans zero_lt_one halpha
+  have halpha_nonneg : 0 <= (alpha : Real) := le_of_lt halpha_pos
+  have hinv_alpha_nonneg : 0 <= 1 / (alpha : Real) := one_div_nonneg.mpr halpha_nonneg
   have hRpos : 0 < R :=
     psdTracePower_pos_of_psdSchattenPNorm_pos_of_one_lt Y.pos halpha Y.norm_pos
   have hR_nonneg : 0 <= R := le_of_lt hRpos
   have hRinv_nonneg : 0 <= R⁻¹ := inv_nonneg.mpr hR_nonneg
   have hpow_power :
-      CFC.rpow (CFC.rpow Y.matrix alpha) (1 / alpha) =
+      CFC.rpow (CFC.rpow Y.matrix alpha) (1 / (alpha : Real)) =
         CFC.rpow Y.matrix 1 := by
     exact cMatrix_rpow_rpow_of_nonneg Y.pos halpha_nonneg hinv_alpha_nonneg (by
       field_simp [ne_of_gt halpha_pos])
@@ -172,12 +174,13 @@ theorem alphaToAlphaTraceValue_toTraceDomain_eq_positiveValue
       CFC.rpow Y.matrix 1 = Y.matrix := by
     exact CFC.rpow_one Y.matrix (ha := Matrix.nonneg_iff_posSemidef.mpr Y.pos)
   have hscale_eq :
-      (R⁻¹) ^ (1 / alpha) =
+      (R⁻¹) ^ (1 / (alpha : Real)) =
         (psdSchattenPNorm Y.matrix Y.pos alpha)⁻¹ := by
-    simpa [psdSchattenPNorm, R] using Real.inv_rpow hR_nonneg (1 / alpha)
+    simpa [psdSchattenPNorm, Internal.psdSchattenExpression, R] using
+      Real.inv_rpow hR_nonneg (1 / (alpha : Real))
   have hinput :
       CFC.rpow ((R⁻¹ : Real) • (CFC.rpow Y.matrix alpha) : CMatrix a)
-          (1 / alpha) =
+          (1 / (alpha : Real)) =
         ((psdSchattenPNorm Y.matrix Y.pos alpha)⁻¹ : Real) • Y.matrix := by
     rw [cMatrix_rpow_real_smul_posSemidef_schatten
       (cMatrix_rpow_posSemidef (A := Y.matrix) (s := alpha) Y.pos)
@@ -190,15 +193,15 @@ theorem alphaToAlphaTraceValue_toTraceDomain_eq_positiveValue
       hRinv_nonneg
   have hactualPowerPos :
       (CFC.rpow ((R⁻¹ : Real) • (CFC.rpow Y.matrix alpha) : CMatrix a)
-        (1 / alpha)).PosSemidef :=
+        (1 / (alpha : Real))).PosSemidef :=
     cMatrix_rpow_posSemidef (A := ((R⁻¹ : Real) • (CFC.rpow Y.matrix alpha) :
-      CMatrix a)) (s := 1 / alpha) hactualNormedPos
+      CMatrix a)) (s := 1 / (alpha : Real)) hactualNormedPos
   have hactualPhiPos :
       (Phi (CFC.rpow ((R⁻¹ : Real) • (CFC.rpow Y.matrix alpha) : CMatrix a)
-        (1 / alpha))).PosSemidef :=
+        (1 / (alpha : Real)))).PosSemidef :=
     MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi
       (CFC.rpow ((R⁻¹ : Real) • (CFC.rpow Y.matrix alpha) : CMatrix a)
-        (1 / alpha)) hactualPowerPos
+        (1 / (alpha : Real))) hactualPowerPos
   have hPhiYpos :
       (Phi Y.matrix).PosSemidef :=
     MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi Y.matrix Y.pos
@@ -218,7 +221,7 @@ theorem alphaToAlphaTraceValue_toTraceDomain_eq_positiveValue
   change
     psdSchattenPNorm
         (Phi (CFC.rpow ((R⁻¹ : Real) • (CFC.rpow Y.matrix alpha) : CMatrix a)
-          (1 / alpha)))
+          (1 / (alpha : Real))))
         _ alpha =
       psdSchattenPNorm (Phi Y.matrix)
           (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi Y.matrix Y.pos)
@@ -227,7 +230,7 @@ theorem alphaToAlphaTraceValue_toTraceDomain_eq_positiveValue
   calc
     psdSchattenPNorm
         (Phi (CFC.rpow ((R⁻¹ : Real) • (CFC.rpow Y.matrix alpha) : CMatrix a)
-          (1 / alpha)))
+          (1 / (alpha : Real))))
         _ alpha
         =
       psdSchattenPNorm
@@ -248,9 +251,10 @@ theorem alphaToAlphaTraceValue_toTraceDomain_eq_positiveValue
         psdSchattenPNorm (Phi Y.matrix)
           (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi Y.matrix Y.pos)
           alpha := by
-          rw [psdSchattenPNorm_real_smul
-            (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi Y.matrix Y.pos)
-            (inv_nonneg.mpr (le_of_lt Y.norm_pos)) halpha_pos]
+          simpa using
+            (psdSchattenPNorm_real_smul
+              (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi Y.matrix Y.pos)
+              (inv_nonneg.mpr (le_of_lt Y.norm_pos)) alpha)
     _ =
       psdSchattenPNorm (Phi Y.matrix)
           (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi Y.matrix Y.pos)
@@ -260,25 +264,25 @@ theorem alphaToAlphaTraceValue_toTraceDomain_eq_positiveValue
 
 theorem alphaToAlphaNorm_eq_sSup_positive
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    (alpha : Real) :
+    (alpha : SchattenOrder) :
     alphaToAlphaNorm Phi hPhi alpha =
       sSup (alphaToAlphaPositiveValueSet Phi hPhi alpha) := by
   rfl
 
 theorem alphaToAlphaTraceValue_nonneg
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (Y : AlphaToAlphaTraceDomain a alpha) :
+    {alpha : SchattenOrder} (Y : AlphaToAlphaTraceDomain a alpha) :
     0 <= alphaToAlphaTraceValue Phi hPhi Y :=
   psdSchattenPNorm_nonneg
-    (Phi (CFC.rpow Y.matrix (1 / alpha)))
+    (Phi (CFC.rpow Y.matrix (1 / (alpha : Real))))
     (MatrixMap.isCompletelyPositive_mapsPositive Phi hPhi
-      (CFC.rpow Y.matrix (1 / alpha))
-      (cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos))
+      (CFC.rpow Y.matrix (1 / (alpha : Real)))
+      (cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos))
     alpha
 
 theorem alphaToAlphaPositiveValue_nonneg
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (Y : AlphaToAlphaPositiveDomain a alpha) :
+    {alpha : SchattenOrder} (Y : AlphaToAlphaPositiveDomain a alpha) :
     0 <= alphaToAlphaPositiveValue Phi hPhi Y := by
   exact div_nonneg
     (psdSchattenPNorm_nonneg (Phi Y.matrix)
@@ -288,19 +292,20 @@ theorem alphaToAlphaPositiveValue_nonneg
 
 theorem alphaToAlphaTraceValue_le_positiveValue_of_rpow_norm_pos
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha) (Y : AlphaToAlphaTraceDomain a alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
+    (Y : AlphaToAlphaTraceDomain a alpha)
     (hnorm_pos :
-      0 < psdSchattenPNorm (CFC.rpow Y.matrix (1 / alpha))
-        (cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos)
+      0 < psdSchattenPNorm (CFC.rpow Y.matrix (1 / (alpha : Real)))
+        (cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos)
         alpha) :
     alphaToAlphaTraceValue Phi hPhi Y <=
       alphaToAlphaPositiveValue Phi hPhi
-        { matrix := CFC.rpow Y.matrix (1 / alpha),
-          pos := cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos,
+        { matrix := CFC.rpow Y.matrix (1 / (alpha : Real)),
+          pos := cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos,
           norm_pos := hnorm_pos } := by
-  let Z : CMatrix a := CFC.rpow Y.matrix (1 / alpha)
+  let Z : CMatrix a := CFC.rpow Y.matrix (1 / (alpha : Real))
   let hZ : Z.PosSemidef :=
-    cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos
+    cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos
   let normZ : Real := psdSchattenPNorm Z hZ alpha
   have hnormZ_pos : 0 < normZ := by
     simpa [Z, hZ, normZ] using hnorm_pos
@@ -325,16 +330,17 @@ theorem alphaToAlphaTraceValue_le_positiveValue_of_rpow_norm_pos
 
 theorem alphaToAlphaTraceValue_eq_zero_of_rpow_norm_eq_zero
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha) (Y : AlphaToAlphaTraceDomain a alpha)
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real))
+    (Y : AlphaToAlphaTraceDomain a alpha)
     (hnorm_zero :
-      psdSchattenPNorm (CFC.rpow Y.matrix (1 / alpha))
-        (cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos)
+      psdSchattenPNorm (CFC.rpow Y.matrix (1 / (alpha : Real)))
+        (cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos)
         alpha = 0) :
     alphaToAlphaTraceValue Phi hPhi Y = 0 := by
-  let Z : CMatrix a := CFC.rpow Y.matrix (1 / alpha)
+  let Z : CMatrix a := CFC.rpow Y.matrix (1 / (alpha : Real))
   let hZ : Z.PosSemidef :=
-    cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos
-  have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
+    cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos
+  have halpha_pos : 0 < (alpha : Real) := lt_trans zero_lt_one halpha
   have hnormZ_zero : psdSchattenPNorm Z hZ alpha = 0 := by
     simpa [Z, hZ] using hnorm_zero
   have hZzero : Z = 0 := by
@@ -353,11 +359,11 @@ theorem alphaToAlphaTraceValue_eq_zero_of_rpow_norm_eq_zero
     psdSchattenPNorm (Phi Z) _ alpha =
         psdSchattenPNorm (0 : CMatrix b) Matrix.PosSemidef.zero alpha := by
           exact psdSchattenPNorm_congr hPhiZzero hPhiZpos Matrix.PosSemidef.zero alpha
-    _ = 0 := psdSchattenPNorm_zero alpha (ne_of_gt halpha_pos)
+    _ = 0 := psdSchattenPNorm_zero alpha
 
 theorem alphaToAlphaNorm_eq_tracePower_sSup_of_one_lt
     (Phi : MatrixMap a b) (hPhi : MatrixMap.IsCompletelyPositive Phi)
-    {alpha : Real} (halpha : 1 < alpha) :
+    {alpha : SchattenOrder} (halpha : 1 < (alpha : Real)) :
     alphaToAlphaNorm Phi hPhi alpha =
       sSup (alphaToAlphaTraceValueSet Phi hPhi alpha) := by
   let P : Set Real := alphaToAlphaPositiveValueSet Phi hPhi alpha
@@ -375,9 +381,9 @@ theorem alphaToAlphaNorm_eq_tracePower_sSup_of_one_lt
   have hT_le_zero_or_positive :
       ∀ x ∈ T, x = 0 ∨ ∃ p ∈ P, x <= p := by
     rintro x ⟨Y, rfl⟩
-    let Z : CMatrix a := CFC.rpow Y.matrix (1 / alpha)
+    let Z : CMatrix a := CFC.rpow Y.matrix (1 / (alpha : Real))
     let hZ : Z.PosSemidef :=
-      cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / alpha) Y.pos
+      cMatrix_rpow_posSemidef (A := Y.matrix) (s := 1 / (alpha : Real)) Y.pos
     let normZ : Real := psdSchattenPNorm Z hZ alpha
     have hnormZ_nonneg : 0 <= normZ := by
       exact psdSchattenPNorm_nonneg Z hZ alpha

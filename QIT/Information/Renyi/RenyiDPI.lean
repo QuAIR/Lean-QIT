@@ -12,12 +12,16 @@ public import QIT.Information.Renyi.RenyiDPI.LowAlpha
 public import QIT.Information.Renyi.RenyiDPI.ConditionalMeasurement
 public import QIT.Information.Renyi.RenyiDPI.TraceLogBridge
 public import QIT.Information.Renyi.RenyiDPI.AlphaToOne
+public import QIT.Information.Renyi.RenyiDPI.ReferenceOrder
+public import QIT.Information.Renyi.RenyiDPI.ConditionalMeasurementSource
+public import QIT.Information.Renyi.RenyiDPI.ConditionalConditioningSource
 
 /-!
 # Sandwiched Renyi DPI, duality, and measurement monotonicity reductions
 
 Facade for the dependency-ordered Renyi DPI domain, high/low-alpha,
-conditional measurement, trace-log bridge, and alpha-to-one modules.
+conditional measurement, trace-log bridge, alpha-to-one, reference-order, and
+source measurement-monotonicity modules.
 -/
 
 @[expose] public section

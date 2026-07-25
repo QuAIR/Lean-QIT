@@ -34,17 +34,6 @@ variable {a : Type uZ} {b : Type ue}
 variable [Fintype a] [DecidableEq a]
 variable [Fintype b] [DecidableEq b]
 
-/-- The maximally mixed state is positive definite on a nonempty system. -/
-private theorem maximallyMixed_posDef [Nonempty b] :
-    (maximallyMixed b).matrix.PosDef := by
-  rw [maximallyMixed_matrix]
-  have hcard_pos : 0 < ((Fintype.card b : ℝ)⁻¹) := by
-    exact inv_pos.mpr (by exact_mod_cast Fintype.card_pos_iff.mpr inferInstance)
-  have hcardC_pos : (0 : ℂ) < (((Fintype.card b : ℝ)⁻¹ : ℝ) : ℂ) := by
-    exact_mod_cast hcard_pos
-  simpa using
-    (Matrix.PosDef.smul (Matrix.PosDef.one : (1 : CMatrix b).PosDef) hcardC_pos)
-
 /-- A full-rank perturbation of a side-information state. -/
 def fullRankPerturb [Nonempty b] (σ : State b) (t : ℝ)
     (ht0 : 0 ≤ t) (ht1 : t ≤ 1) : State b where
@@ -74,7 +63,7 @@ theorem fullRankPerturb_posDef [Nonempty b] (σ : State b) {t : ℝ}
     Matrix.PosSemidef.smul σ.pos ht0
   have hmm :
       ((1 - t) • (maximallyMixed b).matrix).PosDef :=
-    Matrix.PosDef.smul (maximallyMixed_posDef (b := b)) (sub_pos.mpr ht_lt)
+    Matrix.PosDef.smul (maximallyMixed_posDef (a := b)) (sub_pos.mpr ht_lt)
   simpa [fullRankPerturb] using Matrix.PosDef.posSemidef_add hσ hmm
 
 private theorem rpow_two_neg_sub_mul_rpow_two_neg (lam η : ℝ) :

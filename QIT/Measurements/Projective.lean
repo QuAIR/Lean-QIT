@@ -714,8 +714,9 @@ theorem ofHermitianEigenbasis_pinchingMap_psdSchattenPNorm_le
     (M : CMatrix a) (hM : M.IsHermitian) {X : CMatrix a} (hX : X.PosSemidef)
     {p : ℝ} (hp : 1 ≤ p) :
     psdSchattenPNorm ((ofHermitianEigenbasis M hM).pinchingMap X)
-        ((ofHermitianEigenbasis M hM).pinchingMap_mapsPositive X hX) p ≤
-      psdSchattenPNorm X hX p := by
+        ((ofHermitianEigenbasis M hM).pinchingMap_mapsPositive X hX)
+        ⟨p, lt_of_lt_of_le zero_lt_one hp⟩ ≤
+      psdSchattenPNorm X hX ⟨p, lt_of_lt_of_le zero_lt_one hp⟩ := by
   have hp_pos : 0 < p := lt_of_lt_of_le zero_lt_one hp
   exact psdSchattenPNorm_le_of_psdTracePower_le
     ((ofHermitianEigenbasis M hM).pinchingMap_mapsPositive X hX) hX hp_pos

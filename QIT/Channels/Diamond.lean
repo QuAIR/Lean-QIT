@@ -1590,6 +1590,20 @@ variable {a : Type u} {b : Type v} {r : Type w}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 variable [Fintype r] [DecidableEq r]
 
+/-- The channel induced by a finite reference isometry. -/
+def ofReferenceIsometry (V : ReferenceIsometry a b) : Channel a b where
+  map := MatrixMap.ofReferenceIsometry V
+  completelyPositive := MatrixMap.ofReferenceIsometry_isCompletelyPositive V
+  tracePreserving := MatrixMap.ofReferenceIsometry_isTracePreserving V
+  mapsPositive :=
+    MatrixMap.isCompletelyPositive_mapsPositive (MatrixMap.ofReferenceIsometry V)
+      (MatrixMap.ofReferenceIsometry_isCompletelyPositive V)
+
+@[simp]
+theorem ofReferenceIsometry_map (V : ReferenceIsometry a b) :
+    (Channel.ofReferenceIsometry V).map = MatrixMap.ofReferenceIsometry V :=
+  rfl
+
 /-- Relabel a finite channel system along a basis equivalence. -/
 def reindex (e : a ≃ b) : Channel a b where
   map := MatrixMap.ofReferenceIsometry (ReferenceIsometry.ofEquiv e)

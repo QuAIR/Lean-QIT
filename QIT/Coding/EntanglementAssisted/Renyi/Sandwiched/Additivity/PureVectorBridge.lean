@@ -470,6 +470,21 @@ theorem sandwichedMutualInformationACTraceMatrix_ne_zero_posDef
     (Matrix.PosSemidef.trace_eq_zero_iff (rankOneMatrix_pos v)).mp htrace_zero
   exact hvne ((rankOneMatrix_eq_zero_iff v).mp hrank_zero)
 
+/-- Positive Schatten order `alpha / (2 * alpha - 1)` used by the high-alpha
+alternate-expression route. -/
+def sandwichedAlternateSchattenOrder {alpha : Real} (halpha : 1 < alpha) :
+    SchattenOrder := by
+  refine ⟨alpha / (2 * alpha - 1), ?_⟩
+  have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
+  have hden_pos : 0 < 2 * alpha - 1 := by linarith
+  exact div_pos halpha_pos hden_pos
+
+@[simp]
+theorem sandwichedAlternateSchattenOrder_coe {alpha : Real}
+    (halpha : 1 < alpha) :
+    (sandwichedAlternateSchattenOrder halpha : Real) =
+      alpha / (2 * alpha - 1) := rfl
+
 /-- Full-rank side weights make the KW `AC` trace-matrix Schatten norm strictly
 positive on the high-alpha branch. -/
 theorem psdSchattenPNorm_ACTraceMatrix_pos_posDef
@@ -483,7 +498,7 @@ theorem psdSchattenPNorm_ACTraceMatrix_pos_posDef
       psdSchattenPNorm
         (sandwichedMutualInformationACTraceMatrix rhoA ψ τC alpha)
         (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA ψ τC alpha)
-        (alpha / (2 * alpha - 1)) := by
+        (sandwichedAlternateSchattenOrder _halpha) := by
   exact psdSchattenPNorm_pos_of_ne_zero
     (sandwichedMutualInformationACTraceMatrix rhoA ψ τC alpha)
     (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA ψ τC alpha)
@@ -1045,7 +1060,8 @@ theorem sandwichedMutualInformationSionBracketRe_le_weightedPurification_holderU
   have hτtrace : τC.matrix.trace.re = 1 := by
     simpa using congrArg Complex.re τC.trace_eq_one
   have hvar :
-      ((M * CFC.rpow τC.matrix r).trace).re ≤ psdSchattenPNorm M hM alpha := by
+      ((M * CFC.rpow τC.matrix r).trace).re ≤
+        psdSchattenPNorm M hM (SchattenOrder.ofOneLt halpha) := by
     exact psd_trace_rpow_holder_variational_upper
       (M := M) (N := τC.matrix) hM τC.pos hτtrace hpq hr
   have htrace :
@@ -1099,7 +1115,8 @@ theorem sandwichedMutualInformationSionBracketRe_le_weightedPurification_holderU
   have hτtrace : τC.matrix.trace.re = 1 := by
     simpa using congrArg Complex.re τC.trace_eq_one
   have hvar :
-      ((M * CFC.rpow τC.matrix r).trace).re ≤ psdSchattenPNorm M hM alpha := by
+      ((M * CFC.rpow τC.matrix r).trace).re ≤
+        psdSchattenPNorm M hM (SchattenOrder.ofOneLt halpha) := by
     exact psd_trace_rpow_holder_variational_upper
       (M := M) (N := τC.matrix) hM τC.pos hτtrace hpq hr
   have htrace :
@@ -1165,7 +1182,7 @@ theorem weightedPurification_holderUnitBall_sSup_le_sandwichedMutualInformationS
   have hstateBdd :
       BddAbove (Set.range fun τC : State c =>
         sandwichedMutualInformationSionBracketRe rhoA ψ σB τC alpha) := by
-    refine ⟨psdSchattenPNorm M hM alpha, ?_⟩
+    refine ⟨psdSchattenPNorm M hM (SchattenOrder.ofOneLt halpha), ?_⟩
     rintro y ⟨τC, rfl⟩
     have hle :=
       sandwichedMutualInformationSionBracketRe_le_weightedPurification_holderUnitBall_sSup
@@ -1305,7 +1322,7 @@ theorem weightedPurification_holderUnitBall_sSup_le_sandwichedMutualInformationS
   have hstateBdd :
       BddAbove (Set.range fun τC : State c =>
         sandwichedMutualInformationSionBracketRe rhoA ψ σB τC alpha) := by
-    refine ⟨psdSchattenPNorm M hM alpha, ?_⟩
+    refine ⟨psdSchattenPNorm M hM (SchattenOrder.ofOneLt halpha), ?_⟩
     rintro y ⟨τC, rfl⟩
     have hle :=
       sandwichedMutualInformationSionBracketRe_le_weightedPurification_holderUnitBall_sSup_of_side_posDef
@@ -1470,7 +1487,7 @@ theorem psdSchattenPNorm_weightedPurification_partialTraceC_eq_partialTraceAB
         (partialTraceB_posSemidef
           (rankOneMatrix_pos
             (sandwichedMutualInformationWeightedPurificationAmp rhoA σB ψ alpha)))
-        p =
+        (SchattenOrder.ofPositive hp) =
       psdSchattenPNorm
         (partialTraceA (a := Prod a b) (b := c)
           (rankOneMatrix
@@ -1478,9 +1495,10 @@ theorem psdSchattenPNorm_weightedPurification_partialTraceC_eq_partialTraceAB
         (partialTraceA_posSemidef
           (rankOneMatrix_pos
             (sandwichedMutualInformationWeightedPurificationAmp rhoA σB ψ alpha)))
-        p := by
+        (SchattenOrder.ofPositive hp) := by
   exact psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
-    (sandwichedMutualInformationWeightedPurificationAmp rhoA σB ψ alpha) hp
+    (sandwichedMutualInformationWeightedPurificationAmp rhoA σB ψ alpha)
+    (SchattenOrder.ofPositive hp)
 
 /-- Schatten-norm form of the KW weighted-purification bridge.
 
@@ -1499,7 +1517,7 @@ theorem psdSchattenPNorm_referenceInner_eq_weightedPurification_partialTraceA
           (ψ.state.marginalAB.marginalA.prod σB).matrix alpha)
         (State.sandwichedRenyiReferenceInner_posSemidef ψ.state.marginalAB
           (State.prod_posDef hA hσ).posSemidef alpha)
-        p =
+        (SchattenOrder.ofPositive hp) =
       psdSchattenPNorm
         (partialTraceA (a := Prod a b) (b := c)
           (rankOneMatrix
@@ -1509,7 +1527,7 @@ theorem psdSchattenPNorm_referenceInner_eq_weightedPurification_partialTraceA
           (rankOneMatrix_pos
             (sandwichedMutualInformationWeightedPurificationAmp
               ψ.state.marginalAB.marginalA σB ψ alpha)))
-        p := by
+        (SchattenOrder.ofPositive hp) := by
   let amp :=
     sandwichedMutualInformationWeightedPurificationAmp
       ψ.state.marginalAB.marginalA σB ψ alpha
@@ -1530,18 +1548,19 @@ theorem psdSchattenPNorm_referenceInner_eq_weightedPurification_partialTraceA
         σB ψ hA hσ alpha
   have hnormB :
       psdSchattenPNorm (partialTraceB (a := Prod a b) (b := c)
-          (rankOneMatrix amp)) hB p =
+          (rankOneMatrix amp)) hB (SchattenOrder.ofPositive hp) =
         psdSchattenPNorm
           (State.sandwichedRenyiReferenceInner ψ.state.marginalAB
             (ψ.state.marginalAB.marginalA.prod σB).matrix alpha)
-          hRef p :=
-    psdSchattenPNorm_congr hmatrix hB hRef p
+          hRef (SchattenOrder.ofPositive hp) :=
+    psdSchattenPNorm_congr hmatrix hB hRef (SchattenOrder.ofPositive hp)
   have hBA :
       psdSchattenPNorm (partialTraceB (a := Prod a b) (b := c)
-          (rankOneMatrix amp)) hB p =
+          (rankOneMatrix amp)) hB (SchattenOrder.ofPositive hp) =
         psdSchattenPNorm
           (partialTraceA (a := Prod a b) (b := c) (rankOneMatrix amp))
-          (partialTraceA_posSemidef (rankOneMatrix_pos amp)) p := by
+          (partialTraceA_posSemidef (rankOneMatrix_pos amp))
+          (SchattenOrder.ofPositive hp) := by
     simpa [amp, hB] using
       psdSchattenPNorm_weightedPurification_partialTraceC_eq_partialTraceAB
         ψ.state.marginalAB.marginalA σB ψ alpha hp
@@ -2068,7 +2087,7 @@ theorem psdSchattenPNorm_ACTraceMatrix_le_SionBracketRe_of_support
     psdSchattenPNorm
         (sandwichedMutualInformationACTraceMatrix rhoA ψ τC alpha)
         (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA ψ τC alpha)
-        (alpha / (2 * alpha - 1)) ≤
+        (sandwichedAlternateSchattenOrder halpha) ≤
       sandwichedMutualInformationSionBracketRe rhoA ψ σB τC alpha := by
   let M : CMatrix b := sandwichedMutualInformationACTraceMatrix rhoA ψ τC alpha
   let hM : M.PosSemidef :=
@@ -2106,23 +2125,23 @@ theorem sandwichedACTraceMatrixLog_le_SionBracketLog_of_support
           (psdSchattenPNorm
             (sandwichedMutualInformationACTraceMatrix rhoA ψ τC alpha)
             (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA ψ τC alpha)
-            (alpha / (2 * alpha - 1))) ≤
+            (sandwichedAlternateSchattenOrder halpha)) ≤
       alpha / (alpha - 1) *
         log2 (sandwichedMutualInformationSionBracketRe rhoA ψ σB τC alpha) := by
   let M : CMatrix b := sandwichedMutualInformationACTraceMatrix rhoA ψ τC alpha
   let hM : M.PosSemidef := sandwichedMutualInformationACTraceMatrix_posSemidef rhoA ψ τC alpha
   have hnorm_le :
-      psdSchattenPNorm M hM (alpha / (2 * alpha - 1)) ≤
+      psdSchattenPNorm M hM (sandwichedAlternateSchattenOrder halpha) ≤
         sandwichedMutualInformationSionBracketRe rhoA ψ σB τC alpha := by
     simpa [M, hM] using
       psdSchattenPNorm_ACTraceMatrix_le_SionBracketRe_of_support
         rhoA ψ σB τC halpha hSupport
   have hnorm_pos :
-      0 < psdSchattenPNorm M hM (alpha / (2 * alpha - 1)) := by
+      0 < psdSchattenPNorm M hM (sandwichedAlternateSchattenOrder halpha) := by
     simpa [M, hM] using
       psdSchattenPNorm_ACTraceMatrix_pos_posDef rhoA ψ τC hrhoA hτC halpha
   have hlog :
-      log2 (psdSchattenPNorm M hM (alpha / (2 * alpha - 1))) ≤
+      log2 (psdSchattenPNorm M hM (sandwichedAlternateSchattenOrder halpha)) ≤
         log2 (sandwichedMutualInformationSionBracketRe rhoA ψ σB τC alpha) := by
     unfold log2
     exact div_le_div_of_nonneg_right (Real.log_le_log hnorm_pos hnorm_le)
@@ -2147,7 +2166,7 @@ theorem sandwichedACTraceMatrixLog_le_SionBracketLog_posDef
           (psdSchattenPNorm
             (sandwichedMutualInformationACTraceMatrix rhoA ψ τC alpha)
             (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA ψ τC alpha)
-            (alpha / (2 * alpha - 1))) ≤
+            (sandwichedAlternateSchattenOrder halpha)) ≤
       alpha / (alpha - 1) *
         log2 (sandwichedMutualInformationSionBracketRe rhoA ψ σB τC alpha) :=
   sandwichedACTraceMatrixLog_le_SionBracketLog_of_support
@@ -2171,7 +2190,7 @@ theorem sandwichedACTraceMatrixLog_le_fullRankSionBracketLog_iInf
           (psdSchattenPNorm
             (sandwichedMutualInformationACTraceMatrix rhoA ψ τC alpha)
             (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA ψ τC alpha)
-            (alpha / (2 * alpha - 1))) ≤
+            (sandwichedAlternateSchattenOrder halpha)) ≤
       sInf (Set.range fun σB : {σ : State b // σ.matrix.PosDef} =>
         alpha / (alpha - 1) *
           log2 (sandwichedMutualInformationSionBracketRe rhoA ψ σB.1 τC alpha)) := by
@@ -2198,7 +2217,7 @@ theorem exists_state_SionBracketRe_eq_psdSchattenPNorm_of_ACTraceMatrix_ne_zero
         psdSchattenPNorm
           (sandwichedMutualInformationACTraceMatrix rhoA ψ τC alpha)
           (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA ψ τC alpha)
-          (alpha / (2 * alpha - 1)) := by
+          (sandwichedAlternateSchattenOrder halpha) := by
   let M : CMatrix b := sandwichedMutualInformationACTraceMatrix rhoA ψ τC alpha
   let hM : M.PosSemidef :=
     sandwichedMutualInformationACTraceMatrix_posSemidef rhoA ψ τC alpha
@@ -2214,7 +2233,7 @@ theorem exists_state_SionBracketRe_eq_psdSchattenPNorm_of_ACTraceMatrix_ne_zero
     · simpa using hNtr
     · simpa using (Matrix.PosSemidef.trace_nonneg hN).2.symm
   have hattain' :
-      psdSchattenPNorm M hM (alpha / (2 * alpha - 1)) =
+      psdSchattenPNorm M hM (sandwichedAlternateSchattenOrder halpha) =
         (M * CFC.rpow N ((1 - alpha) / alpha)).trace.re := by
     rw [sandwichedAlternate_reverseHolderExponent halpha] at hattain
     exact hattain
@@ -2245,11 +2264,12 @@ theorem sandwichedMutualInformationSionBracketRe_supported_sInf_eq_psdSchattenPN
         psdSchattenPNorm
           (sandwichedMutualInformationACTraceMatrix rhoA ψ τC alpha)
           (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA ψ τC alpha)
-          (alpha / (2 * alpha - 1)) := by
+          (sandwichedAlternateSchattenOrder halpha) := by
   let M : CMatrix b := sandwichedMutualInformationACTraceMatrix rhoA ψ τC alpha
   let hM : M.PosSemidef :=
     sandwichedMutualInformationACTraceMatrix_posSemidef rhoA ψ τC alpha
-  let target : ℝ := psdSchattenPNorm M hM (alpha / (2 * alpha - 1))
+  let target : ℝ :=
+    psdSchattenPNorm M hM (sandwichedAlternateSchattenOrder halpha)
   let S : Set ℝ := Set.range fun σB :
       {σ : State b // Matrix.Supports M σ.matrix} =>
     sandwichedMutualInformationSionBracketRe rhoA ψ σB.1 τC alpha
@@ -2287,10 +2307,11 @@ theorem sandwichedMutualInformationSionBracketRe_supported_sInf_eq_psdSchattenPN
         psdSchattenPNorm
           (sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha)
           (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA psi tauC alpha)
-          (alpha / (2 * alpha - 1)) := by
+          (sandwichedAlternateSchattenOrder halpha) := by
   let M : CMatrix b := sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha
   let hM : M.PosSemidef := sandwichedMutualInformationACTraceMatrix_posSemidef rhoA psi tauC alpha
-  let target : Real := psdSchattenPNorm M hM (alpha / (2 * alpha - 1))
+  let target : Real :=
+    psdSchattenPNorm M hM (sandwichedAlternateSchattenOrder halpha)
   let S : Set Real := Set.range fun sigmaB :
       {sigma : State b // Matrix.Supports M sigma.matrix} =>
     sandwichedMutualInformationSionBracketRe rhoA psi sigmaB.1 tauC alpha
@@ -2299,14 +2320,14 @@ theorem sandwichedMutualInformationSionBracketRe_supported_sInf_eq_psdSchattenPN
   have htarget : target = 0 := by
     have hp := sandwichedAlternateSchattenExponent_pos_lt_one halpha
     have hcongr :
-        psdSchattenPNorm M hM (alpha / (2 * alpha - 1)) =
+        psdSchattenPNorm M hM (sandwichedAlternateSchattenOrder halpha) =
           psdSchattenPNorm (0 : CMatrix b) Matrix.PosSemidef.zero
-            (alpha / (2 * alpha - 1)) :=
+            (sandwichedAlternateSchattenOrder halpha) :=
       psdSchattenPNorm_congr hMzero' hM Matrix.PosSemidef.zero
-        (alpha / (2 * alpha - 1))
-    change psdSchattenPNorm M hM (alpha / (2 * alpha - 1)) = 0
+        (sandwichedAlternateSchattenOrder halpha)
+    change psdSchattenPNorm M hM (sandwichedAlternateSchattenOrder halpha) = 0
     rw [hcongr]
-    exact psdSchattenPNorm_zero (alpha / (2 * alpha - 1)) (ne_of_gt hp.1)
+    exact psdSchattenPNorm_zero (sandwichedAlternateSchattenOrder halpha)
   have hvalue :
       forall sigmaB : {sigma : State b // Matrix.Supports M sigma.matrix},
         sandwichedMutualInformationSionBracketRe rhoA psi sigmaB.1 tauC alpha = 0 := by
@@ -2350,7 +2371,7 @@ theorem sandwichedMutualInformationSionBracketRe_supported_sInf_eq_psdSchattenPN
         psdSchattenPNorm
           (sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha)
           (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA psi tauC alpha)
-          (alpha / (2 * alpha - 1)) := by
+          (sandwichedAlternateSchattenOrder halpha) := by
   by_cases hMne : sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha ≠ 0
   · exact sandwichedMutualInformationSionBracketRe_supported_sInf_eq_psdSchattenPNorm
       rhoA psi tauC halpha hMne
@@ -2377,11 +2398,11 @@ theorem sandwichedMutualInformationSionBracketRe_fullRank_sInf_eq_psdSchattenPNo
         psdSchattenPNorm
           (sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha)
           (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA psi tauC alpha)
-          (alpha / (2 * alpha - 1)) := by
+          (sandwichedAlternateSchattenOrder halpha) := by
   let M : CMatrix b := sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha
   let hM : M.PosSemidef :=
     sandwichedMutualInformationACTraceMatrix_posSemidef rhoA psi tauC alpha
-  let p : Real := alpha / (2 * alpha - 1)
+  let p : SchattenOrder := sandwichedAlternateSchattenOrder halpha
   let r : Real := (1 - alpha) / alpha
   let target : Real := psdSchattenPNorm M hM p
   let S := {sigma : State b // sigma.matrix.PosDef}
@@ -2403,12 +2424,10 @@ theorem sandwichedMutualInformationSionBracketRe_fullRank_sInf_eq_psdSchattenPNo
       rw [sandwichedMutualInformationSionBracketRe_eq_trace_ACTraceMatrix_mul_sigma]
       simp [M, hMzero]
     have htarget : target = 0 := by
-      have hp : 0 < p := by
-        simpa [p] using (sandwichedAlternateSchattenExponent_pos_lt_one halpha).1
       calc
         target = psdSchattenPNorm (0 : CMatrix b) Matrix.PosSemidef.zero p := by
           exact psdSchattenPNorm_congr hMzero hM Matrix.PosSemidef.zero p
-        _ = 0 := psdSchattenPNorm_zero p (ne_of_gt hp)
+        _ = 0 := psdSchattenPNorm_zero p
     apply le_antisymm
     · rw [htarget]
       exact csInf_le hBdd ⟨Classical.choice inferInstance, hvalue (Classical.choice inferInstance)⟩
@@ -2571,7 +2590,7 @@ theorem sandwichedMutualInformationSionBracketLog_fullRank_sInf_eq_ACTraceMatrix
           (psdSchattenPNorm
             (sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha)
             (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA psi tauC alpha)
-            (alpha / (2 * alpha - 1))) := by
+            (sandwichedAlternateSchattenOrder halpha)) := by
   let S := {sigma : State b // sigma.matrix.PosDef}
   let raw : S → ℝ := fun sigmaB =>
     sandwichedMutualInformationSionBracketRe rhoA psi sigmaB.1 tauC alpha
@@ -2580,7 +2599,7 @@ theorem sandwichedMutualInformationSionBracketLog_fullRank_sInf_eq_ACTraceMatrix
     psdSchattenPNorm
       (sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha)
       (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA psi tauC alpha)
-      (alpha / (2 * alpha - 1))
+      (sandwichedAlternateSchattenOrder halpha)
   haveI : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   have hraw_sInf : sInf (Set.range raw) = target := by
     simpa [S, raw, target] using
@@ -2676,7 +2695,7 @@ theorem sandwichedMutualInformationSionBracketLog_fullRank_sInf_eq_ACTraceMatrix
           (psdSchattenPNorm
             (sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha)
             (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA psi tauC alpha)
-            (alpha / (2 * alpha - 1))) := by
+            (sandwichedAlternateSchattenOrder halpha)) := by
   let S := {sigma : State b // sigma.matrix.PosDef}
   let raw : S → ℝ := fun sigmaB =>
     sandwichedMutualInformationSionBracketRe rhoA psi sigmaB.1 tauC alpha
@@ -2685,7 +2704,7 @@ theorem sandwichedMutualInformationSionBracketLog_fullRank_sInf_eq_ACTraceMatrix
     psdSchattenPNorm
       (sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha)
       (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA psi tauC alpha)
-      (alpha / (2 * alpha - 1))
+      (sandwichedAlternateSchattenOrder halpha)
   haveI : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   have hraw_sInf : sInf (Set.range raw) = target := by
     simpa [S, raw, target] using
@@ -2706,7 +2725,7 @@ theorem sandwichedMutualInformationSionBracketLog_fullRank_sInf_eq_ACTraceMatrix
       psdSchattenPNorm_pos_of_ne_zero
         (sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha)
         (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA psi tauC alpha)
-        (p := alpha / (2 * alpha - 1))
+        (p := sandwichedAlternateSchattenOrder halpha)
         hMne using 1
   have hinf_pos : 0 < sInf (Set.range raw) := by
     rw [hraw_sInf]

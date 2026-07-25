@@ -234,7 +234,7 @@ theorem toStateMergingProtocol_targetState_eq_reindex :
           (TensorPower a n) (TensorPower b n) (TensorPower r n) e e) := by
   unfold StateMergingBlockProtocol.targetState FQSWBlockProtocol.targetState
   unfold toStateMergingProtocol stateMergingBlockSource
-  rw [PureVector.prod_state]
+  rfl
 
 end FQSWBlockProtocol
 

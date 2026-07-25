@@ -75,113 +75,6 @@ theorem cMatrix_rpow_submatrix_equiv_posDef
         change Continuous fun A : CMatrix κ => A.submatrix e e
         fun_prop)).symm
 
-private theorem cMatrix_rpow_kronecker_nonneg_core
-    {a : Type u} {b : Type v} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
-    {A : CMatrix a} {B : CMatrix b} (hA : A.PosSemidef) (hB : B.PosSemidef)
-    {s : ℝ} (hs0 : 0 ≤ s) :
-    CFC.rpow (Matrix.kronecker A B) s =
-      Matrix.kronecker (CFC.rpow A s) (CFC.rpow B s) := by
-  let UA := hA.isHermitian.eigenvectorUnitary
-  let UB := hB.isHermitian.eigenvectorUnitary
-  let U : Matrix.unitaryGroup (Prod a b) ℂ :=
-    ⟨Matrix.kronecker (UA : CMatrix a) (UB : CMatrix b),
-      Matrix.kronecker_mem_unitary UA.2 UB.2⟩
-  let da : a -> ℝ := hA.isHermitian.eigenvalues
-  let db : b -> ℝ := hB.isHermitian.eigenvalues
-  let dprod : Prod a b -> ℝ := fun i => da i.1 * db i.2
-  have hda : ∀ i, 0 ≤ da i := by
-    intro i
-    exact hA.eigenvalues_nonneg i
-  have hdb : ∀ i, 0 ≤ db i := by
-    intro i
-    exact hB.eigenvalues_nonneg i
-  have hdprod : ∀ i, 0 ≤ dprod i := by
-    intro i
-    exact mul_nonneg (hda i.1) (hdb i.2)
-  have hA_spec :
-      A = Unitary.conjStarAlgAut ℂ _ UA
-        (Matrix.diagonal (fun i => (da i : ℂ))) := by
-    simpa [UA, da, Function.comp_def] using hA.isHermitian.spectral_theorem
-  have hB_spec :
-      B = Unitary.conjStarAlgAut ℂ _ UB
-        (Matrix.diagonal (fun i => (db i : ℂ))) := by
-    simpa [UB, db, Function.comp_def] using hB.isHermitian.spectral_theorem
-  have hAB_spec :
-      Matrix.kronecker A B =
-        Unitary.conjStarAlgAut ℂ _ U
-          (Matrix.diagonal (fun i => (dprod i : ℂ))) := by
-    rw [hA_spec, hB_spec]
-    simp [U, dprod, Unitary.conjStarAlgAut_apply, star_eq_conjTranspose,
-      Matrix.conjTranspose_kronecker, Matrix.mul_kronecker_mul,
-      Matrix.diagonal_kronecker_diagonal, Matrix.mul_assoc]
-  have hDprod_psd :
-      (Matrix.diagonal (fun i => (dprod i : ℂ)) : CMatrix (Prod a b)).PosSemidef :=
-    Matrix.PosSemidef.diagonal (d := fun i => (dprod i : ℂ)) (by
-      intro i
-      change (0 : ℂ) ≤ (dprod i : ℂ)
-      exact_mod_cast hdprod i)
-  have hA_rpow :
-      CFC.rpow A s =
-        Unitary.conjStarAlgAut ℂ _ UA
-          (Matrix.diagonal (fun i => ((da i ^ s : ℝ) : ℂ))) := by
-    rw [hA_spec]
-    rw [cMatrix_rpow_conjStarAlgAut_nonneg UA
-      (Matrix.PosSemidef.diagonal (d := fun i => (da i : ℂ)) (by
-        intro i
-        change (0 : ℂ) ≤ (da i : ℂ)
-        exact_mod_cast hda i)) hs0]
-    rw [cMatrix_rpow_diagonal_ofReal da hda s]
-  have hB_rpow :
-      CFC.rpow B s =
-        Unitary.conjStarAlgAut ℂ _ UB
-          (Matrix.diagonal (fun i => ((db i ^ s : ℝ) : ℂ))) := by
-    rw [hB_spec]
-    rw [cMatrix_rpow_conjStarAlgAut_nonneg UB
-      (Matrix.PosSemidef.diagonal (d := fun i => (db i : ℂ)) (by
-        intro i
-        change (0 : ℂ) ≤ (db i : ℂ)
-        exact_mod_cast hdb i)) hs0]
-    rw [cMatrix_rpow_diagonal_ofReal db hdb s]
-  have hleft :
-      CFC.rpow (Matrix.kronecker A B) s =
-        Unitary.conjStarAlgAut ℂ _ U
-          (Matrix.diagonal (fun i => ((dprod i ^ s : ℝ) : ℂ))) := by
-    rw [hAB_spec]
-    rw [cMatrix_rpow_conjStarAlgAut_nonneg U hDprod_psd hs0]
-    rw [cMatrix_rpow_diagonal_ofReal dprod hdprod s]
-  have hdiag :
-      Matrix.diagonal (fun i : Prod a b => ((dprod i ^ s : ℝ) : ℂ)) =
-        Matrix.diagonal (fun i : Prod a b => (((da i.1 ^ s) * (db i.2 ^ s) : ℝ) : ℂ)) := by
-    ext i j
-    by_cases hij : i = j
-    · subst j
-      simp [dprod, Real.mul_rpow (hda i.1) (hdb i.2)]
-    · simp [Matrix.diagonal, hij]
-  have hright :
-      Matrix.kronecker (CFC.rpow A s) (CFC.rpow B s) =
-        Unitary.conjStarAlgAut ℂ _ U
-          (Matrix.diagonal
-            (fun i : Prod a b => (((da i.1 ^ s) * (db i.2 ^ s) : ℝ) : ℂ))) := by
-    rw [hA_rpow, hB_rpow]
-    simp [U, Unitary.conjStarAlgAut_apply, star_eq_conjTranspose,
-      Matrix.conjTranspose_kronecker, Matrix.mul_kronecker_mul,
-      Matrix.diagonal_kronecker_diagonal, Matrix.mul_assoc]
-  rw [hleft, hdiag, hright]
-
-/-- Kronecker products commute with `CFC.rpow` for positive semidefinite matrices
-and nonnegative exponents. This is the domain needed by the Chernoff/Petz
-coefficient lemmas. -/
-theorem cMatrix_rpow_kronecker_nonneg
-    {a : Type u} {b : Type v} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
-    {A : CMatrix a} {B : CMatrix b} (hA : A.PosSemidef) (hB : B.PosSemidef)
-    {s : ℝ} (_hs0 : 0 ≤ s) :
-    CFC.rpow (Matrix.kronecker A B) s =
-      Matrix.kronecker (CFC.rpow A s) (CFC.rpow B s) :=
-  cMatrix_rpow_kronecker_nonneg_core hA hB _hs0
-
-/-- Kronecker products commute with `CFC.rpow` for positive definite matrices
-and arbitrary real exponents. This is the full-rank domain needed for Renyi
-divergence additivity when the exponent can be negative. -/
 theorem cMatrix_rpow_kronecker_posDef
     {a : Type u} {b : Type v} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
     {A : CMatrix a} {B : CMatrix b} (hA : A.PosDef) (hB : B.PosDef)
@@ -1500,13 +1393,6 @@ theorem sandwichedRenyiReference_real_smul_reference
 theorem prod_matrix_kronecker {b : Type v} [Fintype b] [DecidableEq b]
     (ρ : State a) (σ : State b) :
     (ρ.prod σ).matrix = Matrix.kronecker ρ.matrix σ.matrix := rfl
-
-theorem prod_posDef {b : Type v} [Fintype b] [DecidableEq b]
-    {ρ : State a} {σ : State b}
-    (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef) :
-    (ρ.prod σ).matrix.PosDef := by
-  rw [prod_matrix_kronecker]
-  exact hρ.kronecker hσ
 
 /-- Positive definiteness is preserved by finite basis relabeling of states. -/
 theorem reindex_posDef_of_posDef {b : Type v} [Fintype b] [DecidableEq b]

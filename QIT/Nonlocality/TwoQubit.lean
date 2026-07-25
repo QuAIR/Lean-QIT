@@ -6,6 +6,7 @@ Authors: QuAIR Team
 
 module
 
+public import QIT.Entanglement.MaximallyEntangled
 public import QIT.States.Purification.ReferenceIsometry
 
 /-!
@@ -79,6 +80,12 @@ theorem invSqrtTwo_mul_self : invSqrtTwo * invSqrtTwo = (1 / 2 : Complex) := by
 theorem star_invSqrtTwo : star invSqrtTwo = invSqrtTwo := by
   simp [invSqrtTwo]
 
+/-- The singlet normalization scalar is fixed by complex conjugation. -/
+theorem invSqrtTwo_mul_starRingEnd_invSqrtTwo :
+    invSqrtTwo * (starRingEnd ℂ) invSqrtTwo = (1 / 2 : Complex) := by
+  change invSqrtTwo * star invSqrtTwo = (1 / 2 : Complex)
+  rw [star_invSqrtTwo, invSqrtTwo_mul_self]
+
 /-- Amplitudes of the singlet `( |01> - |10> ) / sqrt 2`. -/
 def singletAmp : Bool × Bool → Complex
   | (false, true) => invSqrtTwo
@@ -106,10 +113,43 @@ def singletPureVector : PureVector (Bool × Bool) where
   trace_rankOne_eq_one := singlet_trace_rankOne_eq_one
 
 /-- The singlet as a density state. -/
-def singletState : State (Bool × Bool) where
-  matrix := singletMatrix
-  pos := rankOneMatrix_pos singletAmp
-  trace_eq_one := singlet_trace_rankOne_eq_one
+def singletState : State (Bool × Bool) :=
+  singletPureVector.state
+
+/-- The singlet's Alice marginal is maximally mixed. -/
+theorem singletPureVector_marginalA :
+    singletPureVector.state.marginalA = State.maximallyMixed Bool := by
+  apply State.ext
+  ext i j
+  cases i <;> cases j <;>
+  all_goals
+    simp [State.marginalA, partialTraceB, singletPureVector, singletAmp,
+      State.maximallyMixed, rankOneMatrix_apply]
+  all_goals
+    try rw [invSqrtTwo_mul_starRingEnd_invSqrtTwo]
+  all_goals
+    norm_num
+
+/-- The singlet's Bob marginal is maximally mixed. -/
+theorem singletPureVector_marginalB :
+    singletPureVector.state.marginalB = State.maximallyMixed Bool := by
+  apply State.ext
+  ext i j
+  cases i <;> cases j <;>
+  all_goals
+    simp [State.marginalB, partialTraceA, singletPureVector, singletAmp,
+      State.maximallyMixed, rankOneMatrix_apply]
+  all_goals
+    try rw [invSqrtTwo_mul_starRingEnd_invSqrtTwo]
+  all_goals
+    norm_num
+
+/-- The two-qubit singlet is maximally entangled. -/
+theorem singletPureVector_isMaximallyEntangled :
+    singletPureVector.IsMaximallyEntangled := by
+  constructor
+  · exact singletPureVector_marginalA
+  · exact singletPureVector_marginalB
 
 /-- A pair of local reference isometries acting on the two sides of a bipartite state. -/
 structure LocalIsometry (a : Type u) (a' : Type v) (b : Type w) (b' : Type z)

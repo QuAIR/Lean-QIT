@@ -13,6 +13,8 @@ public import QIT.Measurements.Support
 public import QIT.Core.Measurement
 public import QIT.Measurements.Map
 public import QIT.Measurements.Overlap
+public import QIT.Measurements.OverlapDomination
+public import QIT.Measurements.Coherent
 public import QIT.Core.POVMProbability
 
 /-!

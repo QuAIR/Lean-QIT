@@ -10,6 +10,7 @@ public import QIT.Protocols.LOCC.ReferenceLift
 public import QIT.Protocols.StateMerging.Core
 public import QIT.Protocols.StateMerging.DistanceAveraging
 public import QIT.Information.Entropy.EntropyTensorPower
+public import QIT.Information.Entropy.MaximallyMixed
 public import QIT.Information.Fannes
 public import QIT.Asymptotic.AEP
 import QIT.OneShot.SmoothNormalizedExtension
@@ -36,28 +37,6 @@ universe u v w x y z p q ua ua' ub ub' ux
 noncomputable section
 
 /-- Entropy of the canonical maximally mixed ebit marginal. -/
-theorem adhwFQSWMaximallyMixedState_vonNeumann
-    (α : Type*) [Fintype α] [DecidableEq α] [Nonempty α] :
-    (adhwFQSWMaximallyMixedState α).vonNeumann =
-      log2 (Fintype.card α : ℝ) := by
-  have hdiag :
-      (adhwFQSWMaximallyMixedState α).matrix =
-        Matrix.diagonal (fun _ : α => (((Fintype.card α : ℝ)⁻¹ : ℝ) : ℂ)) := by
-    ext i j
-    by_cases hij : i = j
-    · subst j
-      simp [adhwFQSWMaximallyMixedState]
-    · simp [adhwFQSWMaximallyMixedState, hij]
-  rw [State.vonNeumann_eq_neg_sum_xlog2_of_diagonal _ _ hdiag]
-  have hcard_pos : 0 < (Fintype.card α : ℝ) := by
-    exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
-  have hcard_ne : (Fintype.card α : ℝ) ≠ 0 := ne_of_gt hcard_pos
-  rw [Finset.sum_const, nsmul_eq_mul]
-  simp only [xlog2, if_neg (inv_ne_zero hcard_ne), Finset.card_univ]
-  unfold log2
-  rw [Real.log_inv]
-  field_simp [hcard_ne]
-
 private theorem sum_sum_sum_mul_eq_mul_sum_sum_sum
     {A K R : Type*} [Fintype A] [Fintype K] [Fintype R]
     (f : A → R → ℂ) (g : K → ℂ) :
@@ -249,6 +228,20 @@ theorem stateMergingBlockSource_marginalA_eq_tensorPower
     PureVector.tensorPowerTripartiteGrouped_marginalAB
       (a := a) (b := b) (c := r) psi n
 
+/-- The grouped `A^n R^n` marginal of the state-merging source is the
+bipartite tensor power of the one-copy `AR` marginal.  This is the source
+identification used by the smooth-min-entropy converse. -/
+theorem stateMergingBlockSource_marginalAC_eq_tensorPower
+    (psi : PureVector (Prod (Prod a b) r)) (n : ℕ) :
+    (stateMergingBlockSource psi n).state.marginalAC =
+      psi.state.marginalAC.tensorPowerBipartite n := by
+  simpa [stateMergingBlockSource, fqswTensorPowerTripartiteEquiv,
+    PureVector.tensorPowerTripartiteGrouped,
+    PureVector.tensorPowerTripartiteGroupedEquiv, PureVector.reindex_state,
+    PureVector.tensorPower_state] using
+    PureVector.tensorPowerTripartiteGrouped_marginalAC
+      (a := a) (b := b) (c := r) psi n
+
 /-- The `B^n` marginal of the grouped state-merging source is the tensor
 power of the one-copy `B` marginal. -/
 theorem stateMergingBlockSource_marginalB_eq_tensorPower
@@ -283,13 +276,14 @@ def initialPureVector :
         (Prod (Prod (TensorPower a n) kA) (Prod (TensorPower b n) kB))
         (TensorPower r n)) :=
   ((stateMergingBlockSource psi n).prod
-      (maximallyEntangledPureVector C.inputEbitPairing)).reindex
+      (PureVector.maximallyEntangled C.inputEbitPairing)).reindex
     (stateMergingInputEquiv
       (TensorPower a n) (TensorPower b n) (TensorPower r n) kA kB)
 
 @[simp]
 theorem initialPureVector_state : C.initialPureVector.state = C.initialState := by
-  simp [initialPureVector, initialState, PureVector.reindex_state, PureVector.prod_state]
+  rw [initialPureVector, initialState, PureVector.reindex_state, PureVector.prod_state]
+  rfl
 
 /-- The input pure vector under the converse bipartition
 `(Alice, Reference) | Bob`. -/
@@ -325,16 +319,34 @@ theorem converseLOCC_applyState :
           (TensorPower r n)).symm := by
   have h := OneWayLOCC.prodIdRight_applyState_reindex_pure
     (R := TensorPower r n) C.locc C.initialPureVector
-  simpa [converseLOCC, converseInputPureVector, outputState,
-    initialPureVector_state, stateMergingConverseInputEquiv,
-    stateMergingConverseOutputEquiv, loccReferenceRegroupEquiv] using h
+  calc
+    C.converseLOCC.toChannel.applyState C.converseInputPureVector.state =
+        (C.locc.prodIdRight (R := TensorPower r n)).toChannel.applyState
+          (C.initialPureVector.state.reindex
+            (loccReferenceRegroupEquiv
+              (Prod (TensorPower a n) kA)
+              (Prod (TensorPower b n) kB)
+              (TensorPower r n))) := by
+      rw [converseLOCC, converseInputPureVector, PureVector.reindex_state]
+      rfl
+    _ = ((C.locc.toChannel.prod (Channel.idChannel (TensorPower r n))).applyState
+          C.initialPureVector.state).reindex
+          (loccReferenceRegroupEquiv
+            lA (Prod (Prod (TensorPower a n) (TensorPower b n)) lB)
+            (TensorPower r n)) := h
+    _ = C.outputState.reindex
+        (stateMergingConverseOutputEquiv
+          lA (Prod (Prod (TensorPower a n) (TensorPower b n)) lB)
+          (TensorPower r n)).symm := by
+      rw [initialPureVector_state]
+      rfl
 
 /-- Bob's marginal of the regrouped converse input is the product of the IID
 source `B` marginal and Bob's input-ebit marginal. -/
 theorem converseInputPureVector_marginalB :
     C.converseInputPureVector.state.marginalB =
       (stateMergingBlockSource psi n).state.marginalA.marginalB.prod
-        (maximallyEntangledPureVector C.inputEbitPairing).state.marginalB := by
+        (State.maximallyEntangled C.inputEbitPairing).marginalB := by
   apply State.ext
   ext i j
   simp [converseInputPureVector, initialPureVector,
@@ -342,13 +354,14 @@ theorem converseInputPureVector_marginalB :
     PureVector.reindex_state, PureVector.prod_state, State.reindex,
     State.prod, State.marginalA, State.marginalB, partialTraceA, partialTraceB,
     Matrix.kronecker, Matrix.kroneckerMap_apply, Fintype.sum_prod_type]
-  exact sum_sum_sum_mul_eq_mul_sum_sum_sum
-    (fun x x_2 =>
-      (stateMergingBlockSource psi n).amp ((x, i.1), x_2) *
-        star ((stateMergingBlockSource psi n).amp ((x, j.1), x_2)))
-    (fun x_1 =>
-      (maximallyEntangledPureVector C.inputEbitPairing).amp (x_1, i.2) *
-        star ((maximallyEntangledPureVector C.inputEbitPairing).amp (x_1, j.2)))
+  simpa only [PureVector.maximallyEntangled_amp] using
+    (sum_sum_sum_mul_eq_mul_sum_sum_sum
+      (fun x x_2 =>
+        (stateMergingBlockSource psi n).amp ((x, i.1), x_2) *
+          star ((stateMergingBlockSource psi n).amp ((x, j.1), x_2)))
+      (fun x_1 =>
+        (PureVector.maximallyEntangled C.inputEbitPairing).amp (x_1, i.2) *
+          star ((PureVector.maximallyEntangled C.inputEbitPairing).amp (x_1, j.2))))
 
 /-- HOW input-entanglement identity `E_in = n S(B) + log K`. -/
 theorem initialBobEntanglement :
@@ -358,20 +371,23 @@ theorem initialBobEntanglement :
   rw [PureVector.entanglementEntropy, C.converseInputPureVector_marginalB]
   calc
     ((stateMergingBlockSource psi n).state.marginalA.marginalB.prod
-        (maximallyEntangledPureVector C.inputEbitPairing).state.marginalB).vonNeumann =
+        (State.maximallyEntangled C.inputEbitPairing).marginalB).vonNeumann =
         (stateMergingBlockSource psi n).state.marginalA.marginalB.vonNeumann +
-          (maximallyEntangledPureVector C.inputEbitPairing).state.marginalB.vonNeumann := by
+          (State.maximallyEntangled C.inputEbitPairing).marginalB.vonNeumann := by
       rw [State.vonNeumann_prod]
     _ = n * psi.state.marginalA.marginalB.vonNeumann +
-          (maximallyEntangledPureVector C.inputEbitPairing).state.marginalB.vonNeumann := by
+          (State.maximallyEntangled C.inputEbitPairing).marginalB.vonNeumann := by
       rw [stateMergingBlockSource_marginalB_eq_tensorPower,
         State.vonNeumann_tensorPower]
     _ = n * psi.state.marginalA.marginalB.vonNeumann +
+          (PureVector.maximallyEntangled C.inputEbitPairing).state.marginalB.vonNeumann := by
+      rfl
+    _ = n * psi.state.marginalA.marginalB.vonNeumann +
           log2 (Fintype.card kA : ℝ) := by
       rw [← State.pureVector_marginalA_vonNeumann_eq_marginalB
-        (maximallyEntangledPureVector C.inputEbitPairing),
-        maximallyEntangledPureVector_marginalA,
-        adhwFQSWMaximallyMixedState_vonNeumann]
+        (PureVector.maximallyEntangled C.inputEbitPairing),
+        PureVector.maximallyEntangled_marginalA,
+        State.vonNeumann_maximallyMixed]
 
 /-- The normalized pure vector underlying the ideal state-merging target. -/
 def targetPureVector :
@@ -380,33 +396,35 @@ def targetPureVector :
         (Prod lA (Prod (Prod (TensorPower a n) (TensorPower b n)) lB))
         (TensorPower r n)) :=
   ((stateMergingBlockSource psi n).prod
-      (maximallyEntangledPureVector C.outputEbitPairing)).reindex
+      (PureVector.maximallyEntangled C.outputEbitPairing)).reindex
     (stateMergingTargetEquiv
       (TensorPower a n) (TensorPower b n) (TensorPower r n) lA lB)
 
 @[simp]
 theorem targetPureVector_state : C.targetPureVector.state = C.targetState := by
-  simp [targetPureVector, targetState, PureVector.reindex_state, PureVector.prod_state]
+  rw [targetPureVector, targetState, PureVector.reindex_state, PureVector.prod_state]
+  rfl
 
 /-- Tracing the ideal target down to Bob gives the product of the transferred
 IID source and Bob's output-ebit marginal. -/
 theorem targetPureVector_marginalA_marginalB :
     C.targetPureVector.state.marginalA.marginalB =
       (stateMergingBlockSource psi n).state.marginalA.prod
-        (maximallyEntangledPureVector C.outputEbitPairing).state.marginalB := by
+        (State.maximallyEntangled C.outputEbitPairing).marginalB := by
   apply State.ext
   ext i j
   simp [targetPureVector, stateMergingTargetEquiv, PureVector.reindex_state,
     PureVector.prod_state, State.reindex, State.prod, State.marginalA,
     State.marginalB, partialTraceA, partialTraceB, Matrix.kronecker,
     Matrix.kroneckerMap_apply]
-  exact sum_sum_mul_eq_mul_sum
-    (fun x =>
-      (stateMergingBlockSource psi n).amp (i.1, x) *
-        star ((stateMergingBlockSource psi n).amp (j.1, x)))
-    (fun x =>
-      (maximallyEntangledPureVector C.outputEbitPairing).amp (x, i.2) *
-        star ((maximallyEntangledPureVector C.outputEbitPairing).amp (x, j.2)))
+  simpa only [PureVector.maximallyEntangled_amp] using
+    (sum_sum_mul_eq_mul_sum
+      (fun x =>
+        (stateMergingBlockSource psi n).amp (i.1, x) *
+          star ((stateMergingBlockSource psi n).amp (j.1, x)))
+      (fun x =>
+        (PureVector.maximallyEntangled C.outputEbitPairing).amp (x, i.2) *
+          star ((PureVector.maximallyEntangled C.outputEbitPairing).amp (x, j.2))))
 
 /-- The ideal target in the output order of the reference-lifted LOCC channel. -/
 def converseTargetPureVector :
@@ -442,7 +460,7 @@ theorem converseLOCC_fidelityError :
 theorem converseTargetPureVector_marginalB :
     C.converseTargetPureVector.state.marginalB =
       (stateMergingBlockSource psi n).state.marginalA.prod
-        (maximallyEntangledPureVector C.outputEbitPairing).state.marginalB := by
+        (State.maximallyEntangled C.outputEbitPairing).marginalB := by
   rw [converseTargetPureVector, PureVector.reindex_state,
     State.reindex_stateMergingConverseOutputEquiv_symm_marginalB]
   exact C.targetPureVector_marginalA_marginalB
@@ -454,25 +472,28 @@ theorem targetBobEntanglement :
   rw [PureVector.entanglementEntropy, C.converseTargetPureVector_marginalB]
   calc
     ((stateMergingBlockSource psi n).state.marginalA.prod
-        (maximallyEntangledPureVector C.outputEbitPairing).state.marginalB).vonNeumann =
+        (State.maximallyEntangled C.outputEbitPairing).marginalB).vonNeumann =
         (stateMergingBlockSource psi n).state.marginalA.vonNeumann +
-          (maximallyEntangledPureVector C.outputEbitPairing).state.marginalB.vonNeumann := by
+          (State.maximallyEntangled C.outputEbitPairing).marginalB.vonNeumann := by
       rw [State.vonNeumann_prod]
     _ = n * psi.state.marginalA.vonNeumann +
-          (maximallyEntangledPureVector C.outputEbitPairing).state.marginalB.vonNeumann := by
+          (State.maximallyEntangled C.outputEbitPairing).marginalB.vonNeumann := by
       rw [stateMergingBlockSource_marginalA_eq_tensorPower]
       change
         ((psi.state.marginalA.tensorPower n).reindex
             (tensorPowerProdEquiv a b n)).vonNeumann +
-          (maximallyEntangledPureVector C.outputEbitPairing).state.marginalB.vonNeumann =
+          (State.maximallyEntangled C.outputEbitPairing).marginalB.vonNeumann =
         n * psi.state.marginalA.vonNeumann +
-          (maximallyEntangledPureVector C.outputEbitPairing).state.marginalB.vonNeumann
+          (State.maximallyEntangled C.outputEbitPairing).marginalB.vonNeumann
       rw [State.vonNeumann_reindex, State.vonNeumann_tensorPower]
+    _ = n * psi.state.marginalA.vonNeumann +
+          (PureVector.maximallyEntangled C.outputEbitPairing).state.marginalB.vonNeumann := by
+      rfl
     _ = n * psi.state.marginalA.vonNeumann + log2 (Fintype.card lA : ℝ) := by
       rw [← State.pureVector_marginalA_vonNeumann_eq_marginalB
-        (maximallyEntangledPureVector C.outputEbitPairing),
-        maximallyEntangledPureVector_marginalA,
-        adhwFQSWMaximallyMixedState_vonNeumann]
+        (PureVector.maximallyEntangled C.outputEbitPairing),
+        PureVector.maximallyEntangled_marginalA,
+        State.vonNeumann_maximallyMixed]
 
 include C
 
@@ -687,11 +708,14 @@ end StateMergingBlockProtocol
 
 namespace PureVector
 
-/-- Horodecki--Oppenheim--Winter state-merging converse: every achievable net
-entanglement rate is at least the source conditional entropy. -/
-theorem conditionalEntropy_le_of_isAchievableStateMergingRate
+/-- The original HOW/Fannes converse for the explicitly exponent-restricted
+achievable-rate predicate.  The canonical unrestricted converse is proved
+separately by the dimension-independent smooth-min-entropy route. -/
+theorem conditionalEntropy_le_of_isAchievableStateMergingRateWithOutputEbitExponent
     (psi : PureVector (Prod (Prod a b) r)) (R : Real)
-    (hR : IsAchievableStateMergingRate.{u, v, w, x, y, z, p, q} psi R) :
+    (hR :
+      IsAchievableStateMergingRateWithOutputEbitExponent.{u, v, w, x, y, z, p, q}
+        psi R) :
     psi.state.marginalA.conditionalEntropy ≤ R := by
   by_contra hcontra
   push Not at hcontra

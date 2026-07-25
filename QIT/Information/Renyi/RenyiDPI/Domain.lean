@@ -15,6 +15,7 @@ public import QIT.Measurements.Map
 public import QIT.Measurements.Projective
 public import QIT.States.Purification.Uhlmann
 public import QIT.States.Schatten
+public import QIT.States.MaximallyMixed
 public import Mathlib.Analysis.Complex.Hadamard
 public import Mathlib.Analysis.CStarAlgebra.Matrix
 public import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Order
@@ -1221,14 +1222,6 @@ theorem cMatrix_posSemidef_add_pos_smul_one_posDef {A : CMatrix a}
   Matrix.PosDef.posSemidef_add hA
     (cMatrix_real_smul_one_posDef_local (a := a) hε)
 
-/-- The maximally mixed state is full-rank on a nonempty finite system. -/
-theorem maximallyMixed_posDef_of_nonempty [Nonempty a] :
-    (maximallyMixed a).matrix.PosDef := by
-  rw [maximallyMixed_matrix]
-  exact cMatrix_real_smul_one_posDef_local (a := a)
-    (r := (Fintype.card a : ℝ)⁻¹) (by
-      exact inv_pos.mpr (by exact_mod_cast (Fintype.card_pos : 0 < Fintype.card a)))
-
 /-- The sandwiched inner operator of a state with itself is the reference
 power `σ^(1/α)` in the full-rank domain.
 
@@ -1335,7 +1328,7 @@ theorem sandwichedRenyiQ_maximallyMixed_self [Nonempty a]
       (maximallyMixed a).matrix (maximallyMixed a).matrix
       (maximallyMixed a).pos (maximallyMixed a).pos α = 1 :=
   sandwichedRenyiQ_state_self (maximallyMixed a)
-    (maximallyMixed_posDef_of_nonempty (a := a)) α hα_pos
+    (maximallyMixed_posDef (a := a)) α hα_pos
 
 /-- Tensoring both arguments with the same maximally mixed state leaves the
 low-`α` `Q` functional unchanged.

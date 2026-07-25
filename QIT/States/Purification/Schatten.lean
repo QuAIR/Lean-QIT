@@ -112,16 +112,17 @@ theorem psdTracePower_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
 /-- The two partial traces of an arbitrary finite-dimensional rank-one
 bipartite operator have equal PSD Schatten `p` expressions. -/
 theorem psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
-    (psi : Prod r a → ℂ) {p : ℝ} (hp : 0 < p) :
+    (psi : Prod r a → ℂ) (p : SchattenOrder) :
     psdSchattenPNorm
         (partialTraceB (a := r) (b := a) (rankOneMatrix psi))
         (partialTraceB_posSemidef (rankOneMatrix_pos psi)) p =
       psdSchattenPNorm
         (partialTraceA (a := r) (b := a) (rankOneMatrix psi))
         (partialTraceA_posSemidef (rankOneMatrix_pos psi)) p := by
-  simpa [psdSchattenPNorm] using
-    congrArg (fun x : ℝ => Real.rpow x (1 / p))
-      (psdTracePower_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix psi hp)
+  simpa [psdSchattenPNorm, Internal.psdSchattenExpression] using
+    congrArg (fun x : ℝ => Real.rpow x (1 / (p : Real)))
+      (psdTracePower_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
+        psi p.property)
 
 namespace PureVector
 
@@ -140,14 +141,15 @@ theorem psdTracePower_marginalA_eq_marginalB
 /-- The two marginals of a rank-one bipartite pure operator have equal PSD
 Schatten `p` expressions. -/
 theorem psdSchattenPNorm_marginalA_eq_marginalB
-    (Ψ : PureVector (Prod r a)) {p : ℝ} (hp : 0 < p) :
+    (Ψ : PureVector (Prod r a)) (p : SchattenOrder) :
     psdSchattenPNorm
         (partialTraceB (a := r) (b := a) (rankOneMatrix Ψ.amp))
         (partialTraceB_posSemidef (rankOneMatrix_pos Ψ.amp)) p =
       psdSchattenPNorm
         (partialTraceA (a := r) (b := a) (rankOneMatrix Ψ.amp))
         (partialTraceA_posSemidef (rankOneMatrix_pos Ψ.amp)) p :=
-  psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix Ψ.amp hp
+  psdSchattenPNorm_partialTraceB_rankOneMatrix_eq_partialTraceA_rankOneMatrix
+    Ψ.amp p
 
 end PureVector
 

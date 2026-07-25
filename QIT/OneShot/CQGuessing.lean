@@ -533,18 +533,18 @@ theorem CqSmoothConditionalMinEntropyCandidate_of_smoothConditionalMinEntropyNor
     rw [State.toSubnormalized_trace]
     norm_num
   have hpinch_entropy :
-      ρmin.toSubnormalized.conditionalMinEntropy ≤
-        ρmin.toSubnormalized.sourceCoordinatePinch.conditionalMinEntropy :=
+      ρmin.toSubnormalized.conditionalMinEntropyRaw ≤
+        ρmin.toSubnormalized.sourceCoordinatePinch.conditionalMinEntropyRaw :=
     ρmin.toSubnormalized.conditionalMinEntropy_le_sourceCoordinatePinch_of_trace_pos
       (a := ι) hρmin_trace_pos
   have hρmin_entropy :
-      ρmin.toSubnormalized.conditionalMinEntropy = ρmin.conditionalMinEntropy := by
-    rw [State.toSubnormalized_conditionalMinEntropy_eq]
+      ρmin.toSubnormalized.conditionalMinEntropyRaw = ρmin.conditionalMinEntropy := by
+    rw [State.toSubnormalized_conditionalMinEntropyRaw_eq]
   have hE'_entropy :
-      ρmin.toSubnormalized.sourceCoordinatePinch.conditionalMinEntropy =
+      ρmin.toSubnormalized.sourceCoordinatePinch.conditionalMinEntropyRaw =
         E'.cqState.conditionalMinEntropy := by
     have hsub :=
-      State.toSubnormalized_conditionalMinEntropy_eq (a := ι) (b := b)
+      State.toSubnormalized_conditionalMinEntropyRaw_eq (a := ι) (b := b)
         (ρ := E'.cqState)
     rw [hE'_sub] at hsub
     exact hsub
@@ -552,8 +552,8 @@ theorem CqSmoothConditionalMinEntropyCandidate_of_smoothConditionalMinEntropyNor
   calc
     E.cqState.smoothConditionalMinEntropyNormalizedCandidates ε =
         ρmin.conditionalMinEntropy := hsmooth
-    _ = ρmin.toSubnormalized.conditionalMinEntropy := hρmin_entropy.symm
-    _ ≤ ρmin.toSubnormalized.sourceCoordinatePinch.conditionalMinEntropy := hpinch_entropy
+    _ = ρmin.toSubnormalized.conditionalMinEntropyRaw := hρmin_entropy.symm
+    _ ≤ ρmin.toSubnormalized.sourceCoordinatePinch.conditionalMinEntropyRaw := hpinch_entropy
     _ = E'.cqState.conditionalMinEntropy := hE'_entropy
 
 /-! ## cq SDP embedding -/
@@ -1565,6 +1565,76 @@ theorem cqGuessingProbability_le_rpow_neg_of_conditionalMinEntropyFeasible
       cqGuessingProbability_le_dualValue E hT
     _ = Real.rpow 2 (-lam) := by
       simp [T, cqDualValue, Matrix.trace_smul, σ.trace_eq_one]
+
+/-- For a cq state, feasibility in the guessing-probability dual program is
+exactly feasibility in the unnormalized conditional-min-entropy scale program. -/
+theorem cqDualFeasible_iff_conditionalMinEntropyScaleFeasible
+    (E : Ensemble ι b) (T : CMatrix b) :
+    E.cqDualFeasible T ↔
+      State.ConditionalMinEntropyScaleFeasible (a := ι) E.cqState T := by
+  classical
+  constructor
+  · intro hT
+    refine ⟨hT.1, ?_⟩
+    rw [Matrix.le_iff]
+    have hblocks : ∀ x, (T - E.cqBlock x).PosSemidef := by
+      intro x
+      simpa [Matrix.le_iff] using hT.2 x
+    have hmatrix :
+        Matrix.kronecker (1 : CMatrix ι) T - E.cqState.matrix =
+          Classical.blockDiagonal fun x => T - E.cqBlock x := by
+      rw [Classical.identityTensor_eq_blockDiagonal, cqState_eq_blockDiagonal_cqBlock,
+        ← Classical.blockDiagonal_sub]
+    rw [hmatrix]
+    exact Classical.blockDiagonal_posSemidef _ hblocks
+  · intro hT
+    refine ⟨hT.1, fun x => ?_⟩
+    rw [Matrix.le_iff]
+    have hsub := hT.2.submatrix (fun i : b => (x, i))
+    have hmatrix :
+        Matrix.kronecker (1 : CMatrix ι) T - E.cqState.matrix =
+          Classical.blockDiagonal fun y => T - E.cqBlock y := by
+      rw [Classical.identityTensor_eq_blockDiagonal, cqState_eq_blockDiagonal_cqBlock,
+        ← Classical.blockDiagonal_sub]
+    change
+      (Classical.block
+        (Matrix.kronecker (1 : CMatrix ι) T - E.cqState.matrix) x x).PosSemidef at hsub
+    rw [hmatrix, Classical.blockDiagonal_block_self] at hsub
+    exact hsub
+
+/-- The cq guessing dual objective values are exactly the endpoint
+conditional-min-entropy scale values. -/
+theorem cqDualValueSet_eq_conditionalMinEntropyScaleValueSet (E : Ensemble ι b) :
+    E.cqDualValueSet = E.cqState.conditionalMinEntropyScaleValueSet (a := ι) := by
+  ext t
+  constructor
+  · rintro ⟨T, hT, rfl⟩
+    exact ⟨T, (E.cqDualFeasible_iff_conditionalMinEntropyScaleFeasible T).mp hT, rfl⟩
+  · rintro ⟨T, hT, rfl⟩
+    exact ⟨T, (E.cqDualFeasible_iff_conditionalMinEntropyScaleFeasible T).mpr hT, rfl⟩
+
+/-- The cq guessing probability equals the unnormalized endpoint scale of the
+conditional min-entropy of the associated cq state. -/
+theorem cqGuessingProbability_eq_conditionalMinEntropyScale (E : Ensemble ι b) :
+    E.cqGuessingProbability = E.cqState.conditionalMinEntropyScale (a := ι) := by
+  rw [cqGuessingProbability_eq_cqDualOptimalValue, cqDualOptimalValue_eq,
+    State.conditionalMinEntropyScale_eq_sInf_scaleValueSet,
+    cqDualValueSet_eq_conditionalMinEntropyScaleValueSet]
+
+/-- Operational characterization of normalized cq conditional min-entropy:
+`2⁻ᴴᵐⁱⁿ⁽ˣ|ᴮ⁾ = p_guess(X|B)`. -/
+theorem rpow_neg_conditionalMinEntropy_eq_cqGuessingProbability (E : Ensemble ι b) :
+    Real.rpow 2 (-E.cqState.conditionalMinEntropy) = E.cqGuessingProbability := by
+  letI : Nonempty ι := E.index_nonempty
+  letI : Nonempty b :=
+    (E.states (Classical.choice (inferInstance : Nonempty ι))).nonempty
+  have hscale : 0 < E.cqState.conditionalMinEntropyScale (a := ι) := by
+    rw [E.cqState.conditionalMinEntropyScale_eq_normalizedScale (a := ι)]
+    exact E.cqState.conditionalMinEntropyNormalizedScale_inf_pos (a := ι)
+  rw [E.cqState.conditionalMinEntropy_eq_neg_log2_scale_of_nonempty (a := ι)]
+  simp only [neg_neg]
+  rw [QIT.rpow_two_log2_pos hscale]
+  exact E.cqGuessingProbability_eq_conditionalMinEntropyScale.symm
 
 end Ensemble
 

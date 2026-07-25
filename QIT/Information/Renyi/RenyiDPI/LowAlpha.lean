@@ -192,10 +192,11 @@ theorem sandwichedRenyi_dataProcessing_le_of_inner_schattenPNorm_ge_of_lt_one
     (α : ℝ) (hα_half : 1 / 2 ≤ α) (hα_lt_one : α < 1)
     (hnorm :
       psdSchattenPNorm (sandwichedRenyiInner ρ σ α)
-          (sandwichedRenyiInner_posSemidef ρ σ α) α ≤
+          (sandwichedRenyiInner_posSemidef ρ σ α) ⟨α, by linarith⟩ ≤
         psdSchattenPNorm
           (sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α)
-          (sandwichedRenyiInner_posSemidef (Φ.applyState ρ) (Φ.applyState σ) α) α) :
+          (sandwichedRenyiInner_posSemidef (Φ.applyState ρ) (Φ.applyState σ) α)
+          ⟨α, by linarith⟩) :
     sandwichedRenyi (Φ.applyState ρ) (Φ.applyState σ) hρΦ hσΦ
         α (by linarith) (ne_of_lt hα_lt_one) ≤
       sandwichedRenyi ρ σ hρ hσ α (by linarith) (ne_of_lt hα_lt_one) := by
@@ -235,18 +236,18 @@ theorem sandwichedRenyi_dataProcessing_le_of_reverseHolder_trace_le_of_lt_one
         psdSchattenPNorm
           (sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α)
           (sandwichedRenyiInner_posSemidef (Φ.applyState ρ) (Φ.applyState σ) α)
-          α) :
+          ⟨α, by linarith⟩) :
     sandwichedRenyi (Φ.applyState ρ) (Φ.applyState σ) hρΦ hσΦ
         α (by linarith) (ne_of_lt hα_lt_one) ≤
       sandwichedRenyi ρ σ hρ hσ α (by linarith) (ne_of_lt hα_lt_one) := by
   have hα_pos : 0 < α := by linarith
   have hnorm :
       psdSchattenPNorm (sandwichedRenyiInner ρ σ α)
-          (sandwichedRenyiInner_posSemidef ρ σ α) α ≤
+          (sandwichedRenyiInner_posSemidef ρ σ α) ⟨α, hα_pos⟩ ≤
         psdSchattenPNorm
           (sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α)
           (sandwichedRenyiInner_posSemidef (Φ.applyState ρ) (Φ.applyState σ) α)
-          α :=
+          ⟨α, hα_pos⟩ :=
     psdSchattenPNorm_le_of_reverseHolder_trace_le
       (sandwichedRenyiInner_posSemidef ρ σ α) hN hNtr hSupport
       hα_pos hα_lt_one htrace_le
@@ -275,7 +276,7 @@ theorem sandwichedRenyi_dataProcessing_le_of_all_reverseHolder_sideStates_trace_
               (sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α)
               (sandwichedRenyiInner_posSemidef
                 (Φ.applyState ρ) (Φ.applyState σ) α)
-              α) :
+              ⟨α, by linarith⟩) :
     sandwichedRenyi (Φ.applyState ρ) (Φ.applyState σ) hρΦ hσΦ
         α (by linarith) (ne_of_lt hα_lt_one) ≤
       sandwichedRenyi ρ σ hρ hσ α (by linarith) (ne_of_lt hα_lt_one) := by
@@ -309,7 +310,7 @@ theorem sandwichedRenyi_dataProcessing_le_of_all_reverseHolder_fullRank_sideStat
               (sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α)
               (sandwichedRenyiInner_posSemidef
                 (Φ.applyState ρ) (Φ.applyState σ) α)
-              α) :
+              ⟨α, by linarith⟩) :
     sandwichedRenyi (Φ.applyState ρ) (Φ.applyState σ) hρΦ hσΦ
         α (by linarith) (ne_of_lt hα_lt_one) ≤
       sandwichedRenyi ρ σ hρ hσ α (by linarith) (ne_of_lt hα_lt_one) := by
@@ -367,7 +368,7 @@ theorem sandwichedRenyi_reverseHolder_optimizer_trace_eq_schatten
       simpa [M] using sandwichedRenyiInner_posSemidef ρ σ α
     ((M * CFC.rpow (psdTraceReverseHolderOptimizer M hM α)
         (1 - 1 / α)).trace).re =
-      psdSchattenPNorm M hM α := by
+      psdSchattenPNorm M hM ⟨α, hα_pos⟩ := by
   let M : CMatrix a := sandwichedRenyiInner ρ σ α
   let hM : M.PosSemidef := by
     simpa [M] using sandwichedRenyiInner_posSemidef ρ σ α
@@ -419,7 +420,7 @@ theorem sandwichedRenyi_referenceSpectralPinching_reverseHolder_optimizer_trace_
           (P.pinchingChannel.applyState σ) α)
         (sandwichedRenyiInner_posSemidef
           (P.pinchingChannel.applyState ρ) (P.pinchingChannel.applyState σ) α)
-        α := by
+        ⟨α, by linarith⟩ := by
   classical
   let P : ProjectiveMeasurement a a :=
     ProjectiveMeasurement.ofHermitianEigenbasis σ.matrix σ.pos.isHermitian
@@ -433,7 +434,7 @@ theorem sandwichedRenyi_referenceSpectralPinching_reverseHolder_optimizer_trace_
   have htrace_eq :
       ((M * CFC.rpow (psdTraceReverseHolderOptimizer M hM α)
           (1 - 1 / α)).trace).re =
-        psdSchattenPNorm M hM α := by
+        psdSchattenPNorm M hM ⟨α, hα_pos⟩ := by
     simpa [M, hM] using
       sandwichedRenyi_reverseHolder_optimizer_trace_eq_schatten
         ρ σ hρ hσ α hα_pos
@@ -448,12 +449,12 @@ theorem sandwichedRenyi_referenceSpectralPinching_reverseHolder_optimizer_trace_
       sandwichedRenyiInner_referenceSpectralPinching_tracePower_ge_of_le_one
         ρ σ α (by linarith) (le_of_lt hα_lt_one)
   have hnorm :
-      psdSchattenPNorm M hM α ≤
+      psdSchattenPNorm M hM ⟨α, hα_pos⟩ ≤
         psdSchattenPNorm
           (sandwichedRenyiInner (P.pinchingChannel.applyState ρ) σ α)
           (sandwichedRenyiInner_posSemidef
             (P.pinchingChannel.applyState ρ) σ α)
-          α :=
+          ⟨α, hα_pos⟩ :=
     _root_.QIT.psdSchattenPNorm_le_of_psdTracePower_le
       hM
       (sandwichedRenyiInner_posSemidef
@@ -462,18 +463,18 @@ theorem sandwichedRenyi_referenceSpectralPinching_reverseHolder_optimizer_trace_
   calc
     ((M * CFC.rpow (psdTraceReverseHolderOptimizer M hM α)
         (1 - 1 / α)).trace).re =
-        psdSchattenPNorm M hM α := htrace_eq
+        psdSchattenPNorm M hM ⟨α, hα_pos⟩ := htrace_eq
     _ ≤ psdSchattenPNorm
           (sandwichedRenyiInner (P.pinchingChannel.applyState ρ) σ α)
           (sandwichedRenyiInner_posSemidef
             (P.pinchingChannel.applyState ρ) σ α)
-          α := hnorm
+          ⟨α, hα_pos⟩ := hnorm
     _ = psdSchattenPNorm
           (sandwichedRenyiInner (P.pinchingChannel.applyState ρ)
             (P.pinchingChannel.applyState σ) α)
           (sandwichedRenyiInner_posSemidef
             (P.pinchingChannel.applyState ρ) (P.pinchingChannel.applyState σ) α)
-          α := by
+          ⟨α, hα_pos⟩ := by
           rw [hσP_eq]
 
 /-- Single-obligation optimizer handoff for the `1 / 2 ≤ α < 1` channel DPI
@@ -499,7 +500,7 @@ theorem sandwichedRenyi_dataProcessing_le_of_reverseHolder_optimizer_trace_le_of
           (sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α)
           (sandwichedRenyiInner_posSemidef
             (Φ.applyState ρ) (Φ.applyState σ) α)
-          α) :
+          ⟨α, by linarith⟩) :
     sandwichedRenyi (Φ.applyState ρ) (Φ.applyState σ) hρΦ hσΦ
         α (by linarith) (ne_of_lt hα_lt_one) ≤
       sandwichedRenyi ρ σ hρ hσ α (by linarith) (ne_of_lt hα_lt_one) := by
@@ -540,7 +541,7 @@ theorem sandwichedRenyi_dataProcessing_channel_statement_of_reverseHolder_optimi
           (sandwichedRenyiInner (Φ.applyState ρ) (Φ.applyState σ) α)
           (sandwichedRenyiInner_posSemidef
             (Φ.applyState ρ) (Φ.applyState σ) α)
-          α) :
+          ⟨α, by linarith⟩) :
     sandwichedRenyi_dataProcessing_channel_statement ρ σ Φ hρ hσ hρΦ hσΦ
       α hα_half (ne_of_lt hα_lt_one) := by
   unfold sandwichedRenyi_dataProcessing_channel_statement
@@ -589,7 +590,7 @@ theorem sandwichedRenyi_dataProcessing_referenceSpectralPinching_channel_stateme
             (P.pinchingChannel.applyState σ) α)
           (sandwichedRenyiInner_posSemidef
             (P.pinchingChannel.applyState ρ) (P.pinchingChannel.applyState σ) α)
-          α := by
+          ⟨α, by linarith⟩ := by
     simpa [P] using
       sandwichedRenyi_referenceSpectralPinching_reverseHolder_optimizer_trace_le_of_lt_one
         ρ σ hρ hσ α hα_half hα_lt_one

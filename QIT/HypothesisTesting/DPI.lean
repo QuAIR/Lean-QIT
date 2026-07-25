@@ -448,20 +448,6 @@ namespace Channel
 variable {r₁ : Type x} {r₂ : Type y}
 variable [Fintype r₁] [DecidableEq r₁] [Fintype r₂] [DecidableEq r₂]
 
-/-- The channel induced by a finite reference isometry. -/
-def ofReferenceIsometry (V : ReferenceIsometry r₁ r₂) : Channel r₁ r₂ where
-  map := MatrixMap.ofReferenceIsometry V
-  completelyPositive := MatrixMap.ofReferenceIsometry_isCompletelyPositive V
-  tracePreserving := MatrixMap.ofReferenceIsometry_isTracePreserving V
-  mapsPositive :=
-    MatrixMap.isCompletelyPositive_mapsPositive (MatrixMap.ofReferenceIsometry V)
-      (MatrixMap.ofReferenceIsometry_isCompletelyPositive V)
-
-@[simp]
-theorem ofReferenceIsometry_map (V : ReferenceIsometry r₁ r₂) :
-    (Channel.ofReferenceIsometry V).map = MatrixMap.ofReferenceIsometry V :=
-  rfl
-
 variable {a : Type u} [Fintype a] [DecidableEq a]
 
 theorem ofReferenceIsometry_prod_id_applyState_matrix

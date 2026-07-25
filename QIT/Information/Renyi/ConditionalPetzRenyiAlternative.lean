@@ -217,7 +217,8 @@ theorem conditionalPetzRenyiUpOptimizer_trace_objective_eq_schatten
       CFC.rpow (ρ.conditionalPetzRenyiUpOptimizer α hα_pos).matrix
         (1 - α)).trace).re =
       psdSchattenPNorm (ρ.conditionalPetzRenyiUpTraceMatrix α)
-        (ρ.conditionalPetzRenyiUpTraceMatrix_posSemidef α) (1 / α) := by
+        (ρ.conditionalPetzRenyiUpTraceMatrix_posSemidef α)
+        ⟨1 / α, one_div_pos.mpr hα_pos⟩ := by
   have hp : 0 < 1 / α := one_div_pos.mpr hα_pos
   have hSpos : 0 <
       psdTracePower (ρ.conditionalPetzRenyiUpTraceMatrix α)
@@ -236,7 +237,8 @@ theorem conditionalPetzRenyiUpOptimizer_trace_objective_eq_schatten
         (ρ.conditionalPetzRenyiUpTraceMatrix_posSemidef α)
         (1 / α)) (1 - α)).trace).re =
       psdSchattenPNorm (ρ.conditionalPetzRenyiUpTraceMatrix α)
-        (ρ.conditionalPetzRenyiUpTraceMatrix_posSemidef α) (1 / α)
+        (ρ.conditionalPetzRenyiUpTraceMatrix_posSemidef α)
+        ⟨1 / α, one_div_pos.mpr hα_pos⟩
   rw [← hexp]
   exact hattain.symm
 
@@ -249,7 +251,8 @@ theorem conditionalPetzRenyiUpOptimizer_traceTerm_eq_closedTrace_rpow
       (ρ.conditionalPetzRenyiUpClosedTrace α) ^ α := by
   rw [ρ.conditionalPetzRenyiTraceTerm_eq_partialTraceA]
   rw [ρ.conditionalPetzRenyiUpOptimizer_trace_objective_eq_schatten hα_pos]
-  dsimp [psdSchattenPNorm, conditionalPetzRenyiUpClosedTrace,
+  dsimp [psdSchattenPNorm, Internal.psdSchattenExpression,
+    conditionalPetzRenyiUpClosedTrace,
     conditionalPetzRenyiUpClosedTrace_eq_psdTracePower]
   have hrecip : 1 / (1 / α) = α := by field_simp [hα_pos.ne']
   rw [hrecip]
@@ -292,12 +295,14 @@ theorem conditionalPetzRenyiTraceTerm_le_closedTrace_rpow_of_lt_one
       ((ρ.conditionalPetzRenyiUpTraceMatrix α *
         CFC.rpow σ.matrix (1 - α)).trace).re ≤
         psdSchattenPNorm (ρ.conditionalPetzRenyiUpTraceMatrix α)
-          (ρ.conditionalPetzRenyiUpTraceMatrix_posSemidef α) (1 / α) :=
+          (ρ.conditionalPetzRenyiUpTraceMatrix_posSemidef α)
+          ⟨1 / α, one_div_pos.mpr hα_pos⟩ :=
     psd_trace_rpow_holder_variational_upper
       (M := ρ.conditionalPetzRenyiUpTraceMatrix α) (N := σ.matrix)
       (ρ.conditionalPetzRenyiUpTraceMatrix_posSemidef α) σ.pos htr hpq hr
   have hrecip : 1 / (1 / α) = α := by field_simp [hα_pos.ne']
-  simpa [psdSchattenPNorm, conditionalPetzRenyiUpClosedTrace,
+  simpa [psdSchattenPNorm, Internal.psdSchattenExpression,
+    conditionalPetzRenyiUpClosedTrace,
     conditionalPetzRenyiUpClosedTrace_eq_psdTracePower, hrecip] using hholder
 
 /-- Reverse-Holder side of Tomamichel2015FiniteResources, `cond.tex:184-187`:
@@ -323,7 +328,8 @@ theorem closedTrace_rpow_le_conditionalPetzRenyiTraceTerm_of_one_lt
     field_simp [hα_pos.ne']
   have hrev :
       psdSchattenPNorm (ρ.conditionalPetzRenyiUpTraceMatrix α)
-          (ρ.conditionalPetzRenyiUpTraceMatrix_posSemidef α) (1 / α) ≤
+          (ρ.conditionalPetzRenyiUpTraceMatrix_posSemidef α)
+          ⟨1 / α, one_div_pos.mpr hα_pos⟩ ≤
         ((ρ.conditionalPetzRenyiUpTraceMatrix α *
           CFC.rpow σ.matrix (1 - α)).trace).re :=
     psd_trace_rpow_reverse_holder_variational
@@ -331,7 +337,8 @@ theorem closedTrace_rpow_le_conditionalPetzRenyiTraceTerm_of_one_lt
       (ρ.conditionalPetzRenyiUpTraceMatrix_posSemidef α) σ.pos htr hSupport
       hp0 hp1 hr
   have hrecip : 1 / (1 / α) = α := by field_simp [hα_pos.ne']
-  simpa [psdSchattenPNorm, conditionalPetzRenyiUpClosedTrace,
+  simpa [psdSchattenPNorm, Internal.psdSchattenExpression,
+    conditionalPetzRenyiUpClosedTrace,
     conditionalPetzRenyiUpClosedTrace_eq_psdTracePower, hrecip] using hrev
 
 /-- Entropy-level Holder upper bound for full-rank side references,

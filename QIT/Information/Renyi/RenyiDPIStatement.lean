@@ -107,8 +107,9 @@ theorem conditionalSandwichedRenyi_duality_pureTripartite_statement_iff_pair_alg
 upward sandwiched conditional Renyi entropy `H̃^↑_α(·|B)` (a DPI instance).
 
 The measurement map must satisfy the source-required sub-unital/unit-effect
-condition: it must not enlarge the identity effect.  This is a planning-only
-statement surface. -/
+condition: it must not enlarge the identity effect.  The proposition is proved
+by `QIT.State.measurementMap_conditionalRenyi_monotonicity` in
+`QIT.Information.Renyi.RenyiDPI.ConditionalMeasurementSource`. -/
 def measurementMap_conditionalRenyi_monotonicity_statement (ρ : State (Prod a b))
     (hρ : ρ.matrix.PosDef) (M : POVM c a)
     (hMUnit : measurementMapDoesNotEnlargeUnit M)

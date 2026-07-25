@@ -9,6 +9,8 @@ module
 public import QIT.Coding.Classical.Holevo
 public import QIT.States.Purification.ReferenceIsometry
 public import QIT.Channels.Diamond
+public import QIT.States.MaximallyEntangled
+public import QIT.States.MaximallyMixed
 
 /-!
 # FQSW core operational API
@@ -197,129 +199,6 @@ theorem fqswChannelOfReferenceIsometry_prod_id_applyState_pure
   rw [MatrixMap.kron_ofReferenceIsometry_idChannel_apply_eq_applyMatrixLeft]
   exact (V.rankOne_applyAmp Ψ.amp).symm
 
-/-- Canonical maximally entangled pure vector associated to a finite basis
-equivalence between the two ebit registers. -/
-def maximallyEntangledPureVector (pairing : e ≃ et) : PureVector (Prod e et) where
-  amp := fun x =>
-    if pairing x.1 = x.2 then
-      ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹)
-    else
-      0
-  trace_rankOne_eq_one := by
-    rw [rankOneMatrix_trace]
-    have hcard_pos : 0 < (Fintype.card e : ℝ) := by
-      exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
-    have hsqrt_ne : Real.sqrt (Fintype.card e : ℝ) ≠ 0 := by
-      exact ne_of_gt (Real.sqrt_pos.2 hcard_pos)
-    calc
-      (fun x : Prod e et =>
-          (if pairing x.1 = x.2 then ((Real.sqrt (Fintype.card e : ℝ))⁻¹ : ℂ) else 0)) ⬝ᵥ
-          (fun x : Prod e et =>
-            star (if pairing x.1 = x.2 then
-              ((Real.sqrt (Fintype.card e : ℝ))⁻¹ : ℂ) else 0)) =
-          ∑ i : e, ∑ j : et,
-            (if pairing i = j then
-              (((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹) *
-                (((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹))) else 0) := by
-        simp [dotProduct, Fintype.sum_prod_type]
-      _ = ∑ i : e,
-            (((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹) *
-              (((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹))) := by
-        apply Finset.sum_congr rfl
-        intro i _
-        rw [Finset.sum_eq_single (pairing i)]
-        · simp
-        · intro j _ hj
-          have hne : pairing i ≠ j := fun h => hj h.symm
-          simp [hne]
-        · simp
-      _ = (Fintype.card e : ℂ) *
-            (((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹) *
-              (((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹))) := by
-        simp
-      _ = 1 := by
-        have hsqrtC_ne : (Real.sqrt (Fintype.card e : ℝ) : ℂ) ≠ 0 := by
-          exact_mod_cast hsqrt_ne
-        field_simp [hsqrtC_ne]
-        rw [← Complex.ofReal_natCast, ← Complex.ofReal_pow]
-        exact congrArg Complex.ofReal (Real.sq_sqrt hcard_pos.le).symm
-
-/-- Local maximally mixed state constructor used by the FQSW source route. -/
-def adhwFQSWMaximallyMixedState (α : Type*) [Fintype α] [DecidableEq α] [Nonempty α] :
-    State α where
-  matrix := (((Fintype.card α : ℝ)⁻¹ : ℝ) : ℂ) • (1 : CMatrix α)
-  pos := by
-    have hscalar : (0 : ℂ) ≤ (((Fintype.card α : ℝ)⁻¹ : ℝ) : ℂ) := by
-      exact_mod_cast inv_nonneg.mpr (Nat.cast_nonneg (Fintype.card α : ℕ))
-    exact Matrix.PosSemidef.smul Matrix.PosSemidef.one hscalar
-  trace_eq_one := by
-    rw [Matrix.trace_smul, Matrix.trace_one]
-    have hcard : (Fintype.card α : ℂ) ≠ 0 := by
-      exact_mod_cast (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)
-    norm_num [hcard]
-
-/-- On a one-point finite system, every state is the local maximally mixed
-state. -/
-theorem state_matrix_eq_maximallyMixed_of_subsingleton
-    {α : Type u} [Fintype α] [DecidableEq α] [Nonempty α] [Subsingleton α]
-    (ρ : State α) :
-    ρ.matrix = (adhwFQSWMaximallyMixedState α).matrix := by
-  ext x y
-  have hxy : x = y := Subsingleton.elim _ _
-  subst y
-  have hdiag : ρ.matrix x x = 1 := by
-    have htrace := ρ.trace_eq_one
-    rw [Matrix.trace] at htrace
-    have hsum :
-        (∑ z : α, ρ.matrix z z) = ρ.matrix x x := by
-      apply Finset.sum_eq_single x
-      · intro z _ hz
-        exact False.elim (hz (Subsingleton.elim z x))
-      · intro h
-        exact False.elim (h (Finset.mem_univ x))
-    have hsum_diag :
-        (∑ z : α, Matrix.diag ρ.matrix z) = ρ.matrix x x := by
-      simpa [Matrix.diag] using hsum
-    rw [hsum_diag] at htrace
-    exact htrace
-  have hcard : (Fintype.card α : ℝ) = 1 := by
-    exact_mod_cast
-      (Fintype.card_eq_one_iff.mpr ⟨x, fun y => Subsingleton.elim y x⟩)
-  simp [adhwFQSWMaximallyMixedState, hdiag, hcard]
-
-/-- The first marginal of the canonical maximally entangled vector is
-maximally mixed. -/
-theorem maximallyEntangledPureVector_marginalA (pairing : e ≃ et) :
-    (maximallyEntangledPureVector pairing).state.marginalA =
-      adhwFQSWMaximallyMixedState e := by
-  apply State.ext
-  ext x y
-  have hcard_pos : 0 < (Fintype.card e : ℝ) := by
-    exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
-  have hsqrt_ne : (Real.sqrt (Fintype.card e : ℝ) : ℂ) ≠ 0 := by
-    exact_mod_cast (ne_of_gt (Real.sqrt_pos.2 hcard_pos))
-  have hcoef :
-      ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹ *
-          star ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹)) =
-        (((Fintype.card e : ℝ)⁻¹ : ℝ) : ℂ) := by
-    rw [star_inv₀]
-    simp
-    field_simp [hsqrt_ne]
-    rw [← Complex.ofReal_natCast, ← Complex.ofReal_pow]
-    exact congrArg Complex.ofReal (Real.sq_sqrt hcard_pos.le).symm
-  have hcoef' :
-      ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹ *
-          ((Real.sqrt (Fintype.card e : ℝ) : ℂ)⁻¹)) =
-        (((Fintype.card e : ℝ)⁻¹ : ℝ) : ℂ) := by
-    simpa using hcoef
-  by_cases hxy : x = y
-  · subst y
-    simp [State.marginalA, partialTraceB,
-      maximallyEntangledPureVector, adhwFQSWMaximallyMixedState, hcoef']
-  · have hyx : ¬ y = x := fun h => hxy h.symm
-    simp [State.marginalA, partialTraceB,
-      maximallyEntangledPureVector, adhwFQSWMaximallyMixedState, hxy, hyx]
-
 /-- Regroup a left-associated tripartite source `(A × B) × R` so Alice's
 system is the left factor. -/
 def fqswSourceToAliceInputEquiv (a : Type u) (b : Type v) (r : Type w) :
@@ -475,7 +354,7 @@ theorem outputStateOfState_source_eq_outputState :
 
 /-- Source-shaped target: transferred `ABR` source tensor a canonical ebit. -/
 def targetState : State (Prod (Prod (Prod a b) r) (Prod e et)) :=
-  ψ.state.prod (maximallyEntangledPureVector C.ebitPairing).state
+  ψ.state.prod (State.maximallyEntangled C.ebitPairing)
 
 /-- Normalized trace-distance protocol error, matching existing Lean protocol
 conventions. -/
@@ -583,11 +462,11 @@ def outputState :
   C.outputStateOfState ψ.state
 
 def targetState :
-    State (Prod
+  State (Prod
       (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))
       (Prod e et)) :=
   ((ψ.tensorPower n).reindex (fqswTensorPowerTripartiteEquiv a b r n)).state.prod
-    (maximallyEntangledPureVector C.ebitPairing).state
+    (State.maximallyEntangled C.ebitPairing)
 
 def normalizedError : ℝ :=
   C.outputState.normalizedTraceDistance C.targetState
