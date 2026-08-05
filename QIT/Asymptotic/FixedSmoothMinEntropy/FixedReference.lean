@@ -23,7 +23,7 @@ variable {a : Type u} {b : Type v}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 namespace State
 
-private theorem fixedSmooth_trace_re_le_of_le {ι : Type*} [Fintype ι] {X Y : CMatrix ι}
+theorem fixedSmooth_trace_re_le_of_le {ι : Type*} [Fintype ι] {X Y : CMatrix ι}
     (hXY : X ≤ Y) :
     X.trace.re ≤ Y.trace.re := by
   have hnon : 0 ≤ (Y - X).trace.re := (Matrix.PosSemidef.trace_nonneg hXY).1
@@ -31,31 +31,14 @@ private theorem fixedSmooth_trace_re_le_of_le {ι : Type*} [Fintype ι] {X Y : C
     simp [Matrix.trace_sub]
   linarith
 
-private theorem fixedSmooth_identityTensorStateMatrix_trace_re (σ : State b) :
+theorem fixedSmooth_identityTensorStateMatrix_trace_re (σ : State b) :
     (identityTensorStateMatrix (a := a) σ).trace.re = (Fintype.card a : ℝ) := by
   change (Matrix.kroneckerMap (fun x y => x * y) (1 : CMatrix a) σ.matrix).trace.re =
     (Fintype.card a : ℝ)
   rw [Matrix.trace_kronecker, σ.trace_eq_one, Matrix.trace_one]
   norm_num
 
-private theorem neg_log2_rpow_two_neg (lam : ℝ) :
-    -log2 (Real.rpow 2 (-lam)) = lam := by
-  unfold log2
-  change -(Real.log ((2 : ℝ) ^ (-lam)) / Real.log 2) = lam
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2) (-lam)]
-  have hlog2 : Real.log 2 ≠ 0 := ne_of_gt (Real.log_pos one_lt_two)
-  field_simp [hlog2]
-
-private theorem rpow_two_log2_pos {x : ℝ} (hx : 0 < x) :
-    Real.rpow 2 (log2 x) = x := by
-  apply Real.log_injOn_pos
-    (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _)
-    hx
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2)]
-  unfold log2
-  field_simp [ne_of_gt (Real.log_pos one_lt_two)]
-
-private theorem rpow_two_mul_log2_pos {x gamma : ℝ} (hx : 0 < x) :
+theorem rpow_two_mul_log2_pos {x gamma : ℝ} (hx : 0 < x) :
     Real.rpow 2 (gamma * log2 x) = x ^ gamma := by
   apply Real.log_injOn_pos
     (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _)
@@ -65,7 +48,7 @@ private theorem rpow_two_mul_log2_pos {x gamma : ℝ} (hx : 0 < x) :
   unfold log2
   field_simp [ne_of_gt (Real.log_pos one_lt_two)]
 
-private theorem rpow_two_neg_sub_mul_log2_pos {H gamma x : ℝ} (hx : 0 < x) :
+theorem rpow_two_neg_sub_mul_log2_pos {H gamma x : ℝ} (hx : 0 < x) :
     Real.rpow 2 (-(H - gamma * log2 x)) =
       Real.rpow 2 (-H) * x ^ gamma := by
   calc
@@ -76,45 +59,7 @@ private theorem rpow_two_neg_sub_mul_log2_pos {H gamma x : ℝ} (hx : 0 < x) :
     _ = Real.rpow 2 (-H) * x ^ gamma := by
         rw [rpow_two_mul_log2_pos hx]
 
-private theorem traceNorm_eq_trace_re_of_posSemidef
-    (A : CMatrix (Prod a b)) (hA : A.PosSemidef) :
-    traceNorm A = A.trace.re := by
-  rw [traceNorm]
-  have hherm : Matrix.conjTranspose A = A := hA.isHermitian.eq
-  have hs : psdSqrt (Matrix.conjTranspose A * A) = A := by
-    rw [hherm]
-    simpa [psdSqrt, sq] using (CFC.sqrt_sq A hA.nonneg)
-  rw [hs]
-
-private theorem cMatrix_trace_mul_le_of_le {ι : Type*} [Fintype ι] [DecidableEq ι]
-    {D X Y : CMatrix ι} (hD : D.PosSemidef) (hXY : X ≤ Y) :
-    ((D * X).trace).re ≤ ((D * Y).trace).re := by
-  rw [Matrix.le_iff] at hXY
-  have hnonneg : 0 ≤ ((D * (Y - X)).trace).re := by
-    let S := psdSqrt D
-    have hpsd : (S * (Y - X) * S).PosSemidef := by
-      have h := hXY.mul_mul_conjTranspose_same S
-      rw [psdSqrt_isHermitian D] at h
-      exact h
-    have htrace_re : 0 ≤ ((S * (Y - X) * S).trace).re :=
-      (Matrix.PosSemidef.trace_nonneg hpsd).1
-    have hEq : (D * (Y - X)).trace = (S * (Y - X) * S).trace := by
-      have hSsq : S * S = D := by
-        simpa [S] using psdSqrt_mul_self_of_posSemidef hD
-      rw [← hSsq]
-      calc
-        ((S * S) * (Y - X)).trace = (S * (S * (Y - X))).trace := by
-          rw [Matrix.mul_assoc]
-        _ = ((S * (Y - X)) * S).trace := by rw [Matrix.trace_mul_comm]
-        _ = (S * (Y - X) * S).trace := by rw [Matrix.mul_assoc]
-    rwa [hEq]
-  have hcalc :
-      ((D * (Y - X)).trace).re =
-        ((D * Y).trace).re - ((D * X).trace).re := by
-    simp [Matrix.mul_sub, Matrix.trace_sub]
-  linarith
-
-private theorem trace_conjTranspose_mul_hermitian_re_eq
+theorem trace_conjTranspose_mul_hermitian_re_eq
     {ι : Type*} [Fintype ι] {G D : CMatrix ι} (hD : D.IsHermitian) :
     ((Matrix.conjTranspose G * D).trace).re = ((G * D).trace).re := by
   have htrace :
@@ -128,12 +73,6 @@ private theorem trace_conjTranspose_mul_hermitian_re_eq
       _ = star ((G * D).trace) := Matrix.trace_conjTranspose _
   rw [htrace]
   simp
-
-private theorem cMatrix_real_smul_le_smul {ι : Type*} [Fintype ι] [DecidableEq ι]
-    {A B : CMatrix ι} {c : ℝ} (hc : 0 ≤ c) (hAB : A ≤ B) :
-    ((c : ℂ) • A) ≤ ((c : ℂ) • B) := by
-  rw [Matrix.le_iff] at hAB ⊢
-  simpa [sub_eq_add_neg, smul_add, smul_neg] using hAB.smul hc
 
 /-- Fuchs--van de Graaf lower bound gives a trace-distance control on
 purified distance. -/
@@ -171,7 +110,7 @@ theorem purifiedDistance_le_sqrt_two_mul_normalizedTraceDistance
 
 This local copy keeps the finite-AEP regularization path from importing the heavier
 trace-norm continuity dependencies into the basic trace-distance API. -/
-private theorem finiteAEPTraceNorm_continuous
+theorem finiteAEPTraceNorm_continuous
     {ι : Type*} [Fintype ι] [DecidableEq ι] :
     Continuous (traceNorm : CMatrix ι → ℝ) := by
   have hgram : Continuous (fun M : CMatrix ι => star M * M) := by
@@ -190,7 +129,7 @@ private theorem finiteAEPTraceNorm_continuous
   simpa [traceNorm, psdSqrt] using Complex.continuous_re.comp htrace
 
 /-- Normalized trace distance from a fixed state is continuous. -/
-private theorem finiteAEP_normalizedTraceDistance_continuous_left
+theorem finiteAEP_normalizedTraceDistance_continuous_left
     (σ : State (Prod a b)) :
     Continuous fun ρ : State (Prod a b) => ρ.normalizedTraceDistance σ := by
   rw [show (fun ρ : State (Prod a b) => ρ.normalizedTraceDistance σ) =
@@ -198,7 +137,7 @@ private theorem finiteAEP_normalizedTraceDistance_continuous_left
         (1 / 2 : ℝ) * traceNorm (ρ.matrix - σ.matrix) by
     funext ρ
     rw [State.normalizedTraceDistance_eq_matrix, QIT.normalizedTraceDistance_eq,
-      QIT.traceDistance]]
+      QIT.traceNormDistance]]
   exact continuous_const.mul
     (finiteAEPTraceNorm_continuous.comp (by fun_prop))
 
@@ -210,7 +149,7 @@ private theorem log2_card_left_nonneg (ρ : State (Prod a b)) :
   exact div_nonneg (Real.log_nonneg hcard_one)
     (le_of_lt (Real.log_pos one_lt_two))
 
-private theorem ConditionalMinEntropyFeasible_scale_lower_bound
+theorem ConditionalMinEntropyFeasible_scale_lower_bound
     {ρ : State (Prod a b)} {σ : State b} {lam : ℝ}
     (h : ConditionalMinEntropyFeasible (a := a) ρ σ lam) :
     (Fintype.card a : ℝ)⁻¹ ≤ Real.rpow 2 (-lam) := by
@@ -230,7 +169,7 @@ private theorem ConditionalMinEntropyFeasible_scale_lower_bound
   rw [inv_le_iff_one_le_mul₀ hcard_pos]
   simpa [mul_comm] using htrace
 
-private theorem ConditionalMinEntropyFeasible_le_log2_card_left
+theorem ConditionalMinEntropyFeasible_le_log2_card_left
     {ρ : State (Prod a b)} {σ : State b} {lam : ℝ}
     (h : ConditionalMinEntropyFeasible (a := a) ρ σ lam) :
     lam ≤ log2 (Fintype.card a : ℝ) := by
@@ -551,89 +490,6 @@ end State
 
 namespace SubnormalizedState
 
-private theorem neg_log2_rpow_two_neg (lam : ℝ) :
-    -log2 (Real.rpow 2 (-lam)) = lam := by
-  unfold log2
-  change -(Real.log ((2 : ℝ) ^ (-lam)) / Real.log 2) = lam
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2) (-lam)]
-  have hlog2 : Real.log 2 ≠ 0 := ne_of_gt (Real.log_pos one_lt_two)
-  field_simp [hlog2]
-
-private theorem rpow_two_log2_pos {x : ℝ} (hx : 0 < x) :
-    Real.rpow 2 (log2 x) = x := by
-  apply Real.log_injOn_pos
-    (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _)
-    hx
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2)]
-  unfold log2
-  field_simp [ne_of_gt (Real.log_pos one_lt_two)]
-
-private theorem cMatrix_posSemidef_le_trace_re_smul_one_forFixedSmooth
-    {ι : Type*} [Fintype ι] [DecidableEq ι] {A : CMatrix ι}
-    (hA : A.PosSemidef) :
-    A ≤ (((A.trace.re : ℝ) : ℂ) • (1 : CMatrix ι)) := by
-  classical
-  rw [Matrix.le_iff]
-  let U : Matrix.unitaryGroup ι ℂ := hA.1.eigenvectorUnitary
-  let D : CMatrix ι := Matrix.diagonal fun i => ((hA.1.eigenvalues i : ℝ) : ℂ)
-  have hdiag : A = (U : CMatrix ι) * D * star (U : CMatrix ι) := by
-    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hA.1.spectral_theorem
-  have heig_sum : ∑ i, hA.1.eigenvalues i = A.trace.re := by
-    have htrace := congrArg Complex.re hA.1.trace_eq_sum_eigenvalues
-    simpa using htrace.symm
-  have heig_le_trace : ∀ i, hA.1.eigenvalues i ≤ A.trace.re := by
-    intro i
-    have hnonneg (j : ι) : 0 ≤ hA.1.eigenvalues j := hA.eigenvalues_nonneg j
-    calc
-      hA.1.eigenvalues i
-          ≤ hA.1.eigenvalues i +
-              ∑ j ∈ Finset.univ.erase i, hA.1.eigenvalues j :=
-            le_add_of_nonneg_right (Finset.sum_nonneg (fun j _ => hnonneg j))
-      _ = ∑ j, hA.1.eigenvalues j := by
-            rw [add_comm]
-            exact Finset.sum_erase_add (s := Finset.univ)
-              (f := fun j => hA.1.eigenvalues j) (Finset.mem_univ i)
-      _ = A.trace.re := heig_sum
-  let c : ℂ := ((A.trace.re : ℝ) : ℂ)
-  have hsub :
-      c • (1 : CMatrix ι) - A =
-        (U : CMatrix ι) * (c • (1 : CMatrix ι) - D) * star (U : CMatrix ι) := by
-    have hunit_scalar :
-        (U : CMatrix ι) * (c • (1 : CMatrix ι)) * star (U : CMatrix ι) =
-          c • (1 : CMatrix ι) := by
-      have hunit : (U : CMatrix ι) * star (U : CMatrix ι) = 1 := by
-        simp
-      calc
-        (U : CMatrix ι) * (c • (1 : CMatrix ι)) * star (U : CMatrix ι) =
-            c • ((U : CMatrix ι) * (1 : CMatrix ι) * star (U : CMatrix ι)) := by
-              simp
-        _ = c • (1 : CMatrix ι) := by
-              simp [hunit]
-    calc
-      c • (1 : CMatrix ι) - A =
-          c • (1 : CMatrix ι) - (U : CMatrix ι) * D * star (U : CMatrix ι) := by
-            rw [hdiag]
-      _ = (U : CMatrix ι) * (c • (1 : CMatrix ι)) * star (U : CMatrix ι) -
-          (U : CMatrix ι) * D * star (U : CMatrix ι) := by
-            rw [hunit_scalar]
-      _ = (U : CMatrix ι) * (c • (1 : CMatrix ι) - D) * star (U : CMatrix ι) := by
-            rw [Matrix.mul_sub, Matrix.sub_mul]
-  have hdiag_sub :
-      c • (1 : CMatrix ι) - D =
-        Matrix.diagonal fun i => (((A.trace.re - hA.1.eigenvalues i : ℝ) : ℝ) : ℂ) := by
-    ext i j
-    by_cases hij : i = j
-    · subst hij
-      simp [D, c]
-    · simp [D, Matrix.diagonal, hij]
-  rw [hsub]
-  rw [Matrix.IsUnit.posSemidef_star_right_conjugate_iff (Unitary.isUnit_coe :
-    IsUnit (U : CMatrix ι))]
-  rw [hdiag_sub]
-  rw [Matrix.posSemidef_diagonal_iff]
-  intro i
-  exact_mod_cast sub_nonneg.mpr (heig_le_trace i)
 
 private theorem trace_re_le_of_le {ι : Type*} [Fintype ι] {X Y : CMatrix ι}
     (hXY : X ≤ Y) :
@@ -682,7 +538,7 @@ theorem matrix_le_one_forFixedSmooth (ρ : SubnormalizedState a) :
     ρ.matrix ≤ 1 := by
   have htrace :
       ρ.matrix ≤ (((ρ.matrix.trace.re : ℝ) : ℂ) • (1 : CMatrix a)) :=
-    cMatrix_posSemidef_le_trace_re_smul_one_forFixedSmooth ρ.pos
+    State.posSemidef_le_trace_re_smul_one ρ.pos
   have htrace_le_one :
       (((ρ.matrix.trace.re : ℝ) : ℂ) • (1 : CMatrix a)) ≤ 1 := by
     rw [Matrix.le_iff]

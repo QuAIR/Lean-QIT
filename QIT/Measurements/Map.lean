@@ -43,9 +43,23 @@ def measureSubsystemState (M : POVM x a) (ρ : State (Prod a b)) :
     State (Prod x b) :=
   (Channel.prod (Channel.measure M) (Channel.idChannel b)).applyState ρ
 
-/-- Local source-side condition for measurement monotonicity: the quantum-classical
-measurement map does not enlarge the unit effect.  This is the finite-dimensional
-sub-unital condition needed for the conditional-Renyi monotonicity surface. -/
+/-- Local source-side HYPOTHESIS for measurement monotonicity: the quantum-classical
+measurement map does not enlarge the unit effect, i.e.
+`(Channel.measure M).map (1 : CMatrix a) ≤ (1 : CMatrix x)`.
+
+Unfolding `Channel.measure_map` at `X = 1` gives
+`(measure M).map 1 = ∑ y, (M.effects y).trace • Matrix.single y y 1`, so this
+condition is equivalent to the per-outcome trace bound `∀ y, Tr (M.effects y) ≤ 1`.
+
+This is NOT automatic from the POVM constraint `∑ y, M.effects y = 1`; it is a
+genuine restrictiveness hypothesis. In particular it FAILS for the trivial
+one-outcome POVM `M.effects _ = 1` on `dim a ≥ 2`, since
+`Tr (1 : CMatrix a) = dim a > 1`. Trace-one projective measurements satisfy it
+(see `toPOVM_measurementMapDoesNotEnlargeUnit_of_traceOne`).
+
+This is the finite-dimensional sub-unital condition required as a hypothesis by
+the conditional-Renyi monotonicity statements in
+`QIT.Information.Renyi.RenyiDPI.ConditionalMeasurementSource`. -/
 def measurementMapDoesNotEnlargeUnit (M : POVM x a) : Prop :=
   (Channel.measure M).map (1 : CMatrix a) ≤ (1 : CMatrix x)
 

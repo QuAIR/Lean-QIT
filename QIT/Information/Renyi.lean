@@ -28,6 +28,7 @@ public import QIT.Information.Renyi.AlphaEntropyContinuity
 public import QIT.Information.Renyi.DirectSumMean
 public import QIT.Information.Renyi.IsometryImageMean
 public import QIT.Information.Renyi.RpowOperatorConvex
+public import QIT.Information.Renyi.SandwichedMutualInformation
 public import QIT.Information.Renyi.SandwichedRenyiMonotonicity
 public import QIT.Information.Renyi.SandwichedRenyiOptimizedUSC
 public import QIT.Information.Renyi.OverlapDomination

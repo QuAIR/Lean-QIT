@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Entropy.Entropy
+public import QIT.Information.Entropy.Log2Lemmas
 public import QIT.Classical.Bridge
 public import QIT.States.Schatten
 public import Mathlib.LinearAlgebra.Lagrange
@@ -171,13 +172,6 @@ theorem cMatrix_rpow_kronecker_posDef
       Matrix.diagonal_kronecker_diagonal, Matrix.mul_assoc]
   rw [hleft, hdiag, hright]
 
-theorem log2_mul {x y : ℝ} (hx : x ≠ 0) (hy : y ≠ 0) :
-    log2 (x * y) = log2 x + log2 y := by
-  unfold log2
-  rw [Real.log_mul hx hy]
-  ring
-
-/-- The trace of the product of two positive semidefinite matrices is real. -/
 theorem trace_mul_posSemidef_im_eq_zero {A B : CMatrix a}
     (hA : A.PosSemidef) (hB : B.PosSemidef) :
     ((A * B).trace).im = 0 := by

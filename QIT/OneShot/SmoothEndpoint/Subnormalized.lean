@@ -27,17 +27,6 @@ namespace ReferenceIsometry
 variable {a : Type u} {b : Type v}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 
-private def prodSumRightEquiv
-    (a : Type u) (extra : Type w) (b : Type v) :
-    Sum (Prod a extra) (Prod a b) ≃ Prod a (Sum extra b) where
-  toFun x := match x with
-    | Sum.inl ae => (ae.1, Sum.inl ae.2)
-    | Sum.inr ab => (ab.1, Sum.inr ab.2)
-  invFun x := match x.2 with
-    | Sum.inl e => Sum.inl (x.1, e)
-    | Sum.inr y => Sum.inr (x.1, y)
-  left_inv := by intro x; cases x <;> rfl
-  right_inv := by intro x; cases x with | mk i s => cases s <;> rfl
 
 private theorem submatrix_equiv_mul {ι κ : Type*} [Fintype ι] [Fintype κ]
     (e : ι ≃ κ) (A B : CMatrix κ) :
@@ -57,19 +46,6 @@ private theorem eq_of_submatrix_equiv_eq {ι κ : Type*} [Fintype ι]
   ext i j
   have hij := congrFun (congrFun h (e.symm i)) (e.symm j)
   simpa using hij
-
-omit [Fintype a] [DecidableEq a] in
-private theorem applyMatrixRight_sumInr_submatrix_prodSumRightEquiv
-    {extra : Type w} [Fintype extra] [DecidableEq extra]
-    (X : CMatrix (Prod a b)) :
-    ((ReferenceIsometry.sumInr extra b).applyMatrixRight X).submatrix
-      (prodSumRightEquiv a extra b) (prodSumRightEquiv a extra b) =
-        (Matrix.fromBlocks (0 : CMatrix (Prod a extra)) 0 0 X :
-          CMatrix (Sum (Prod a extra) (Prod a b))) := by
-  ext x y
-  cases x <;> cases y <;>
-    simp [prodSumRightEquiv, ReferenceIsometry.applyMatrixRight,
-      ReferenceIsometry.rightBlock, ReferenceIsometry.sumInr, Matrix.mul_apply]
 
 private theorem applyMatrixRight_sumInr_sandwich_submatrix_prodSumRightEquiv
     {extra : Type w} [Fintype extra] [DecidableEq extra]
@@ -3664,17 +3640,6 @@ theorem conditionalMaxEntropy_ofStateScale
   unfold log2
   rw [Real.log_mul ht.ne' hρexp_pos.ne']
   ring
-
-private theorem cMatrix_real_smul_le_smul {α : Type*} [Fintype α] [DecidableEq α]
-    {A B : CMatrix α} {t : ℝ} (ht : 0 ≤ t) (hAB : A ≤ B) :
-    (t • A) ≤ (t • B) := by
-  rw [Matrix.le_iff] at hAB ⊢
-  have hdiff :
-      (t • B - t • A) = t • (B - A) := by
-    ext i j
-    simp [sub_eq_add_neg, Complex.real_smul]
-  rw [hdiff]
-  exact hAB.smul ht
 
 theorem ConditionalMinEntropyScaleFeasible.ofStateScale
     {ρ : State (Prod a b)} {T : CMatrix b} {t : ℝ}

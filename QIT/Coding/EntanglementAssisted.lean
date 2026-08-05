@@ -7,6 +7,9 @@ Authors: QuAIR Team
 module
 
 public import QIT.Coding.EntanglementAssisted.Basic
+public import QIT.Coding.EntanglementAssisted.PositionBasedCoding
+public import QIT.Coding.EntanglementAssisted.PositionNaimarkTrace
+public import QIT.Coding.EntanglementAssisted.SequentialDecoding
 public import QIT.Coding.EntanglementAssisted.OneShot
 public import QIT.Coding.EntanglementAssisted.Renyi.Petz.Additivity
 public import QIT.Coding.EntanglementAssisted.Renyi.Petz.Limit

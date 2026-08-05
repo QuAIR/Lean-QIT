@@ -88,12 +88,12 @@ namespace State
 /-- The single-code Schumacher converse bound (multiplicative form).
 
 For one compression code `C` at block length `n ≥ 1` with joint error at most
-`ε ≤ 1`, the Wilde chain gives
+`ε`, the Wilde chain gives
 `2n S(ρ) ≤ 2n (C.rate) + afwContinuityModulus |Aⁿ| ε`.  The multiplicative
 form avoids division by `n` here; the per-copy form is extracted in the final
 theorem. -/
 theorem schumacher_converse_single_code
-    (ρ : State a) (ε : ℝ) (n : ℕ) (hn : 1 ≤ n) (hε1 : ε ≤ 1)
+    (ρ : State a) (ε : ℝ) (n : ℕ) (hn : 1 ≤ n)
     {W : Type u} [Fintype W] [DecidableEq W]
     (C : SchumacherCompressionCode ρ n W) (herr : C.jointError ≤ ε) :
     2 * (n : ℝ) * ρ.schumacherRate ≤ 2 * (n : ℝ) * C.rate +
@@ -139,7 +139,7 @@ theorem schumacher_converse_single_code
     ring
   have hafw : |ω.conditionalEntropy - φ.conditionalEntropy| ≤
       afwContinuityModulus (Fintype.card Rn) ε :=
-    State.alickiFannesWinter_conditionalEntropy ω φ ε herr' hε1
+    State.alickiFannesWinter_conditionalEntropy ω φ ε herr'
   have hafw_bound : QIT.mutualInformation ω ≥ QIT.mutualInformation φ -
       afwContinuityModulus (Fintype.card Rn) ε := by
     rw [hMIdecomp ω, hMIdecomp φ, hmarg]
@@ -250,7 +250,6 @@ theorem schumacher_converse (ρ : State a) (R : ℝ)
   -- Pick `ε₀ = (min δ 1)/2 ∈ (0, min δ 1] ⊆ (0, δ) ∩ (0, 1]`.
   set ε₀ : ℝ := min δ 1 / 2 with hε₀_def
   have hε₀_pos : 0 < ε₀ := div_pos (lt_min hδ_pos (by norm_num)) (by norm_num)
-  have hε₀_le1 : ε₀ ≤ 1 := by dsimp only [ε₀]; linarith [min_le_right δ 1]
   have hε₀_ltδ : ε₀ < δ := by
     dsimp only [ε₀]
     have hmin : min δ 1 ≤ δ := min_le_left δ 1
@@ -271,7 +270,7 @@ theorem schumacher_converse (ρ : State a) (R : ℝ)
   letI : DecidableEq W := hWdec
   -- Single-code Wilde chain at block length `n`.
   have hsingle :=
-    State.schumacher_converse_single_code ρ ε₀ n hn hε₀_le1 C herr
+    State.schumacher_converse_single_code ρ ε₀ n hn C herr
   -- Per-copy AFW modulus bound `afwContinuityModulus |Aⁿ| ε₀ / (2n) ≤` the
   -- block-length-independent estimate.
   have hbound :=

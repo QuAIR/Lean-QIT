@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Renyi.RenyiDPI.Domain
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # High-alpha sandwiched Renyi DPI support
@@ -105,12 +106,6 @@ theorem stinespringLiftState_marginalA_eq_applyState {κ : Type*} [Fintype κ] [
   apply State.ext
   rw [stinespringLiftState_marginalA_matrix K hTP ρ]
   simp [Channel.applyState, hK]
-
-private theorem log2_mono_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    log2 x ≤ log2 y := by
-  unfold log2
-  exact div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-    (le_of_lt (Real.log_pos one_lt_two))
 
 /-- Full-support classical stochastic maps satisfy sandwiched Renyi DPI for
 diagonal states in the `α > 1` range.
@@ -2736,28 +2731,6 @@ theorem sandwichedRenyi_tracePairingBound_of_normalizedBeigi_closedStrip
     (sandwichedRenyiWeightedTraceFamily_normalizedBeigi_bddAbove_closedStrip
       σ hσ τ hτ K A hA B hB α q (psdSchattenPNorm A hA.posSemidef ⟨α, hpq.pos⟩))
 
-omit [Fintype a] in
-private theorem cMatrix_real_smul_one_posDef_local {r : ℝ} (hr : 0 < r) :
-    (r • (1 : CMatrix a)).PosDef := by
-  rw [show r • (1 : CMatrix a) = Matrix.diagonal (fun _ : a => (r : ℂ)) by
-    ext i j
-    by_cases hij : i = j
-    · subst j
-      simp
-    · simp [hij]]
-  rw [Matrix.posDef_diagonal_iff]
-  intro i
-  exact_mod_cast hr
-
-omit [Fintype a] in
-private theorem cMatrix_le_add_pos_smul_one {A : CMatrix a}
-    {ε : ℝ} (hε : 0 < ε) :
-    A ≤ A + ε • (1 : CMatrix a) := by
-  rw [Matrix.le_iff]
-  have hpos : (ε • (1 : CMatrix a)).PosSemidef :=
-    (cMatrix_real_smul_one_posDef_local (a := a) hε).posSemidef
-  simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using hpos
-
 /-- The first marginal of white noise on a product system is full-rank. -/
 theorem maximallyMixed_marginalA_posDef
     [Nonempty a] [Nonempty b] :
@@ -4336,19 +4309,6 @@ theorem sandwichedRenyi_dataProcessing_channel_statement_half
   have hcoef : 1 / ((1 / 2 : ℝ) - 1) = -2 := by norm_num
   rw [hcoef]
   exact mul_le_mul_of_nonpos_left hlog (by norm_num)
-
-/-- The old same-space statement is exactly the `b = a` specialization of the
-general-channel statement. This keeps the existing statement-only surface stable
-while future proof work targets the source-shaped channel arity. -/
-theorem sandwichedRenyi_dataProcessing_statement_iff_channel_statement
-    (ρ σ : State a) (Φ : Channel a a)
-    (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
-    (hρΦ : (Φ.applyState ρ).matrix.PosDef) (hσΦ : (Φ.applyState σ).matrix.PosDef)
-    (α : ℝ) (hα : 1 / 2 ≤ α) (hα_ne_one : α ≠ 1) :
-    sandwichedRenyi_dataProcessing_statement ρ σ Φ hρ hσ hρΦ hσΦ α hα hα_ne_one ↔
-      sandwichedRenyi_dataProcessing_channel_statement ρ σ Φ hρ hσ hρΦ hσΦ
-        α hα hα_ne_one :=
-  Iff.rfl
 
 /-- Classical stochastic channels satisfy the full-rank sandwiched Renyi DPI
 statement for diagonal full-support inputs in the `α > 1` range.

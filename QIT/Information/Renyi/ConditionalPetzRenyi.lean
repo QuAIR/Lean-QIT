@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.OneShot.Smooth
+public import QIT.States.Purification.Conditioning
 public import QIT.Information.Renyi.Renyi
 
 /-!

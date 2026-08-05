@@ -76,27 +76,6 @@ private theorem psdSqrt_real_smul_of_posSemidef
   simpa [psdSqrt, S] using
     (CFC.sqrt_unique (a := ((r : ℂ) • M)) (b := S) hSsq hSpos.nonneg)
 
-private theorem traceNorm_real_smul_eq_of_nonneg
-    {c : ℝ} (hc : 0 ≤ c) (M : CMatrix a) :
-    traceNorm (((c : ℂ) • M)) = c * traceNorm M := by
-  by_cases hcz : c = 0
-  · simp [hcz]
-  · have hcpos : 0 < c := lt_of_le_of_ne hc (Ne.symm hcz)
-    apply le_antisymm
-    · exact traceNorm_real_smul_le hc M
-    · have hInvNonneg : 0 ≤ c⁻¹ := inv_nonneg.mpr hc
-      have hle := traceNorm_real_smul_le hInvNonneg (((c : ℂ) • M))
-      have hscale : (((c⁻¹ : ℝ) : ℂ) • ((c : ℂ) • M)) = M := by
-        rw [smul_smul]
-        have hcC : ((c : ℂ) ≠ 0) := by exact_mod_cast hcz
-        simp [hcC]
-      rw [hscale] at hle
-      have hmul := mul_le_mul_of_nonneg_left hle hc
-      have htrace_nonneg : 0 ≤ traceNorm (((c : ℂ) • M)) :=
-        traceNorm_nonneg _
-      have hc_inv : c * c⁻¹ = 1 := mul_inv_cancel₀ hcz
-      nlinarith
-
 private theorem traceNorm_psdSqrt_same_real_smul
     {r : ℝ} (hr : 0 ≤ r) {A B : CMatrix a}
     (hA : A.PosSemidef) (hB : B.PosSemidef) :
@@ -108,7 +87,7 @@ private theorem traceNorm_psdSqrt_same_real_smul
     Matrix.smul_mul, Matrix.mul_smul, smul_smul]
   have hsqrt_sq : (Real.sqrt r) * Real.sqrt r = r := Real.mul_self_sqrt hr
   rw [show ((Real.sqrt r : ℂ) * (Real.sqrt r : ℂ)) = (r : ℂ) by exact_mod_cast hsqrt_sq]
-  exact traceNorm_real_smul_eq_of_nonneg hr _
+  exact traceNorm_real_smul_eq hr _
 
 private def binaryEnsemble
     (t : ℝ) (ρ σ : State a) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :

@@ -19,6 +19,7 @@ public import QIT.States.SubnormalizedTopology
 public import QIT.States.SubnormalizedConvexity
 public import QIT.States.Topology
 public import QIT.States.Purification.Canonical
+public import QIT.States.Purification.Conditioning
 public import QIT.States.Purification.Equivalence
 public import QIT.States.Purification.Gram
 public import QIT.States.Purification.GramFactorization
@@ -32,6 +33,8 @@ public import QIT.States.Purification.ReferenceUnitary
 public import QIT.States.Purification.Schatten
 public import QIT.States.Purification.Uhlmann
 public import QIT.States.TraceNorm.Distance
+public import QIT.States.TraceNorm.Audenaert
+public import QIT.States.TraceNorm.BlockMatrix
 public import QIT.States.TraceNorm.PositivePart
 public import QIT.States.TraceNorm.Spectral
 public import QIT.States.TraceNorm.Variational

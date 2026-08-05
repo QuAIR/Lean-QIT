@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Information.PositionBasedCoding
+public import QIT.Coding.EntanglementAssisted.PositionBasedCoding
 public import QIT.Symmetry.DeFinetti
 public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import Mathlib.Data.Complex.BigOperators

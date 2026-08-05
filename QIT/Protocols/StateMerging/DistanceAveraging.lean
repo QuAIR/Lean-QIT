@@ -22,14 +22,6 @@ noncomputable section
 
 open scoped ComplexOrder MatrixOrder NNReal
 
-private theorem partialTraceA_sub
-    {a : Type u} {b : Type v} [Fintype a] [Fintype b]
-    (X Y : CMatrix (Prod a b)) :
-    partialTraceA (a := a) (b := b) (X - Y) =
-      partialTraceA (a := a) (b := b) X - partialTraceA (a := a) (b := b) Y := by
-  ext j j'
-  simp [partialTraceA, Finset.sum_sub_distrib]
-
 namespace State
 
 /-- Discarding the first register cannot increase normalized trace distance. -/
@@ -43,18 +35,18 @@ theorem normalizedTraceDistance_marginalB_le
     rho.marginalB.normalizedTraceDistance sigma.marginalB =
         (1 / 2 : Real) * traceNorm (partialTraceA (a := a) (b := b) D) := by
           simp [State.normalizedTraceDistance, QIT.normalizedTraceDistance,
-            QIT.traceDistance, State.marginalB_matrix, D, partialTraceA_sub]
+            QIT.traceNormDistance, State.marginalB_matrix, D, partialTraceA_sub]
     _ <= (1 / 2 : Real) * traceNorm D := by
           exact mul_le_mul_of_nonneg_left (traceNorm_partialTraceA_le D) (by norm_num)
     _ = rho.normalizedTraceDistance sigma := by
           simp [State.normalizedTraceDistance, QIT.normalizedTraceDistance,
-            QIT.traceDistance, D]
+            QIT.traceNormDistance, D]
 
 /-- Discarding the first register cannot increase unnormalized trace distance. -/
-theorem traceDistance_marginalB_le
+theorem traceNormDistance_marginalB_le
     {a : Type u} {b : Type v} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
     (rho sigma : State (Prod a b)) :
-    rho.marginalB.traceDistance sigma.marginalB <= rho.traceDistance sigma := by
+    rho.marginalB.traceNormDistance sigma.marginalB <= rho.traceNormDistance sigma := by
   have h := normalizedTraceDistance_marginalB_le rho sigma
   simpa [State.normalizedTraceDistance, QIT.normalizedTraceDistance] using
     mul_le_mul_of_nonneg_left h (show (0 : Real) <= 2 by norm_num)
@@ -132,17 +124,17 @@ theorem sum_jointPositiveBranchProbability_mul_squaredFidelity_eq_output
 
 /-- The HOW branch average of full trace distances is controlled by the
 fidelity error of the realized one-way LOCC output. -/
-theorem sum_jointPositiveBranchProbability_mul_traceDistance_le
+theorem sum_jointPositiveBranchProbability_mul_traceNormDistance_le
     (L : OneWayLOCC A A' B B' X) (psi : PureVector (Prod A B))
     (target : PureVector (Prod A' B')) :
     (Finset.univ.sum fun j : L.jointPositiveSupport psi =>
       (L.jointPositiveBranchProbability psi j : Real) *
-        (L.finalNormalizedBranch psi j).state.traceDistance target.state) <=
+        (L.finalNormalizedBranch psi j).state.traceNormDistance target.state) <=
       2 * Real.sqrt
         (1 - (L.toChannel.applyState psi.state).squaredFidelity target.state) := by
   have hsum := L.sum_jointPositiveBranchProbability_eq_one psi
   have hfdg (j : L.jointPositiveSupport psi) :
-      (L.finalNormalizedBranch psi j).state.traceDistance target.state <=
+      (L.finalNormalizedBranch psi j).state.traceNormDistance target.state <=
         2 * Real.sqrt
           (1 - (L.finalNormalizedBranch psi j).state.squaredFidelity target.state) := by
     have h := State.fuchs_van_de_graaf_upper
@@ -152,7 +144,7 @@ theorem sum_jointPositiveBranchProbability_mul_traceDistance_le
   calc
     (Finset.univ.sum fun j : L.jointPositiveSupport psi =>
         (L.jointPositiveBranchProbability psi j : Real) *
-          (L.finalNormalizedBranch psi j).state.traceDistance target.state) <=
+          (L.finalNormalizedBranch psi j).state.traceNormDistance target.state) <=
         Finset.univ.sum (fun j : L.jointPositiveSupport psi =>
           (L.jointPositiveBranchProbability psi j : Real) *
             (2 * Real.sqrt
@@ -182,30 +174,30 @@ theorem sum_jointPositiveBranchProbability_mul_traceDistance_le
       rw [L.sum_jointPositiveBranchProbability_mul_squaredFidelity_eq_output psi target]
 
 /-- The HOW branch average remains bounded after tracing out Alice. -/
-theorem sum_jointPositiveBranchProbability_mul_marginalB_traceDistance_le
+theorem sum_jointPositiveBranchProbability_mul_marginalB_traceNormDistance_le
     (L : OneWayLOCC A A' B B' X) (psi : PureVector (Prod A B))
     (target : PureVector (Prod A' B')) :
     (Finset.univ.sum fun j : L.jointPositiveSupport psi =>
       (L.jointPositiveBranchProbability psi j : Real) *
-        (L.finalNormalizedBranch psi j).state.marginalB.traceDistance
+        (L.finalNormalizedBranch psi j).state.marginalB.traceNormDistance
           target.state.marginalB) <=
       2 * Real.sqrt
         (1 - (L.toChannel.applyState psi.state).squaredFidelity target.state) := by
   calc
     (Finset.univ.sum fun j : L.jointPositiveSupport psi =>
         (L.jointPositiveBranchProbability psi j : Real) *
-          (L.finalNormalizedBranch psi j).state.marginalB.traceDistance
+          (L.finalNormalizedBranch psi j).state.marginalB.traceNormDistance
             target.state.marginalB) <=
         Finset.univ.sum (fun j : L.jointPositiveSupport psi =>
           (L.jointPositiveBranchProbability psi j : Real) *
-            (L.finalNormalizedBranch psi j).state.traceDistance target.state) := by
+            (L.finalNormalizedBranch psi j).state.traceNormDistance target.state) := by
       apply Finset.sum_le_sum
       intro j _
       exact mul_le_mul_of_nonneg_left
-        (State.traceDistance_marginalB_le _ _) (NNReal.coe_nonneg _)
+        (State.traceNormDistance_marginalB_le _ _) (NNReal.coe_nonneg _)
     _ <= 2 * Real.sqrt
         (1 - (L.toChannel.applyState psi.state).squaredFidelity target.state) :=
-      L.sum_jointPositiveBranchProbability_mul_traceDistance_le psi target
+      L.sum_jointPositiveBranchProbability_mul_traceNormDistance_le psi target
 
 end OneWayLOCC
 

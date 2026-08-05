@@ -7,10 +7,9 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Entropy.RelativeEntropyDPI
-public import QIT.Coding.Classical.Holevo
+public import QIT.Information.Entropy.Entropy
 public import QIT.Information.Entropy.EntropyTensorPower
-public import QIT.HypothesisTesting.DPI
-public import QIT.Coding.EntanglementAssisted.Renyi.Petz.Limit
+public import QIT.Information.BinaryHypothesisTest
 
 /-!
 # Mutual information data processing
@@ -85,49 +84,6 @@ theorem trace_mul_unitary_conj_diagonal_right_re
   simp [D, Matrix.trace, Matrix.diagonal, Matrix.mul_apply, Complex.mul_re]
 
 end Matrix
-
-namespace MatrixMap
-
-variable {α : Type u} {β : Type v} {γ : Type w}
-variable {δ : Type x} {η : Type y} {θ : Type z}
-variable [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
-variable [Fintype γ] [DecidableEq γ] [Fintype δ] [DecidableEq δ]
-variable [Fintype η] [DecidableEq η] [Fintype θ] [DecidableEq θ]
-
-/-- Kronecker products of matrix maps compose componentwise, with fully
-polymorphic input and output universes. -/
-theorem kron_comp_apply_general
-    (Φ₁ : MatrixMap α β) (Ψ₁ : MatrixMap γ δ)
-    (Φ₂ : MatrixMap η α) (Ψ₂ : MatrixMap θ γ) (X : CMatrix (Prod η θ)) :
-    kron Φ₁ Ψ₁ ((kron Φ₂ Ψ₂) X) =
-      kron (Φ₁.comp Φ₂) (Ψ₁.comp Ψ₂) X := by
-  ext bd bd'
-  rw [map_eq_sum_single (kron Φ₂ Ψ₂) X]
-  simp_rw [map_sum]
-  simp_rw [map_smul]
-  simp only [Matrix.sum_apply]
-  rw [map_eq_sum_single (kron (Φ₁.comp Φ₂) (Ψ₁.comp Ψ₂)) X]
-  simp only [Matrix.sum_apply]
-  change
-    (∑ ef : Prod η θ, ∑ ef' : Prod η θ,
-      (X ef ef' • (kron Φ₁ Ψ₁ ((kron Φ₂ Ψ₂) (Matrix.single ef ef' 1)))) bd bd') =
-    (∑ ef : Prod η θ, ∑ ef' : Prod η θ,
-      (X ef ef' • (kron (Φ₁.comp Φ₂) (Ψ₁.comp Ψ₂) (Matrix.single ef ef' 1))) bd bd')
-  refine Finset.sum_congr rfl fun ef _ => ?_
-  refine Finset.sum_congr rfl fun ef' _ => ?_
-  simp only [Matrix.smul_apply]
-  congr 1
-  cases ef with
-  | mk e0 f0 =>
-  cases ef' with
-  | mk e1 f1 =>
-  rw [single_prod_eq_kronecker_single]
-  rw [kron_apply_kronecker]
-  rw [kron_apply_kronecker]
-  rw [kron_apply_kronecker]
-  rfl
-
-end MatrixMap
 
 namespace Channel
 

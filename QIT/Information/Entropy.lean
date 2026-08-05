@@ -7,6 +7,8 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Entropy.Entropy
+public import QIT.Information.Entropy.Log2Lemmas
+public import QIT.Information.Entropy.Holevo
 public import QIT.Information.Entropy.EntropyTensorPower
 public import QIT.Information.Entropy.MaximallyMixed
 public import QIT.Information.Entropy.RelativeEntropyTraceLog
@@ -14,6 +16,7 @@ public import QIT.Information.Entropy.RelativeEntropyDPI
 public import QIT.Information.Entropy.MutualInformationDPI
 public import QIT.Information.Entropy.StrongSubadditivity
 public import QIT.Information.Entropy.ConditionalEntropyConcavity
+public import QIT.Information.Entropy.PureEntanglement
 
 /-!
 # Entropy foundations

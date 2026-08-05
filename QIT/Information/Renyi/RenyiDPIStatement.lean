@@ -7,16 +7,14 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Renyi.ConditionalRenyi
-public import QIT.Measurements.Map
 
 /-!
-# Sandwiched Renyi DPI statement surfaces
+# Sandwiched Renyi DPI statement surface
 
-Planning-only statement surfaces for sandwiched Renyi data processing,
-upward sandwiched conditional Renyi duality, and measurement-map monotonicity.
-
-These declarations are `Prop`-valued targets used by local reduction theorems.
-The completed public PSD-reference sandwiched Renyi DPI theorem is
+Planning-only statement surface for the sandwiched Renyi data-processing
+inequality at general channel arity.  This `Prop`-valued target is consumed by
+local reduction theorems.  The completed public PSD-reference sandwiched Renyi
+DPI theorem is
 `QIT.State.sandwichedRenyiPSDReferenceE_dataProcessing_channel_ge_of_half_le_lt_one_or_one_lt`
 in `QIT.Information.Renyi.FrankLieb.DPI`.
 -/
@@ -39,20 +37,8 @@ namespace State
 namespace RenyiDPI
 namespace Statement
 
-/-- Sandwiched Renyi data-processing inequality `D̃_α(Φρ ‖ Φσ) ≤ D̃_α(ρ ‖ σ)`
-over the range `α ∈ [1/2, ∞)`, `α ≠ 1`, for an endomorphism channel.
-
-This is a planning-only statement surface. The completed public PSD-reference
-DPI theorem lives in `QIT.Information.Renyi.FrankLieb.DPI`. -/
-def sandwichedRenyi_dataProcessing_statement (ρ σ : State a) (Φ : Channel a a)
-    (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
-    (hρΦ : (Φ.applyState ρ).matrix.PosDef) (hσΦ : (Φ.applyState σ).matrix.PosDef)
-    (α : ℝ) (hα : 1 / 2 ≤ α) (hα_ne_one : α ≠ 1) : Prop :=
-  sandwichedRenyi (Φ.applyState ρ) (Φ.applyState σ) hρΦ hσΦ α (by linarith) hα_ne_one ≤
-    sandwichedRenyi ρ σ hρ hσ α (by linarith) hα_ne_one
-
-/-- Same full-rank state-level sandwiched Renyi data-processing statement, but
-with a general input-output channel `Φ : Channel a b`.
+/-- Full-rank state-level sandwiched Renyi data-processing statement with a
+general input-output channel `Φ : Channel a b`.
 
 This is still weaker than the public source theorem for `sandwiched-renyi-dpi`:
 the source statement allows a positive semidefinite reference operator `σ`, while
@@ -63,61 +49,6 @@ def sandwichedRenyi_dataProcessing_channel_statement (ρ σ : State a) (Φ : Cha
     (α : ℝ) (hα : 1 / 2 ≤ α) (hα_ne_one : α ≠ 1) : Prop :=
   sandwichedRenyi (Φ.applyState ρ) (Φ.applyState σ) hρΦ hσΦ α (by linarith) hα_ne_one ≤
     sandwichedRenyi ρ σ hρ hσ α (by linarith) hα_ne_one
-
-/-- Internal algebraic shell for upward sandwiched conditional Renyi duality.
-
-This is not source-facing: it compares an arbitrary pair of bipartite states and
-therefore does not encode Tomamichel's pure-tripartite `AB`/`AC` marginal
-hypothesis. Source-facing statements should use
-`conditionalSandwichedRenyi_duality_pureTripartite_statement`. -/
-def conditionalSandwichedRenyi_duality_pair_algebraic_statement (ρ : State (Prod a b))
-    (σ : State (Prod a c)) (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef)
-    (α β : ℝ) (hα : 1 / 2 ≤ α) (hβ : 1 / 2 ≤ β) (hα1 : α ≠ 1) (hβ1 : β ≠ 1)
-    (_hab : 1 / α + 1 / β = 2) : Prop :=
-  conditionalSandwichedRenyi ρ hρ α hα hα1 =
-    - conditionalSandwichedRenyi σ hσ β hβ hβ1
-
-/-- Source-facing upward sandwiched conditional Renyi duality for one pure
-tripartite state. The two compared states are exactly the `AB` and `AC`
-marginals of `ψ : PureVector (Prod (Prod a b) c)`, matching Tomamichel's
-`cond.tex` source hypothesis. -/
-def conditionalSandwichedRenyi_duality_pureTripartite_statement
-    (ψ : PureVector (Prod (Prod a b) c))
-    (hAB : ψ.state.marginalAB.matrix.PosDef) (hAC : ψ.state.marginalAC.matrix.PosDef)
-    (α β : ℝ) (hα : 1 / 2 ≤ α) (hβ : 1 / 2 ≤ β) (hα1 : α ≠ 1) (hβ1 : β ≠ 1)
-    (hab : 1 / α + 1 / β = 2) : Prop :=
-  conditionalSandwichedRenyi_duality_pair_algebraic_statement
-    ψ.state.marginalAB ψ.state.marginalAC hAB hAC α β hα hβ hα1 hβ1 hab
-
-/-- The pure-tripartite source-facing duality surface is definitionally the
-internal algebraic shell applied to the `AB` and `AC` marginals of the same pure
-state. -/
-theorem conditionalSandwichedRenyi_duality_pureTripartite_statement_iff_pair_algebraic
-    (ψ : PureVector (Prod (Prod a b) c))
-    (hAB : ψ.state.marginalAB.matrix.PosDef) (hAC : ψ.state.marginalAC.matrix.PosDef)
-    (α β : ℝ) (hα : 1 / 2 ≤ α) (hβ : 1 / 2 ≤ β) (hα1 : α ≠ 1) (hβ1 : β ≠ 1)
-    (hab : 1 / α + 1 / β = 2) :
-    conditionalSandwichedRenyi_duality_pureTripartite_statement
-        ψ hAB hAC α β hα hβ hα1 hβ1 hab ↔
-      conditionalSandwichedRenyi_duality_pair_algebraic_statement
-        ψ.state.marginalAB ψ.state.marginalAC hAB hAC α β hα hβ hα1 hβ1 hab :=
-  Iff.rfl
-
-/-- Measurement-map monotonicity: measuring subsystem `A` does not decrease the
-upward sandwiched conditional Renyi entropy `H̃^↑_α(·|B)` (a DPI instance).
-
-The measurement map must satisfy the source-required sub-unital/unit-effect
-condition: it must not enlarge the identity effect.  The proposition is proved
-by `QIT.State.measurementMap_conditionalRenyi_monotonicity` in
-`QIT.Information.Renyi.RenyiDPI.ConditionalMeasurementSource`. -/
-def measurementMap_conditionalRenyi_monotonicity_statement (ρ : State (Prod a b))
-    (hρ : ρ.matrix.PosDef) (M : POVM c a)
-    (hMUnit : measurementMapDoesNotEnlargeUnit M)
-    (hρM : (measureSubsystemState M ρ).matrix.PosDef)
-    (α : ℝ) (hα : 1 / 2 ≤ α) (hα1 : α ≠ 1) : Prop :=
-  let _unitCondition : measurementMapDoesNotEnlargeUnit M := hMUnit
-  conditionalSandwichedRenyi (measureSubsystemState M ρ) hρM α hα hα1 ≥
-    conditionalSandwichedRenyi ρ hρ α hα hα1
 
 end Statement
 end RenyiDPI

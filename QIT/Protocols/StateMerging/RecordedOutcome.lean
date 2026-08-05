@@ -48,7 +48,7 @@ private theorem cqState_normalizedTraceDistance_eq_sum_of_same_probs
         (E.states j).normalizedTraceDistance (F.states j) := by
   classical
   simp only [State.normalizedTraceDistance, QIT.normalizedTraceDistance,
-    QIT.traceDistance]
+    QIT.traceNormDistance]
   rw [Classical.cqState_eq_blockDiagonal, Classical.cqState_eq_blockDiagonal]
   have hF :
       Classical.blockDiagonal (fun j =>
@@ -74,10 +74,10 @@ private theorem cqState_normalizedTraceDistance_eq_sum_of_same_probs
 
 omit [DecidableEq i] in
 /-- Trace-norm convexity for the average of a finite ensemble. -/
-private theorem averageState_traceDistance_le_sum
+private theorem averageState_traceNormDistance_le_sum
     (E : Ensemble i s) (target : State s) :
-    E.averageState.traceDistance target ≤
-      ∑ j, (E.probs j : ℝ) * (E.states j).traceDistance target := by
+    E.averageState.traceNormDistance target ≤
+      ∑ j, (E.probs j : ℝ) * (E.states j).traceNormDistance target := by
   classical
   change traceNorm (E.averageState.matrix - target.matrix) ≤
     ∑ j, (E.probs j : ℝ) * traceNorm ((E.states j).matrix - target.matrix)
@@ -185,19 +185,19 @@ private theorem sum_prob_mul_sqrt_one_sub_squaredFidelity_le
 omit [DecidableEq i] in
 /-- The average trace distance of a state ensemble from a pure target is
 controlled by the fidelity of its average state. -/
-private theorem sum_prob_mul_traceDistance_le_pure
+private theorem sum_prob_mul_traceNormDistance_le_pure
     (E : Ensemble i s) (target : PureVector s) :
-    (∑ j, (E.probs j : ℝ) * (E.states j).traceDistance target.state) ≤
+    (∑ j, (E.probs j : ℝ) * (E.states j).traceNormDistance target.state) ≤
       2 * Real.sqrt
         (1 - E.averageState.squaredFidelity target.state) := by
   have hfdg (j : i) :
-      (E.states j).traceDistance target.state ≤
+      (E.states j).traceNormDistance target.state ≤
         2 * Real.sqrt (1 - (E.states j).squaredFidelity target.state) := by
     have h := State.fuchs_van_de_graaf_upper (E.states j) target.state
     simpa [State.normalizedTraceDistance, QIT.normalizedTraceDistance] using
       mul_le_mul_of_nonneg_left h (show (0 : ℝ) ≤ 2 by norm_num)
   calc
-    (∑ j, (E.probs j : ℝ) * (E.states j).traceDistance target.state) ≤
+    (∑ j, (E.probs j : ℝ) * (E.states j).traceNormDistance target.state) ≤
         ∑ j, (E.probs j : ℝ) *
           (2 * Real.sqrt (1 - (E.states j).squaredFidelity target.state)) := by
       apply Finset.sum_le_sum
@@ -420,19 +420,11 @@ private theorem FiniteInstrument.sum_rankOne_postAmplitude_fixedOutcome
     (sum_rankOne_localPostAmplitude_eq_kron_ofKraus
       (M.branchTraceNonincreasingCP result).kraus psi.amp)
 
-private theorem partialTraceB_sub
-    {A : Type u} {B : Type v} [Fintype A] [Fintype B]
-    (X Y : CMatrix (Prod A B)) :
-    partialTraceB (a := A) (b := B) (X - Y) =
-      partialTraceB (a := A) (b := B) X - partialTraceB (a := A) (b := B) Y := by
-  ext a b
-  simp [partialTraceB, Finset.sum_sub_distrib]
-
-private theorem traceDistance_marginalA_le
+private theorem traceNormDistance_marginalA_le
     {A : Type u} {B : Type v}
     [Fintype A] [DecidableEq A] [Fintype B] [DecidableEq B]
     (rho sigma : State (Prod A B)) :
-    rho.marginalA.traceDistance sigma.marginalA ≤ rho.traceDistance sigma := by
+    rho.marginalA.traceNormDistance sigma.marginalA ≤ rho.traceNormDistance sigma := by
   change traceNorm
       (partialTraceB (a := A) (b := B) rho.matrix -
         partialTraceB (a := A) (b := B) sigma.matrix) ≤
@@ -1027,7 +1019,7 @@ theorem recordedOutcomeState_normalizedTraceDistance_le_sqrt_fidelityError :
     C.recordedOutcomeEnsemble C.idealRecordedOutcomeEnsemble
     C.idealRecordedOutcomeEnsemble_probs]
   have hfull :=
-    C.originalAlicePostBobEnsemble.sum_prob_mul_traceDistance_le_pure
+    C.originalAlicePostBobEnsemble.sum_prob_mul_traceNormDistance_le_pure
       C.converseTargetPureVector
   rw [C.originalAlicePostBobEnsemble_averageState,
     C.converseLOCC_fidelityError] at hfull
@@ -1036,7 +1028,7 @@ theorem recordedOutcomeState_normalizedTraceDistance_le_sqrt_fidelityError :
         (C.locc.aliceInstrument.branchWeight
           C.localConverseInputPureVector i.1 : ℝ) *
           (C.locc.aliceInstrument.positiveBranchSourceReferenceState
-            C.localConverseInputPureVector i).traceDistance
+            C.localConverseInputPureVector i).traceNormDistance
               C.converseTargetPureVector.state.marginalA) ≤
         2 * Real.sqrt C.fidelityError := by
     calc
@@ -1044,11 +1036,11 @@ theorem recordedOutcomeState_normalizedTraceDistance_le_sqrt_fidelityError :
           (C.locc.aliceInstrument.branchWeight
             C.localConverseInputPureVector i.1 : ℝ) *
             (C.locc.aliceInstrument.positiveBranchSourceReferenceState
-              C.localConverseInputPureVector i).traceDistance
+              C.localConverseInputPureVector i).traceNormDistance
                 C.converseTargetPureVector.state.marginalA) =
           ∑ i : C.recordedOutcomeIndex,
             (C.originalAlicePostBobEnsemble.probs i : ℝ) *
-              (C.originalAlicePostBobEnsemble.states i).marginalA.traceDistance
+              (C.originalAlicePostBobEnsemble.states i).marginalA.traceNormDistance
                 C.converseTargetPureVector.state.marginalA := by
         apply Finset.sum_congr rfl
         intro i _
@@ -1056,12 +1048,12 @@ theorem recordedOutcomeState_normalizedTraceDistance_le_sqrt_fidelityError :
         rw [C.originalAlicePostBobBranchState_marginalA i]
       _ ≤ ∑ i : C.recordedOutcomeIndex,
           (C.originalAlicePostBobEnsemble.probs i : ℝ) *
-            (C.originalAlicePostBobEnsemble.states i).traceDistance
+            (C.originalAlicePostBobEnsemble.states i).traceNormDistance
               C.converseTargetPureVector.state := by
         apply Finset.sum_le_sum
         intro i _
         exact mul_le_mul_of_nonneg_left
-          (traceDistance_marginalA_le _ _) (NNReal.coe_nonneg _)
+          (traceNormDistance_marginalA_le _ _) (NNReal.coe_nonneg _)
       _ ≤ 2 * Real.sqrt C.fidelityError := hfull
   calc
     (∑ i : C.recordedOutcomeIndex,
@@ -1073,7 +1065,7 @@ theorem recordedOutcomeState_normalizedTraceDistance_le_sqrt_fidelityError :
             (C.locc.aliceInstrument.branchWeight
                 C.localConverseInputPureVector i.1 : ℝ) *
               (C.locc.aliceInstrument.positiveBranchSourceReferenceState
-                C.localConverseInputPureVector i).traceDistance
+                C.localConverseInputPureVector i).traceNormDistance
                   C.converseTargetPureVector.state.marginalA := by
       rw [Finset.mul_sum]
       apply Finset.sum_congr rfl
@@ -1081,7 +1073,7 @@ theorem recordedOutcomeState_normalizedTraceDistance_le_sqrt_fidelityError :
       simp only [recordedOutcomeEnsemble,
         C.idealRecordedOutcomeEnsemble_states_eq_target,
         State.normalizedTraceDistance, QIT.normalizedTraceDistance,
-        State.traceDistance]
+        State.traceNormDistance]
       ring
     _ ≤ (1 / 2 : ℝ) * (2 * Real.sqrt C.fidelityError) :=
       mul_le_mul_of_nonneg_left havg (by norm_num)

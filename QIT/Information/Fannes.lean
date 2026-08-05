@@ -6,13 +6,14 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Coding.Classical.Holevo
+public import QIT.Information.Entropy.Entropy
 public import QIT.Information.Entropy.EntropyTensorPower
 public import QIT.Measurements.Projective
 public import QIT.States.TraceNorm.Variational
 public import Mathlib.Analysis.Convex.Jensen
 public import Mathlib.Analysis.Calculus.Deriv.MeanValue
 public import Mathlib.Analysis.SpecialFunctions.Log.NegMulLog
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # Fannes continuity for finite-dimensional von Neumann entropy
@@ -615,11 +616,6 @@ private theorem classical_entropy_sum_dist_le_howFannes
       change log2 n * (t + howFannesCorrection t) = log2 n * howFannesEta t
       rw [howFannesEta_eq_add_correction]
 
-private theorem xlog2_eq_mul_log2 (x : ℝ) : xlog2 x = x * log2 x := by
-  by_cases hx : x = 0
-  · simp [xlog2, hx]
-  · simp [xlog2, hx]
-
 private theorem fannes_posSemidef_diagonal_re_mul_log2_le_eigenvalue_sum
     {a : Type u} [Fintype a] [DecidableEq a]
     {B : CMatrix a} (hB : B.PosSemidef) (i : a) :
@@ -801,10 +797,10 @@ namespace State
 variable {a : Type u} [Fintype a] [DecidableEq a]
 
 /-- The unnormalized trace distance between density states lies in `[0, 2]`. -/
-theorem traceDistance_le_two (ρ σ : State a) : ρ.traceDistance σ ≤ 2 := by
+theorem traceNormDistance_le_two (ρ σ : State a) : ρ.traceNormDistance σ ≤ 2 := by
   calc
-    ρ.traceDistance σ = traceNorm (ρ.matrix + -σ.matrix) := by
-      simp [State.traceDistance, QIT.traceDistance, sub_eq_add_neg]
+    ρ.traceNormDistance σ = traceNorm (ρ.matrix + -σ.matrix) := by
+      simp [State.traceNormDistance, QIT.traceNormDistance, sub_eq_add_neg]
     _ ≤ traceNorm ρ.matrix + traceNorm (-σ.matrix) := traceNorm_add_le _ _
     _ = 1 + 1 := by
       rw [traceNorm_neg, traceNorm_posSemidef_eq_trace_re ρ.matrix ρ.pos,
@@ -815,7 +811,7 @@ theorem traceDistance_le_two (ρ σ : State a) : ρ.traceDistance σ ≤ 2 := by
 private theorem vonNeumann_sub_le_howFannes
     (rho sigma : State a) (hcard : 2 ≤ Fintype.card a) :
     rho.vonNeumann - sigma.vonNeumann ≤
-      log2 (Fintype.card a : ℝ) * howFannesEta (rho.traceDistance sigma) := by
+      log2 (Fintype.card a : ℝ) * howFannesEta (rho.traceNormDistance sigma) := by
   classical
   letI : Nonempty a := rho.nonempty
   let U : Matrix.unitaryGroup a ℂ := sigma.pos.isHermitian.eigenvectorUnitary
@@ -875,7 +871,7 @@ private theorem vonNeumann_sub_le_howFannes
       ((star (U : CMatrix a) * rho.matrix * (U : CMatrix a)) i i).re -
           ((star (U : CMatrix a) * sigma.matrix * (U : CMatrix a)) i i).re = _
     simp [Matrix.mul_sub, Matrix.sub_mul]
-  have hdist : ∑ i, |p i - q i| ≤ rho.traceDistance sigma := by
+  have hdist : ∑ i, |p i - q i| ≤ rho.traceNormDistance sigma := by
     calc
       ∑ i, |p i - q i| =
           ∑ i, |((star (U : CMatrix a) * (rho.matrix - sigma.matrix) *
@@ -886,7 +882,7 @@ private theorem vonNeumann_sub_le_howFannes
       _ ≤ traceNorm (rho.matrix - sigma.matrix) :=
         sum_abs_unitary_conjugate_diagonal_re_le_traceNorm
           (rho.matrix - sigma.matrix) U
-      _ = rho.traceDistance sigma := by
+      _ = rho.traceNormDistance sigma := by
         rfl
   have hrhoEntropy :
       rho.vonNeumann ≤ ∑ i, -p i * log2 (p i) := by
@@ -908,11 +904,11 @@ private theorem vonNeumann_sub_le_howFannes
     exact div_nonneg (Real.log_nonneg hcardReal) (le_of_lt (Real.log_pos one_lt_two))
   have heta :
       howFannesEta (∑ i, |p i - q i|) ≤
-        howFannesEta (rho.traceDistance sigma) :=
+        howFannesEta (rho.traceNormDistance sigma) :=
     howFannesEta_mono (Finset.sum_nonneg fun i _ => abs_nonneg _) hdist
   have hclassical' :
       |(∑ i, -p i * log2 (p i)) - ∑ i, -q i * log2 (q i)| ≤
-        log2 (Fintype.card a : ℝ) * howFannesEta (rho.traceDistance sigma) :=
+        log2 (Fintype.card a : ℝ) * howFannesEta (rho.traceNormDistance sigma) :=
     hclassical.trans (mul_le_mul_of_nonneg_left heta hlogCard)
   calc
     rho.vonNeumann - sigma.vonNeumann ≤
@@ -922,14 +918,14 @@ private theorem vonNeumann_sub_le_howFannes
       rw [hsigmaEntropy]
     _ ≤ |(∑ i, -p i * log2 (p i)) - ∑ i, -q i * log2 (q i)| :=
       le_abs_self _
-    _ ≤ log2 (Fintype.card a : ℝ) * howFannesEta (rho.traceDistance sigma) :=
+    _ ≤ log2 (Fintype.card a : ℝ) * howFannesEta (rho.traceNormDistance sigma) :=
       hclassical'
 
 /-- Finite-dimensional von Neumann entropy continuity with the exact HOW
 ordinary-entropy modulus and the repository's unnormalized trace distance. -/
 theorem vonNeumann_dist_le_howFannes (rho sigma : State a) :
     |rho.vonNeumann - sigma.vonNeumann| ≤
-      log2 (Fintype.card a : ℝ) * howFannesEta (rho.traceDistance sigma) := by
+      log2 (Fintype.card a : ℝ) * howFannesEta (rho.traceNormDistance sigma) := by
   classical
   letI : Nonempty a := rho.nonempty
   have hcardPos : 0 < Fintype.card a := Fintype.card_pos
@@ -944,7 +940,7 @@ theorem vonNeumann_dist_le_howFannes (rho sigma : State a) :
   · have hcard : 2 ≤ Fintype.card a := by omega
     have hforward := vonNeumann_sub_le_howFannes rho sigma hcard
     have hbackward := vonNeumann_sub_le_howFannes sigma rho hcard
-    rw [traceDistance_comm sigma rho] at hbackward
+    rw [traceNormDistance_comm sigma rho] at hbackward
     rw [abs_le]
     constructor
     · linarith

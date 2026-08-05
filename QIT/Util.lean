@@ -7,9 +7,13 @@ Authors: QuAIR Team
 module
 
 public import QIT.Util.Matrix
+public import QIT.Util.Matrix.PosSqrt
 public import QIT.Util.BlockMatrix
 public import QIT.Util.RpowOperatorConvex
 public import QIT.Util.Order.EReal
+public import QIT.Util.TensorPower
+public import QIT.Util.Wires
+public import QIT.Util.CMatrixCLM
 
 /-!
 # QIT utilities

@@ -26,8 +26,6 @@ original projection.
 
 open scoped ComplexOrder MatrixOrder Kronecker
 
-set_option linter.unusedSectionVars false
-
 namespace QIT
 
 universe u v w
@@ -43,11 +41,13 @@ variable [Fintype HA] [DecidableEq HA] [Fintype HB] [DecidableEq HB]
 def bobAmplitudeMatrix (φ : HA × HB → ℂ) : Matrix HB HA ℂ :=
   fun b a => φ (a, b)
 
+omit [Fintype HA] [DecidableEq HA] [Fintype HB] [DecidableEq HB] in
 @[simp]
 theorem bobAmplitudeMatrix_apply (φ : HA × HB → ℂ) (b : HB) (a : HA) :
     bobAmplitudeMatrix φ b a = φ (a, b) :=
   rfl
 
+omit [DecidableEq HA] [Fintype HB] [DecidableEq HB] in
 /-- Tracing out Alice from a rank-one bipartite vector gives the Bob-side
 amplitude Gram matrix. -/
 theorem partialTraceA_rankOneMatrix_eq_bobAmplitudeMatrix_mul_conjTranspose
@@ -57,6 +57,7 @@ theorem partialTraceA_rankOneMatrix_eq_bobAmplitudeMatrix_mul_conjTranspose
   ext b b'
   simp [partialTraceA, rankOneMatrix_apply, bobAmplitudeMatrix, Matrix.mul_apply]
 
+omit [DecidableEq HB] in
 /-- Applying a Bob-local operator corresponds to left multiplication of the
 Bob-by-Alice amplitude matrix. -/
 theorem bobAmplitudeMatrix_kronecker_mulVec
@@ -68,6 +69,7 @@ theorem bobAmplitudeMatrix_kronecker_mulVec
   rw [← Finset.univ_product_univ, Finset.sum_product]
   simp [Matrix.one_apply]
 
+omit [DecidableEq HB] in
 /-- Coordinate form of a Bob-local operator acting on a bipartite vector. -/
 theorem kronecker_one_mulVec_apply
     (P : CMatrix HB) (φ : HA × HB → ℂ) (a : HA) (b : HB) :

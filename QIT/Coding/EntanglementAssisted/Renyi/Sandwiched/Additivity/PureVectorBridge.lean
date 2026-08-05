@@ -1975,13 +1975,6 @@ theorem sandwichedCoeff_pos {alpha : ℝ} (halpha : 1 < alpha) :
     0 < alpha / (alpha - 1) := by
   exact div_pos (lt_trans zero_lt_one halpha) (sub_pos.mpr halpha)
 
-/-- Monotonicity of base-two logarithms on the positive half-line. -/
-theorem log2_mono_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    log2 x ≤ log2 y := by
-  unfold log2
-  exact div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-    (le_of_lt (Real.log_pos one_lt_two))
-
 /-- The output-side weighting exponent used in
 `S_sigma^(alpha)` is negative on the high-alpha branch. -/
 theorem sandwichedSideWeightExponent_neg {alpha : ℝ} (halpha : 1 < alpha) :

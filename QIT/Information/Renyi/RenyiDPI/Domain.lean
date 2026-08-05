@@ -10,7 +10,6 @@ public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import QIT.Information.Renyi.Renyi
 public import QIT.Information.Renyi.ConditionalRenyi
 public import QIT.Information.Renyi.RenyiDPIStatement
-public import QIT.OneShot.SmoothEndpoint
 public import QIT.Measurements.Map
 public import QIT.Measurements.Projective
 public import QIT.States.Purification.Uhlmann
@@ -697,24 +696,13 @@ theorem abs_trace_mul_le_of_traceNorm_le_one_of_scaled_contraction
     _ ≤ C * 1 := mul_le_mul_of_nonneg_left hpair (le_of_lt hCpos)
     _ = C := by ring
 
-/-- The trace norm of a positive semidefinite matrix is its real trace. -/
-theorem traceNorm_posSemidef_eq_trace_re
-    {P : CMatrix a} (hP : P.PosSemidef) :
-    traceNorm P = P.trace.re := by
-  have hstar : Matrix.conjTranspose P = P := by
-    simpa [Matrix.star_eq_conjTranspose] using hP.isHermitian.eq
-  have hsqrt : psdSqrt (P * P) = P := by
-    simpa [psdSqrt] using
-      (CFC.sqrt_unique (a := P * P) (b := P) rfl hP.nonneg)
-  rw [traceNorm, hstar, hsqrt]
-
 /-- The trace norm of a positive real power is its PSD trace power. -/
 theorem traceNorm_rpow_eq_psdTracePower
     {A : CMatrix a} (hA : A.PosSemidef) (p : ℝ) :
     traceNorm (CFC.rpow A p) = psdTracePower A hA p := by
   have hp : (CFC.rpow A p).PosSemidef :=
     cMatrix_rpow_posSemidef (A := A) (s := p) hA
-  simpa [psdTracePower] using traceNorm_posSemidef_eq_trace_re hp
+  simpa [psdTracePower] using QIT.traceNorm_posSemidef_eq_trace_re _ hp
 
 /-- The trace norm of a positive-definite complex power depends only on the
 real part of the exponent. -/
@@ -1194,7 +1182,7 @@ end Classical
 namespace State
 
 omit [Fintype a] in
-private theorem cMatrix_real_smul_one_posDef_local {r : ℝ} (hr : 0 < r) :
+theorem cMatrix_real_smul_one_posDef_local {r : ℝ} (hr : 0 < r) :
     (r • (1 : CMatrix a)).PosDef := by
   rw [show r • (1 : CMatrix a) = Matrix.diagonal (fun _ : a => (r : ℂ)) by
     ext i j
@@ -1207,7 +1195,7 @@ private theorem cMatrix_real_smul_one_posDef_local {r : ℝ} (hr : 0 < r) :
   exact_mod_cast hr
 
 omit [Fintype a] in
-private theorem cMatrix_le_add_pos_smul_one {A : CMatrix a}
+theorem cMatrix_le_add_pos_smul_one {A : CMatrix a}
     {ε : ℝ} (hε : 0 < ε) :
     A ≤ A + ε • (1 : CMatrix a) := by
   rw [Matrix.le_iff]

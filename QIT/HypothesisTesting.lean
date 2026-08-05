@@ -7,7 +7,6 @@ Authors: QuAIR Team
 module
 
 public import QIT.HypothesisTesting.Basic
-public import QIT.HypothesisTesting.Audenaert
 public import QIT.HypothesisTesting.MutualInformation
 public import QIT.HypothesisTesting.ComparatorTest
 public import QIT.HypothesisTesting.DPI

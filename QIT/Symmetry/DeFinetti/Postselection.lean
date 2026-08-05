@@ -463,27 +463,6 @@ private theorem traceNorm_classical_blockDiagonal_eq_sum {ι : Type w} {β : Typ
     (posPart_trace_blockDiagonal_le_sum blocks hblocks)
     (sum_posPart_trace_le_blockDiagonal blocks hblocks)
 
-private theorem traceNorm_real_smul_eq {β : Type x} [Fintype β] [DecidableEq β]
-    {c : ℝ} (hc : 0 ≤ c) (M : CMatrix β) :
-    traceNorm (((c : ℂ) • M)) = c * traceNorm M := by
-  by_cases hcz : c = 0
-  · simp [hcz]
-  · have hcpos : 0 < c := lt_of_le_of_ne hc (Ne.symm hcz)
-    apply le_antisymm
-    · exact traceNorm_real_smul_le hc M
-    · have hInvNonneg : 0 ≤ c⁻¹ := inv_nonneg.mpr hc
-      have hle := traceNorm_real_smul_le hInvNonneg (((c : ℂ) • M))
-      have hscale : (((c⁻¹ : ℝ) : ℂ) • ((c : ℂ) • M)) = M := by
-        rw [smul_smul]
-        have hcC : ((c : ℂ) ≠ 0) := by exact_mod_cast hcz
-        simp [hcC]
-      rw [hscale] at hle
-      have hmul := mul_le_mul_of_nonneg_left hle hc
-      have htrace_nonneg : 0 ≤ traceNorm (((c : ℂ) • M)) :=
-        traceNorm_nonneg _
-      have hc_inv : c * c⁻¹ = 1 := mul_inv_cancel₀ hcz
-      nlinarith
-
 /-- CKR permutation-labelled extension
 `1/n! ∑π (π ⊗ id)(ω) ⊗ |π⟩⟨π|`, reindexed so the channel input remains the
 left factor.  Its input marginal is the ordinary input permutation twirl. -/
@@ -1426,8 +1405,8 @@ private theorem postSelectionCovariantDifference_labelExtension_action_eq
             (MatrixMap.kron Δ (Channel.idChannel r).map
               ((((permutationChannel (a := a) n π).prod (Channel.idChannel r)).applyState ω).matrix)) := by
     refine Finset.sum_congr rfl fun π _ => ?_
-    simpa [c] using State.traceNorm_real_smul_eq
-      (β := Prod b r) (c := c) hc
+    simpa [c] using traceNorm_real_smul_eq
+      (a := Prod b r) (c := c) hc
       (MatrixMap.kron Δ (Channel.idChannel r).map
         ((((permutationChannel (a := a) n π).prod (Channel.idChannel r)).applyState ω).matrix))
   change (1 / 2 : ℝ) *

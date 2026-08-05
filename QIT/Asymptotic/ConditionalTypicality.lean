@@ -3284,18 +3284,6 @@ theorem cMatrix_projector_mul_mul_le_of_le {a : Type u} [Fintype a] [DecidableEq
   rw [hdiff]
   exact hpsd
 
-/-- Nonnegative real scalar multiplication preserves Loewner order for complex
-matrices. -/
-theorem cMatrix_real_smul_le_smul {a : Type u} [Fintype a] [DecidableEq a]
-    {A B : CMatrix a} {t : ℝ} (ht : 0 ≤ t) (hAB : A ≤ B) :
-    (t • A) ≤ (t • B) := by
-  rw [Matrix.le_iff] at hAB ⊢
-  have hdiff : (t • B - t • A : CMatrix a) = t • (B - A) := by
-    ext i j
-    simp [sub_eq_add_neg, Complex.real_smul]
-  rw [hdiff]
-  exact hAB.smul ht
-
 /-- Combine a scalar Loewner domination bound with a projected Loewner bound.
 
 If `A ≤ c • B` and the Hermitian projector/compressor `P` satisfies

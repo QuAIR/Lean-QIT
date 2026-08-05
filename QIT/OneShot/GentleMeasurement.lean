@@ -572,7 +572,7 @@ theorem normalizedTraceDistance_normalize_projector_sandwich_le
       ).normalizedTraceDistance ρ
         = (1 / 2 : ℝ) * traceNorm ((τM.trace.re)⁻¹ • τM - ρ.matrix) := by
           simp [τM, State.normalizedTraceDistance, normalizedTraceDistance,
-            traceDistance, State.normalizePSD_matrix]
+            traceNormDistance, State.normalizePSD_matrix]
     _ ≤ (1 / 2 : ℝ) *
         (traceNorm ((τM.trace.re)⁻¹ • τM - τM) +
           traceNorm (τM - ρ.matrix)) := by

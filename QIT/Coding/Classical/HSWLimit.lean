@@ -8,6 +8,7 @@ module
 
 public import QIT.Coding.Classical.HSWDirect
 public import QIT.Coding.Classical.HSWConverse
+import QIT.Util.TensorPower
 
 /-!
 # HSW capacity formula and regularized Holevo limit
@@ -238,25 +239,9 @@ set_option maxHeartbeats 4000000
 variable {a : Type uIn} {b : Type uOut}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 
-private theorem tensorPower_nonempty_of_nonempty (α : Type uAux) [Nonempty α] :
-    (n : ℕ) → Nonempty (QIT.TensorPower α n)
-  | 0 => ⟨PUnit.unit⟩
-  | n + 1 => ⟨(Classical.choice (inferInstance : Nonempty α),
-      Classical.choice (tensorPower_nonempty_of_nonempty α n))⟩
-
-private theorem tensorPower_card (α : Type uAux) [Fintype α] (n : ℕ) :
-    Fintype.card (QIT.TensorPower α n) = (Fintype.card α) ^ n := by
-  induction n with
-  | zero =>
-      simp [QIT.TensorPower]
-  | succ n ih =>
-      change Fintype.card (Prod α (QIT.TensorPower α n)) = Fintype.card α ^ (n + 1)
-      rw [Fintype.card_prod, ih, Nat.pow_succ]
-      ring
-
 private theorem tensorPower_card_real (α : Type uAux) [Fintype α] (n : ℕ) :
     (Fintype.card (QIT.TensorPower α n) : ℝ) = (Fintype.card α : ℝ) ^ n := by
-  exact_mod_cast tensorPower_card α n
+  exact_mod_cast tensorPower_card (a := α) n
 
 private theorem log2_pow_nat (x : ℝ) (n : ℕ) :
     log2 (x ^ n) = (n : ℝ) * log2 x := by
@@ -308,10 +293,10 @@ theorem blockHolevoInformation_superadditive [Nonempty a] (N : Channel a b) (m r
       (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) (m + r) := by
   rw [le_iff_forall_pos_lt_add]
   intro η hη
-  letI : Nonempty (QIT.TensorPower a m) := tensorPower_nonempty_of_nonempty a m
-  letI : Nonempty (QIT.TensorPower a r) := tensorPower_nonempty_of_nonempty a r
+  letI : Nonempty (QIT.TensorPower a m) := tensorPower_nonempty_of_nonempty (α := a) m
+  letI : Nonempty (QIT.TensorPower a r) := tensorPower_nonempty_of_nonempty (α := a) r
   letI : Nonempty (QIT.TensorPower a (m + r)) :=
-    tensorPower_nonempty_of_nonempty a (m + r)
+    tensorPower_nonempty_of_nonempty (α := a) (m + r)
   have hη4 : 0 < η / 4 := by positivity
   obtain ⟨ι, hιF, hιD, E, hE⟩ :=
     (N.tensorPower m).exists_hswHolevoRate_gt_of_lt_holevoInformation
@@ -357,7 +342,7 @@ nonnegativity, but it is self-contained and sufficient for the Fekete-limit rema
 theorem neg_block_log_card_le_blockHolevoInformation [Nonempty a] [Nonempty b]
     (N : Channel a b) (n : ℕ) :
     -((n : ℝ) * log2 (Fintype.card b : ℝ)) ≤ (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n := by
-  letI : Nonempty (QIT.TensorPower a n) := tensorPower_nonempty_of_nonempty a n
+  letI : Nonempty (QIT.TensorPower a n) := tensorPower_nonempty_of_nonempty (α := a) n
   have hne :
       (Channel.holevoInformationValues.{uIn, uOut, uEnsemble} (N.tensorPower n)).Nonempty :=
     (N.tensorPower n).holevoInformationValues_nonempty

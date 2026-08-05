@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Coding.Classical.Holevo
+public import QIT.Information.Entropy.Entropy
 public import QIT.States.Purification.ReferenceIsometry
 public import QIT.Channels.Diamond
 public import QIT.States.MaximallyEntangled
@@ -158,14 +158,14 @@ theorem fqswProdRight_normalizedTraceDistance_le
 
 /-- Appending a fixed right-hand state cannot increase the source trace-norm
 distance between density matrices. -/
-theorem fqswProdRight_traceDistance_le
+theorem fqswProdRight_traceNormDistance_le
     {α : Type u} {β : Type v}
     [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
     (ρ σ : State α) (τ : State β) :
-    (ρ.prod τ).traceDistance (σ.prod τ) ≤ ρ.traceDistance σ := by
+    (ρ.prod τ).traceNormDistance (σ.prod τ) ≤ ρ.traceNormDistance σ := by
   have h := fqswProdRight_normalizedTraceDistance_le ρ σ τ
   unfold State.normalizedTraceDistance normalizedTraceDistance at h
-  unfold State.traceDistance
+  unfold State.traceNormDistance
   nlinarith
 
 /-- The channel induced by an isometry on a finite system. -/
@@ -363,13 +363,13 @@ def normalizedError : ℝ :=
 
 /-- Source trace-norm error `||ρ_out - ρ_target||₁`. -/
 def traceNormError : ℝ :=
-  traceDistance C.outputState.matrix C.targetState.matrix
+  traceNormDistance C.outputState.matrix C.targetState.matrix
 
 /-- Source trace-norm error against `C.targetState` for an explicit source
 state argument. -/
 def traceNormErrorOfState (C : FQSWOneShotProtocol ψ q e et)
     (ρ : State (Prod (Prod a b) r)) : ℝ :=
-  traceDistance (C.outputStateOfState ρ).matrix C.targetState.matrix
+  traceNormDistance (C.outputStateOfState ρ).matrix C.targetState.matrix
 
 /-- Number of qubits communicated in the one-shot protocol. -/
 def communicationCost (_C : FQSWOneShotProtocol ψ q e et) : ℝ :=
@@ -383,7 +383,7 @@ theorem normalizedError_nonneg : 0 ≤ C.normalizedError :=
   State.normalizedTraceDistance_nonneg _ _
 
 theorem traceNormError_nonneg : 0 ≤ C.traceNormError :=
-  traceDistance_nonneg _ _
+  traceNormDistance_nonneg _ _
 
 theorem normalizedError_eq_half_traceNormError :
     C.normalizedError = (1 / 2 : ℝ) * C.traceNormError := by
@@ -472,11 +472,11 @@ def normalizedError : ℝ :=
   C.outputState.normalizedTraceDistance C.targetState
 
 def traceNormError : ℝ :=
-  traceDistance C.outputState.matrix C.targetState.matrix
+  traceNormDistance C.outputState.matrix C.targetState.matrix
 
 def traceNormErrorOfState (C : FQSWBlockProtocol ψ n q e et)
     (ρ : State (Prod (Prod a b) r)) : ℝ :=
-  traceDistance (C.outputStateOfState ρ).matrix C.targetState.matrix
+  traceNormDistance (C.outputStateOfState ρ).matrix C.targetState.matrix
 
 def communicationRate (_C : FQSWBlockProtocol ψ n q e et) : ℝ :=
   if n = 0 then 0 else log2 (Fintype.card q : ℝ) / (n : ℝ)
@@ -488,7 +488,7 @@ theorem normalizedError_nonneg : 0 ≤ C.normalizedError :=
   State.normalizedTraceDistance_nonneg _ _
 
 theorem traceNormError_nonneg : 0 ≤ C.traceNormError :=
-  traceDistance_nonneg _ _
+  traceNormDistance_nonneg _ _
 
 theorem normalizedError_eq_half_traceNormError :
     C.normalizedError = (1 / 2 : ℝ) * C.traceNormError := by

@@ -11,9 +11,11 @@ public import QIT.OneShot.SmoothAttainment
 public import QIT.States.Topology
 public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import QIT.Util.SDP.StrongDuality
+import QIT.Util.CMatrixCLM
 public import Mathlib.Analysis.CStarAlgebra.Matrix
 public import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Order
 public import Mathlib.Topology.MetricSpace.Sequences
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # CQ guessing probability and conditional min-entropy dual program
@@ -42,30 +44,6 @@ namespace State
 
 variable {a : Type u} {b : Type v}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
-
-/-- A closed purified-distance ball in the normalized-state topology. -/
-theorem purifiedBall_isClosed (ρ : State a) (ε : ℝ) :
-    IsClosed ({σ : State a | ρ.purifiedBall ε σ}) := by
-  have hclosed :
-      IsClosed
-        ({σ : State a |
-          ρ.toSubnormalized.purifiedBall ε σ.toSubnormalized}) :=
-    (SubnormalizedState.purifiedBall_isClosed (a := a) ρ.toSubnormalized ε).preimage
-      State.continuous_toSubnormalized
-  have hset :
-      {σ : State a | ρ.purifiedBall ε σ} =
-        {σ : State a | ρ.toSubnormalized.purifiedBall ε σ.toSubnormalized} := by
-    ext σ
-    exact State.purifiedBall_iff_toSubnormalized_purifiedBall ρ σ ε
-  rwa [hset]
-
-/-- A purified-distance ball is compact as a closed subset of the compact
-normalized-state space. -/
-theorem purifiedBall_isCompact (ρ : State a) (ε : ℝ) :
-    IsCompact ({σ : State a | ρ.purifiedBall ε σ}) := by
-  have hcompact :=
-    (State.isCompact_univ (a := a)).inter_right (purifiedBall_isClosed (a := a) ρ ε)
-  simpa [Set.univ_inter] using hcompact
 
 /-- Compact feasible pairs `(ρ', T_B)` for the normalized conditional-min scale
 over a normalized purified-distance ball, with a harmless trace cap on `T_B`. -/
@@ -112,13 +90,6 @@ theorem conditionalMinEntropyScaleFeasiblePairSet_isCompact
   have hclosed := conditionalMinEntropyScaleFeasiblePair_order_isClosed (a := a) (b := b)
   simpa [conditionalMinEntropyScaleFeasiblePairSet, ball, tset] using
     hbase.inter_right hclosed
-
-private theorem neg_log2_antitone_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    -log2 y ≤ -log2 x := by
-  unfold log2
-  exact neg_le_neg
-    (div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-      (le_of_lt (Real.log_pos one_lt_two)))
 
 /-- Normalized-candidate smooth conditional min-entropy attains its maximum on
 every nonempty normalized purified-distance ball. -/
@@ -772,29 +743,6 @@ theorem sum_single (x : ι) (A : CMatrix b) :
 
 end CQEffectFamily
 
-private noncomputable def cMatrixEntryCLM (i j : b) : CMatrix b →L[ℝ] ℂ :=
-  LinearMap.toContinuousLinearMap
-    ({ toFun := fun A => A i j
-       map_add' := by
-        intro A B
-        rfl
-       map_smul' := by
-        intro c A
-        simp [Matrix.smul_apply] } :
-      CMatrix b →ₗ[ℝ] ℂ)
-
-private noncomputable def cMatrixConjTransposeCLM : CMatrix b →L[ℝ] CMatrix b :=
-  LinearMap.toContinuousLinearMap
-    ({ toFun := fun A => Matrix.conjTranspose A
-       map_add' := by
-        intro A B
-        rw [Matrix.conjTranspose_add]
-       map_smul' := by
-        intro c A
-        rw [Matrix.conjTranspose_smul]
-        simp } :
-      CMatrix b →ₗ[ℝ] CMatrix b)
-
 private noncomputable def hermitianInclusionNormed : HermitianMatrix b →L[ℝ] CMatrix b :=
   LinearMap.toContinuousLinearMap
     (HermitianMatrix.toCMatrixLinear : HermitianMatrix b →ₗ[ℝ] CMatrix b)
@@ -821,7 +769,7 @@ private theorem continuous_quadraticForm_normed (x : b →₀ ℂ) :
   simp only [Finsupp.sum, Finsupp.sum]
   exact continuous_finsetSum x.support fun i _ =>
     continuous_finsetSum x.support fun j _ =>
-      Continuous.mul (Continuous.mul continuous_const (cMatrixEntryCLM (b := b) i j).continuous)
+      Continuous.mul (Continuous.mul continuous_const (cMatrixEntryCLM (ι := b) i j).continuous)
         continuous_const
 
 private theorem isClosed_cMatrix_posSemidef_normed :
@@ -840,7 +788,7 @@ private theorem isClosed_cMatrix_posSemidef_normed :
       ext A
       simp [Matrix.IsHermitian]
     rw [hH]
-    exact isClosed_eq (cMatrixConjTransposeCLM (b := b)).continuous continuous_id
+    exact isClosed_eq (cMatrixConjTransposeCLM (ι := b)).continuous continuous_id
   · exact isClosed_iInter fun x =>
       isClosed_setOf_zero_le_complex'.preimage (continuous_quadraticForm_normed (b := b) x)
 
@@ -1074,31 +1022,6 @@ noncomputable def probabilityPOVM (E : Ensemble ι b) : POVM ι b where
             rw [hsum]
       _ = 1 := by simp
 
-private theorem trace_mul_posSemidef_re_nonneg {A B : CMatrix b}
-    (hA : A.PosSemidef) (hB : B.PosSemidef) :
-    0 ≤ ((A * B).trace).re := by
-  let S := psdSqrt A
-  have hpsd : (S * B * S).PosSemidef := by
-    have h := hB.mul_mul_conjTranspose_same S
-    dsimp [S] at h
-    rw [psdSqrt_isHermitian A] at h
-    exact h
-  have htrace : 0 ≤ (S * B * S).trace :=
-    Matrix.PosSemidef.trace_nonneg hpsd
-  have hEq : (A * B).trace = (S * B * S).trace := by
-    have hsqrt : S * S = A := by
-      simpa [S] using psdSqrt_mul_self_of_posSemidef hA
-    rw [← hsqrt]
-    calc
-      ((S * S) * B).trace = (S * (S * B)).trace := by
-        rw [Matrix.mul_assoc]
-      _ = ((S * B) * S).trace := by
-        rw [Matrix.trace_mul_comm]
-      _ = (S * B * S).trace := by
-        rw [Matrix.mul_assoc]
-  rw [hEq]
-  exact htrace.1
-
 namespace Classical
 
 variable {ι : Type u} {b : Type v}
@@ -1180,7 +1103,7 @@ theorem cqPrimalValue_le_dualValue (E : Ensemble ι b) (M : POVM ι b) {T : CMat
       refine Finset.sum_le_sum fun x _ => ?_
       have hdiff : (T - E.cqBlock x).PosSemidef := by
         simpa [Matrix.le_iff] using hT.2 x
-      have hnonneg := trace_mul_posSemidef_re_nonneg (b := b) hdiff (M.pos x)
+      have hnonneg := cMatrix_trace_mul_posSemidef_re_nonneg hdiff (M.pos x)
       have htrace :
           (((T - E.cqBlock x) * M.effects x).trace).re =
             ((T * M.effects x).trace).re -

@@ -325,16 +325,11 @@ private theorem positiveSpectralProjector_trace_mul
   rw [spectralSignBlockMatrix_mul, spectralSignBlockMatrix_projector]
   exact trace_fromBlocks_projector_mul _
 
-private theorem trace_mul_posSemidef_re_nonneg {A B : CMatrix a}
-    (hA : A.PosSemidef) (hB : B.PosSemidef) :
-    0 ≤ ((A * B).trace).re :=
-  cMatrix_trace_mul_posSemidef_re_nonneg hA hB
-
 private theorem trace_mul_le_of_le {D X Y : CMatrix a}
     (hD : D.PosSemidef) (hXY : X ≤ Y) :
     ((D * X).trace).re ≤ ((D * Y).trace).re := by
   rw [Matrix.le_iff] at hXY
-  have hnonneg := trace_mul_posSemidef_re_nonneg hD hXY
+  have hnonneg := cMatrix_trace_mul_posSemidef_re_nonneg hD hXY
   have hcalc : ((D * (Y - X)).trace).re =
       ((D * Y).trace).re - ((D * X).trace).re := by
     simp [Matrix.mul_sub, Matrix.trace_sub]
@@ -1268,7 +1263,7 @@ public theorem audenaertLemma4_one_trace_nonneg
       _ = ((H⁺ * B).trace).re := by
         rw [hHP]
   have hnonneg : 0 ≤ ((H⁺ * B).trace).re :=
-    trace_mul_posSemidef_re_nonneg
+    cMatrix_trace_mul_posSemidef_re_nonneg
       (Matrix.nonneg_iff_posSemidef.mp (CFC.posPart_nonneg H)) hB
   rw [cMatrix_rpow_one hA, cMatrix_rpow_one hB]
   change 0 ≤ ((P * B * H).trace).re

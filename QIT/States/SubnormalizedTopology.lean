@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.States.Subnormalized
+public import QIT.States.TraceNorm.Spectral
 public import QIT.Util.SDP.PSDCone
 public import Mathlib.Topology.MetricSpace.ProperSpace
 import Mathlib.Analysis.CStarAlgebra.Classes
@@ -33,7 +34,7 @@ open Matrix
 
 namespace QIT
 
-universe u
+universe u v
 
 noncomputable section
 
@@ -70,89 +71,6 @@ private theorem isEmbedding_matrix :
     Topology.IsEmbedding (fun ρ : SubnormalizedState a => ρ.matrix) :=
   Function.Injective.isEmbedding_induced matrix_injective
 
-private theorem posSemidef_le_trace_re_smul_one {A : CMatrix a} (hA : A.PosSemidef) :
-    A ≤ (((A.trace.re : ℝ) : ℂ) • (1 : CMatrix a)) := by
-  classical
-  rw [Matrix.le_iff]
-  let U : Matrix.unitaryGroup a ℂ := hA.1.eigenvectorUnitary
-  let D : CMatrix a := Matrix.diagonal fun i => ((hA.1.eigenvalues i : ℝ) : ℂ)
-  have hdiag : A = (U : CMatrix a) * D * star (U : CMatrix a) := by
-    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hA.1.spectral_theorem
-  have heig_sum : ∑ i, hA.1.eigenvalues i = A.trace.re := by
-    have hc : A.trace = ∑ i, ((hA.1.eigenvalues i : ℝ) : ℂ) := by
-      exact hA.1.trace_eq_sum_eigenvalues
-    have hre := congrArg Complex.re hc
-    simpa using hre.symm
-  have heig_le_trace : ∀ i, hA.1.eigenvalues i ≤ A.trace.re := by
-    intro i
-    have hnonneg (j : a) : 0 ≤ hA.1.eigenvalues j := hA.eigenvalues_nonneg j
-    calc hA.1.eigenvalues i
-        ≤ hA.1.eigenvalues i +
-            ∑ j ∈ Finset.univ.erase i, hA.1.eigenvalues j :=
-          le_add_of_nonneg_right (Finset.sum_nonneg (fun j _ => hnonneg j))
-      _ = ∑ j, hA.1.eigenvalues j := by
-          rw [add_comm]
-          exact Finset.sum_erase_add (s := Finset.univ)
-            (f := fun j => hA.1.eigenvalues j) (Finset.mem_univ i)
-      _ = A.trace.re := heig_sum
-  let c : ℂ := ((A.trace.re : ℝ) : ℂ)
-  have hsub :
-      c • (1 : CMatrix a) - A =
-        (U : CMatrix a) * (c • (1 : CMatrix a) - D) * star (U : CMatrix a) := by
-    have hunit_scalar :
-        (U : CMatrix a) * (c • (1 : CMatrix a)) * star (U : CMatrix a) =
-          c • (1 : CMatrix a) := by
-      have hunit : (U : CMatrix a) * star (U : CMatrix a) = 1 := by
-        simp
-      calc
-        (U : CMatrix a) * (c • (1 : CMatrix a)) * star (U : CMatrix a) =
-            c • ((U : CMatrix a) * (1 : CMatrix a) * star (U : CMatrix a)) := by
-          simp
-        _ = c • (1 : CMatrix a) := by
-          simp [hunit]
-    calc
-      c • (1 : CMatrix a) - A =
-          c • (1 : CMatrix a) - (U : CMatrix a) * D * star (U : CMatrix a) := by
-        rw [hdiag]
-      _ = (U : CMatrix a) * (c • (1 : CMatrix a)) * star (U : CMatrix a) -
-            (U : CMatrix a) * D * star (U : CMatrix a) := by
-        rw [hunit_scalar]
-      _ = (U : CMatrix a) * (c • (1 : CMatrix a) - D) * star (U : CMatrix a) := by
-        rw [Matrix.mul_sub, Matrix.sub_mul]
-  have hdiag_sub :
-      c • (1 : CMatrix a) - D =
-        Matrix.diagonal fun i => (((A.trace.re - hA.1.eigenvalues i : ℝ) : ℝ) : ℂ) := by
-    ext i j
-    by_cases hij : i = j
-    · subst j
-      simp [D, c]
-    · simp [D, Matrix.diagonal, hij]
-  rw [hsub]
-  rw [Matrix.IsUnit.posSemidef_star_right_conjugate_iff (Unitary.isUnit_coe :
-    IsUnit (U : CMatrix a))]
-  rw [hdiag_sub]
-  rw [Matrix.posSemidef_diagonal_iff]
-  intro i
-  exact_mod_cast sub_nonneg.mpr (heig_le_trace i)
-
-private theorem norm_le_trace_re_mul_norm_one_of_posSemidef {A : CMatrix a} (hA : A.PosSemidef) :
-    ‖A‖ ≤ A.trace.re * ‖(1 : CMatrix a)‖ := by
-  have hA0 : (0 : CMatrix a) ≤ A := by
-    simpa [Matrix.le_iff] using hA
-  have hle := posSemidef_le_trace_re_smul_one (a := a) hA
-  have hnorm :
-      ‖A‖ ≤ ‖(((A.trace.re : ℝ) : ℂ) • (1 : CMatrix a))‖ :=
-    CStarAlgebra.norm_le_norm_of_nonneg_of_le
-      (A := CMatrix a) (a := A)
-      (b := (((A.trace.re : ℝ) : ℂ) • (1 : CMatrix a))) hA0 hle
-  calc
-    ‖A‖ ≤ ‖(((A.trace.re : ℝ) : ℂ) • (1 : CMatrix a))‖ := hnorm
-    _ = A.trace.re * ‖(1 : CMatrix a)‖ := by
-      rw [norm_smul]
-      have htr_nonneg : 0 ≤ A.trace.re := (Matrix.PosSemidef.trace_nonneg hA).1
-      rw [Complex.norm_of_nonneg htr_nonneg]
-
 omit [DecidableEq a] in
 /-- The matrix-level subnormalized-state domain is closed. -/
 theorem subnormalizedMatrixSet_isClosed :
@@ -181,7 +99,7 @@ theorem subnormalizedMatrixSet_isBounded :
   refine ⟨‖(1 : CMatrix a)‖, ?_⟩
   intro M hM
   rcases hM with ⟨hMpsd, hMtr⟩
-  have hnorm := norm_le_trace_re_mul_norm_one_of_posSemidef (a := a) hMpsd
+  have hnorm := State.norm_le_trace_re_mul_norm_one_of_posSemidef (a := a) hMpsd
   have htrace_bound :
       M.trace.re * ‖(1 : CMatrix a)‖ ≤ 1 * ‖(1 : CMatrix a)‖ :=
     mul_le_mul_of_nonneg_right hMtr (norm_nonneg _)
@@ -278,6 +196,74 @@ theorem purifiedBall_isCompact (ρ : SubnormalizedState a) (ε : ℝ) :
   have hcompact :=
     (isCompact_univ (a := a)).inter_right (purifiedBall_isClosed (a := a) ρ ε)
   simpa [Set.univ_inter] using hcompact
+
+section psdTraceBoundedMatrix
+
+variable {b : Type v} [Fintype b] [DecidableEq b]
+
+omit [Fintype a] [Fintype b] [DecidableEq b] in
+/-- The map `T_B ↦ I_A ⊗ T_B` is continuous on side-information matrices. -/
+theorem continuous_kronecker_one_matrix :
+    Continuous fun T : CMatrix b => Matrix.kronecker (1 : CMatrix a) T := by
+  refine continuous_pi ?_
+  intro i
+  refine continuous_pi ?_
+  intro j
+  simp [Matrix.kronecker, Matrix.kroneckerMap_apply]
+  exact continuous_const.mul
+    ((continuous_apply j.2).comp ((continuous_apply i.2).comp continuous_id))
+
+/-- PSD matrices with trace bounded by `R`. -/
+def psdTraceBoundedMatrixSet (b : Type v) [Fintype b] (R : ℝ) : Set (CMatrix b) :=
+  {T | T.PosSemidef ∧ T.trace.re ≤ R}
+
+omit [DecidableEq b] in
+theorem mem_psdTraceBoundedMatrixSet_iff {R : ℝ} {T : CMatrix b} :
+    T ∈ psdTraceBoundedMatrixSet b R ↔ T.PosSemidef ∧ T.trace.re ≤ R :=
+  Iff.rfl
+
+omit [DecidableEq b] in
+/-- The trace-bounded PSD matrix domain is closed. -/
+theorem psdTraceBoundedMatrixSet_isClosed (R : ℝ) :
+    IsClosed (psdTraceBoundedMatrixSet b R) := by
+  classical
+  have hpsd : IsClosed ({T : CMatrix b | T.PosSemidef} : Set (CMatrix b)) := by
+    simpa using (psdCone b).isClosed
+  have htrace :
+      IsClosed ({T : CMatrix b | T.trace.re ≤ R} : Set (CMatrix b)) := by
+    exact isClosed_le
+      (Complex.continuous_re.comp (Continuous.matrix_trace continuous_id))
+      continuous_const
+  have hset :
+      psdTraceBoundedMatrixSet b R =
+        ({T : CMatrix b | T.PosSemidef} ∩
+          {T : CMatrix b | T.trace.re ≤ R}) := by
+    ext T
+    rfl
+  rw [hset]
+  exact hpsd.inter htrace
+
+/-- The trace-bounded PSD matrix domain is bounded. -/
+theorem psdTraceBoundedMatrixSet_isBounded {R : ℝ} :
+    Bornology.IsBounded (psdTraceBoundedMatrixSet b R) := by
+  rw [isBounded_iff_forall_norm_le]
+  refine ⟨R * ‖(1 : CMatrix b)‖, ?_⟩
+  intro T hT
+  rcases hT with ⟨hTpsd, hTtrace⟩
+  have hnorm := State.norm_le_trace_re_mul_norm_one_of_posSemidef (a := b) hTpsd
+  have htrace_bound :
+      T.trace.re * ‖(1 : CMatrix b)‖ ≤ R * ‖(1 : CMatrix b)‖ :=
+    mul_le_mul_of_nonneg_right hTtrace (norm_nonneg _)
+  exact le_trans hnorm htrace_bound
+
+/-- The trace-bounded PSD matrix domain is compact. -/
+theorem psdTraceBoundedMatrixSet_isCompact {R : ℝ} :
+    IsCompact (psdTraceBoundedMatrixSet b R) :=
+  Metric.isCompact_of_isClosed_isBounded
+    (psdTraceBoundedMatrixSet_isClosed (b := b) R)
+    (psdTraceBoundedMatrixSet_isBounded (b := b))
+
+end psdTraceBoundedMatrix
 
 end SubnormalizedState
 

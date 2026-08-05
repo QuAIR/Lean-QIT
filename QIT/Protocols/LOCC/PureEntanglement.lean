@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Information.AlickiFannesWinter
+public import QIT.Information.Entropy.PureEntanglement
 public import QIT.Protocols.LOCC.InstrumentEntanglement
 
 /-!
@@ -29,35 +29,6 @@ namespace QIT
 universe u v w x y
 
 noncomputable section
-
-namespace PureVector
-
-variable {a : Type u} {b : Type v}
-variable [Fintype a] [DecidableEq a]
-variable [Fintype b] [DecidableEq b]
-
-/-- Entanglement entropy of a finite bipartite pure state. -/
-def entanglementEntropy (psi : PureVector (Prod a b)) : Real :=
-  psi.state.marginalB.vonNeumann
-
-/-- Either marginal computes the entanglement entropy of a bipartite pure state. -/
-theorem entanglementEntropy_eq_marginalA (psi : PureVector (Prod a b)) :
-    psi.entanglementEntropy = psi.state.marginalA.vonNeumann := by
-  rw [entanglementEntropy]
-  exact (State.pureVector_marginalA_vonNeumann_eq_marginalB psi).symm
-
-/-- Swapping the two tensor factors does not change pure-state entanglement. -/
-theorem entanglementEntropy_reindex_prodComm (psi : PureVector (Prod a b)) :
-    (psi.reindex (Equiv.prodComm a b)).entanglementEntropy = psi.entanglementEntropy := by
-  have hswap :
-      (psi.reindex (Equiv.prodComm a b)).state.marginalB = psi.state.marginalA := by
-    apply State.ext
-    ext i j
-    rfl
-  rw [entanglementEntropy, entanglementEntropy, hswap]
-  exact State.pureVector_marginalA_vonNeumann_eq_marginalB psi
-
-end PureVector
 
 namespace Channel
 

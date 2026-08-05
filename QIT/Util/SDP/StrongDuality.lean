@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Util.SDP.ConicDuality
+public import Mathlib.Analysis.Convex.Cone.Basic
 public import Mathlib.Analysis.LocallyConvex.WithSeminorms
 public import Mathlib.Analysis.LocallyConvex.Separation
 public import Mathlib.Topology.Algebra.Module.FiniteDimension
@@ -94,13 +94,6 @@ def dualValue (y : F →L[ℝ] ℝ) : ℝ :=
 /-- Dual value set. -/
 def dualValueSet : Set ℝ :=
   {v | ∃ y : F →L[ℝ] ℝ, P.IsDualFeasible y ∧ v = P.dualValue y}
-
-/-- Forget continuity, producing the existing linear-map `ConeProgram`. -/
-def toConeProgram : ConeProgram E F where
-  K := P.K
-  A := P.A.toLinearMap
-  b := P.b
-  c := P.c.toLinearMap
 
 /-- Pointwise weak duality. -/
 theorem primalValue_le_dualValue {x : E} (hx : P.IsPrimalFeasible x)
@@ -407,52 +400,6 @@ theorem sSup_primalValueSet_eq_sInf_dualValueSet_of_hasClosedPrimalHypograph
   have hInfLe : sInf P.dualValueSet ≤ P.dualValue y :=
     csInf_le hdualBddBelow hyMem
   linarith
-
-/-- The old and continuous primal value sets coincide. -/
-theorem toConeProgram_primalValueSet :
-    P.toConeProgram.primalValueSet = P.primalValueSet := by
-  ext v
-  constructor
-  · rintro ⟨x, hx, hv⟩
-    exact ⟨x, hx, hv⟩
-  · rintro ⟨x, hx, hv⟩
-    exact ⟨x, hx, hv⟩
-
-/--
-The old and continuous dual value sets coincide in finite dimension.  The
-linear-map-to-continuous-linear-map direction uses automatic continuity.
--/
-theorem toConeProgram_dualValueSet :
-    P.toConeProgram.dualValueSet = P.dualValueSet := by
-  ext v
-  constructor
-  · rintro ⟨y, hy, hv⟩
-    refine ⟨LinearMap.toContinuousLinearMap y, ?_, ?_⟩
-    · intro x hx
-      simpa [toConeProgram, IsDualFeasible, primalValue, ConeProgram.IsDualFeasible,
-        LinearMap.coe_toContinuousLinearMap] using hy x hx
-    · simpa [toConeProgram, dualValue, LinearMap.coe_toContinuousLinearMap] using hv
-  · rintro ⟨y, hy, hv⟩
-    refine ⟨y.toLinearMap, ?_, ?_⟩
-    · intro x hx
-      simpa [toConeProgram, IsDualFeasible, primalValue, ConeProgram.IsDualFeasible] using hy x hx
-    · simpa [toConeProgram, dualValue] using hv
-
-/--
-Compatibility theorem for the existing `ConeProgram.strong_duality` predicate.
-
-The old predicate quantifies only primal feasibility internally, so the
-closed-hypograph and bounded/nonempty value-set assumptions remain explicit
-here.
--/
-theorem toConeProgram_strong_duality_of_hasClosedPrimalHypograph
-    (hclosed : P.HasClosedPrimalHypograph)
-    (hne : P.primalValueSet.Nonempty)
-    (hbdd : BddAbove P.primalValueSet) :
-    P.toConeProgram.strong_duality := by
-  intro _hprimal
-  rw [P.toConeProgram_primalValueSet, P.toConeProgram_dualValueSet]
-  exact P.sSup_primalValueSet_eq_sInf_dualValueSet_of_hasClosedPrimalHypograph hclosed hne hbdd
 
 end ContinuousConeProgram
 

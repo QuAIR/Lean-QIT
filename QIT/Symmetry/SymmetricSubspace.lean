@@ -17,6 +17,7 @@ public import Mathlib.Data.Finsupp.Multiset
 public import Mathlib.Data.Nat.Choose.Multinomial
 public import Mathlib.Data.Sym.Card
 public import Mathlib.LinearAlgebra.Matrix.Permutation
+public import QIT.Util.TensorPower
 
 /-!
 # Symmetric (Bose) subspace
@@ -40,26 +41,6 @@ universe u
 noncomputable section
 
 variable {a : Type u} [DecidableEq a]
-
-/-- `TensorPower a n` is canonically equivalent to `Fin n → a` (right-associated
-Prod unfolds to a function on `Fin n` via `Fin.cons` head/tail decomposition). -/
-def tensorPowerEquiv : (n : ℕ) → TensorPower a n ≃ (Fin n → a)
-  | 0 =>
-    { toFun := fun _ i => i.elim0,
-      invFun := fun _ => ⟨⟩,
-      left_inv := fun _ => rfl,
-      right_inv := fun _ => by ext i; exact i.elim0 }
-  | Nat.succ n =>
-    let ih := tensorPowerEquiv n
-    ((Equiv.refl a).prodCongr ih).trans
-      { toFun := fun (head, tail) => Fin.cons head tail,
-        invFun := fun f => (f 0, Fin.tail f),
-        left_inv := by
-          rintro ⟨head, tail⟩
-          ext i <;> simp [Fin.cons_zero, Fin.tail_cons]
-        right_inv := by
-          intro f
-          (ext i; simp) }
 
 /-- Precompose a `Fin n → a` function by permutation inverse (left action via `⁻¹`). -/
 def precompPerm (n : ℕ) (σ : Equiv.Perm (Fin n)) : Equiv (Fin n → a) (Fin n → a) where
@@ -146,21 +127,6 @@ theorem mem_symmetricSubmodule_iff (n : ℕ) (f : (TensorPower a n) → ℂ) :
   rfl
 
 variable [Fintype a]
-
-omit [DecidableEq a] in
-/-- The recursive tensor-power basis has the expected cardinality `|a|^n`. -/
-theorem tensorPower_card (n : ℕ) :
-    Fintype.card (TensorPower a n) = Fintype.card a ^ n := by
-  induction n with
-  | zero =>
-      simp [TensorPower]
-  | succ n ih =>
-      calc
-        Fintype.card (TensorPower a (n + 1)) =
-            Fintype.card (a × TensorPower a n) := rfl
-        _ = Fintype.card a * Fintype.card (TensorPower a n) := Fintype.card_prod a (TensorPower a n)
-        _ = Fintype.card a * Fintype.card a ^ n := by rw [ih]
-        _ = Fintype.card a ^ (n + 1) := by rw [pow_succ']
 
 omit [DecidableEq a] [Fintype a] in
 @[simp]

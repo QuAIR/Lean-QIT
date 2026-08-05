@@ -35,31 +35,6 @@ universe u v w x
 
 noncomputable section
 
-@[simp]
-theorem State.toSubnormalized_reindex_eq
-    {a : Type u} {b : Type v}
-    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
-    (rho : State a) (e : a ≃ b) :
-    (rho.reindex e).toSubnormalized =
-      rho.toSubnormalized.applyTraceNonincreasingCP
-        (Channel.reindex e).map (Channel.reindex e).traceNonincreasingCP_map := by
-  apply SubnormalizedState.ext
-  have h := congrArg State.matrix (Channel.reindex_applyState e rho)
-  exact h.symm
-
-/-- Relabeling normalized states transports their subnormalized
-purified-distance ball without changing the radius. -/
-theorem State.toSubnormalized_purifiedBall_reindex
-    {a : Type u} {b : Type v}
-    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
-    {rho sigma : State a} {epsilon : Real} (e : a ≃ b)
-    (hball : rho.toSubnormalized.purifiedBall epsilon sigma.toSubnormalized) :
-    (rho.reindex e).toSubnormalized.purifiedBall epsilon
-      (sigma.reindex e).toSubnormalized := by
-  simpa only [State.toSubnormalized_reindex_eq] using
-    (SubnormalizedState.purifiedBall_of_traceNonincreasingCP
-      (Channel.reindex e).map (Channel.reindex e).traceNonincreasingCP_map hball)
-
 /-- Reorder a refined cq state so that Alice's quantum output is the source
 and the untouched reference together with the refined outcome is the
 conditioning system. -/

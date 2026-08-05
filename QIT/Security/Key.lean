@@ -254,13 +254,13 @@ theorem conditionedIdealKeyStateFor_conditionedIdealKeySideInfoState (σE : Stat
 /-- Conditioned/no-abort distance from uniform `d(ρ_AB | B)`, without the
 factor `1 / 2`. -/
 def conditionedDistanceFromUniformGiven (ρ : State (KeyOutput κ × e)) : ℝ :=
-  ρ.traceDistance (conditionedIdealKeyStateFor ρ)
+  ρ.traceNormDistance (conditionedIdealKeyStateFor ρ)
 
 @[simp]
-theorem conditionedDistanceFromUniformGiven_eq_traceDistance
+theorem conditionedDistanceFromUniformGiven_eq_traceNormDistance
     (ρ : State (KeyOutput κ × e)) :
     conditionedDistanceFromUniformGiven ρ =
-      ρ.traceDistance (conditionedIdealKeyStateFor ρ) :=
+      ρ.traceNormDistance (conditionedIdealKeyStateFor ρ) :=
   rfl
 
 /-- Conditioned/no-abort secrecy distance, using the

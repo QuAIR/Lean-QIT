@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Security.ExtractorTraceBridge
+public import QIT.Util.BlockMatrix
 public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 public import Mathlib.LinearAlgebra.Matrix.PosDef
@@ -34,56 +35,6 @@ noncomputable section
 variable {Z : Type uZ} {e : Type ue}
 variable [Fintype Z] [DecidableEq Z]
 variable [Fintype e] [DecidableEq e]
-
-omit [DecidableEq e] in
-private theorem cMatrix_fromBlocks_diagonal_posSemidef {A D : CMatrix e}
-    (hA : A.PosSemidef) (hD : D.PosSemidef) :
-    (Matrix.fromBlocks A 0 0 D : CMatrix (Sum e e)).PosSemidef := by
-  classical
-  refine Matrix.PosSemidef.of_dotProduct_mulVec_nonneg ?_ ?_
-  · rw [Matrix.IsHermitian.ext_iff]
-    intro i j
-    cases i <;> cases j <;>
-      simp [Matrix.fromBlocks_apply₁₁, Matrix.fromBlocks_apply₁₂,
-        Matrix.fromBlocks_apply₂₁, Matrix.fromBlocks_apply₂₂,
-        Matrix.IsHermitian.ext_iff.mp hA.isHermitian,
-        Matrix.IsHermitian.ext_iff.mp hD.isHermitian]
-  · intro x
-    let xl : e → ℂ := fun i => x (Sum.inl i)
-    let xr : e → ℂ := fun i => x (Sum.inr i)
-    have hleft : 0 ≤ star xl ⬝ᵥ A.mulVec xl :=
-      (Matrix.posSemidef_iff_dotProduct_mulVec.mp hA).2 xl
-    have hright : 0 ≤ star xr ⬝ᵥ D.mulVec xr :=
-      (Matrix.posSemidef_iff_dotProduct_mulVec.mp hD).2 xr
-    have hsum : 0 ≤ star xl ⬝ᵥ A.mulVec xl + star xr ⬝ᵥ D.mulVec xr :=
-      add_nonneg hleft hright
-    have hquad :
-        star x ⬝ᵥ (Matrix.fromBlocks A 0 0 D).mulVec x =
-          star xl ⬝ᵥ A.mulVec xl + star xr ⬝ᵥ D.mulVec xr := by
-      rw [Matrix.dotProduct_mulVec, Matrix.vecMul_fromBlocks, Matrix.dotProduct_block]
-      simp [Matrix.dotProduct_mulVec, xl, xr]
-      change
-        Matrix.vecMul (star xl) A ⬝ᵥ xl + Matrix.vecMul (star xr) D ⬝ᵥ xr =
-          Matrix.vecMul (star xl) A ⬝ᵥ xl + Matrix.vecMul (star xr) D ⬝ᵥ xr
-      rfl
-    simpa [hquad] using hsum
-
-private theorem cMatrix_fromBlocks_self_le_posSemidef {A C : CMatrix e}
-    (hA : A.PosSemidef) (hCminusA : (C - A).PosSemidef) :
-    (Matrix.fromBlocks A A A C : CMatrix (Sum e e)).PosSemidef := by
-  classical
-  let D : CMatrix (Sum e e) := Matrix.fromBlocks A 0 0 (C - A)
-  let T : CMatrix (Sum e e) := Matrix.fromBlocks 1 1 0 1
-  have hD : D.PosSemidef := by
-    simpa [D] using cMatrix_fromBlocks_diagonal_posSemidef (e := e) hA hCminusA
-  have hconj : (T.conjTranspose * D * T).PosSemidef := by
-    simpa [Matrix.mul_assoc] using hD.mul_mul_conjTranspose_same T.conjTranspose
-  have hfactor :
-      T.conjTranspose * D * T = (Matrix.fromBlocks A A A C : CMatrix (Sum e e)) := by
-    (ext i j; cases i <;> cases j <;>
-      simp [D, T, Matrix.fromBlocks_multiply, Matrix.fromBlocks_conjTranspose,
-        sub_eq_add_neg])
-  simpa [hfactor] using hconj
 
 omit [DecidableEq e] in
 private theorem cMatrix_trace_re_le_of_le {X Y : CMatrix e} (hXY : X ≤ Y) :

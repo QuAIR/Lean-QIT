@@ -6,7 +6,7 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Information.SequentialDecoding
+public import QIT.Coding.EntanglementAssisted.SequentialDecoding
 public import QIT.Measurements.Naimark
 
 /-!

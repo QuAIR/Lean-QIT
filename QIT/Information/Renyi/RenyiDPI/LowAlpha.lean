@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Renyi.RenyiDPI.HighAlpha
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # Low-alpha sandwiched Renyi DPI support
@@ -34,12 +35,6 @@ variable [Fintype c] [DecidableEq c]
 namespace State
 
 open RenyiDPI.Statement
-
-private theorem log2_mono_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    log2 x ≤ log2 y := by
-  unfold log2
-  exact div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-    (le_of_lt (Real.log_pos one_lt_two))
 
 /-- For `1 / 2 ≤ α < 1`, the negative logarithmic prefactor reverses the
 trace-power order: a core trace-power expansion for the sandwiched inner

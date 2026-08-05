@@ -480,38 +480,6 @@ private theorem cbOneToAlphaNorm_congr_map
   subst hmap
   rfl
 
-private theorem kron_comp_apply_general
-    {α : Type u} {β : Type v} {γ : Type w}
-    {δ : Type x} {η : Type y} {θ : Type z}
-    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
-    [Fintype γ] [DecidableEq γ] [Fintype δ] [DecidableEq δ]
-    [Fintype η] [DecidableEq η] [Fintype θ] [DecidableEq θ]
-    (Phi₁ : MatrixMap α β) (Psi₁ : MatrixMap γ δ)
-    (Phi₂ : MatrixMap η α) (Psi₂ : MatrixMap θ γ)
-    (X : CMatrix (Prod η θ)) :
-    MatrixMap.kron Phi₁ Psi₁ ((MatrixMap.kron Phi₂ Psi₂) X) =
-      MatrixMap.kron (Phi₁.comp Phi₂) (Psi₁.comp Psi₂) X := by
-  ext cd cd'
-  rw [map_eq_sum_single (MatrixMap.kron Phi₂ Psi₂) X]
-  simp_rw [map_sum]
-  simp_rw [map_smul]
-  simp only [Matrix.sum_apply]
-  rw [map_eq_sum_single (MatrixMap.kron (Phi₁.comp Phi₂) (Psi₁.comp Psi₂)) X]
-  simp only [Matrix.sum_apply]
-  refine Finset.sum_congr rfl fun ac _ => ?_
-  refine Finset.sum_congr rfl fun ac' _ => ?_
-  simp only [Matrix.smul_apply]
-  congr 1
-  cases ac with
-  | mk a0 c0 =>
-  cases ac' with
-  | mk a1 c1 =>
-  rw [single_prod_eq_kronecker_single]
-  rw [MatrixMap.kron_apply_kronecker]
-  rw [MatrixMap.kron_apply_kronecker]
-  rw [MatrixMap.kron_apply_kronecker]
-  rfl
-
 private theorem kron_eq_comp_identity_extensions
     (Phi : MatrixMap a b) (Psi : MatrixMap c d) :
     MatrixMap.kron Phi Psi =
@@ -538,10 +506,10 @@ private theorem kron_eq_comp_identity_extensions
         MatrixMap.kron Phi (Channel.idChannel d).map
           (MatrixMap.kron (Channel.idChannel a).map Psi X) := by
           exact (kron_comp_apply_general
-            (Phi₁ := Phi)
-            (Psi₁ := (Channel.idChannel d).map)
-            (Phi₂ := (Channel.idChannel a).map)
-            (Psi₂ := Psi)
+            (Φ₁ := Phi)
+            (Ψ₁ := (Channel.idChannel d).map)
+            (Φ₂ := (Channel.idChannel a).map)
+            (Ψ₂ := Psi)
             X).symm
   exact congrFun (congrFun hmat bd) bd'
 

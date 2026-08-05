@@ -8,6 +8,7 @@ module
 
 public import QIT.Security.RandomnessExtraction
 public import QIT.OneShot.SmoothEndpoint
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # Optimized conditional-min-entropy extractor bound
@@ -148,20 +149,6 @@ variable [Fintype F] [DecidableEq F] [Nonempty F]
 variable [Fintype Z] [DecidableEq Z]
 variable [Fintype S] [DecidableEq S] [Nonempty S]
 variable [Fintype e] [DecidableEq e]
-
-private theorem rpow_two_log2_pos {x : ℝ} (hx : 0 < x) :
-    Real.rpow 2 (log2 x) = x := by
-  apply Real.log_injOn_pos (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _) hx
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2)]
-  unfold log2
-  have hlog2 : Real.log 2 ≠ 0 := (Real.log_pos one_lt_two).ne'
-  field_simp [hlog2]
-
-private theorem log2_one_div (x : ℝ) :
-    log2 (1 / x) = -log2 x := by
-  unfold log2
-  rw [one_div, Real.log_inv]
-  ring_nf
 
 private theorem rpow_two_two_mul_log2_pos {x : ℝ} (hx : 0 < x) :
     Real.rpow 2 (2 * log2 x) = x ^ 2 := by

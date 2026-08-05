@@ -7,7 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Core.Pure
-public import QIT.States.PosSqrt
+public import QIT.Util.Matrix.PosSqrt
 public import QIT.Util.SDP.PSDCone
 public import Mathlib.Analysis.InnerProductSpace.Dual
 public import Mathlib.Analysis.Normed.Module.FiniteDimension
@@ -36,14 +36,13 @@ namespace QIT
 
 universe u
 
-set_option linter.unusedSectionVars false
-
 noncomputable section
 
 variable {n : Type u} [Fintype n] [DecidableEq n]
 
 /-! ## Matrix-level PSD trace-pairing support -/
 
+omit [DecidableEq n] in
 /-- The trace pairing with a rank-one kernel is the associated quadratic form. -/
 theorem trace_mul_rankOneMatrix_eq_quadratic (T : CMatrix n) (x : n →₀ ℂ) :
     (T * rankOneMatrix (fun i => x i)).trace =
@@ -52,6 +51,7 @@ theorem trace_mul_rankOneMatrix_eq_quadratic (T : CMatrix n) (x : n →₀ ℂ) 
   simp [Matrix.trace, Matrix.mul_apply, rankOneMatrix_apply, Finsupp.sum_fintype]
   ac_rfl
 
+omit [DecidableEq n] in
 /-- The trace of a product of Hermitian matrices is real. -/
 theorem trace_mul_isHermitian_im_eq_zero {T A : CMatrix n}
     (hT : T.IsHermitian) (hA : A.IsHermitian) : ((T * A).trace).im = 0 := by
@@ -102,6 +102,7 @@ public theorem cMatrix_trace_mul_le_of_le_posSemidef_left
   rw [htrace] at hnonneg
   linarith
 
+omit [DecidableEq n] in
 private theorem posSemidef_of_trace_mul_rankOneMatrix_re_nonneg {T : CMatrix n}
     (hT : T.IsHermitian)
     (h : ∀ x : n →₀ ℂ, 0 ≤ ((T * rankOneMatrix (fun i => x i)).trace).re) :

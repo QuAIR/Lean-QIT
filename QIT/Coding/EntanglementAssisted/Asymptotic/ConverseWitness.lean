@@ -35,44 +35,13 @@ namespace Channel
 
 variable (N : Channel a b)
 
-/-- Converse witness family from eventual `n`-use log-cardinality upper bounds.
-
-This is the rate-normalization layer for the Khatri--Wilde asymptotic upper
-bound and strong-converse route: once the one-shot/n-use converse estimates
-show that every sufficiently long reliable protocol has
-`log₂ |M| ≤ n * (I(N) + η)`, this theorem packages the result in the standard
-`EntanglementAssistedConverseWitnessFamily` interface. -/
-theorem entanglementAssisted_converseWitnessFamily_of_logCardUpperBounds
-    (h :
-      ∀ η : ℝ, 0 < η → ∀ ε : ℝ, 0 < ε →
-        ∃ N0 : ℕ, ∀ n : ℕ, n ≥ N0 →
-          ∀ (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M],
-            ∀ (EA : Type u) [Fintype EA] [DecidableEq EA],
-              ∀ (EB : Type u) [Fintype EB] [DecidableEq EB],
-                ∀ C : EntanglementAssistedClassicalCode N n M EA EB,
-                  C.maxErrorAtMost ε →
-                    log2 (Fintype.card M : ℝ) ≤
-                      (n : ℝ) * (N.entanglementAssistedInformation + η)) :
-    EntanglementAssistedConverseWitnessFamily N where
-  rate_le := by
-    intro η hη ε hε
-    obtain ⟨N0, hN0⟩ := h η hη ε hε
-    refine ⟨max 1 N0, ?_⟩
-    intro n hn M _hMfin _hMdec _hMnonempty EA _hEAfin _hEAdec EB _hEBfin _hEBdec C hC
-    have hn_pos : 0 < n :=
-      lt_of_lt_of_le (by norm_num : 0 < 1) (le_trans (Nat.le_max_left 1 N0) hn)
-    have hnN0 : n ≥ N0 :=
-      le_trans (Nat.le_max_right 1 N0) hn
-    exact C.rate_le_of_log_card_le_mul hn_pos (hN0 n hnN0 M EA EB C hC)
-
 /-- Source-consistent converse witness family from eventual `n`-use
 log-cardinality upper bounds.
 
-This is the same rate-normalization layer as
-`entanglementAssisted_converseWitnessFamily_of_logCardUpperBounds`, but with
-the error range used by the Khatri--Wilde one-shot upper bounds:
-`ε ∈ [0, 1)`.  The output is a strict rate estimate, matching the operational
-strong-converse interface. -/
+This is the rate-normalization layer for the Khatri--Wilde asymptotic upper
+bound and strong-converse route, using the source error range
+`ε ∈ [0, 1)` from the one-shot upper bounds.  The output is a strict rate
+estimate, matching the operational strong-converse interface. -/
 theorem entanglementAssisted_sourceConverseWitnessFamily_of_logCardUpperBounds
     (h :
       ∀ η : ℝ, 0 < η → ∀ ε : ℝ, 0 ≤ ε → ε < 1 →

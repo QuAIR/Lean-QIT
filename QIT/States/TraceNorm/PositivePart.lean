@@ -55,7 +55,7 @@ private theorem trace_diagonal_mul_eq_sum {a : Type u} [Fintype a] [DecidableEq 
     (Matrix.diagonal d * E).trace = ∑ i, d i * E i i := by
   simp [Matrix.trace, Matrix.diagonal_mul]
 
-private theorem real_posPart_eq_if (x : ℝ) : x⁺ = if 0 < x then x else 0 := by
+theorem real_posPart_eq_if (x : ℝ) : x⁺ = if 0 < x then x else 0 := by
   rw [_root_.posPart_def]
   split_ifs with hx
   · exact max_eq_left hx.le

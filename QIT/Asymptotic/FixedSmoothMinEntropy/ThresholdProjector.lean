@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Asymptotic.FixedSmoothMinEntropy.PetzWitness
+public import QIT.States.TraceNorm.BlockMatrix
 
 @[expose] public section
 
@@ -23,105 +24,6 @@ variable {a : Type u} {b : Type v}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 namespace State
 /-! ### Fixed-reference threshold projector bridge -/
-
-private theorem fixedSmooth_trace_re_le_of_le {ι : Type*} [Fintype ι] {X Y : CMatrix ι}
-    (hXY : X ≤ Y) :
-    X.trace.re ≤ Y.trace.re := by
-  have hnon : 0 ≤ (Y - X).trace.re := (Matrix.PosSemidef.trace_nonneg hXY).1
-  have htrace : (Y - X).trace.re = Y.trace.re - X.trace.re := by
-    simp [Matrix.trace_sub]
-  linarith
-
-private theorem fixedSmooth_identityTensorStateMatrix_trace_re (σ : State b) :
-    (identityTensorStateMatrix (a := a) σ).trace.re = (Fintype.card a : ℝ) := by
-  change (Matrix.kroneckerMap (fun x y => x * y) (1 : CMatrix a) σ.matrix).trace.re =
-    (Fintype.card a : ℝ)
-  rw [Matrix.trace_kronecker, σ.trace_eq_one, Matrix.trace_one]
-  norm_num
-
-private theorem neg_log2_rpow_two_neg (lam : ℝ) :
-    -log2 (Real.rpow 2 (-lam)) = lam := by
-  unfold log2
-  change -(Real.log ((2 : ℝ) ^ (-lam)) / Real.log 2) = lam
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2) (-lam)]
-  have hlog2 : Real.log 2 ≠ 0 := ne_of_gt (Real.log_pos one_lt_two)
-  field_simp [hlog2]
-
-private theorem cMatrix_trace_mul_le_of_le {ι : Type*} [Fintype ι] [DecidableEq ι]
-    {D X Y : CMatrix ι} (hD : D.PosSemidef) (hXY : X ≤ Y) :
-    ((D * X).trace).re ≤ ((D * Y).trace).re := by
-  rw [Matrix.le_iff] at hXY
-  have hnonneg : 0 ≤ ((D * (Y - X)).trace).re := by
-    let S := psdSqrt D
-    have hpsd : (S * (Y - X) * S).PosSemidef := by
-      have h := hXY.mul_mul_conjTranspose_same S
-      rw [psdSqrt_isHermitian D] at h
-      exact h
-    have htrace_re : 0 ≤ ((S * (Y - X) * S).trace).re :=
-      (Matrix.PosSemidef.trace_nonneg hpsd).1
-    have hEq : (D * (Y - X)).trace = (S * (Y - X) * S).trace := by
-      have hSsq : S * S = D := by
-        simpa [S] using psdSqrt_mul_self_of_posSemidef hD
-      rw [← hSsq]
-      calc
-        ((S * S) * (Y - X)).trace = (S * (S * (Y - X))).trace := by
-          rw [Matrix.mul_assoc]
-        _ = ((S * (Y - X)) * S).trace := by rw [Matrix.trace_mul_comm]
-        _ = (S * (Y - X) * S).trace := by rw [Matrix.mul_assoc]
-    rwa [hEq]
-  have hcalc :
-      ((D * (Y - X)).trace).re =
-        ((D * Y).trace).re - ((D * X).trace).re := by
-    simp [Matrix.mul_sub, Matrix.trace_sub]
-  linarith
-
-private theorem cMatrix_real_smul_le_smul {ι : Type*} [Fintype ι] [DecidableEq ι]
-    {A B : CMatrix ι} {c : ℝ} (hc : 0 ≤ c) (hAB : A ≤ B) :
-    ((c : ℂ) • A) ≤ ((c : ℂ) • B) := by
-  rw [Matrix.le_iff] at hAB ⊢
-  simpa [sub_eq_add_neg, smul_add, smul_neg] using hAB.smul hc
-
-private theorem ConditionalMinEntropyFeasible_scale_lower_bound
-    {ρ : State (Prod a b)} {σ : State b} {lam : ℝ}
-    (h : ConditionalMinEntropyFeasible (a := a) ρ σ lam) :
-    (Fintype.card a : ℝ)⁻¹ ≤ Real.rpow 2 (-lam) := by
-  haveI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
-  have htrace := fixedSmooth_trace_re_le_of_le h
-  have hleft : ρ.matrix.trace.re = 1 := by
-    rw [ρ.trace_eq_one]
-    norm_num
-  have hright :
-      (((Real.rpow 2 (-lam) : ℝ) : ℂ) • identityTensorStateMatrix (a := a) σ).trace.re =
-        Real.rpow 2 (-lam) * (Fintype.card a : ℝ) := by
-    rw [Matrix.trace_smul]
-    simp [fixedSmooth_identityTensorStateMatrix_trace_re (a := a) σ]
-  rw [hleft, hright] at htrace
-  have hcard_pos : 0 < (Fintype.card a : ℝ) := by
-    exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
-  rw [inv_le_iff_one_le_mul₀ hcard_pos]
-  simpa [mul_comm] using htrace
-
-private theorem ConditionalMinEntropyFeasible_le_log2_card_left
-    {ρ : State (Prod a b)} {σ : State b} {lam : ℝ}
-    (h : ConditionalMinEntropyFeasible (a := a) ρ σ lam) :
-    lam ≤ log2 (Fintype.card a : ℝ) := by
-  haveI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
-  have hscale := ConditionalMinEntropyFeasible_scale_lower_bound (a := a) h
-  have hcard_pos : 0 < (Fintype.card a : ℝ) := by
-    exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
-  have hlog := Real.log_le_log (inv_pos.mpr hcard_pos) hscale
-  have hlog2_nonneg : 0 ≤ Real.log 2 := le_of_lt (Real.log_pos one_lt_two)
-  have hdiv := div_le_div_of_nonneg_right hlog hlog2_nonneg
-  change log2 ((Fintype.card a : ℝ)⁻¹) ≤
-    log2 (Real.rpow 2 (-lam)) at hdiv
-  have hneg := neg_le_neg hdiv
-  have hcard :
-      -log2 ((Fintype.card a : ℝ)⁻¹) = log2 (Fintype.card a : ℝ) := by
-    unfold log2
-    rw [Real.log_inv]
-    ring
-  rw [neg_log2_rpow_two_neg lam, hcard] at hneg
-  exact hneg
 
 /-- Hermitian fixed-reference threshold matrix
 `ρ_AB - λ (I_A ⊗ σ_B)`.
@@ -297,7 +199,7 @@ theorem fixedPetzThresholdCompressedMatrix_trace_re_le_one
   let Q : CMatrix (Prod a b) := ρ.fixedPetzThresholdComplementProjector σ lambda
   have htrace_le' :
       ((ρ.matrix * Q).trace).re ≤ ((ρ.matrix * 1).trace).re :=
-    cMatrix_trace_mul_le_of_le ρ.pos
+    cMatrix_trace_mul_le_of_le_posSemidef_left ρ.pos
       (by
         rw [Matrix.le_iff]
         have hPpos := ρ.fixedPetzThresholdProjector_posSemidef σ lambda
@@ -1792,7 +1694,7 @@ theorem fixedPetzThresholdCompressedSubstate_normalize_le_scaled_compressed_thre
           (lambda • identityTensorStateMatrix (a := a) σ) *
             ρ.fixedPetzThresholdComplementProjector σ lambda) := by
   rw [fixedPetzThresholdCompressedSubstate_normalize_matrix]
-  exact cMatrix_real_smul_le_smul
+  exact cMatrix_ofReal_smul_le_smul
     (inv_nonneg.mpr
       (ρ.fixedPetzThresholdCompressedSubstate σ lambda).trace_nonneg)
     (ρ.fixedPetzThresholdCompressedMatrix_le_compressed_threshold σ lambda)

@@ -15,8 +15,10 @@ public import QIT.Channels.Diamond
 public import QIT.States.Schatten
 public import QIT.States.Purification.PureGeometry
 public import QIT.States.Purification.Uhlmann
+public import QIT.States.Geometry.PurifiedDistance
 public import QIT.States.Subnormalized
 public import QIT.States.TraceNorm.PositivePart
+public import QIT.States.Purification.Conditioning
 public import Mathlib.Data.Real.Archimedean
 
 /-!
@@ -54,480 +56,9 @@ variable {a : Type u} [Fintype a] [DecidableEq a]
 
 namespace State
 
-/-! ## Purified distance and smoothing balls -/
-
-/-- A normalized state satisfies the canonical subnormalized smoothing-radius
-condition exactly when the radius is below one. -/
-theorem epsilon_lt_sqrt_toSubnormalized_trace (rho : State a) {epsilon : ℝ}
-    (hepsilon : epsilon < 1) :
-    epsilon < Real.sqrt rho.toSubnormalized.matrix.trace.re := by
-  rw [State.toSubnormalized_trace]
-  simpa using hepsilon
-
-/-- Purified distance between normalized finite-dimensional states,
-`P(ρ,σ) = sqrt(1 - F(ρ,σ)^2)`, using the local squared-fidelity convention. -/
-def purifiedDistance (ρ σ : State a) : ℝ :=
-  Real.sqrt (1 - ρ.squaredFidelity σ)
-
-@[simp]
-theorem purifiedDistance_eq (ρ σ : State a) :
-    ρ.purifiedDistance σ = Real.sqrt (1 - ρ.squaredFidelity σ) :=
-  rfl
-
-/-- The closed purified-distance epsilon ball around a normalized state. -/
-def purifiedBall (ρ : State a) (ε : ℝ) (σ : State a) : Prop :=
-  ρ.purifiedDistance σ ≤ ε
-
-@[simp]
-theorem purifiedBall_eq (ρ σ : State a) (ε : ℝ) :
-    ρ.purifiedBall ε σ ↔ ρ.purifiedDistance σ ≤ ε :=
-  Iff.rfl
-
-/-- Purified-distance balls are monotone in the smoothing radius. -/
-theorem purifiedBall_mono {ρ σ : State a} {ε δ : ℝ} (hεδ : ε ≤ δ) :
-    ρ.purifiedBall ε σ → ρ.purifiedBall δ σ := by
-  intro hball
-  exact le_trans hball hεδ
-
-/-- Purified distance is antitone in squared fidelity.
-
-This is the algebraic handoff used by fidelity-monotonicity arguments: once a
-map is known to increase squared fidelity, its output purified distance is
-bounded by the input purified distance. -/
-theorem purifiedDistance_le_of_squaredFidelity_le
-    {b : Type v} [Fintype b] [DecidableEq b]
-    {ρ σ : State a} {τ υ : State b}
-    (hF : ρ.squaredFidelity σ ≤ τ.squaredFidelity υ) :
-    τ.purifiedDistance υ ≤ ρ.purifiedDistance σ := by
-  rw [State.purifiedDistance_eq, State.purifiedDistance_eq]
-  exact Real.sqrt_le_sqrt (by linarith)
-
-/-- The same squared-fidelity monotonicity handoff, phrased for purified balls. -/
-theorem purifiedBall_of_squaredFidelity_le
-    {b : Type v} [Fintype b] [DecidableEq b]
-    {ρ σ : State a} {τ υ : State b} {ε : ℝ}
-    (hF : ρ.squaredFidelity σ ≤ τ.squaredFidelity υ)
-    (hball : ρ.purifiedBall ε σ) :
-    τ.purifiedBall ε υ := by
-  exact le_trans (purifiedDistance_le_of_squaredFidelity_le hF) hball
-
-/-- Squared fidelity is symmetric, proved here from Uhlmann's purification
-characterization so the basic purified-distance layer can use it without
-importing endpoint trace-norm symmetry. -/
-theorem squaredFidelity_comm_of_uhlmann (ρ σ : State a) :
-    ρ.squaredFidelity σ = σ.squaredFidelity ρ := by
-  let Ψ : PureVector (Prod a a) := ρ.canonicalPurification
-  have hΨ : Ψ.Purifies ρ := by
-    simpa [Ψ] using ρ.canonicalPurification_purifies
-  obtain ⟨Φ, hΦ, hΦeq⟩ :=
-    PureVector.exists_purification_with_overlapSq_eq_squaredFidelity
-      (ρ := ρ) (σ := σ) hΨ (le_refl (Fintype.card a))
-  have hle_forward : ρ.squaredFidelity σ ≤ σ.squaredFidelity ρ := by
-    calc
-      ρ.squaredFidelity σ = Ψ.overlapSq Φ := hΦeq.symm
-      _ = Φ.overlapSq Ψ := PureVector.overlapSq_comm Φ Ψ
-      _ ≤ σ.squaredFidelity ρ :=
-          PureVector.overlapSq_le_squaredFidelity_of_purifies hΦ hΨ
-  let Ω : PureVector (Prod a a) := σ.canonicalPurification
-  have hΩ : Ω.Purifies σ := by
-    simpa [Ω] using σ.canonicalPurification_purifies
-  obtain ⟨Θ, hΘ, hΘeq⟩ :=
-    PureVector.exists_purification_with_overlapSq_eq_squaredFidelity
-      (ρ := σ) (σ := ρ) hΩ (le_refl (Fintype.card a))
-  have hle_reverse : σ.squaredFidelity ρ ≤ ρ.squaredFidelity σ := by
-    calc
-      σ.squaredFidelity ρ = Ω.overlapSq Θ := hΘeq.symm
-      _ = Θ.overlapSq Ω := PureVector.overlapSq_comm Θ Ω
-      _ ≤ ρ.squaredFidelity σ :=
-          PureVector.overlapSq_le_squaredFidelity_of_purifies hΘ hΩ
-  exact le_antisymm hle_forward hle_reverse
-
-/-- Squared fidelity is bounded by one. -/
-theorem squaredFidelity_le_one_of_uhlmann (ρ σ : State a) :
-    ρ.squaredFidelity σ ≤ 1 := by
-  let Ψ : PureVector (Prod a a) := ρ.canonicalPurification
-  have hΨ : Ψ.Purifies ρ := by
-    simpa [Ψ] using ρ.canonicalPurification_purifies
-  obtain ⟨Φ, _hΦ, hΦeq⟩ :=
-    PureVector.exists_purification_with_overlapSq_eq_squaredFidelity
-      (ρ := ρ) (σ := σ) hΨ (le_refl (Fintype.card a))
-  have hoverlap := PureVector.one_sub_overlapSq_nonneg Ψ Φ
-  rw [← hΦeq]
-  linarith
-
-/-- Purified distance is symmetric on normalized states. -/
-theorem purifiedDistance_comm (ρ σ : State a) :
-    σ.purifiedDistance ρ = ρ.purifiedDistance σ := by
-  rw [State.purifiedDistance_eq, State.purifiedDistance_eq,
-    squaredFidelity_comm_of_uhlmann σ ρ]
-
-/-- Any two purifications give an upper bound on the purified distance of
-their reduced states. -/
-theorem purifiedDistance_le_sqrt_one_sub_overlapSq_of_purifies
-    {r : Type v} [Fintype r] [DecidableEq r]
-    {ρ σ : State a} {Ψ Φ : PureVector (Prod r a)}
-    (hΨ : Ψ.Purifies ρ) (hΦ : Φ.Purifies σ) :
-    ρ.purifiedDistance σ ≤ Real.sqrt (1 - Ψ.overlapSq Φ) := by
-  rw [State.purifiedDistance_eq]
-  exact Real.sqrt_le_sqrt (by
-    have hF := PureVector.overlapSq_le_squaredFidelity_of_purifies hΨ hΦ
-    linarith)
-
-/-- Uhlmann's theorem, phrased directly for purified distance: for a fixed
-purification of `ρ` on a large enough reference, one can choose a purification
-of `σ` whose pure overlap realizes the purified distance. -/
-theorem exists_purification_purifiedDistance_eq_sqrt_one_sub_overlapSq
-    {r : Type v} [Fintype r] [DecidableEq r]
-    {ρ σ : State a} {Ψ : PureVector (Prod r a)}
-    (hΨ : Ψ.Purifies ρ) (hcard : Fintype.card a ≤ Fintype.card r) :
-    ∃ Φ : PureVector (Prod r a),
-      Φ.Purifies σ ∧
-        ρ.purifiedDistance σ = Real.sqrt (1 - Ψ.overlapSq Φ) := by
-  obtain ⟨Φ, hΦ, hΦeq⟩ :=
-    PureVector.exists_purification_with_overlapSq_eq_squaredFidelity
-      (ρ := ρ) (σ := σ) hΨ hcard
-  refine ⟨Φ, hΦ, ?_⟩
-  rw [State.purifiedDistance_eq, hΦeq]
-
-/-- Purified distance satisfies the triangle inequality on normalized finite
-states. -/
-theorem purifiedDistance_triangle (ρ σ τ : State a) :
-    ρ.purifiedDistance τ ≤ ρ.purifiedDistance σ + σ.purifiedDistance τ := by
-  let Ψ : PureVector (Prod a a) := ρ.canonicalPurification
-  have hΨ : Ψ.Purifies ρ := by
-    simpa [Ψ] using ρ.canonicalPurification_purifies
-  obtain ⟨Φ, hΦ, hρσ⟩ :=
-    exists_purification_purifiedDistance_eq_sqrt_one_sub_overlapSq
-      (ρ := ρ) (σ := σ) hΨ (le_refl (Fintype.card a))
-  obtain ⟨Ω, hΩ, hστ⟩ :=
-    exists_purification_purifiedDistance_eq_sqrt_one_sub_overlapSq
-      (ρ := σ) (σ := τ) hΦ (le_refl (Fintype.card a))
-  calc
-    ρ.purifiedDistance τ ≤ Real.sqrt (1 - Ψ.overlapSq Ω) :=
-      purifiedDistance_le_sqrt_one_sub_overlapSq_of_purifies hΨ hΩ
-    _ ≤ Real.sqrt (1 - Ψ.overlapSq Φ) +
-          Real.sqrt (1 - Φ.overlapSq Ω) :=
-      PureVector.sqrt_one_sub_overlapSq_triangle Ψ Φ Ω
-    _ = ρ.purifiedDistance σ + σ.purifiedDistance τ := by
-      rw [← hρσ, ← hστ]
-
-end State
-
-namespace PureVector
-
-/-- The squared overlap of two pure vectors is bounded by the squared fidelity
-of their rank-one states. -/
-theorem overlapSq_le_state_squaredFidelity (Ψ Φ : PureVector a) :
-    Ψ.overlapSq Φ ≤ Ψ.state.squaredFidelity Φ.state := by
-  classical
-  let e : a ≃ Prod PUnit.{u + 1} a := (Equiv.punitProd a).symm
-  let Ψ' : PureVector (Prod PUnit.{u + 1} a) := Ψ.reindex e
-  let Φ' : PureVector (Prod PUnit.{u + 1} a) := Φ.reindex e
-  have hΨm : Ψ'.state.marginalB = Ψ.state := by
-    apply State.ext
-    ext i j
-    simp [Ψ', e, PureVector.reindex_state, State.reindex, State.marginalB,
-      partialTraceA, PureVector.state_matrix, rankOneMatrix_apply]
-  have hΦm : Φ'.state.marginalB = Φ.state := by
-    apply State.ext
-    ext i j
-    simp [Φ', e, PureVector.reindex_state, State.reindex, State.marginalB,
-      partialTraceA, PureVector.state_matrix, rankOneMatrix_apply]
-  have hΨpur : Ψ'.Purifies Ψ.state := by
-    simpa [hΨm] using PureVector.purifies_marginalB Ψ'
-  have hΦpur : Φ'.Purifies Φ.state := by
-    simpa [hΦm] using PureVector.purifies_marginalB Φ'
-  have hbound := PureVector.overlapSq_le_squaredFidelity_of_purifies hΨpur hΦpur
-  simpa [Ψ', Φ', e, PureVector.overlapSq_reindex] using hbound
-
-end PureVector
-
-namespace State
-
 variable {b : Type v} [Fintype b] [DecidableEq b]
 
 variable {bPlus : Type*} [Fintype bPlus] [DecidableEq bPlus]
-
-/-! ## Conditioning-register isometries -/
-
-/-- Apply a finite reference isometry to the conditioning/right register of a
-state on `A × B`. -/
-def conditioningIsometryApply (ρ : State (Prod a b)) (V : ReferenceIsometry b bPlus) :
-    State (Prod a bPlus) where
-  matrix := V.applyMatrixRight ρ.matrix
-  pos := by
-    rw [← MatrixMap.kron_id_ofReferenceIsometry_apply_eq_applyMatrixRight
-      (a := a) V ρ.matrix]
-    exact MatrixMap.isCompletelyPositive_mapsPositive
-      (MatrixMap.kron (Channel.idChannel a).map (MatrixMap.ofReferenceIsometry V))
-      (MatrixMap.isCompletelyPositive_kron (Channel.idChannel a).map
-        (MatrixMap.ofReferenceIsometry V)
-        (Channel.idChannel a).completelyPositive
-        (MatrixMap.ofReferenceIsometry_isCompletelyPositive V))
-      ρ.matrix ρ.pos
-  trace_eq_one := by
-    rw [← MatrixMap.kron_id_ofReferenceIsometry_apply_eq_applyMatrixRight
-      (a := a) V ρ.matrix]
-    have hTP := MatrixMap.isTracePreserving_kron (Channel.idChannel a).map
-      (MatrixMap.ofReferenceIsometry V)
-      (Channel.idChannel a).tracePreserving
-      (MatrixMap.ofReferenceIsometry_isTracePreserving V)
-    rw [hTP ρ.matrix, ρ.trace_eq_one]
-
-@[simp]
-theorem conditioningIsometryApply_matrix (ρ : State (Prod a b))
-    (V : ReferenceIsometry b bPlus) :
-    (ρ.conditioningIsometryApply V).matrix = V.applyMatrixRight ρ.matrix :=
-  rfl
-
-theorem conditioningIsometryApply_matrix_eq_kronecker_conj
-    (ρ : State (Prod a b)) (V : ReferenceIsometry b bPlus) :
-    (ρ.conditioningIsometryApply V).matrix =
-      Matrix.kronecker (1 : CMatrix a) V.matrix * ρ.matrix *
-        Matrix.conjTranspose (Matrix.kronecker (1 : CMatrix a) V.matrix) := by
-  ext x y
-  simp [conditioningIsometryApply_matrix, ReferenceIsometry.applyMatrixRight,
-    ReferenceIsometry.rightBlock, Matrix.mul_apply, Matrix.kronecker,
-    Matrix.kroneckerMap_apply, Matrix.one_apply, Matrix.conjTranspose_kronecker,
-    Fintype.sum_prod_type, Finset.sum_mul, Finset.mul_sum,
-    Finset.sum_ite_eq', apply_ite, mul_assoc, mul_comm]
-
-theorem conditioningIsometryApply_marginalA (ρ : State (Prod a b))
-    (V : ReferenceIsometry b bPlus) :
-    (ρ.conditioningIsometryApply V).marginalA = ρ.marginalA := by
-  apply State.ext
-  rw [State.marginalA_matrix, State.marginalA_matrix, conditioningIsometryApply_matrix]
-  exact V.partialTraceB_applyMatrixRight ρ.matrix
-
-theorem conditioningIsometryApply_marginalB_matrix (ρ : State (Prod a b))
-    (V : ReferenceIsometry b bPlus) :
-    (ρ.conditioningIsometryApply V).marginalB.matrix =
-      V.matrix * ρ.marginalB.matrix * Matrix.conjTranspose V.matrix := by
-  rw [State.marginalB_matrix, State.marginalB_matrix, conditioningIsometryApply_matrix]
-  exact V.partialTraceA_applyMatrixRight ρ.matrix
-
-/-- The support isometry of a PSD right-register reference, as a
-`ReferenceIsometry` from the compressed support register into the original
-right register. -/
-noncomputable def psdSupportReferenceIsometry
-    (N : CMatrix b) (hN : N.PosSemidef) :
-    ReferenceIsometry (psdSupportIndex N hN) b where
-  matrix := psdSupportIsometry N hN
-  isometry := psdSupportIsometry_isometry N hN
-
-/-- Compress the right register of a bipartite matrix to the positive spectral
-support of a PSD right-register reference. -/
-noncomputable def psdSupportCompressRight
-    (N : CMatrix b) (hN : N.PosSemidef)
-    (X : CMatrix (Prod a b)) :
-    CMatrix (Prod a (psdSupportIndex N hN)) :=
-  fun x y =>
-    (Matrix.conjTranspose (psdSupportIsometry N hN) *
-      ReferenceIsometry.rightBlock X x.1 y.1 *
-      psdSupportIsometry N hN) x.2 y.2
-
-theorem psdSupportCompressRight_eq_conj
-    (N : CMatrix b) (hN : N.PosSemidef)
-    (X : CMatrix (Prod a b)) :
-    psdSupportCompressRight (a := a) N hN X =
-      Matrix.conjTranspose
-        (Matrix.kronecker (1 : CMatrix a) (psdSupportIsometry N hN)) *
-        X * Matrix.kronecker (1 : CMatrix a) (psdSupportIsometry N hN) := by
-  classical
-  ext x y
-  simp [psdSupportCompressRight, ReferenceIsometry.rightBlock, Matrix.mul_apply,
-    Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.one_apply,
-    Fintype.sum_prod_type, Finset.sum_mul, Finset.sum_ite_eq',
-    apply_ite]
-
-omit [DecidableEq a] in
-theorem partialTraceA_psdSupportCompressRight
-    (N : CMatrix b) (hN : N.PosSemidef)
-    (X : CMatrix (Prod a b)) :
-    partialTraceA (a := a) (b := psdSupportIndex N hN)
-        (psdSupportCompressRight (a := a) N hN X) =
-      psdSupportCompress N hN (partialTraceA (a := a) (b := b) X) := by
-  classical
-  ext i j
-  simp [partialTraceA, psdSupportCompressRight, psdSupportCompress,
-    ReferenceIsometry.rightBlock, Matrix.mul_apply, Finset.sum_mul,
-    Finset.mul_sum]
-  have hswap_outer :
-      (∑ x : a, ∑ y : b, ∑ i₁ : b,
-          (starRingEnd ℂ) (psdSupportIsometry N hN i₁ i) *
-            X (x, i₁) (x, y) * psdSupportIsometry N hN y j) =
-        ∑ y : b, ∑ x : a, ∑ i₁ : b,
-          (starRingEnd ℂ) (psdSupportIsometry N hN i₁ i) *
-            X (x, i₁) (x, y) * psdSupportIsometry N hN y j := by
-    simpa using
-      (Finset.sum_comm
-        (s := (Finset.univ : Finset a)) (t := (Finset.univ : Finset b))
-        (β := ℂ)
-        (f := fun (x : a) (y : b) =>
-          ∑ i₁ : b, (starRingEnd ℂ) (psdSupportIsometry N hN i₁ i) *
-            X (x, i₁) (x, y) * psdSupportIsometry N hN y j))
-  have hswap_inner :
-      (∑ y : b, ∑ x : a, ∑ i₁ : b,
-          (starRingEnd ℂ) (psdSupportIsometry N hN i₁ i) *
-            X (x, i₁) (x, y) * psdSupportIsometry N hN y j) =
-        ∑ y : b, ∑ i₁ : b, ∑ x : a,
-          (starRingEnd ℂ) (psdSupportIsometry N hN i₁ i) *
-            X (x, i₁) (x, y) * psdSupportIsometry N hN y j := by
-    refine Finset.sum_congr rfl fun (y : b) _ => ?_
-    simpa using
-      (Finset.sum_comm
-        (s := (Finset.univ : Finset a)) (t := (Finset.univ : Finset b))
-        (β := ℂ)
-        (f := fun (x : a) (i₁ : b) =>
-          (starRingEnd ℂ) (psdSupportIsometry N hN i₁ i) *
-            X (x, i₁) (x, y) * psdSupportIsometry N hN y j))
-  rw [hswap_outer, hswap_inner]
-
-/-- A bipartite state is supported by the identity tensor its right marginal. -/
-theorem matrix_supports_identityTensor_marginalB (ρ : State (Prod a b)) :
-    Matrix.Supports ρ.matrix
-      (Matrix.kronecker (1 : CMatrix a) ρ.marginalB.matrix) := by
-  classical
-  have hρ : Matrix.Supports ρ.matrix (ρ.marginalA.prod ρ.marginalB).matrix :=
-    ρ.matrix_supports_prod_marginals
-  have hprod :
-      Matrix.Supports (ρ.marginalA.prod ρ.marginalB).matrix
-        (Matrix.kronecker (1 : CMatrix a) ρ.marginalB.matrix) := by
-    intro v hv
-    let L : CMatrix (Prod a b) :=
-      Matrix.kronecker (1 : CMatrix a) ρ.marginalB.matrix
-    let K : CMatrix (Prod a b) :=
-      Matrix.kronecker ρ.marginalA.matrix (1 : CMatrix b)
-    have hfactor : (ρ.marginalA.prod ρ.marginalB).matrix = K * L := by
-      change Matrix.kronecker ρ.marginalA.matrix ρ.marginalB.matrix = K * L
-      simpa [K, L] using
-        (Matrix.mul_kronecker_mul ρ.marginalA.matrix (1 : CMatrix a)
-          (1 : CMatrix b) ρ.marginalB.matrix)
-    calc
-      Matrix.mulVec (ρ.marginalA.prod ρ.marginalB).matrix v =
-          Matrix.mulVec (K * L) v := by rw [hfactor]
-      _ = Matrix.mulVec K (Matrix.mulVec L v) := by
-          rw [Matrix.mulVec_mulVec]
-      _ = 0 := by
-          rw [show Matrix.mulVec L v = 0 from by simpa [L] using hv]
-          simp
-  exact Matrix.Supports.trans hρ hprod
-
-/-- Every fixed right-register block of a bipartite state is supported by the
-right marginal. -/
-theorem rightBlock_supports_marginalB
-    (ρ : State (Prod a b)) (x y : a) :
-    Matrix.Supports (ReferenceIsometry.rightBlock ρ.matrix x y)
-      ρ.marginalB.matrix := by
-  classical
-  intro v hv
-  let w : Prod a b → ℂ := fun z => if z.1 = y then v z.2 else 0
-  have hNw :
-      Matrix.mulVec (Matrix.kronecker (1 : CMatrix a) ρ.marginalB.matrix) w = 0 := by
-    ext z
-    by_cases hzy : z.1 = y
-    ·
-      simpa [w, Matrix.mulVec, dotProduct, Matrix.kronecker,
-        Matrix.kroneckerMap_apply, Matrix.one_apply, Fintype.sum_prod_type,
-        Finset.sum_ite_eq', hzy] using congrFun hv z.2
-    · simp [w, Matrix.mulVec, dotProduct, Matrix.kronecker,
-        Matrix.kroneckerMap_apply, Matrix.one_apply, Fintype.sum_prod_type,
-        Finset.sum_ite_eq', hzy]
-  have hSupport := matrix_supports_identityTensor_marginalB (a := a) (b := b) ρ
-  have hMw := hSupport w hNw
-  ext k
-  have hk := congrFun hMw (x, k)
-  simpa [ReferenceIsometry.rightBlock, Matrix.mulVec, dotProduct, w,
-    Fintype.sum_prod_type, Finset.sum_ite_eq'] using hk
-
-theorem rightBlock_conjTranspose
-    (ρ : State (Prod a b)) (x y : a) :
-    Matrix.conjTranspose (ReferenceIsometry.rightBlock ρ.matrix x y) =
-      ReferenceIsometry.rightBlock ρ.matrix y x := by
-  ext i j
-  have h := congrFun (congrFun ρ.pos.isHermitian.eq (y, i)) (x, j)
-  simpa [ReferenceIsometry.rightBlock, Matrix.conjTranspose_apply] using h
-
-/-- Compress a bipartite state to the positive spectral support of its right
-marginal. -/
-noncomputable def conditioningSupportCompressedState
-    (ρ : State (Prod a b)) :
-    State (Prod a (psdSupportIndex ρ.marginalB.matrix ρ.marginalB.pos)) where
-  matrix :=
-    psdSupportCompressRight (a := a) ρ.marginalB.matrix ρ.marginalB.pos ρ.matrix
-  pos := by
-    rw [psdSupportCompressRight_eq_conj]
-    exact Matrix.PosSemidef.conjTranspose_mul_mul_same ρ.pos
-      (Matrix.kronecker (1 : CMatrix a)
-        (psdSupportIsometry ρ.marginalB.matrix ρ.marginalB.pos))
-  trace_eq_one := by
-    let X : CMatrix (Prod a (psdSupportIndex ρ.marginalB.matrix ρ.marginalB.pos)) :=
-      psdSupportCompressRight (a := a) ρ.marginalB.matrix ρ.marginalB.pos ρ.matrix
-    calc
-      X.trace =
-          (partialTraceA (a := a)
-            (b := psdSupportIndex ρ.marginalB.matrix ρ.marginalB.pos) X).trace := by
-          rw [partialTraceA_trace]
-      _ = (psdSupportCompress ρ.marginalB.matrix ρ.marginalB.pos
-            ρ.marginalB.matrix).trace := by
-          rw [partialTraceA_psdSupportCompressRight]
-          simp
-      _ = ρ.marginalB.matrix.trace := by
-          rw [psdSupportCompress_trace_self]
-      _ = 1 := ρ.marginalB.trace_eq_one
-
-@[simp]
-theorem conditioningSupportCompressedState_matrix
-    (ρ : State (Prod a b)) :
-    ρ.conditioningSupportCompressedState.matrix =
-      psdSupportCompressRight (a := a)
-        ρ.marginalB.matrix ρ.marginalB.pos ρ.matrix := rfl
-
-@[simp]
-theorem conditioningSupportCompressedState_marginalB_matrix
-    (ρ : State (Prod a b)) :
-    ρ.conditioningSupportCompressedState.marginalB.matrix =
-      psdSupportCompress ρ.marginalB.matrix ρ.marginalB.pos
-        ρ.marginalB.matrix := by
-  change partialTraceA
-      (psdSupportCompressRight (a := a)
-        ρ.marginalB.matrix ρ.marginalB.pos ρ.matrix) =
-      psdSupportCompress ρ.marginalB.matrix ρ.marginalB.pos
-        ρ.marginalB.matrix
-  rw [partialTraceA_psdSupportCompressRight]
-  rfl
-
-theorem conditioningSupportCompressedState_marginalB_posDef
-    (ρ : State (Prod a b)) :
-    ρ.conditioningSupportCompressedState.marginalB.matrix.PosDef := by
-  rw [conditioningSupportCompressedState_marginalB_matrix]
-  exact psdSupportCompress_self_posDef ρ.marginalB.matrix ρ.marginalB.pos
-
-@[simp]
-theorem conditioningSupportCompressedState_conditioningIsometryApply
-    (ρ : State (Prod a b)) :
-    ρ.conditioningSupportCompressedState.conditioningIsometryApply
-      (psdSupportReferenceIsometry ρ.marginalB.matrix ρ.marginalB.pos) = ρ := by
-  apply State.ext
-  ext x y
-  let N : CMatrix b := ρ.marginalB.matrix
-  let hN : N.PosSemidef := ρ.marginalB.pos
-  let B : CMatrix b := ReferenceIsometry.rightBlock ρ.matrix x.1 y.1
-  have hB : Matrix.Supports B N := by
-    simpa [B, N] using rightBlock_supports_marginalB (a := a) (b := b) ρ x.1 y.1
-  have hBstar : Matrix.Supports (Matrix.conjTranspose B) N := by
-    rw [show Matrix.conjTranspose B =
-        ReferenceIsometry.rightBlock ρ.matrix y.1 x.1 from by
-      simpa [B] using rightBlock_conjTranspose (a := a) (b := b) ρ x.1 y.1]
-    simpa [N] using rightBlock_supports_marginalB (a := a) (b := b) ρ y.1 x.1
-  have hrec :=
-    psdSupportCompress_reconstruct_of_supports_right_and_conjTranspose
-      (M := B) (N := N) hN hB hBstar
-  have hentry := congrFun (congrFun hrec x.2) y.2
-  simpa [conditioningIsometryApply_matrix, ReferenceIsometry.applyMatrixRight,
-    conditioningSupportCompressedState_matrix, psdSupportReferenceIsometry,
-    psdSupportCompressRight, ReferenceIsometry.rightBlock, psdSupportCompress,
-    B, N, hN] using hentry
 
 /-- Purified distance cannot increase after tracing out the second subsystem. -/
 theorem purifiedDistance_marginalA_le [Nonempty b]
@@ -793,102 +324,7 @@ theorem EmbeddedABToACSmoothCandidate.exists_complementaryPureMarginalRel
   refine ⟨acMarginalFromABPurification Φ, hball, ?_⟩
   exact ⟨Φ, hΦ, rfl⟩
 
-/-! ## Normalized/subnormalized purified-distance bridge -/
-
-/-- Generalized fidelity reduces to squared fidelity for normalized states. -/
-theorem toSubnormalized_generalizedFidelity_eq_squaredFidelity (ρ σ : State a) :
-    ρ.toSubnormalized.generalizedFidelity σ.toSubnormalized = ρ.squaredFidelity σ := by
-  rw [SubnormalizedState.generalizedFidelity_eq,
-    State.squaredFidelity_eq_traceNorm_sqrtMatrix_mul_sqrtMatrix_sq]
-  have hρ : ρ.matrix.trace.re = 1 := by
-    rw [ρ.trace_eq_one]
-    norm_num
-  have hσ : σ.matrix.trace.re = 1 := by
-    rw [σ.trace_eq_one]
-    norm_num
-  simp [State.sqrtMatrix, hρ, hσ]
-
-/-- The subnormalized purified distance agrees with the normalized one after
-embedding normalized states via `State.toSubnormalized`. -/
-theorem toSubnormalized_purifiedDistance_eq (ρ σ : State a) :
-    ρ.toSubnormalized.purifiedDistance σ.toSubnormalized = ρ.purifiedDistance σ := by
-  rw [SubnormalizedState.purifiedDistance_eq, State.purifiedDistance_eq,
-    toSubnormalized_generalizedFidelity_eq_squaredFidelity]
-
 end State
-
-/-- Subnormalized purified distance agrees with normalized purified distance
-after adjoining the one-dimensional failure register in the hat extension.
-This is the purified-distance specialization of Tomamichel's hat route from
-`metric.tex`, lines 512-513 and 584-604. -/
-theorem SubnormalizedState.purifiedDistance_eq_purifiedDistance_hatExtension
-    (ρ σ : SubnormalizedState a) :
-    ρ.purifiedDistance σ =
-      ρ.hatExtension.purifiedDistance σ.hatExtension := by
-  rw [SubnormalizedState.purifiedDistance_eq, State.purifiedDistance_eq,
-    SubnormalizedState.generalizedFidelity_eq_squaredFidelity_hatExtension]
-
-/-- Subnormalized purified balls are exactly normalized purified balls after
-hat extension. -/
-theorem SubnormalizedState.purifiedBall_iff_hatExtension_purifiedBall
-    (ρ σ : SubnormalizedState a) (ε : ℝ) :
-    ρ.purifiedBall ε σ ↔ ρ.hatExtension.purifiedBall ε σ.hatExtension := by
-  rw [SubnormalizedState.purifiedBall_eq, State.purifiedBall_eq,
-    SubnormalizedState.purifiedDistance_eq_purifiedDistance_hatExtension]
-
-/-- Hat extension is injective on subnormalized states. -/
-theorem SubnormalizedState.eq_of_hatExtension_eq {ρ σ : SubnormalizedState a}
-    (h : ρ.hatExtension = σ.hatExtension) :
-    ρ = σ := by
-  apply SubnormalizedState.ext
-  ext i j
-  have hmatrix := congrArg State.matrix h
-  have hentry :
-      ρ.hatExtension.matrix (Sum.inr i) (Sum.inr j) =
-        σ.hatExtension.matrix (Sum.inr i) (Sum.inr j) := by
-    rw [hmatrix]
-  simpa [SubnormalizedState.hatExtension_matrix,
-    SubnormalizedState.hatExtensionMatrix_state_state] using hentry
-
-/-- Subnormalized purified distance is symmetric via the normalized
-hat-extension bridge. -/
-theorem SubnormalizedState.purifiedDistance_comm
-    (ρ σ : SubnormalizedState a) :
-    σ.purifiedDistance ρ = ρ.purifiedDistance σ := by
-  let ρhat : State (Sum PUnit.{u + 1} a) := ρ.hatExtension
-  let σhat : State (Sum PUnit.{u + 1} a) := σ.hatExtension
-  have hσρ : σ.purifiedDistance ρ = σhat.purifiedDistance ρhat := by
-    simpa [σhat, ρhat] using
-      (SubnormalizedState.purifiedDistance_eq_purifiedDistance_hatExtension
-        (a := a) σ ρ)
-  have hρσ : ρ.purifiedDistance σ = ρhat.purifiedDistance σhat := by
-    simpa [ρhat, σhat] using
-      (SubnormalizedState.purifiedDistance_eq_purifiedDistance_hatExtension
-        (a := a) ρ σ)
-  rw [hσρ, hρσ, State.purifiedDistance_comm ρhat σhat]
-
-/-- Subnormalized purified distance satisfies the triangle inequality via the
-normalized hat-extension bridge. -/
-theorem SubnormalizedState.purifiedDistance_triangle
-    (ρ σ τ : SubnormalizedState a) :
-    ρ.purifiedDistance τ ≤ ρ.purifiedDistance σ + σ.purifiedDistance τ := by
-  let ρhat : State (Sum PUnit.{u + 1} a) := ρ.hatExtension
-  let σhat : State (Sum PUnit.{u + 1} a) := σ.hatExtension
-  let τhat : State (Sum PUnit.{u + 1} a) := τ.hatExtension
-  have hρτ : ρ.purifiedDistance τ = ρhat.purifiedDistance τhat := by
-    simpa [ρhat, τhat] using
-      (SubnormalizedState.purifiedDistance_eq_purifiedDistance_hatExtension
-        (a := a) ρ τ)
-  have hρσ : ρ.purifiedDistance σ = ρhat.purifiedDistance σhat := by
-    simpa [ρhat, σhat] using
-      (SubnormalizedState.purifiedDistance_eq_purifiedDistance_hatExtension
-        (a := a) ρ σ)
-  have hστ : σ.purifiedDistance τ = σhat.purifiedDistance τhat := by
-    simpa [σhat, τhat] using
-      (SubnormalizedState.purifiedDistance_eq_purifiedDistance_hatExtension
-        (a := a) σ τ)
-  rw [hρτ, hρσ, hστ]
-  exact State.purifiedDistance_triangle ρhat σhat τhat
 
 /-- Moving the center of a subnormalized purified ball only increases the
 radius by the purified distance between the old and new centers. -/
@@ -946,49 +382,6 @@ theorem SubnormalizedState.generalizedFidelity_le_applyTraceNonincreasingCP
   change τ.generalizedFidelity υ = _ at hτF
   rw [hτF, hτhat, hυhat]
   exact State.squaredFidelity_le_applyState_squaredFidelity hΦ.hatCompletion ρhat σhat
-
-/-- Purified distance is monotone under trace-nonincreasing completely positive
-maps between subnormalized states. -/
-theorem SubnormalizedState.purifiedDistance_mono_traceNonincreasingCP
-    {b : Type v} [Fintype b] [DecidableEq b]
-    (ρ σ : SubnormalizedState a) (Φ : MatrixMap a b)
-    (hΦ : MatrixMap.TraceNonincreasingCP Φ) :
-    (ρ.applyTraceNonincreasingCP Φ hΦ).purifiedDistance
-        (σ.applyTraceNonincreasingCP Φ hΦ) ≤
-      ρ.purifiedDistance σ := by
-  let τ : SubnormalizedState b := ρ.applyTraceNonincreasingCP Φ hΦ
-  let υ : SubnormalizedState b := σ.applyTraceNonincreasingCP Φ hΦ
-  let ρhat : State (Sum PUnit.{max u v + 1} a) := ρ.hatExtension
-  let σhat : State (Sum PUnit.{max u v + 1} a) := σ.hatExtension
-  let τhat : State (Sum PUnit.{max u v + 1} b) := τ.hatExtension
-  let υhat : State (Sum PUnit.{max u v + 1} b) := υ.hatExtension
-  have hρP : ρ.purifiedDistance σ = ρhat.purifiedDistance σhat := by
-    simpa [ρhat, σhat] using
-      (SubnormalizedState.purifiedDistance_eq_purifiedDistance_hatExtension ρ σ)
-  have hτP : τ.purifiedDistance υ = τhat.purifiedDistance υhat := by
-    simpa [τhat, υhat] using
-      (SubnormalizedState.purifiedDistance_eq_purifiedDistance_hatExtension τ υ)
-  have hτhat : τhat = hΦ.hatCompletion.applyState ρhat := by
-    simpa [τ, τhat, ρhat] using
-      (SubnormalizedState.hatExtension_applyTraceNonincreasingCP ρ Φ hΦ)
-  have hυhat : υhat = hΦ.hatCompletion.applyState σhat := by
-    simpa [υ, υhat, σhat] using
-      (SubnormalizedState.hatExtension_applyTraceNonincreasingCP σ Φ hΦ)
-  change τ.purifiedDistance υ ≤ ρ.purifiedDistance σ
-  rw [hτP, hρP, hτhat, hυhat]
-  exact State.purifiedDistance_le_of_squaredFidelity_le
-    (State.squaredFidelity_le_applyState_squaredFidelity hΦ.hatCompletion ρhat σhat)
-
-/-- Trace-nonincreasing completely positive maps transport purified-distance
-balls between subnormalized states. -/
-theorem SubnormalizedState.purifiedBall_of_traceNonincreasingCP
-    {b : Type v} [Fintype b] [DecidableEq b]
-    {ρ σ : SubnormalizedState a} {ε : ℝ} (Φ : MatrixMap a b)
-    (hΦ : MatrixMap.TraceNonincreasingCP Φ)
-    (hball : ρ.purifiedBall ε σ) :
-    (ρ.applyTraceNonincreasingCP Φ hΦ).purifiedBall ε
-      (σ.applyTraceNonincreasingCP Φ hΦ) :=
-  le_trans (SubnormalizedState.purifiedDistance_mono_traceNonincreasingCP ρ σ Φ hΦ) hball
 
 /-- A subnormalized purified-distance ball of radius smaller than
 `sqrt (Tr ρ)` contains only positive-trace witnesses. -/
@@ -1264,21 +657,11 @@ theorem SubnormalizedState.purifiedBall_trace_lower_bound
     (sq_le_sq₀ hleft_nonneg (Real.sqrt_nonneg σ.matrix.trace.re)).mpr hsqrt_le
   rwa [Real.sq_sqrt σ.trace_nonneg] at hsquare
 
-private theorem traceNorm_eq_trace_re_of_posSemidef
-    (A : CMatrix a) (hA : A.PosSemidef) :
-    traceNorm A = A.trace.re := by
-  rw [traceNorm]
-  have hherm : Matrix.conjTranspose A = A := hA.isHermitian.eq
-  have hs : psdSqrt (Matrix.conjTranspose A * A) = A := by
-    rw [hherm]
-    simpa [psdSqrt, sq] using (CFC.sqrt_sq A hA.nonneg)
-  rw [hs]
-
 @[simp]
 theorem State.purifiedDistance_self (ρ : State a) :
     ρ.purifiedDistance ρ = 0 := by
   rw [State.purifiedDistance_eq, State.squaredFidelity_self_eq_traceNorm_matrix_sq,
-    traceNorm_eq_trace_re_of_posSemidef ρ.matrix ρ.pos]
+    traceNorm_posSemidef_eq_trace_re ρ.matrix ρ.pos]
   have htrace : ρ.matrix.trace.re = 1 := by
     rw [ρ.trace_eq_one]
     norm_num
@@ -1325,7 +708,7 @@ theorem SubnormalizedState.generalizedFidelity_self
     ρ.generalizedFidelity ρ = 1 := by
   rw [SubnormalizedState.generalizedFidelity_eq]
   rw [psdSqrt_mul_self_of_posSemidef ρ.pos]
-  rw [traceNorm_eq_trace_re_of_posSemidef ρ.matrix ρ.pos]
+  rw [traceNorm_posSemidef_eq_trace_re ρ.matrix ρ.pos]
   have hfail :
       Real.sqrt ((1 - ρ.matrix.trace.re) * (1 - ρ.matrix.trace.re)) =
         1 - ρ.matrix.trace.re := by
@@ -1540,19 +923,6 @@ theorem purifiedBall_iff_toSubnormalized_purifiedBall (ρ σ : State a) (ε : �
 /-! ## Conditional min/max entropy definitions -/
 
 variable {b : Type v} [Fintype b] [DecidableEq b]
-
-/-- Feasibility predicate for the conditional min-entropy order constraint
-`ρ_AB ≤ 2^{-λ} • (I_A ⊗ σ_B)` in the local bits convention. -/
-def ConditionalMinEntropyFeasible (ρ : State (Prod a b)) (σ : State b) (lam : ℝ) :
-    Prop :=
-  ρ.matrix ≤ (Real.rpow 2 (-lam) : ℂ) • identityTensorStateMatrix (a := a) σ
-
-@[simp]
-theorem ConditionalMinEntropyFeasible_eq (ρ : State (Prod a b)) (σ : State b)
-    (lam : ℝ) :
-    ConditionalMinEntropyFeasible (a := a) ρ σ lam ↔
-      ρ.matrix ≤ (Real.rpow 2 (-lam) : ℂ) • identityTensorStateMatrix (a := a) σ :=
-  Iff.rfl
 
 /-- Conditional min-entropy as the supremum of feasible exponents.
 
@@ -1872,29 +1242,6 @@ theorem conditioningSumInrCompressed_conditioningIsometryApply_sumInr
       (extra := extra) ρ)
 
 /-! ## Subnormalized conditional min/max entropy definitions -/
-
-/-- The matrix `I_A ⊗ σ_B` used in subnormalized conditional entropy definitions.
-
-Here `σ_B` is subnormalized, matching
-[Tomamichel2015FiniteResources, calculus.tex:81-89] and
-[Tomamichel2015FiniteResources, calculus.tex:191-198]. -/
-def identityTensorStateMatrix (σ : SubnormalizedState b) : CMatrix (Prod a b) :=
-  Matrix.kronecker (1 : CMatrix a) σ.matrix
-
-/-- Feasibility predicate for subnormalized conditional min-entropy in the
-local bits convention: `ρ_AB ≤ 2^{-λ} • (I_A ⊗ σ_B)` with
-`σ_B ∈ S_≤(B)`. -/
-def ConditionalMinEntropyFeasible
-    (ρ : SubnormalizedState (Prod a b)) (σ : SubnormalizedState b) (lam : ℝ) :
-    Prop :=
-  ρ.matrix ≤ (Real.rpow 2 (-lam) : ℂ) • identityTensorStateMatrix (a := a) σ
-
-@[simp]
-theorem ConditionalMinEntropyFeasible_eq
-    (ρ : SubnormalizedState (Prod a b)) (σ : SubnormalizedState b) (lam : ℝ) :
-    ConditionalMinEntropyFeasible (a := a) ρ σ lam ↔
-      ρ.matrix ≤ (Real.rpow 2 (-lam) : ℂ) • identityTensorStateMatrix (a := a) σ :=
-  Iff.rfl
 
 /-- Internal real-valued branch of subnormalized conditional min-entropy.
 
@@ -2280,34 +1627,6 @@ theorem smoothConditionalMaxEntropy_zero
 
 variable {c : Type*} [Fintype c] [DecidableEq c]
 
-/-- Scale a normalized state by a real weight in `[0,1]`, yielding a
-subnormalized state. This is the local smooth-entropy version of the scaled
-pure-state carrier used by the subnormalized duality route. -/
-def ofStateScale (ρ : State a) (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
-    SubnormalizedState a where
-  matrix := t • ρ.matrix
-  pos := Matrix.PosSemidef.smul ρ.pos ht0
-  trace_le_one := by
-    rw [Matrix.trace_smul, ρ.trace_eq_one]
-    simpa [Complex.real_smul] using ht1
-
-@[simp]
-theorem ofStateScale_matrix (ρ : State a) (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
-    (ofStateScale ρ t ht0 ht1).matrix = t • ρ.matrix :=
-  rfl
-
-@[simp]
-theorem ofStateScale_trace (ρ : State a) (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
-    (ofStateScale ρ t ht0 ht1).matrix.trace = (t : ℂ) := by
-  rw [ofStateScale_matrix, Matrix.trace_smul, ρ.trace_eq_one]
-  simp [Complex.real_smul]
-
-@[simp]
-theorem ofStateScale_trace_re (ρ : State a) (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
-    (ofStateScale ρ t ht0 ht1).matrix.trace.re = t := by
-  rw [ofStateScale_trace]
-  simp
-
 theorem ofStateScale_normalize_trace_eq
     (ρ : SubnormalizedState a) (hρ : 0 < ρ.matrix.trace.re) :
     SubnormalizedState.ofStateScale (ρ.normalize hρ.ne')
@@ -2330,34 +1649,6 @@ theorem identityTensorStateMatrix_ofStateScale
   simp [identityTensorStateMatrix, State.identityTensorStateMatrix, Matrix.kronecker,
     Matrix.kroneckerMap_apply, Complex.real_smul]
   ring
-
-/-- The `AB` marginal of a scaled pure tripartite state on left-associated
-`ABC`. -/
-def abMarginalFromScaledTripartitePure
-    (ψ : PureVector (Prod (Prod a b) c)) (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
-    SubnormalizedState (Prod a b) :=
-  ofStateScale ψ.state.marginalAB t ht0 ht1
-
-@[simp]
-theorem abMarginalFromScaledTripartitePure_matrix
-    (ψ : PureVector (Prod (Prod a b) c)) (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
-    (abMarginalFromScaledTripartitePure (a := a) (b := b) (c := c)
-      ψ t ht0 ht1).matrix = t • ψ.state.marginalAB.matrix :=
-  rfl
-
-/-- The `AC` marginal of a scaled pure tripartite state on left-associated
-`ABC`. -/
-def acMarginalFromScaledTripartitePure
-    (ψ : PureVector (Prod (Prod a b) c)) (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
-    SubnormalizedState (Prod a c) :=
-  ofStateScale ψ.state.marginalAC t ht0 ht1
-
-@[simp]
-theorem acMarginalFromScaledTripartitePure_matrix
-    (ψ : PureVector (Prod (Prod a b) c)) (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
-    (acMarginalFromScaledTripartitePure (a := a) (b := b) (c := c)
-      ψ t ht0 ht1).matrix = t • ψ.state.marginalAC.matrix :=
-  rfl
 
 /-- Two subnormalized bipartite states are complementary pure marginals when
 they are the `AB` and `AC` marginals of the same scaled normalized pure

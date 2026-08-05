@@ -7,7 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Coding.Classical.HSW
-public import QIT.Coding.Classical.Holevo
+public import QIT.Information.Entropy.Holevo
 public import QIT.Information.Entropy.EntropyTensorPower
 public import QIT.Information.Entropy.MutualInformationDPI
 public import QIT.Coding.Classical.RandomnessDistribution

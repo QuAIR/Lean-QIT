@@ -31,8 +31,6 @@ namespace QIT
 
 universe u
 
-set_option linter.unusedSectionVars false
-
 noncomputable section
 
 variable {M : Type u} [Fintype M] [DecidableEq M]
@@ -41,6 +39,7 @@ variable {M : Type u} [Fintype M] [DecidableEq M]
 def uniformMessageProb [Nonempty M] : M → ℝ≥0 :=
   fun _ => (Fintype.card M : ℝ≥0)⁻¹
 
+omit [DecidableEq M] in
 /-- The uniform message probabilities sum to one. -/
 theorem uniformMessageProb_sum [Nonempty M] :
     (∑ m : M, uniformMessageProb (M := M) m) = 1 := by
@@ -61,6 +60,7 @@ theorem uniformMessageState_matrix [Nonempty M] :
 def comparatorEffect : CMatrix (Prod M M) :=
   Matrix.diagonal fun p : Prod M M => if p.1 = p.2 then (1 : ℂ) else 0
 
+omit [Fintype M] in
 @[simp]
 theorem comparatorEffect_apply (p q : Prod M M) :
     comparatorEffect (M := M) p q =
@@ -72,12 +72,14 @@ theorem comparatorEffect_apply (p q : Prod M M) :
   · rw [Matrix.diagonal_apply_ne _ hpq]
     simp [hpq]
 
+omit [Fintype M] in
 /-- The comparator effect is positive semidefinite. -/
 theorem comparatorEffect_posSemidef :
     (comparatorEffect (M := M)).PosSemidef := by
   exact Matrix.PosSemidef.diagonal fun p => by
     by_cases h : p.1 = p.2 <;> simp [h]
 
+omit [Fintype M] in
 /-- The complement of the comparator effect is positive semidefinite. -/
 theorem comparatorEffect_compl_posSemidef :
     (1 - comparatorEffect (M := M)).PosSemidef := by
@@ -90,6 +92,7 @@ theorem comparatorEffect_compl_posSemidef :
     by_cases h : p.1 = p.2 <;> simp [comparatorEffect, h]
   · simp [comparatorEffect, hpq]
 
+omit [Fintype M] in
 /-- The comparator effect is bounded above by the identity. -/
 theorem comparatorEffect_le_one :
     comparatorEffect (M := M) ≤ 1 := by
@@ -203,6 +206,7 @@ theorem neg_log2_le_hypothesisTestingRelativeEntropyFinite_of_beta_le
 
 end State
 
+omit [DecidableEq M] in
 /-- `-log₂(1 / |M|) = log₂ |M|` for a nonempty finite message register. -/
 theorem neg_log2_inv_card [Nonempty M] :
     -log2 ((Fintype.card M : ℝ)⁻¹) = log2 (Fintype.card M : ℝ) := by

@@ -96,6 +96,38 @@ theorem partialTraceB_smul [Fintype b] (c : ℂ) (X : CMatrix (Prod a b)) :
   simp only [partialTraceB, Matrix.smul_apply, smul_eq_mul]
   exact (Finset.mul_sum _ _ _).symm
 
+/-- `Tr_A` commutes with subtraction. -/
+theorem partialTraceA_sub [Fintype a] (X Y : CMatrix (Prod a b)) :
+    partialTraceA (X - Y) = partialTraceA X - partialTraceA Y := by
+  ext j j'
+  simp [partialTraceA, Finset.sum_sub_distrib]
+
+/-- `Tr_B` commutes with subtraction. -/
+theorem partialTraceB_sub [Fintype b] (X Y : CMatrix (Prod a b)) :
+    partialTraceB (X - Y) = partialTraceB X - partialTraceB Y := by
+  ext i i'
+  simp [partialTraceB, Finset.sum_sub_distrib]
+
+/-- Nonnegative real scalar multiplication preserves the Loewner order on
+complex matrices (real `SMul ℝ` action form). -/
+theorem cMatrix_real_smul_le_smul {a : Type u} [Fintype a] [DecidableEq a]
+    {A B : CMatrix a} {t : ℝ} (ht : 0 ≤ t) (hAB : A ≤ B) :
+    (t • A) ≤ (t • B) := by
+  rw [Matrix.le_iff] at hAB ⊢
+  have hdiff : (t • B - t • A : CMatrix a) = t • (B - A) := by
+    ext i j
+    simp [sub_eq_add_neg, Complex.real_smul]
+  rw [hdiff]
+  exact hAB.smul ht
+
+/-- Nonnegative real scalar multiplication preserves the Loewner order on
+complex matrices (complex-coercion form, with the scalar cast to `ℂ`). -/
+theorem cMatrix_ofReal_smul_le_smul {a : Type u} [Fintype a] [DecidableEq a]
+    {A B : CMatrix a} {c : ℝ} (hc : 0 ≤ c) (hAB : A ≤ B) :
+    ((c : ℂ) • A) ≤ ((c : ℂ) • B) := by
+  rw [Matrix.le_iff] at hAB ⊢
+  simpa [sub_eq_add_neg, smul_add, smul_neg] using hAB.smul hc
+
 /-- Taking `Tr_A` preserves the full matrix trace. -/
 theorem partialTraceA_trace [Fintype a] [Fintype b] (X : CMatrix (Prod a b)) :
     (partialTraceA (a := a) (b := b) X).trace = X.trace := by
@@ -243,6 +275,67 @@ theorem partialTraceA_posSemidef [Fintype a] [Fintype b]
   convert hsum using 1
   ext j j'
   simp [partialTraceA, block, Matrix.sum_apply]
+
+/-- Reindex a triple finite sum over `a × b × b` to move the `a`-sum outermost. -/
+theorem finset_sum_b_b_a_reorder {a : Type u} {b : Type v} [Fintype a] [Fintype b]
+    {R : Type*} [AddCommMonoid R] (F : a → b → b → R) :
+    (∑ j : b, ∑ k : b, ∑ i : a, F i j k) =
+      ∑ i : a, ∑ j : b, ∑ k : b, F i j k := by
+  calc
+    (∑ j : b, ∑ k : b, ∑ i : a, F i j k) =
+        ∑ k : b, ∑ j : b, ∑ i : a, F i j k := by
+      rw [Finset.sum_comm]
+    _ = ∑ k : b, ∑ i : a, ∑ j : b, F i j k := by
+      apply Finset.sum_congr rfl
+      intro k _
+      rw [Finset.sum_comm]
+    _ = ∑ i : a, ∑ k : b, ∑ j : b, F i j k := by
+      rw [Finset.sum_comm]
+    _ = ∑ i : a, ∑ j : b, ∑ k : b, F i j k := by
+      apply Finset.sum_congr rfl
+      intro i _
+      rw [Finset.sum_comm]
+
+/-- The quadratic form of a first-subsystem partial trace expands as the sum of
+the slice quadratic forms. -/
+theorem partialTraceA_quadratic_eq_sum_slice {a : Type u} {b : Type v}
+    [Fintype a] [DecidableEq a] [Fintype b]
+    (M : CMatrix (Prod a b)) (y : b → ℂ) :
+    let z : a → Prod a b → ℂ := fun i p => if p.1 = i then y p.2 else 0
+    star y ⬝ᵥ (partialTraceA (a := a) (b := b) M).mulVec y =
+      ∑ i, star (z i) ⬝ᵥ M.mulVec (z i) := by
+  intro z
+  simp [z, partialTraceA, Matrix.mulVec, dotProduct, Fintype.sum_prod_type,
+    Finset.mul_sum, Finset.sum_mul, apply_ite]
+  rw [finset_sum_b_b_a_reorder (a := a) (b := b)
+    (F := fun i j k => starRingEnd ℂ (y j) * (M (i, j) (i, k) * y k))]
+
+/-- The partial trace over a nonempty first subsystem of a positive definite
+matrix is positive definite. -/
+theorem partialTraceA_posDef_of_posDef {a : Type u} {b : Type v}
+    [Fintype a] [DecidableEq a] [Fintype b] [Nonempty a]
+    {M : CMatrix (Prod a b)} (hM : M.PosDef) :
+    (partialTraceA (a := a) (b := b) M).PosDef := by
+  refine Matrix.PosDef.of_dotProduct_mulVec_pos
+    (partialTraceA_posSemidef (a := a) (b := b) hM.posSemidef).1 ?_
+  intro y hy
+  let z : a → Prod a b → ℂ := fun i p => if p.1 = i then y p.2 else 0
+  have hz (i : a) : z i ≠ 0 := by
+    intro hzi
+    apply hy
+    funext j
+    have h := congr_fun hzi (i, j)
+    simpa [z] using h
+  have hnonneg : ∀ i : a, 0 ≤ star (z i) ⬝ᵥ M.mulVec (z i) := by
+    intro i
+    exact hM.posSemidef.dotProduct_mulVec_nonneg (z i)
+  have hpos :
+      0 < star (z (Classical.choice inferInstance)) ⬝ᵥ
+        M.mulVec (z (Classical.choice inferInstance)) :=
+    hM.dotProduct_mulVec_pos (hz (Classical.choice inferInstance))
+  rw [partialTraceA_quadratic_eq_sum_slice (M := M) (y := y)]
+  exact Finset.sum_pos' (fun i _ => hnonneg i)
+    ⟨Classical.choice inferInstance, Finset.mem_univ _, hpos⟩
 
 /-- Partial trace on the second subsystem preserves positive semidefiniteness. -/
 theorem partialTraceB_posSemidef [Fintype a] [Fintype b]

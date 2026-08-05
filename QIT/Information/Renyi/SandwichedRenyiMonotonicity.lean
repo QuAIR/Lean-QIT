@@ -6,9 +6,8 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.Basic
+public import QIT.Information.Renyi.SandwichedMutualInformation
 public import QIT.Information.Renyi.FrankLieb.DPI
-public import QIT.Information.Renyi.RenyiDPI.ConditionalMeasurement
 public import Mathlib.Analysis.Calculus.Deriv.Basic
 public import Mathlib.Analysis.Calculus.Deriv.MeanValue
 

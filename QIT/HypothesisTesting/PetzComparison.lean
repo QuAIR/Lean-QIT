@@ -9,7 +9,7 @@ module
 public import QIT.Coding.EntanglementAssisted.OneShot.Lower.Petz
 public import QIT.Coding.EntanglementAssisted.OneShot.Lower.HypothesisTesting
 public import QIT.HypothesisTesting.ComparatorTest
-public import QIT.HypothesisTesting.Audenaert
+public import QIT.States.TraceNorm.Audenaert
 public import QIT.States.Schatten
 
 /-!

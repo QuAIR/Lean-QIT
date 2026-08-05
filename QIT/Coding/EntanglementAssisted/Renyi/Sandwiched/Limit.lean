@@ -948,14 +948,14 @@ theorem marginalB_supports_of_supports_prod_left_side
     Matrix.Supports rhoAB.marginalB.matrix sigmaB.matrix := by
   have hOut :
       Matrix.Supports
-        ((Channel.traceOutAForHypothesisTestingDPI a b).applyState rhoAB).matrix
-        ((Channel.traceOutAForHypothesisTestingDPI a b).map
+        ((Channel.traceOutLeft a b).applyState rhoAB).matrix
+        ((Channel.traceOutLeft a b).map
           (rhoAB.marginalA.prod sigmaB).matrix) :=
     channel_applyState_supports_of_supports rhoAB
       (rhoAB.marginalA.prod sigmaB).pos
-      (Channel.traceOutAForHypothesisTestingDPI a b) hSupport
-  simpa [Channel.traceOutAForHypothesisTestingDPI_applyState,
-    Channel.traceOutAForHypothesisTestingDPI_map, State.partialTraceA_prod] using hOut
+      (Channel.traceOutLeft a b) hSupport
+  simpa [Channel.traceOutLeft_applyState,
+    Channel.traceOutLeft_map, State.partialTraceA_prod] using hOut
 
 /-- The side-state trace-log relative entropy term in the Khatri--Wilde
 endpoint optimization is nonnegative. -/

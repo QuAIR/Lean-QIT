@@ -7,7 +7,8 @@ Authors: QuAIR Team
 module
 
 public import QIT.Coding.EntanglementAssisted.OneShot.Lower.Naimark
-public import QIT.Information.PositionNaimarkTrace
+public import QIT.Coding.EntanglementAssisted.PositionNaimarkTrace
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # Hypothesis-testing one-shot lower-bound assembly
@@ -329,22 +330,6 @@ theorem canonicalIndexed_falsePair_liftedAcceptTrace
     (decoder := decoder) (m := m) (i := i) hi
   exact (congrArg (fun τ => SequentialDecoding.effectTrace τ Λ.effect) hstate).trans rfl
 
-/-- Base-two logarithm is monotone on positive reals. -/
-private theorem log2_mono_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    log2 x ≤ log2 y := by
-  unfold log2
-  exact div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-    (le_of_lt (Real.log_pos one_lt_two))
-
-/-- The base-two logarithm inverts positive powers of two. -/
-private theorem log2_rpow_two (x : ℝ) :
-    log2 (Real.rpow 2 x) = x := by
-  unfold log2
-  rw [show Real.log (Real.rpow 2 x) = x * Real.log 2 by
-    exact Real.log_rpow (by norm_num : (0 : ℝ) < 2) x]
-  have hlog2 : Real.log 2 ≠ 0 := (Real.log_pos one_lt_two).ne'
-  field_simp [hlog2]
-
 /-- If a finite message set has cardinality at least `2^lowerBound`, then the
 position-based one-shot code rate is at least `lowerBound`. -/
 theorem lowerBound_le_rate_of_rpow_two_le_card
@@ -356,15 +341,6 @@ theorem lowerBound_le_rate_of_rpow_two_le_card
     Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) lowerBound
   have hlog := log2_mono_of_pos hpow_pos hcard
   rwa [log2_rpow_two] at hlog
-
-/-- Positive reals are recovered from their base-two logarithm. -/
-private theorem rpow_two_log2_pos {x : ℝ} (hx : 0 < x) :
-    Real.rpow 2 (log2 x) = x := by
-  apply Real.log_injOn_pos (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _) hx
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2)]
-  unfold log2
-  have hlog2 : Real.log 2 ≠ 0 := (Real.log_pos one_lt_two).ne'
-  field_simp [hlog2]
 
 /-- `2^{-log₂ x}` is the reciprocal of `x` for positive `x`. -/
 private theorem rpow_two_neg_log2 {x : ℝ} (hx : 0 < x) :

@@ -128,12 +128,6 @@ theorem negativeEigenvalueBlock_posSemidef (H : CMatrix a) (hH : H.IsHermitian) 
   have hi : hH.eigenvalues i.1 ≤ 0 := le_of_not_gt i.2
   exact_mod_cast (neg_nonneg.mpr hi)
 
-private theorem real_posPart_eq_if (x : ℝ) : x⁺ = if 0 < x then x else 0 := by
-  rw [_root_.posPart_def]
-  split_ifs with hx
-  · exact max_eq_left hx.le
-  · exact max_eq_right (le_of_not_gt hx)
-
 private theorem real_negPart_eq_if (x : ℝ) : x⁻ = if 0 < x then 0 else -x := by
   rw [_root_.negPart_def]
   split_ifs with hx

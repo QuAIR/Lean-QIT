@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Protocols.FQSW.IIDTypical
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # FQSW IID rate and register arithmetic
@@ -1141,32 +1142,6 @@ theorem eventually_half_adhwFQSWIidRoundedPostCompressionTraceErrorBound_le
   simpa [adhwFQSWIidRoundedPostCompressionTraceErrorBound,
     adhwFQSWIidPostCompressionTraceErrorBound, hexp] using hbound
 
-/-- Base-two logarithm is monotone on positive reals. -/
-private theorem log2_mono_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    log2 x ≤ log2 y := by
-  unfold log2
-  exact div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-    (le_of_lt (Real.log_pos one_lt_two))
-
-/-- The base-two logarithm inverts positive powers of two. -/
-private theorem log2_two_rpow (x : ℝ) :
-    log2 ((2 : ℝ) ^ x) = x := by
-  unfold log2
-  rw [show Real.log ((2 : ℝ) ^ x) = x * Real.log 2 by
-    exact Real.log_rpow (by norm_num : (0 : ℝ) < 2) x]
-  have hlog2 : Real.log 2 ≠ 0 := (Real.log_pos one_lt_two).ne'
-  field_simp [hlog2]
-
-/-- Base-two powers invert `log2` on positive reals. -/
-private theorem two_rpow_log2_pos {x : ℝ} (hx : 0 < x) :
-    (2 : ℝ) ^ log2 x = x := by
-  apply Real.log_injOn_pos
-    (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _) hx
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2)]
-  unfold log2
-  have hlog2 : Real.log 2 ≠ 0 := (Real.log_pos one_lt_two).ne'
-  field_simp [hlog2]
-
 /-- Upper cardinality bounds convert into upper base-two log bounds. -/
 private theorem log2_le_of_le_two_rpow {x t : ℝ}
     (hx : 0 < x) (hxt : x ≤ (2 : ℝ) ^ t) :
@@ -1181,7 +1156,7 @@ theorem le_two_rpow_of_log2_le {x t : ℝ}
   have hpow :=
     Real.rpow_le_rpow_of_exponent_le
       (x := (2 : ℝ)) (by norm_num : (1 : ℝ) ≤ 2) hxt
-  simpa [two_rpow_log2_pos hx] using hpow
+  rwa [show (2 : ℝ) ^ log2 x = x from rpow_two_log2_pos hx] at hpow
 
 /-- Lower powers-of-two cardinality bounds convert into lower base-two log
 bounds. -/

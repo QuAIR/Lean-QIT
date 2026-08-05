@@ -8,6 +8,7 @@ module
 
 public import QIT.Information.Renyi.FrankLieb.DPI
 public import QIT.HypothesisTesting.MutualInformation
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # Hypothesis testing to sandwiched-Renyi comparison
@@ -166,40 +167,11 @@ theorem hypothesisTestingRelativeEntropyPSDE_eq_state (sigma : State a) :
     hypothesisTestingBetaPSDCandidateSet, hypothesisTestingBetaCandidateSet,
     HypothesisTestingEffect.typeIIErrorPSD_eq_state]
 
-private theorem neg_log2_rpow_two_neg (C : ℝ) :
-    -log2 (Real.rpow 2 (-C)) = C := by
-  have hlog2_pos : 0 < Real.log 2 := Real.log_pos one_lt_two
-  unfold log2
-  change -(Real.log ((2 : ℝ) ^ (-C)) / Real.log 2) = C
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2)]
-  field_simp [ne_of_gt hlog2_pos]
-
-private theorem log2_mono_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    log2 x ≤ log2 y := by
-  unfold log2
-  exact div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-    (le_of_lt (Real.log_pos one_lt_two))
-
 private theorem sandwich_log2_rpow_pos {x : ℝ} (hx : 0 < x) (y : ℝ) :
     log2 (x ^ y) = y * log2 x := by
   unfold log2
   rw [Real.log_rpow hx y]
   ring
-
-private theorem log2_inv_pos {x : ℝ} (hx : 0 < x) :
-    log2 (1 / x) = -log2 x := by
-  unfold log2
-  rw [Real.log_div one_ne_zero hx.ne']
-  simp
-  ring
-
-private theorem rpow_two_log2_pos {x : ℝ} (hx : 0 < x) :
-    Real.rpow 2 (log2 x) = x := by
-  apply Real.log_injOn_pos (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _) hx
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2)]
-  unfold log2
-  have hlog2 : Real.log 2 ≠ 0 := (Real.log_pos one_lt_two).ne'
-  field_simp [hlog2]
 
 private theorem rpow_two_neg_le_of_neg_log2_le {q C : ℝ} (hq : 0 < q)
     (h : -log2 q ≤ C) :
@@ -492,7 +464,7 @@ private theorem typeIIErrorPSD_rpow_lower_bound_of_sandwichedRenyi
         rho.sandwichedRenyiPSDReferenceHighAlphaFinite sigma hsigma alpha :=
     hmeasureLower.trans hDPI
   have hinv : log2 (1 / (1 - epsilon)) = -log2 (1 - epsilon) :=
-    log2_inv_pos (sub_pos.mpr hε_lt_one)
+    log2_one_div (1 - epsilon)
   have hneg :
       -log2 q ≤
         rho.sandwichedRenyiPSDReferenceHighAlphaFinite sigma hsigma alpha +

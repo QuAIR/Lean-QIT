@@ -36,27 +36,12 @@ namespace Channel
 
 variable (N : Channel a b)
 
-/-- The asymptotic upper input gives the standard converse witness family used
-by the final capacity-squeeze theorem. -/
-theorem entanglementAssisted_converseWitnessFamily_of_asymptoticUpperInput
-    (H : N.EntanglementAssistedAsymptoticUpperInput) :
-    EntanglementAssistedConverseWitnessFamily N :=
-  N.entanglementAssisted_converseWitnessFamily_of_logCardUpperBounds H.logCard_upper
-
 /-- The source-shaped asymptotic upper input gives the source-consistent
 converse witness family used by the KW strong-converse route. -/
 theorem entanglementAssisted_sourceConverseWitnessFamily_of_sourceAsymptoticUpperInput
     (H : N.EntanglementAssistedSourceAsymptoticUpperInput) :
     EntanglementAssistedSourceConverseWitnessFamily N :=
   N.entanglementAssisted_sourceConverseWitnessFamily_of_logCardUpperBounds H.logCard_upper
-
-/-- Ordinary-rate upper-bound consequence of the asymptotic upper input. -/
-theorem entanglementAssistedInformation_isRateUpperBound_of_asymptoticUpperInput
-    (H : N.EntanglementAssistedAsymptoticUpperInput) :
-    N.IsEntanglementAssistedClassicalRateUpperBound
-      N.entanglementAssistedInformation :=
-  N.entanglementAssisted_information_isUpperBound_of_converseWitness
-    (N.entanglementAssisted_converseWitnessFamily_of_asymptoticUpperInput H)
 
 /-- Ordinary-rate upper-bound consequence of the source-shaped asymptotic
 upper input. -/
@@ -67,14 +52,6 @@ theorem entanglementAssistedInformation_isRateUpperBound_of_sourceAsymptoticUppe
   N.entanglementAssisted_information_isUpperBound_of_sourceConverseWitness
     (N.entanglementAssisted_sourceConverseWitnessFamily_of_sourceAsymptoticUpperInput H)
 
-/-- Strong-converse-rate consequence of the asymptotic upper input. -/
-theorem entanglementAssistedInformation_isStrongConverseRate_of_asymptoticUpperInput
-    (H : N.EntanglementAssistedAsymptoticUpperInput) :
-    N.IsStrongConverseEntanglementAssistedClassicalRate
-      N.entanglementAssistedInformation :=
-  N.entanglementAssisted_information_isStrongConverseRate_of_converseWitness
-    (N.entanglementAssisted_converseWitnessFamily_of_asymptoticUpperInput H)
-
 /-- Strong-converse-rate consequence of the source-shaped asymptotic upper
 input. -/
 theorem entanglementAssistedInformation_isStrongConverseRate_of_sourceAsymptoticUpperInput
@@ -83,19 +60,6 @@ theorem entanglementAssistedInformation_isStrongConverseRate_of_sourceAsymptotic
       N.entanglementAssistedInformation :=
   N.entanglementAssisted_information_isStrongConverseRate_of_sourceConverseWitness
     (N.entanglementAssisted_sourceConverseWitnessFamily_of_sourceAsymptoticUpperInput H)
-
-/-- Capacity upper-bound consequence, separated from the asymptotic upper input
-so the dependence on the already-proved lower-bound/achievability route stays
-explicit. -/
-theorem entanglementAssistedClassicalCapacity_le_information_of_asymptoticUpperInput
-    (hach :
-      N.IsAchievableEntanglementAssistedClassicalRate
-        N.entanglementAssistedInformation)
-    (H : N.EntanglementAssistedAsymptoticUpperInput) :
-    N.entanglementAssistedClassicalCapacity ≤
-      N.entanglementAssistedInformation :=
-  N.entanglementAssistedClassicalCapacity_le_information_of_converseWitness
-    hach (N.entanglementAssisted_converseWitnessFamily_of_asymptoticUpperInput H)
 
 /-- Capacity upper-bound consequence of the source-shaped asymptotic upper
 input. -/
@@ -108,18 +72,6 @@ theorem entanglementAssistedClassicalCapacity_le_information_of_sourceAsymptotic
       N.entanglementAssistedInformation :=
   N.entanglementAssistedClassicalCapacity_le_information_of_sourceConverseWitness
     hach (N.entanglementAssisted_sourceConverseWitnessFamily_of_sourceAsymptoticUpperInput H)
-
-/-- Strong-converse capacity upper-bound consequence, again keeping the
-achievability input explicit for the final capacity squeeze. -/
-theorem strongConverseEntanglementAssistedClassicalCapacity_le_information_of_asymptoticUpperInput
-    (hach :
-      N.IsAchievableEntanglementAssistedClassicalRate
-        N.entanglementAssistedInformation)
-    (H : N.EntanglementAssistedAsymptoticUpperInput) :
-    N.strongConverseEntanglementAssistedClassicalCapacity ≤
-      N.entanglementAssistedInformation :=
-  N.strongConverseEntanglementAssistedClassicalCapacity_le_information hach
-    (N.entanglementAssistedInformation_isStrongConverseRate_of_asymptoticUpperInput H)
 
 /-- Strong-converse capacity upper-bound consequence of the source-shaped
 asymptotic upper input. -/

@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Renyi.SandwichedRenyiMonotonicity
+public import QIT.States.TraceNorm.Spectral
 public import Mathlib.Topology.Semicontinuity.Basic
 
 /-!

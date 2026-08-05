@@ -7,7 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Coding.Classical.HSW
-public import QIT.Coding.Classical.Holevo
+public import QIT.Information.Entropy.Entropy
 public import QIT.Information.CQChannel
 public import QIT.Information.Entropy.EntropyTensorPower
 public import QIT.HypothesisTesting.ComparatorTest

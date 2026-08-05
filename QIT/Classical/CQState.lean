@@ -7,7 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Classical.Ensemble
-public import QIT.Util.BlockMatrix
+public import QIT.States.TraceNorm.Distance
 public import QIT.Util.Matrix
 
 /-!

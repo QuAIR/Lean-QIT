@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Symmetry.SymmetricSubspace
+public import QIT.Symmetry.TensorPowerSplit
 public import QIT.Symmetry.UnitaryTwirl
 public import QIT.Symmetry.DeFinetti
 

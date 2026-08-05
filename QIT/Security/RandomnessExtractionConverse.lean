@@ -8,6 +8,7 @@ module
 
 public import QIT.Security.RandomnessExtractionOptimized
 public import QIT.Classical.Bridge
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # Converse-side randomness-extraction helpers
@@ -3719,23 +3720,9 @@ theorem extractableRandomnessLog_le_source_toSubnormalized_smoothConditionalMinE
   extractableRandomnessLog_le_source_toSubnormalized_smoothConditionalMinEntropy_of_valueSet_nonempty
     (E := E) hε0 hε1 (extractableRandomnessLogValueSet_nonempty_of_nonneg E hε0)
 
-private theorem log2_mono_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    log2 x ≤ log2 y := by
-  unfold log2
-  exact div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-    (le_of_lt (Real.log_pos one_lt_two))
-
 /-- Finite-alphabet lower endpoint associated to a real bit lower bound. -/
 def roundedOutputLengthLower (l : Real) : Nat :=
   max 1 (Nat.floor (Real.rpow 2 l))
-
-private theorem log2_rpow_two (l : Real) : log2 (Real.rpow 2 l) = l := by
-  unfold log2
-  have hlog : Real.log (Real.rpow 2 l) = l * Real.log 2 := by
-    simpa using (Real.log_rpow (x := (2 : Real)) (by norm_num : (0 : Real) < 2) l)
-  rw [hlog]
-  have hlogtwo : Ne (Real.log 2) 0 := (Real.log_pos one_lt_two).ne'
-  field_simp [hlogtwo]
 
 private theorem roundedOutputLengthLower_pos (l : Real) :
     0 < roundedOutputLengthLower l := by

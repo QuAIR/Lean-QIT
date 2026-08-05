@@ -6,6 +6,7 @@ Authors: QuAIR Team
 
 module
 
+public import QIT.Information.Entropy.Holevo
 public import QIT.Information.Entropy.StrongSubadditivity
 
 /-!
@@ -20,8 +21,6 @@ apply strong subadditivity as `I(A;X|B) ≥ 0`, and expand the two cq entropies.
 -/
 
 @[expose] public section
-
-set_option linter.unusedSectionVars false
 
 open scoped ComplexOrder MatrixOrder NNReal
 
@@ -44,14 +43,17 @@ def marginalBipartiteB (E : Ensemble ι (Prod a b)) : Ensemble ι b where
   weights_sum := E.weights_sum
   states := fun x => (E.states x).marginalB
 
+omit [DecidableEq ι] in
 @[simp]
 theorem marginalBipartiteB_probs (E : Ensemble ι (Prod a b)) :
     E.marginalBipartiteB.probs = E.probs := rfl
 
+omit [DecidableEq ι] in
 @[simp]
 theorem marginalBipartiteB_states (E : Ensemble ι (Prod a b)) (x : ι) :
     E.marginalBipartiteB.states x = (E.states x).marginalB := rfl
 
+omit [DecidableEq ι] in
 /-- Taking the `B` marginal commutes with forming the ensemble average. -/
 theorem marginalBipartiteB_averageState (E : Ensemble ι (Prod a b)) :
     E.marginalBipartiteB.averageState = E.averageState.marginalB := by
@@ -70,21 +72,6 @@ variable [Fintype ι] [DecidableEq ι]
 variable [Fintype a] [DecidableEq a]
 variable [Fintype b] [DecidableEq b]
 
-private theorem vonNeumann_punit_eq_zero (ρ : State PUnit.{1}) :
-    ρ.vonNeumann = 0 := by
-  exact le_antisymm (by simpa [log2] using vonNeumann_le_log_card ρ) (vonNeumann_nonneg ρ)
-
-private theorem mutualInformation_punit_punit_eq_zero
-    (ρ : State (Prod PUnit.{1} PUnit.{1})) :
-    QIT.mutualInformation ρ = 0 := by
-  have hA : ρ.marginalA.vonNeumann = 0 := vonNeumann_punit_eq_zero ρ.marginalA
-  have hB : ρ.marginalB.vonNeumann = 0 := vonNeumann_punit_eq_zero ρ.marginalB
-  have hAB : ρ.vonNeumann = 0 := by
-    exact le_antisymm (by simpa [log2] using vonNeumann_le_log_card ρ) (vonNeumann_nonneg ρ)
-  simp [QIT.mutualInformation, hA, hB, hAB]
-
-/-- Local nonnegativity of mutual information, kept here so AFW can import this
-module without a cycle. -/
 private theorem mutualInformation_nonneg_forEntropyConcavity (ρ : State (Prod a b)) :
     0 ≤ QIT.mutualInformation ρ := by
   have hDPI :=

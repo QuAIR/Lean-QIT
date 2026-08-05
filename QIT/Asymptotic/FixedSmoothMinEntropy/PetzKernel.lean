@@ -12,9 +12,11 @@ public import QIT.Information.Renyi.AlphaEntropyContinuity
 public import QIT.Information.Renyi.ConditionalPetzRenyi
 public import QIT.Asymptotic.AEP
 public import QIT.Information.Renyi.RpowOperatorConvex
+public import QIT.Information.Renyi.FrankLieb.ScalarOperator
 public import QIT.States.Geometry.FuchsVdG
 public import QIT.OneShot.GentleMeasurement
-public import QIT.HypothesisTesting.Audenaert
+public import QIT.States.TraceNorm.Audenaert
+import QIT.Util.CMatrixCLM
 public import QIT.States.PosSqrtOrder
 public import QIT.Util.BlockMatrix
 public import Mathlib.LinearAlgebra.Matrix.Vec
@@ -856,123 +858,6 @@ private theorem cMatrix_rpowIntegrand₁₂_eq_resolvent_affine
       rw [add_comm]
       rw [Matrix.nonsing_inv_eq_ringInverse]
 
-private theorem cMatrixPetz_kronecker_inv_ref_mul_right
-    {a b : Type*} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
-    {A : CMatrix a} {B : CMatrix b} (hB : B.PosDef) :
-    Matrix.kronecker A B⁻¹ * Matrix.kronecker (1 : CMatrix a) B =
-      Matrix.kronecker A (1 : CMatrix b) := by
-  have hdet : IsUnit B.det := (Matrix.isUnit_iff_isUnit_det B).mp hB.isUnit
-  calc
-    Matrix.kronecker A B⁻¹ * Matrix.kronecker (1 : CMatrix a) B =
-      Matrix.kronecker (A * (1 : CMatrix a)) (B⁻¹ * B) := by
-        simpa [Matrix.kronecker] using
-          (Matrix.mul_kronecker_mul A (1 : CMatrix a) B⁻¹ B).symm
-    _ = Matrix.kronecker A (1 : CMatrix b) := by
-        rw [Matrix.nonsing_inv_mul B hdet]
-        simp
-
-private theorem cMatrixPetz_andoDenom_mul_ref_inv_eq_shift
-    {a b : Type*} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
-    {A : CMatrix a} {B : CMatrix b} (hB : B.PosDef) {r : ℝ} :
-    (Matrix.kronecker A (1 : CMatrix b) +
-        r • Matrix.kronecker (1 : CMatrix a) B) *
-      Matrix.kronecker (1 : CMatrix a) B⁻¹ =
-    Matrix.kronecker A B⁻¹ + r • (1 : CMatrix (a × b)) := by
-  have hdet : IsUnit B.det := (Matrix.isUnit_iff_isUnit_det B).mp hB.isUnit
-  calc
-    (Matrix.kronecker A (1 : CMatrix b) +
-        r • Matrix.kronecker (1 : CMatrix a) B) *
-      Matrix.kronecker (1 : CMatrix a) B⁻¹ =
-      Matrix.kronecker A (1 : CMatrix b) *
-          Matrix.kronecker (1 : CMatrix a) B⁻¹ +
-        (r • Matrix.kronecker (1 : CMatrix a) B) *
-          Matrix.kronecker (1 : CMatrix a) B⁻¹ := by
-        rw [add_mul]
-    _ = Matrix.kronecker A B⁻¹ + r • (1 : CMatrix (a × b)) := by
-        have h₁ :
-            Matrix.kronecker A (1 : CMatrix b) *
-                Matrix.kronecker (1 : CMatrix a) B⁻¹ =
-              Matrix.kronecker A B⁻¹ := by
-          calc
-            Matrix.kronecker A (1 : CMatrix b) *
-                Matrix.kronecker (1 : CMatrix a) B⁻¹ =
-              Matrix.kronecker (A * (1 : CMatrix a))
-                ((1 : CMatrix b) * B⁻¹) := by
-                simpa [Matrix.kronecker] using
-                  (Matrix.mul_kronecker_mul
-                    A (1 : CMatrix a) (1 : CMatrix b) B⁻¹).symm
-            _ = Matrix.kronecker A B⁻¹ := by
-                simp
-        have h₂ :
-            (r • Matrix.kronecker (1 : CMatrix a) B) *
-                Matrix.kronecker (1 : CMatrix a) B⁻¹ =
-              r • (1 : CMatrix (a × b)) := by
-          calc
-            (r • Matrix.kronecker (1 : CMatrix a) B) *
-                Matrix.kronecker (1 : CMatrix a) B⁻¹ =
-              r •
-                (Matrix.kronecker (1 : CMatrix a) B *
-                  Matrix.kronecker (1 : CMatrix a) B⁻¹) := by
-                simp
-            _ = r • (1 : CMatrix (a × b)) := by
-                have hmul :
-                    Matrix.kronecker (1 : CMatrix a) B *
-                        Matrix.kronecker (1 : CMatrix a) B⁻¹ =
-                      1 := by
-                  calc
-                    Matrix.kronecker (1 : CMatrix a) B *
-                        Matrix.kronecker (1 : CMatrix a) B⁻¹ =
-                      Matrix.kronecker
-                        ((1 : CMatrix a) * (1 : CMatrix a)) (B * B⁻¹) := by
-                        simpa [Matrix.kronecker] using
-                          (Matrix.mul_kronecker_mul
-                            (1 : CMatrix a) (1 : CMatrix a) B B⁻¹).symm
-                    _ = 1 := by
-                        rw [Matrix.mul_nonsing_inv B hdet]
-                        simp
-                rw [hmul]
-        rw [h₁, h₂]
-
-private theorem cMatrixPetz_shiftedKroneckerInv_inv_eq_ref_mul_andoDenom_inv
-    {a b : Type*} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
-    {r : ℝ} {A : CMatrix a} {B : CMatrix b}
-    (hA : A.PosSemidef) (hB : B.PosDef) (hr : 0 < r) :
-    (Matrix.kronecker A B⁻¹ + r • (1 : CMatrix (a × b)))⁻¹ =
-      Matrix.kronecker (1 : CMatrix a) B *
-        (Matrix.kronecker A (1 : CMatrix b) +
-          r • Matrix.kronecker (1 : CMatrix a) B)⁻¹ := by
-  let X : CMatrix (a × b) := Matrix.kronecker A (1 : CMatrix b)
-  let Y : CMatrix (a × b) := Matrix.kronecker (1 : CMatrix a) B
-  let C : CMatrix (a × b) := Matrix.kronecker A B⁻¹
-  let D : CMatrix (a × b) := X + r • Y
-  have hYpd : Y.PosDef := by
-    simpa [Y] using Matrix.PosDef.one.kronecker hB
-  have hYdet : IsUnit Y.det := (Matrix.isUnit_iff_isUnit_det Y).mp hYpd.isUnit
-  have hDpd : D.PosDef := by
-    simpa [X, Y, D] using Matrix.andoDenom_posDef (a := a) (b := b) hA hB hr
-  have hDdet : IsUnit D.det := (Matrix.isUnit_iff_isUnit_det D).mp hDpd.isUnit
-  have hYinv : Y⁻¹ = Matrix.kronecker (1 : CMatrix a) B⁻¹ := by
-    simpa [Y] using (Matrix.inv_kronecker (1 : CMatrix a) B)
-  have hDYinv : D * Y⁻¹ = C + r • (1 : CMatrix (a × b)) := by
-    rw [hYinv]
-    simpa [X, Y, C, D] using
-      cMatrixPetz_andoDenom_mul_ref_inv_eq_shift
-        (a := a) (b := b) (A := A) (B := B) (r := r) hB
-  apply Matrix.inv_eq_right_inv
-  calc
-    (C + r • (1 : CMatrix (a × b))) * (Y * D⁻¹) =
-        (D * Y⁻¹) * (Y * D⁻¹) := by
-      rw [hDYinv]
-    _ = D * (Y⁻¹ * (Y * D⁻¹)) := by
-      exact Matrix.mul_assoc D Y⁻¹ (Y * D⁻¹)
-    _ = D * ((Y⁻¹ * Y) * D⁻¹) := by
-      exact congrArg (fun Z : CMatrix (a × b) => D * Z)
-        (Matrix.mul_assoc Y⁻¹ Y D⁻¹).symm
-    _ = D * (1 * D⁻¹) := by
-      rw [Matrix.nonsing_inv_mul Y hYdet]
-    _ = 1 := by
-      rw [Matrix.one_mul, Matrix.mul_nonsing_inv D hDdet]
-
 theorem cMatrix_rpowIntegrand₁₂_kronecker_inv_mul_right_eq_petzPerspective
     {a b : Type*} [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
     {p r : ℝ} {A : CMatrix a} {B : CMatrix b}
@@ -990,11 +875,11 @@ theorem cMatrix_rpowIntegrand₁₂_kronecker_inv_mul_right_eq_petzPerspective
     simpa [C] using hA.kronecker hB.inv.posSemidef
   have hCmulY : C * Y = X := by
     simpa [C, Y, X] using
-      cMatrixPetz_kronecker_inv_ref_mul_right
+      cMatrix_kronecker_inv_ref_mul_right
         (a := a) (b := b) (A := A) (B := B) hB
   have hinv : (C + r • (1 : CMatrix (a × b)))⁻¹ = Y * D⁻¹ := by
     simpa [C, X, Y, D] using
-      cMatrixPetz_shiftedKroneckerInv_inv_eq_ref_mul_andoDenom_inv
+      cMatrix_shiftedKroneckerInv_inv_eq_ref_mul_andoDenom_inv
         (a := a) (b := b) (A := A) (B := B) (r := r) hA hB hr
   have hDright : D * D⁻¹ = 1 := by
     have hDpd : D.PosDef := by
@@ -1106,46 +991,14 @@ private theorem cMatrixPetz_setIntegral_mul_right
     (ContinuousLinearMap.mulLeftRight ℝ (CMatrix ι) (1 : CMatrix ι) R).integral_comp_comm hf'
   simpa [ContinuousLinearMap.mulLeftRight_apply] using h.symm
 
-private noncomputable def cMatrixPetzConjTransposeCLM
-    {ι : Type*} [Fintype ι] [DecidableEq ι] :
-    CMatrix ι →L[ℝ] CMatrix ι :=
-  LinearMap.toContinuousLinearMap
-    ({ toFun := fun M => Matrix.conjTranspose M
-       map_add' := by intro M N; simp
-       map_smul' := by intro c M; ext i j; simp } : CMatrix ι →ₗ[ℝ] CMatrix ι)
-
 private theorem cMatrixPetz_integral_conjTranspose
     {α : Type*} [MeasurableSpace α]
     {μ : MeasureTheory.Measure α} {ι : Type*} [Fintype ι] [DecidableEq ι]
     {f : α → CMatrix ι} (hf : MeasureTheory.Integrable f μ) :
     Matrix.conjTranspose (∫ x, f x ∂μ) =
       ∫ x, Matrix.conjTranspose (f x) ∂μ := by
-  simpa [cMatrixPetzConjTransposeCLM] using
-    ((cMatrixPetzConjTransposeCLM (ι := ι)).integral_comp_comm hf).symm
-
-private noncomputable def cMatrixPetzEntryCLMComplex
-    {ι : Type*} [Fintype ι] [DecidableEq ι] (i j : ι) : CMatrix ι →L[ℂ] ℂ :=
-  LinearMap.toContinuousLinearMap
-    ({ toFun := fun M => M i j
-       map_add' := by intro M N; simp
-       map_smul' := by intro c M; simp [Matrix.smul_apply] } :
-      CMatrix ι →ₗ[ℂ] ℂ)
-
-private noncomputable def cMatrixPetzQuadraticCLM
-    {ι : Type*} [Fintype ι] [DecidableEq ι] (x : ι → ℂ) : CMatrix ι →L[ℂ] ℂ :=
-  ∑ i, ∑ j, (star (x i) * x j) •
-    cMatrixPetzEntryCLMComplex (ι := ι) i j
-
-private theorem cMatrixPetzQuadraticCLM_apply
-    {ι : Type*} [Fintype ι] [DecidableEq ι] (x : ι → ℂ) (A : CMatrix ι) :
-    cMatrixPetzQuadraticCLM x A = dotProduct (star x) (Matrix.mulVec A x) := by
-  simp [cMatrixPetzQuadraticCLM, cMatrixPetzEntryCLMComplex, Matrix.mulVec, dotProduct]
-  refine Finset.sum_congr rfl ?_
-  intro i _
-  rw [Finset.mul_sum]
-  refine Finset.sum_congr rfl ?_
-  intro j _
-  ring
+  simpa [cMatrixConjTransposeCLM] using
+    ((cMatrixConjTransposeCLM (ι := ι)).integral_comp_comm hf).symm
 
 private theorem cMatrixPetz_integral_dotProduct_mulVec
     {α : Type*} [MeasurableSpace α]
@@ -1153,9 +1006,9 @@ private theorem cMatrixPetz_integral_dotProduct_mulVec
     {f : α → CMatrix ι} (hf : MeasureTheory.Integrable f μ) (x : ι → ℂ) :
     dotProduct (star x) (Matrix.mulVec (∫ t, f t ∂μ) x) =
       ∫ t, dotProduct (star x) (Matrix.mulVec (f t) x) ∂μ := by
-  simp_rw [← cMatrixPetzQuadraticCLM_apply x]
+  simp_rw [← cMatrixQuadraticCLM_apply x]
   exact
-    ((cMatrixPetzQuadraticCLM x).integral_comp_comm hf).symm
+    ((cMatrixQuadraticCLM x).integral_comp_comm hf).symm
 
 private theorem cMatrixPetz_integral_posSemidef_of_ae
     {α : Type*} [MeasurableSpace α]

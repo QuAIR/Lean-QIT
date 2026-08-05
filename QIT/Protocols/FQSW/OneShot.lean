@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.OneShot.Decoupling
+public import QIT.Information.Entropy.EntropyTensorPower
 public import QIT.Protocols.FQSW.Core
 public import QIT.OneShot.GentleMeasurement
 public import QIT.States.Geometry.FuchsVdG
@@ -360,7 +361,7 @@ Haar-selection step in ADHW fqsw.tex lines 580-841. -/
 def adhwFQSWDecouplingTraceNormIntegrandOfSplitUnitary
     (ψ : PureVector (Prod (Prod a b) r))
     (split : a ≃ Prod q e) (U : Matrix.unitaryGroup (Prod q e) ℂ) : ℝ :=
-  traceDistance
+  traceNormDistance
     (adhwFQSWSigmaA2RStateOfIsometry (q := q) (e := e) ψ
       (adhwFQSWAliceIsometryOfSplitUnitary split U)).matrix
     (((adhwFQSWMaximallyMixedA2State e).prod (adhwFQSWSigmaRState ψ)).matrix)
@@ -372,7 +373,7 @@ def adhwFQSWProductDecouplingTraceNormIntegrandOfSplitUnitary
     (ψ : PureVector (Prod (Prod a b) r))
     (split : a ≃ Prod q e) (U : Matrix.unitaryGroup (Prod q e) ℂ) : ℝ :=
   let alice := adhwFQSWAliceIsometryOfSplitUnitary split U
-  traceDistance
+  traceNormDistance
     (adhwFQSWSigmaA2RStateOfIsometry (q := q) (e := e) ψ alice).matrix
     (((adhwFQSWSigmaA2StateOfIsometry (q := q) (e := e) ψ alice).prod
       (adhwFQSWSigmaRState ψ)).matrix)
@@ -383,7 +384,7 @@ def adhwFQSWProductDecouplingTraceNormIntegrandOfSplitUnitary
 def adhwFQSWMaxMixedA2TraceNormIntegrandOfSplitUnitary
     (ψ : PureVector (Prod (Prod a b) r))
     (split : a ≃ Prod q e) (U : Matrix.unitaryGroup (Prod q e) ℂ) : ℝ :=
-  traceDistance
+  traceNormDistance
     (adhwFQSWSigmaA2StateOfIsometry (q := q) (e := e) ψ
       (adhwFQSWAliceIsometryOfSplitUnitary split U)).matrix
     (adhwFQSWMaximallyMixedA2State e).matrix
@@ -1039,7 +1040,7 @@ def adhwFQSWLiftedMaxMixedA2TraceNormIntegrandOfSplitUnitary
     (ψ : PureVector (Prod (Prod a b) r))
     (split : a ≃ Prod q e) (U : Matrix.unitaryGroup (Prod q e) ℂ) : ℝ :=
   let alice := adhwFQSWAliceIsometryOfSplitUnitary split U
-  traceDistance
+  traceNormDistance
     (((adhwFQSWSigmaA2StateOfIsometry (q := q) (e := e) ψ alice).prod
       (adhwFQSWSigmaRState ψ)).matrix)
     (((adhwFQSWMaximallyMixedA2State e).prod (adhwFQSWSigmaRState ψ)).matrix)
@@ -1061,14 +1062,14 @@ theorem adhwFQSWDecouplingTraceNormIntegrand_le_product_add_liftedMaxMixed
   let τ : CMatrix (Prod e r) :=
     ((adhwFQSWMaximallyMixedA2State e).prod (adhwFQSWSigmaRState ψ)).matrix
   have htri := normalizedTraceDistance_triangle ρ σ τ
-  unfold normalizedTraceDistance traceDistance at htri
+  unfold normalizedTraceDistance traceNormDistance at htri
   have h :
       traceNorm (ρ - τ) ≤ traceNorm (ρ - σ) + traceNorm (σ - τ) := by
     nlinarith
   simpa [adhwFQSWDecouplingTraceNormIntegrandOfSplitUnitary,
     adhwFQSWProductDecouplingTraceNormIntegrandOfSplitUnitary,
     adhwFQSWLiftedMaxMixedA2TraceNormIntegrandOfSplitUnitary,
-    ρ, σ, τ, alice, traceDistance] using h
+    ρ, σ, τ, alice, traceNormDistance] using h
 
 /-- Tensoring both `A₂` states with the same `R` state cannot increase the
 source trace-norm distance.  This is the ADHW step that turns the lifted
@@ -1079,7 +1080,7 @@ theorem adhwFQSWLiftedMaxMixedA2TraceNormIntegrand_le_maxMixedA2
     adhwFQSWLiftedMaxMixedA2TraceNormIntegrandOfSplitUnitary ψ split U ≤
       adhwFQSWMaxMixedA2TraceNormIntegrandOfSplitUnitary ψ split U := by
   let alice := adhwFQSWAliceIsometryOfSplitUnitary split U
-  have h := fqswProdRight_traceDistance_le
+  have h := fqswProdRight_traceNormDistance_le
     (adhwFQSWSigmaA2StateOfIsometry (q := q) (e := e) ψ alice)
     (adhwFQSWMaximallyMixedA2State e)
     (adhwFQSWSigmaRState ψ)
@@ -1493,7 +1494,7 @@ theorem adhwFQSWDecouplingTraceNormIntegrandOfSplitUnitary_continuous
     (ψ : PureVector (Prod (Prod a b) r)) (split : a ≃ Prod q e) :
     Continuous fun U : Matrix.unitaryGroup (Prod q e) ℂ =>
       adhwFQSWDecouplingTraceNormIntegrandOfSplitUnitary ψ split U := by
-  unfold adhwFQSWDecouplingTraceNormIntegrandOfSplitUnitary traceDistance
+  unfold adhwFQSWDecouplingTraceNormIntegrandOfSplitUnitary traceNormDistance
   exact traceNorm_continuous.comp
     ((adhwFQSWSigmaA2RStateOfSplitUnitary_matrix_continuous ψ split).sub continuous_const)
 
@@ -1535,7 +1536,7 @@ theorem adhwFQSWProductDecouplingTraceNormIntegrandOfSplitUnitary_continuous
     intro i j
     simp [State.prod, Matrix.kronecker, Matrix.kroneckerMap_apply]
     continuity
-  unfold adhwFQSWProductDecouplingTraceNormIntegrandOfSplitUnitary traceDistance
+  unfold adhwFQSWProductDecouplingTraceNormIntegrandOfSplitUnitary traceNormDistance
   exact traceNorm_continuous.comp (hsigmaA2R.sub hprod)
 
 /-- The squared product-decoupling ADHW integrand is Haar-integrable. -/
@@ -1554,7 +1555,7 @@ theorem adhwFQSWMaxMixedA2TraceNormIntegrandOfSplitUnitary_continuous
     (ψ : PureVector (Prod (Prod a b) r)) (split : a ≃ Prod q e) :
     Continuous fun U : Matrix.unitaryGroup (Prod q e) ℂ =>
       adhwFQSWMaxMixedA2TraceNormIntegrandOfSplitUnitary ψ split U := by
-  unfold adhwFQSWMaxMixedA2TraceNormIntegrandOfSplitUnitary traceDistance
+  unfold adhwFQSWMaxMixedA2TraceNormIntegrandOfSplitUnitary traceNormDistance
   exact traceNorm_continuous.comp
     ((adhwFQSWSigmaA2StateOfSplitUnitary_matrix_continuous ψ split).sub continuous_const)
 
@@ -1638,7 +1639,7 @@ theorem adhwFQSWProductDecouplingTraceNormSq_le_card_mul_hilbertSchmidt
   have h := traceNorm_sq_le_card_mul_hilbertSchmidtSq Δ
   simpa [adhwFQSWProductDecouplingTraceNormIntegrandOfSplitUnitary,
     adhwFQSWProductDecouplingHilbertSchmidtIntegrandOfSplitUnitary,
-    traceDistance, Δ, alice, Fintype.card_prod] using h
+    traceNormDistance, Δ, alice, Fintype.card_prod] using h
 
 /-- ADHW fqsw.tex lines 776-780: pointwise Cauchy--Schwarz bridge from the
 max-mixed `A₂` trace norm to the Hilbert--Schmidt square on `A₂`. -/
@@ -1655,7 +1656,7 @@ theorem adhwFQSWMaxMixedA2TraceNormSq_le_card_mul_hilbertSchmidt
   have h := traceNorm_sq_le_card_mul_hilbertSchmidtSq Δ
   simpa [adhwFQSWMaxMixedA2TraceNormIntegrandOfSplitUnitary,
     adhwFQSWMaxMixedA2HilbertSchmidtIntegrandOfSplitUnitary,
-    traceDistance, Δ] using h
+    traceNormDistance, Δ] using h
 
 /-- Integral form of the ADHW product-decoupling Cauchy--Schwarz tail.  The
 remaining source-route task is the exact Hilbert--Schmidt average of
@@ -1762,13 +1763,13 @@ theorem adhwFQSWCombinedTraceNormAverageSq_le_two_component_averages
       adhwFQSWMaxMixedA2TraceNormIntegrandOfSplitUnitary ψ split U)
     (by
       filter_upwards with U
-      exact traceDistance_nonneg _ _)
+      exact traceNormDistance_nonneg _ _)
     (by
       filter_upwards with U
-      exact traceDistance_nonneg _ _)
+      exact traceNormDistance_nonneg _ _)
     (by
       filter_upwards with U
-      exact traceDistance_nonneg _ _)
+      exact traceNormDistance_nonneg _ _)
     (by
       filter_upwards with U
       exact adhwFQSWDecouplingTraceNormIntegrand_le_product_add_maxMixed ψ split U)
@@ -1793,12 +1794,12 @@ theorem fqsw_sum_sum_sum_mul_right
       ring
 
 /-- Trace distance is invariant under simultaneous finite reindexing. -/
-theorem fqsw_traceDistance_submatrix_equiv
+theorem fqsw_traceNormDistance_submatrix_equiv
     {α : Type u} {β : Type v} [Fintype α] [DecidableEq α]
     [Fintype β] [DecidableEq β] (E : α ≃ β) (M N : CMatrix α) :
-    traceDistance (M.submatrix E.symm E.symm) (N.submatrix E.symm E.symm) =
-      traceDistance M N := by
-  rw [traceDistance, traceDistance]
+    traceNormDistance (M.submatrix E.symm E.symm) (N.submatrix E.symm E.symm) =
+      traceNormDistance M N := by
+  rw [traceNormDistance, traceNormDistance]
   have hsub :
       M.submatrix E.symm E.symm - N.submatrix E.symm E.symm =
         (M - N).submatrix E.symm E.symm := by
@@ -1816,9 +1817,9 @@ theorem normalizedTraceDistance_reindex_equiv
     (ρ.reindex E).normalizedTraceDistance (σ.reindex E) =
       ρ.normalizedTraceDistance σ := by
   change (1 / 2 : ℝ) *
-      QIT.traceDistance (ρ.matrix.submatrix E.symm E.symm) (σ.matrix.submatrix E.symm E.symm) =
-    (1 / 2 : ℝ) * QIT.traceDistance ρ.matrix σ.matrix
-  rw [fqsw_traceDistance_submatrix_equiv E ρ.matrix σ.matrix]
+      QIT.traceNormDistance (ρ.matrix.submatrix E.symm E.symm) (σ.matrix.submatrix E.symm E.symm) =
+    (1 / 2 : ℝ) * QIT.traceNormDistance ρ.matrix σ.matrix
+  rw [fqsw_traceNormDistance_submatrix_equiv E ρ.matrix σ.matrix]
 
 end State
 
@@ -4139,7 +4140,7 @@ theorem adhwFQSWFinalTraceNormAverage_le_sqrt_source_bounds
         adhwFQSWDecouplingTraceNormIntegrandOfSplitUnitary ψ split U)
       (by
         filter_upwards with U
-        exact traceDistance_nonneg _ _)
+        exact traceNormDistance_nonneg _ _)
       (adhwFQSWDecouplingTraceNormIntegrandOfSplitUnitary_integrable ψ split)
       (adhwFQSWDecouplingTraceNormIntegrandOfSplitUnitary_sq_integrable ψ split)
   have hsq := adhwFQSWFinalTraceNormAverageSq_le_component_records ψ split D M

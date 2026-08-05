@@ -39,36 +39,13 @@ namespace Channel
 
 variable (N : Channel a b)
 
-/-- Source-shaped input expected from the sandwiched-Renyi asymptotic
-upper-bound route.
-
-The field is exactly the eventual `n`-use log-cardinality estimate consumed by
-`entanglementAssisted_converseWitnessFamily_of_logCardUpperBounds`: for every
-rate slack and positive reliability threshold, all sufficiently long reliable
-codes have message size bounded by `n * (I(N) + eta)`.
-
-This is a proof-dependency interface, not the asymptotic upper-bound theorem by
-itself. -/
-structure EntanglementAssistedAsymptoticUpperInput where
-  logCard_upper :
-    ∀ η : ℝ, 0 < η → ∀ ε : ℝ, 0 < ε →
-      ∃ N0 : ℕ, ∀ n : ℕ, n ≥ N0 →
-        ∀ (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M],
-          ∀ (EA : Type u) [Fintype EA] [DecidableEq EA],
-            ∀ (EB : Type u) [Fintype EB] [DecidableEq EB],
-              ∀ C : EntanglementAssistedClassicalCode N n M EA EB,
-                C.maxErrorAtMost ε →
-                  log2 (Fintype.card M : ℝ) ≤
-                    (n : ℝ) * (N.entanglementAssistedInformation + η)
-
 /-- Source-shaped input expected from the Khatri--Wilde sandwiched-Renyi
 asymptotic upper-bound route.
 
-Unlike the compatibility input above, this version uses the source error
-range `ε ∈ [0, 1)`.  That is the range in the one-shot upper bounds
-[KhatriWilde2024Principles, Chapters/EA_capacity.tex:411-427] and in the
-strong-converse argument [KhatriWilde2024Principles,
-Chapters/EA_capacity.tex:990-1331]. -/
+This version uses the source error range `ε ∈ [0, 1)`, which is the range in
+the one-shot upper bounds [KhatriWilde2024Principles,
+Chapters/EA_capacity.tex:411-427] and in the strong-converse argument
+[KhatriWilde2024Principles, Chapters/EA_capacity.tex:990-1331]. -/
 structure EntanglementAssistedSourceAsymptoticUpperInput where
   logCard_upper :
     ∀ η : ℝ, 0 < η → ∀ ε : ℝ, 0 ≤ ε → ε < 1 →

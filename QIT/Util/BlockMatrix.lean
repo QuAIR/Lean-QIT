@@ -7,14 +7,14 @@ Authors: QuAIR Team
 module
 
 public import QIT.Util.Matrix
-public import QIT.States.TraceNorm.Distance
 public import Mathlib.Data.Matrix.ColumnRowPartitioned
 
 /-!
 # Two-by-two block matrix helpers
 
 Small wrappers for the `Sum`-indexed `2 × 2` block decomposition used by the
-positive/negative spectral split in trace-norm arguments.
+positive/negative spectral split. Trace-norm and matrix-square-root
+specializations live in `QIT.States.TraceNorm.BlockMatrix`.
 -/
 
 @[expose] public section
@@ -611,47 +611,6 @@ theorem andoResolventIntegrand_rpow_weighted_concave_posDef
 
 end AndoResolvent
 
-/-- The positive square root of a block-diagonal positive semidefinite matrix is
-the block diagonal of the positive square roots. -/
-theorem fromBlocks_diagonal_psdSqrt [Fintype α] [DecidableEq α]
-    [Fintype β] [DecidableEq β] {A : Matrix α α ℂ} {D : Matrix β β ℂ}
-    (hA : A.PosSemidef) (hD : D.PosSemidef) :
-    QIT.psdSqrt (Matrix.fromBlocks A 0 0 D : Matrix (Sum α β) (Sum α β) ℂ) =
-      Matrix.fromBlocks (QIT.psdSqrt A) 0 0 (QIT.psdSqrt D) := by
-  classical
-  let S : Matrix (Sum α β) (Sum α β) ℂ :=
-    Matrix.fromBlocks (QIT.psdSqrt A) 0 0 (QIT.psdSqrt D)
-  have hSpos : S.PosSemidef := by
-    dsimp [S]
-    exact fromBlocks_diagonal_posSemidef (QIT.psdSqrt_pos A) (QIT.psdSqrt_pos D)
-  have hSsq : S * S = (Matrix.fromBlocks A 0 0 D : Matrix (Sum α β) (Sum α β) ℂ) := by
-    dsimp [S]
-    rw [Matrix.fromBlocks_multiply]
-    simp [QIT.psdSqrt_mul_self_of_posSemidef hA,
-      QIT.psdSqrt_mul_self_of_posSemidef hD]
-  simpa [QIT.psdSqrt, S] using
-    (CFC.sqrt_unique (a := (Matrix.fromBlocks A 0 0 D : Matrix (Sum α β) (Sum α β) ℂ))
-      (b := S) hSsq hSpos.nonneg)
-
-/-- The trace norm of a block-diagonal matrix is the sum of the trace norms of
-the diagonal blocks. -/
-theorem traceNorm_fromBlocks_diagonal [Fintype α] [DecidableEq α]
-    [Fintype β] [DecidableEq β] (X : Matrix α α ℂ) (Y : Matrix β β ℂ) :
-    QIT.traceNorm (Matrix.fromBlocks X 0 0 Y : Matrix (Sum α β) (Sum α β) ℂ) =
-      QIT.traceNorm X + QIT.traceNorm Y := by
-  classical
-  have hgram :
-      (Matrix.fromBlocks X 0 0 Y : Matrix (Sum α β) (Sum α β) ℂ)ᴴ *
-          (Matrix.fromBlocks X 0 0 Y : Matrix (Sum α β) (Sum α β) ℂ) =
-        Matrix.fromBlocks (Xᴴ * X) 0 0 (Yᴴ * Y) := by
-    rw [Matrix.fromBlocks_conjTranspose, Matrix.fromBlocks_multiply]
-    simp
-  rw [QIT.traceNorm, hgram,
-    fromBlocks_diagonal_psdSqrt (Matrix.posSemidef_conjTranspose_mul_self X)
-      (Matrix.posSemidef_conjTranspose_mul_self Y),
-    trace_fromBlocks_diagonal]
-  simp [QIT.traceNorm]
-
 /-- Off-diagonal blocks of a Hermitian block matrix are adjoints. -/
 theorem sumBlock21_eq_conjTranspose_sumBlock12_of_isHermitian
     {M : Matrix (Sum α β) (Sum α β) ℂ} (hM : M.IsHermitian) :
@@ -665,3 +624,32 @@ theorem sumBlock21_eq_conjTranspose_sumBlock12_of_isHermitian
 end
 
 end Matrix
+
+namespace QIT
+
+universe u
+
+/-- The block matrix `[[A, A], [A, C]]` is positive semidefinite when `A` and
+`C - A` are: it factors as `Tᴴ * D * T` with `T = [[I, I], [0, I]]` and
+`D = [[A, 0], [0, C - A]]`. -/
+theorem cMatrix_fromBlocks_self_le_posSemidef {e : Type u}
+    [Fintype e] [DecidableEq e] {A C : CMatrix e}
+    (hA : A.PosSemidef) (hCminusA : (C - A).PosSemidef) :
+    (Matrix.fromBlocks A A A C : CMatrix (Sum e e)).PosSemidef := by
+  classical
+  let D : CMatrix (Sum e e) := Matrix.fromBlocks A 0 0 (C - A)
+  let T : CMatrix (Sum e e) := Matrix.fromBlocks 1 1 0 1
+  have hD : D.PosSemidef := by
+    simpa [D] using
+      Matrix.fromBlocks_diagonal_posSemidef (A := A) (D := C - A) hA hCminusA
+  have hconj : (T.conjTranspose * D * T).PosSemidef := by
+    simpa [Matrix.mul_assoc] using hD.mul_mul_conjTranspose_same T.conjTranspose
+  have hfactor :
+      T.conjTranspose * D * T =
+        (Matrix.fromBlocks A A A C : CMatrix (Sum e e)) := by
+    (ext i j; cases i) <;> cases j <;>
+      simp [D, T, Matrix.fromBlocks_multiply, Matrix.fromBlocks_conjTranspose,
+        sub_eq_add_neg]
+  simpa [hfactor] using hconj
+
+end QIT

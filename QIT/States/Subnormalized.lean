@@ -10,7 +10,7 @@ public import QIT.States.PosSqrt
 public import QIT.States.TraceNorm.Distance
 public import QIT.Channels.Diamond
 public import QIT.States.Geometry.Fidelity
-public import QIT.Util.BlockMatrix
+public import QIT.States.TraceNorm.BlockMatrix
 
 /-!
 # Subnormalized finite-dimensional states
@@ -554,6 +554,17 @@ theorem toSubnormalized_trace (ρ : State a) :
   ρ.trace_eq_one
 
 end State
+
+theorem State.toSubnormalized_reindex_eq
+    {a : Type u} {b : Type v}
+    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+    (rho : State a) (e : a ≃ b) :
+    (rho.reindex e).toSubnormalized =
+      rho.toSubnormalized.applyTraceNonincreasingCP
+        (Channel.reindex e).map (Channel.reindex e).traceNonincreasingCP_map := by
+  apply SubnormalizedState.ext
+  have h := congrArg State.matrix (Channel.reindex_applyState e rho)
+  exact h.symm
 
 namespace SubnormalizedState
 

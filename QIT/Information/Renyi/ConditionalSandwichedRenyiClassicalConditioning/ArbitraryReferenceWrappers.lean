@@ -11,7 +11,6 @@ public import QIT.Information.Renyi.SandwichedRenyiOptimizedUSC
 public import QIT.Information.Renyi.ConditionalSandwichedRenyiDuality
 public import QIT.Information.Renyi.ConditionalSandwichedRenyiAdditivity
 public import QIT.Measurements.Projective
-public import QIT.OneShot.CQGuessing
 public import QIT.Information.Renyi.ConditionalSandwichedRenyiClassicalConditioning.BlockAlgebra
 public import QIT.Information.Renyi.ConditionalSandwichedRenyiClassicalConditioning.LowAlphaQDecomposition
 public import QIT.Information.Renyi.ConditionalSandwichedRenyiClassicalConditioning.HighAlphaSupport

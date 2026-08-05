@@ -7,7 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Renyi.Renyi
-public import QIT.HypothesisTesting.ChernoffSupport
+public import QIT.Information.BinaryHypothesisTest
 
 /-!
 # Petz--Renyi endpoint helpers

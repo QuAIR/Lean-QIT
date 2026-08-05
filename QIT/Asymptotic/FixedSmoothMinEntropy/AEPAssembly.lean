@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Asymptotic.FixedSmoothMinEntropy.ThresholdProjector
+import QIT.Util.TensorPower
 
 @[expose] public section
 
@@ -23,41 +24,6 @@ variable {a : Type u} {b : Type v}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 namespace State
 /-! ## Finite-AEP assembly core -/
-
-/-- The trace norm is continuous on finite-dimensional complex matrices.
-
-This local copy keeps the finite-AEP regularization path from importing the heavier
-trace-norm continuity dependencies into the basic trace-distance API. -/
-private theorem finiteAEPTraceNorm_continuous
-    {ι : Type*} [Fintype ι] [DecidableEq ι] :
-    Continuous (traceNorm : CMatrix ι → ℝ) := by
-  have hgram : Continuous (fun M : CMatrix ι => star M * M) := by
-    exact (Continuous.star continuous_id).matrix_mul continuous_id
-  have hnonneg : ∀ M : CMatrix ι, (star M * M) ∈ {A : CMatrix ι | 0 ≤ A} := by
-    intro M
-    exact Matrix.nonneg_iff_posSemidef.mpr
-      (Matrix.posSemidef_conjTranspose_mul_self M)
-  have hsqrtOn :
-      ContinuousOn (CFC.sqrt : CMatrix ι → CMatrix ι) {A : CMatrix ι | 0 ≤ A} := by
-    exact CFC.continuousOn_sqrt
-  have hsqrt : Continuous (fun M : CMatrix ι => CFC.sqrt (star M * M)) := by
-    exact hsqrtOn.comp_continuous hgram hnonneg
-  have htrace : Continuous (fun M : CMatrix ι => (CFC.sqrt (star M * M)).trace) :=
-    Continuous.matrix_trace hsqrt
-  simpa [traceNorm, psdSqrt] using Complex.continuous_re.comp htrace
-
-/-- Normalized trace distance from a fixed state is continuous. -/
-private theorem finiteAEP_normalizedTraceDistance_continuous_left
-    (σ : State (Prod a b)) :
-    Continuous fun ρ : State (Prod a b) => ρ.normalizedTraceDistance σ := by
-  rw [show (fun ρ : State (Prod a b) => ρ.normalizedTraceDistance σ) =
-      fun ρ : State (Prod a b) =>
-        (1 / 2 : ℝ) * traceNorm (ρ.matrix - σ.matrix) by
-    funext ρ
-    rw [State.normalizedTraceDistance_eq_matrix, QIT.normalizedTraceDistance_eq,
-      QIT.traceDistance]]
-  exact continuous_const.mul
-    (finiteAEPTraceNorm_continuous.comp (by fun_prop))
 
 /-! ### Full-rank regularization setup for arbitrary finite states -/
 
@@ -142,7 +108,7 @@ theorem finiteAEPFullRankRegularization_normalizedTraceDistance_le
       η * (1 / 2 : ℝ) *
         traceNorm ρ.finiteAEPFullRankRegularizationDirection := by
   rw [State.normalizedTraceDistance_eq_matrix, QIT.normalizedTraceDistance_eq,
-    QIT.traceDistance]
+    QIT.traceNormDistance]
   rw [finiteAEPFullRankRegularization_matrix_sub ρ η hη0 hη1]
   have hnorm := traceNorm_real_smul_le (a := Prod a b) hη0
     ρ.finiteAEPFullRankRegularizationDirection
@@ -1341,12 +1307,6 @@ theorem toSubnormalized_conditioningIsometryApply
   rw [SubnormalizedState.conditioningIsometryApply_matrix]
   rw [State.conditioningIsometryApply_matrix]
   rfl
-
-private theorem tensorPower_nonempty_of_nonempty {α : Type*} [Nonempty α] :
-    ∀ n : ℕ, Nonempty (TensorPower α n)
-  | 0 => ⟨PUnit.unit⟩
-  | n + 1 => ⟨(Classical.choice ‹Nonempty α›,
-      Classical.choice (tensorPower_nonempty_of_nonempty n))⟩
 
 theorem tensorPowerBipartite_conditionalPetzRenyiEntropyCandidate_succ_of_regroupedCandidate
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef)

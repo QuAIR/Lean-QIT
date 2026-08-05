@@ -36,51 +36,12 @@ universe w
 
 noncomputable section
 
-private theorem posSemidef_one_sub_of_posSemidef_idempotent {ι : Type*}
-    [Fintype ι] [DecidableEq ι] (P : CMatrix ι)
-    (hPpos : P.PosSemidef) (hPid : P * P = P) :
-    (1 - P).PosSemidef := by
-  let Q : CMatrix ι := 1 - P
-  have hPherm : P.IsHermitian := hPpos.isHermitian
-  have hQherm : Q.IsHermitian := by
-    dsimp [Q]
-    exact Matrix.IsHermitian.sub (by simp [Matrix.IsHermitian]) hPherm
-  have hQid : Q * Q = Q := by
-    dsimp [Q]
-    calc
-      (1 - P) * (1 - P) = (1 - P) * 1 - (1 - P) * P := by
-        rw [Matrix.mul_sub]
-      _ = (1 - P) - (1 * P - P * P) := by
-        rw [Matrix.mul_one, Matrix.sub_mul]
-      _ = 1 - P := by
-        rw [Matrix.one_mul, hPid]
-        abel
-  have hPSD : (Matrix.conjTranspose Q * Q).PosSemidef :=
-    Matrix.posSemidef_conjTranspose_mul_self Q
-  convert hPSD using 1
-  rw [hQherm.eq, hQid]
-
 namespace ReferenceIsometry
 
 variable {r₁ : Type u} {r₂ : Type v} {a : Type*}
 variable [Fintype r₁] [DecidableEq r₁]
 variable [Fintype r₂] [DecidableEq r₂]
 variable [Fintype a] [DecidableEq a]
-
-/-- Embed a reference register as the right summand of an enlarged reference
-register. This is the finite-dimensional padding used when Uhlmann's theorem
-needs a sufficiently large reference space. -/
-def sumInr (extra : Type*) [Fintype extra] [DecidableEq extra]
-    (r : Type*) [Fintype r] [DecidableEq r] :
-    ReferenceIsometry r (Sum extra r) where
-  matrix := fun x i =>
-    match x with
-    | Sum.inl _ => 0
-    | Sum.inr j => if j = i then 1 else 0
-  isometry := by
-    classical
-    ext i j
-    simp [Matrix.mul_apply, Matrix.conjTranspose, Matrix.one_apply, eq_comm]
 
 /-- A reference-side isometry preserves pure-vector overlaps. -/
 theorem overlap_applyPureVector (V : ReferenceIsometry r₁ r₂)
@@ -313,16 +274,6 @@ namespace PureVector
 variable {r : Type v} {a : Type u}
 variable [Fintype r] [DecidableEq r] [Fintype a] [DecidableEq a]
 
-private theorem complex_normSq_le_sq_of_abs_le {z : ℂ} {x : ℝ}
-    (h : Complex.abs z ≤ x) : Complex.normSq z ≤ x ^ 2 := by
-  have hz : 0 ≤ ‖z‖ := norm_nonneg z
-  have hnorm : ‖z‖ ≤ x := h
-  have hx : 0 ≤ x := hz.trans hnorm
-  rw [Complex.normSq_eq_norm_sq]
-  exact (sq_le_sq₀ hz hx).2 hnorm
-
-/-- The overlap of two same-reference bipartite pure vectors is the trace
-pairing of their target-by-reference amplitude matrices. -/
 theorem overlap_eq_trace_conjTranspose_amplitudeMatrix_mul
     (Ψ Φ : PureVector (Prod r a)) :
     Ψ.overlap Φ = (Matrix.conjTranspose Ψ.amplitudeMatrix * Φ.amplitudeMatrix).trace := by
@@ -472,7 +423,7 @@ private theorem referenceIsometry_transpose_cross_contraction
             rw [hTW]
           _ = Matrix.conjTranspose TW * TW := by
             simp
-      exact posSemidef_one_sub_of_posSemidef_idempotent
+      exact MatrixMap.posSemidef_one_sub_of_posSemidef_idempotent
         (Matrix.conjTranspose TW * TW) hP hidem
     exact sub_nonneg.mp (Matrix.nonneg_iff_posSemidef.mpr hdiff_pos)
   have hconj :

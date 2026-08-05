@@ -193,6 +193,29 @@ theorem partialTraceA_applyMatrixRight [Fintype a] (X : CMatrix (Prod a r₁)) :
   refine Finset.sum_congr rfl fun j _ => ?_
   rw [Finset.sum_comm]
 
+/-- Conjugation by the reference isometry respects matrix multiplication on the
+reference block: `(V M V†)(V N V†) = V (M N) V†`. -/
+theorem matrix_mul_conjTranspose_mul_matrix (B C : CMatrix r₁) :
+    (V.matrix * B * Matrix.conjTranspose V.matrix) *
+        (V.matrix * C * Matrix.conjTranspose V.matrix) =
+      V.matrix * (B * C) * Matrix.conjTranspose V.matrix := by
+  calc
+    (V.matrix * B * Matrix.conjTranspose V.matrix) *
+        (V.matrix * C * Matrix.conjTranspose V.matrix) =
+      V.matrix * B * (Matrix.conjTranspose V.matrix * V.matrix) *
+        C * Matrix.conjTranspose V.matrix := by
+          simp only [Matrix.mul_assoc]
+    _ = V.matrix * B * (1 : CMatrix r₁) * C * Matrix.conjTranspose V.matrix := by
+          rw [V.isometry]
+    _ = V.matrix * (B * C) * Matrix.conjTranspose V.matrix := by
+          simp only [Matrix.mul_one, Matrix.mul_assoc]
+
+/-- Applying a reference isometry preserves the trace of a bipartite matrix. -/
+theorem trace_applyMatrix [Fintype a] (X : CMatrix (Prod r₁ a)) :
+    (V.applyMatrix X).trace = X.trace := by
+  have h := congrArg Matrix.trace (V.partialTraceA_applyMatrix X)
+  simpa [partialTraceA_trace] using h
+
 /-- Apply a reference isometry to a bipartite pure vector. -/
 def applyPureVector [Fintype a] [DecidableEq a] (Ψ : PureVector (Prod r₁ a)) :
     PureVector (Prod r₂ a) where
@@ -299,6 +322,21 @@ def tensorPower (V : ReferenceIsometry r₁ r₂) :
 theorem tensorPower_succ (V : ReferenceIsometry r₁ r₂) (n : ℕ) :
     V.tensorPower (n + 1) = V.prod (V.tensorPower n) :=
   rfl
+
+/-- Embed a reference register as the right summand of an enlarged reference
+register. This is the finite-dimensional padding used when Uhlmann's theorem
+needs a sufficiently large reference space. -/
+def sumInr (extra : Type*) [Fintype extra] [DecidableEq extra]
+    (r : Type*) [Fintype r] [DecidableEq r] :
+    ReferenceIsometry r (Sum extra r) where
+  matrix := fun x i =>
+    match x with
+    | Sum.inl _ => 0
+    | Sum.inr j => if j = i then 1 else 0
+  isometry := by
+    classical
+    ext i j
+    simp [Matrix.mul_apply, Matrix.conjTranspose, Matrix.one_apply, eq_comm]
 
 end ReferenceIsometry
 

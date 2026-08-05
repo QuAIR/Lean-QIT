@@ -369,7 +369,7 @@ def trivialHashFamily (Z : Type uZ) [Fintype Z] : HashFamily PUnit Z PUnit where
   prob := fun _ => 1
   prob_sum := by simp
 
-set_option linter.unusedSectionVars false in
+omit [DecidableEq Z] in
 /-- The trivial extractor output is already ideal, since the output alphabet is
 the singleton alphabet. -/
 theorem trivialHashFamily_outputState_eq_ideal (E : Ensemble Z e) :
@@ -380,7 +380,7 @@ theorem trivialHashFamily_outputState_eq_ideal (E : Ensemble Z e) :
     extractorOutputMatrix, State.prod, State.marginalB,
     partialTraceA, uniformExtractorOutputState, uniformExtractorOutputProb]
 
-set_option linter.unusedSectionVars false in
+omit [DecidableEq Z] in
 /-- The trivial extractor has zero secrecy distance. -/
 theorem trivialHashFamily_extractorSecrecyDistance_eq_zero (E : Ensemble Z e) :
     extractorSecrecyDistance (extractorOutputState (trivialHashFamily Z) E) = 0 := by
@@ -394,6 +394,7 @@ theorem trivialHashFamily_extractorSecrecyDistance_eq_zero (E : Ensemble Z e) :
     _ = ρ.normalizedTraceDistance ρ := by rw [← hstate]
     _ = 0 := State.normalizedTraceDistance_self ρ
 
+omit [DecidableEq Z] in
 /-- The trivial extractor is `ε`-secret for every nonnegative `ε`. -/
 theorem trivialHashFamily_isEpsilonSecretExtractor
     (E : Ensemble Z e) {ε : ℝ} (hε : 0 ≤ ε) :
@@ -402,6 +403,7 @@ theorem trivialHashFamily_isEpsilonSecretExtractor
   rw [trivialHashFamily_extractorSecrecyDistance_eq_zero]
   exact hε
 
+omit [DecidableEq Z] in
 /-- The one-output trivial extractor is always achievable for nonnegative
 secrecy error. -/
 theorem extractorOutputLengthAchievable_one_of_nonneg
@@ -413,6 +415,7 @@ theorem extractorOutputLengthAchievable_one_of_nonneg
   dsimp
   exact ⟨trivialHashFamily Z, trivialHashFamily_isEpsilonSecretExtractor E hε⟩
 
+omit [DecidableEq Z] in
 /-- The achievable output-length set is nonempty for every nonnegative secrecy
 parameter. -/
 theorem extractableRandomnessLengthSet_nonempty_of_nonneg
@@ -420,6 +423,7 @@ theorem extractableRandomnessLengthSet_nonempty_of_nonneg
     (ExtractableRandomnessLengthSet.{uF, uZ, uS, ue} E ε).Nonempty := by
   exact ⟨1, extractorOutputLengthAchievable_one_of_nonneg E hε⟩
 
+omit [DecidableEq Z] in
 /-- Achievable extractable-randomness log values are nonempty for every
 nonnegative secrecy parameter. -/
 theorem extractableRandomnessLogValueSet_nonempty_of_nonneg

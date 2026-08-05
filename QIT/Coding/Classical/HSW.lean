@@ -6,10 +6,13 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Coding.Classical.Holevo
+public import QIT.Information.Entropy.Holevo
+public import QIT.Classical.Bridge
 public import QIT.Core.Channel
 public import QIT.Core.POVMProbability
 public import QIT.Util.SDP.HermitianPSDTraceDuality
+public import QIT.Information.Entropy.Log2Lemmas
+import QIT.Util.TensorPower
 
 /-!
 # HSW coding theorem: classical capacity
@@ -40,17 +43,6 @@ noncomputable section
 variable {a : Type uIn} {b : Type uOut}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 
-/-- A canonical basis state on a nonempty finite system.  This is only used to
-show nonemptiness of the finite-ensemble Holevo value set; no coding theorem
-silently assumes it. -/
-private def basisState (a : Type uIn) [Fintype a] [DecidableEq a] [Nonempty a] : State a where
-  matrix := Matrix.single (Classical.choice (inferInstance : Nonempty a))
-    (Classical.choice (inferInstance : Nonempty a)) (1 : ℂ)
-  pos := posSemidef_single (Classical.choice (inferInstance : Nonempty a))
-  trace_eq_one := by
-    rw [trace_single_one]
-    simp
-
 /-- The singleton ensemble concentrated on a given state. -/
 private def singletonEnsemble (ρ : State a) : Ensemble PUnit.{uEnsemble + 1} a where
   probs := fun _ => 1
@@ -58,19 +50,9 @@ private def singletonEnsemble (ρ : State a) : Ensemble PUnit.{uEnsemble + 1} a 
   states := fun _ => ρ
 
 /-- Cardinality of the recursive tensor-power label type. -/
-private theorem tensorPower_card (α : Type uIn) [Fintype α] (n : ℕ) :
-    Fintype.card (TensorPower α n) = (Fintype.card α) ^ n := by
-  induction n with
-  | zero =>
-      simp [TensorPower]
-  | succ n ih =>
-      change Fintype.card (Prod α (TensorPower α n)) = Fintype.card α ^ (n + 1)
-      rw [Fintype.card_prod, ih, Nat.pow_succ]
-      ring
-
 private theorem tensorPower_card_real (α : Type uIn) [Fintype α] (n : ℕ) :
     (Fintype.card (TensorPower α n) : ℝ) = (Fintype.card α : ℝ) ^ n := by
-  exact_mod_cast tensorPower_card α n
+  exact_mod_cast tensorPower_card (a := α) n
 
 private theorem tensorPower_nonempty (α : Type uIn) [Nonempty α] :
     (n : ℕ) → Nonempty (TensorPower α n)
@@ -142,7 +124,8 @@ theorem holevoInformationValues_bddAbove :
 system admits a state. -/
 theorem holevoInformationValues_nonempty [Nonempty a] :
     (Channel.holevoInformationValues.{uIn, uOut, uEnsemble} N).Nonempty := by
-  let E : Ensemble PUnit.{uEnsemble + 1} a := singletonEnsemble (basisState a)
+  let E : Ensemble PUnit.{uEnsemble + 1} a :=
+    singletonEnsemble (Classical.basisState (Classical.choice (inferInstance : Nonempty a)))
   exact ⟨N.hswHolevoRate E, ⟨PUnit.{uEnsemble + 1}, inferInstance, inferInstance, E, rfl⟩⟩
 
 /-- Approximate the channel Holevo supremum from below by a concrete finite
@@ -239,35 +222,6 @@ def hswMessageRate (M : Type uMessage) [Fintype M] (n : ℕ) : ℝ :=
   if n = 0 then 0 else log2 (Fintype.card M : ℝ) / (n : ℝ)
 
 namespace hswMessageRate
-
-/-- Base-two logarithm is monotone on positive reals. -/
-private theorem log2_mono_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    log2 x ≤ log2 y := by
-  unfold log2
-  exact div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-    (le_of_lt (Real.log_pos one_lt_two))
-
-/-- Product rule for the base-two logarithm away from zero. -/
-private theorem log2_mul {x y : ℝ} (hx : x ≠ 0) (hy : y ≠ 0) :
-    log2 (x * y) = log2 x + log2 y := by
-  unfold log2
-  rw [Real.log_mul hx hy]
-  ring
-
-/-- `log₂ 2 = 1`. -/
-private theorem log2_two : log2 2 = 1 := by
-  unfold log2
-  have hlog2 : Real.log 2 ≠ 0 := (Real.log_pos one_lt_two).ne'
-  field_simp [hlog2]
-
-/-- The base-two logarithm inverts positive powers of two. -/
-private theorem log2_rpow_two (x : ℝ) :
-    log2 (Real.rpow 2 x) = x := by
-  unfold log2
-  rw [show Real.log (Real.rpow 2 x) = x * Real.log 2 by
-    exact Real.log_rpow (by norm_num : (0 : ℝ) < 2) x]
-  have hlog2 : Real.log 2 ≠ 0 := (Real.log_pos one_lt_two).ne'
-  field_simp [hlog2]
 
 /-- If the message set size is at least `2^(n R)`, then the HSW message rate is
 at least `R`. -/

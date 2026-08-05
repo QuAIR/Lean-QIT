@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.OneShot.SmoothAttainment
+public import QIT.OneShot.SmoothEndpoint
 public import QIT.Information.Renyi.RenyiDPI.Domain
 
 set_option maxHeartbeats 1000000

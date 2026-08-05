@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Symmetry.SymmetricSubspace
+public import QIT.Symmetry.TensorPowerSplit
 public import QIT.Symmetry.UnitaryTwirl
 public import QIT.Classical.Ensemble
 public import QIT.Classical.CQState
@@ -75,36 +76,13 @@ theorem card_pos [Nonempty a] (n : ℕ) :
 
 end TensorPowerProfile
 
-/-- Split a function on `Fin (n+k)` into its first `n` and last `k`
-coordinates. This is the `Fin`-level bookkeeping behind Renner's
-`tr_k` convention [Renner2007Symmetry, sub.tex:618-633]. -/
-def finTakeDropEquiv (n k : ℕ) :
-    (Fin (n + k) → a) ≃ Prod (Fin n → a) (Fin k → a) where
-  toFun f := (fun i => f (Fin.castAdd k i), fun j => f (Fin.natAdd n j))
-  invFun g := fun i => Fin.addCases (fun j : Fin n => g.1 j) (fun j : Fin k => g.2 j) i
-  left_inv := by
-    intro f
-    ext i
-    exact Fin.addCases
-      (motive := fun i =>
-        Fin.addCases (fun j : Fin n => f (Fin.castAdd k j))
-          (fun j : Fin k => f (Fin.natAdd n j)) i = f i)
-      (fun j => by simp)
-      (fun j => by simp)
-      i
-  right_inv := by
-    intro g
-    ext i <;> simp
-
 /-- Source-shaped split of a tensor power into retained `n` systems and traced
-`k` systems. -/
+`k` systems.  The coordinate-level split is the shared
+`QIT.TensorPower.takeDropEquiv` API. -/
 def tensorPowerTakeDropEquiv (a : Type v) [Fintype a] [DecidableEq a]
     (n k : ℕ) :
     TensorPower a (n + k) ≃ Prod (TensorPower a n) (TensorPower a k) :=
-  (tensorPowerEquiv (a := a) (n + k)).trans
-    ((finTakeDropEquiv (a := a) n k).trans
-      (Equiv.prodCongr (tensorPowerEquiv (a := a) n).symm
-        (tensorPowerEquiv (a := a) k).symm))
+  TensorPower.takeDropEquiv a n k
 
 /-- Embed a permutation of the last `k` tensor positions into a permutation of
 `Fin (n+k)` that fixes the first `n` positions. -/
@@ -140,14 +118,14 @@ theorem tensorPowerTakeDropEquiv_fst_apply (n k : ℕ)
     (x : TensorPower a (n + k)) (i : Fin n) :
     tensorPowerEquiv n ((tensorPowerTakeDropEquiv a n k x).1) i =
       tensorPowerEquiv (n + k) x (Fin.castAdd k i) := by
-  simp [tensorPowerTakeDropEquiv, finTakeDropEquiv]
+  simp [tensorPowerTakeDropEquiv, TensorPower.takeDropEquiv, TensorPower.finTakeDropEquiv]
 
 @[simp]
 theorem tensorPowerTakeDropEquiv_snd_apply (n k : ℕ)
     (x : TensorPower a (n + k)) (j : Fin k) :
     tensorPowerEquiv k ((tensorPowerTakeDropEquiv a n k x).2) j =
       tensorPowerEquiv (n + k) x (Fin.natAdd n j) := by
-  simp [tensorPowerTakeDropEquiv, finTakeDropEquiv]
+  simp [tensorPowerTakeDropEquiv, TensorPower.takeDropEquiv, TensorPower.finTakeDropEquiv]
 
 /-- Under the `n|k` split, a permutation embedded in the last `k` positions
 acts only on the dropped/right tensor factor. -/

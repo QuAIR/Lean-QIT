@@ -1855,33 +1855,33 @@ private theorem adhwFQSW_hilbertSchmidtSq_le_of_projector_envelope
   exact State.hilbertSchmidtSq_matrix_le_of_le_smul_one ρ hd
     (henv.trans (hPenv.trans hdenv))
 
-private theorem adhwFQSW_traceDistance_le_of_normalizedTraceDistance_le
+private theorem adhwFQSW_traceNormDistance_le_of_normalizedTraceDistance_le
     {α : Type u} [Fintype α] [DecidableEq α]
     (ρ σ : State α) {η ε : ℝ}
     (hdist : ρ.normalizedTraceDistance σ ≤ Real.sqrt η + η)
     (hsplit : 2 * (Real.sqrt η + η) ≤ ε) :
-    traceDistance ρ.matrix σ.matrix ≤ ε := by
-  have hnorm : (1 / 2 : ℝ) * traceDistance ρ.matrix σ.matrix ≤
+    traceNormDistance ρ.matrix σ.matrix ≤ ε := by
+  have hnorm : (1 / 2 : ℝ) * traceNormDistance ρ.matrix σ.matrix ≤
       Real.sqrt η + η := by
     simpa [State.normalizedTraceDistance, normalizedTraceDistance] using hdist
-  have hnonneg : 0 ≤ traceDistance ρ.matrix σ.matrix :=
-    traceDistance_nonneg ρ.matrix σ.matrix
+  have hnonneg : 0 ≤ traceNormDistance ρ.matrix σ.matrix :=
+    traceNormDistance_nonneg ρ.matrix σ.matrix
   nlinarith
 
-private theorem adhwFQSW_traceDistance_triangle_state
+private theorem adhwFQSW_traceNormDistance_triangle_state
     {α : Type u} [Fintype α] [DecidableEq α]
     (ρ σ τ : State α) :
-    traceDistance ρ.matrix τ.matrix ≤
-      traceDistance ρ.matrix σ.matrix + traceDistance σ.matrix τ.matrix := by
+    traceNormDistance ρ.matrix τ.matrix ≤
+      traceNormDistance ρ.matrix σ.matrix + traceNormDistance σ.matrix τ.matrix := by
   have htri := State.normalizedTraceDistance_triangle ρ σ τ
   have hscaled :
-      (1 / 2 : ℝ) * traceDistance ρ.matrix τ.matrix ≤
-        (1 / 2 : ℝ) * traceDistance ρ.matrix σ.matrix +
-          (1 / 2 : ℝ) * traceDistance σ.matrix τ.matrix := by
+      (1 / 2 : ℝ) * traceNormDistance ρ.matrix τ.matrix ≤
+        (1 / 2 : ℝ) * traceNormDistance ρ.matrix σ.matrix +
+          (1 / 2 : ℝ) * traceNormDistance σ.matrix τ.matrix := by
     simpa [State.normalizedTraceDistance, normalizedTraceDistance,
       mul_add] using htri
-  have hnonneg : 0 ≤ traceDistance ρ.matrix τ.matrix :=
-    traceDistance_nonneg ρ.matrix τ.matrix
+  have hnonneg : 0 ≤ traceNormDistance ρ.matrix τ.matrix :=
+    traceNormDistance_nonneg ρ.matrix τ.matrix
   nlinarith
 
 /-- Simultaneous ADHW i.i.d. typical projectors `Π_A`, `Π_B`, and `Π_R`,
@@ -1928,11 +1928,11 @@ structure ADHWFQSWSimultaneousTypicalProjectors
         adhwFQSWIidProjectedSourceMatrix
           (a := a) (b := b) (r := r) ψ n projectorA projectorB projectorR
   schumacher_traceNorm_le :
-    traceDistance compressedSource.matrix (adhwFQSWIidSourceState ψ n).matrix ≤ ε
+    traceNormDistance compressedSource.matrix (adhwFQSWIidSourceState ψ n).matrix ≤ ε
   schumacher_traceNorm_le_normalizedTypical :
-    traceDistance compressedSource.matrix normalizedTypicalSource.matrix ≤ ε
+    traceNormDistance compressedSource.matrix normalizedTypicalSource.matrix ≤ ε
   normalized_traceNorm_le :
-    traceDistance normalizedTypicalSource.matrix (adhwFQSWIidSourceState ψ n).matrix ≤ ε
+    traceNormDistance normalizedTypicalSource.matrix (adhwFQSWIidSourceState ψ n).matrix ≤ ε
   purityA_le :
     hilbertSchmidtSq normalizedTypicalSource.marginalA.marginalA.matrix ≤
       (2 : ℝ) ^ (-((n : ℝ) * (adhwFQSWEntropyA ψ - δ)))
@@ -2152,30 +2152,30 @@ theorem exists_adhwFQSWSimultaneousTypicalProjectors
       normalizedTraceDistance_normalize_projector_sandwich_le
         (P := Pi) hPipsd hPiid ρ hη_nonneg hη_lt_one haccTriple
   have hdistCompressed_half :
-      traceDistance compressedSource.matrix ρ.matrix ≤ ε / 2 :=
-    adhwFQSW_traceDistance_le_of_normalizedTraceDistance_le
+      traceNormDistance compressedSource.matrix ρ.matrix ≤ ε / 2 :=
+    adhwFQSW_traceNormDistance_le_of_normalizedTraceDistance_le
       compressedSource ρ hdistCompressed_norm (by simpa [η] using hη_error)
   have hdistNormalized_half :
-      traceDistance normalizedTypicalSource.matrix ρ.matrix ≤ ε / 2 :=
-    adhwFQSW_traceDistance_le_of_normalizedTraceDistance_le
+      traceNormDistance normalizedTypicalSource.matrix ρ.matrix ≤ ε / 2 :=
+    adhwFQSW_traceNormDistance_le_of_normalizedTraceDistance_le
       normalizedTypicalSource ρ hdistNormalized_norm (by simpa [η] using hη_error)
   have hdistCompressed :
-      traceDistance compressedSource.matrix ρ.matrix ≤ ε :=
+      traceNormDistance compressedSource.matrix ρ.matrix ≤ ε :=
     hdistCompressed_half.trans hε_half_le
   have hdistNormalized :
-      traceDistance normalizedTypicalSource.matrix ρ.matrix ≤ ε :=
+      traceNormDistance normalizedTypicalSource.matrix ρ.matrix ≤ ε :=
     hdistNormalized_half.trans hε_half_le
   have hdistCompressedNormalized :
-      traceDistance compressedSource.matrix normalizedTypicalSource.matrix ≤ ε := by
+      traceNormDistance compressedSource.matrix normalizedTypicalSource.matrix ≤ ε := by
     have hdistNormalized_half_comm :
-        traceDistance ρ.matrix normalizedTypicalSource.matrix ≤ ε / 2 := by
-      rw [traceDistance_comm]
+        traceNormDistance ρ.matrix normalizedTypicalSource.matrix ≤ ε / 2 := by
+      rw [traceNormDistance_comm]
       exact hdistNormalized_half
     calc
-      traceDistance compressedSource.matrix normalizedTypicalSource.matrix
-          ≤ traceDistance compressedSource.matrix ρ.matrix +
-              traceDistance ρ.matrix normalizedTypicalSource.matrix :=
-            adhwFQSW_traceDistance_triangle_state compressedSource ρ normalizedTypicalSource
+      traceNormDistance compressedSource.matrix normalizedTypicalSource.matrix
+          ≤ traceNormDistance compressedSource.matrix ρ.matrix +
+              traceNormDistance ρ.matrix normalizedTypicalSource.matrix :=
+            adhwFQSW_traceNormDistance_triangle_state compressedSource ρ normalizedTypicalSource
       _ ≤ ε / 2 + ε / 2 := by
             exact add_le_add hdistCompressed_half hdistNormalized_half_comm
       _ = ε := by ring

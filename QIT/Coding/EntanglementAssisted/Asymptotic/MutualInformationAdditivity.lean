@@ -7,6 +7,8 @@ Authors: QuAIR Team
 module
 
 public import QIT.Coding.EntanglementAssisted.Asymptotic.ProtocolLifting
+public import QIT.HypothesisTesting.DPI
+import QIT.States.Purification.Uhlmann
 
 /-!
 # Ordinary mutual-information additivity
@@ -51,7 +53,7 @@ theorem entanglementAssistedMutualInformation_le_information_of_card_le
   have hφ : φ.Purifies ψ.state.marginalB :=
     ψ.state.marginalB.canonicalPurification_purifies
   have hψ : ψ.Purifies ψ.state.marginalB :=
-    ψ.purifies_marginalB_forHypothesisTestingDPI
+    ψ.purifies_marginalB
   rcases PureVector.exists_referenceIsometry_applyPureVector_eq_of_purifies_same_state
       hφ hψ hcard with ⟨V, hV⟩
   have hout :
@@ -102,7 +104,7 @@ theorem mixedInputOutput_mutualInformation_le_information
   let ψ : PureVector (Prod (Prod (Prod r a) r) a) :=
     ρ.purifiedInputForHypothesisTestingDPI
   let D : Channel (Prod (Prod r a) r) r :=
-    Channel.traceOutAForHypothesisTestingDPI (Prod r a) r
+    Channel.traceOutLeft (Prod r a) r
   have hstate :
       (D.prod (Channel.idChannel b)).applyState (N.entanglementAssistedOutputState ψ) =
         ((Channel.idChannel r).prod N).applyState ρ := by
@@ -112,7 +114,7 @@ theorem mixedInputOutput_mutualInformation_le_information
           (((Channel.idChannel (Prod (Prod r a) r)).prod N).applyState ψ.state) := rfl
       _ = ((Channel.idChannel r).prod N).applyState
           (((D.prod (Channel.idChannel a)).applyState ψ.state)) := by
-          exact Channel.traceOutAForHypothesisTestingDPI_prod_id_applyState_id_prod
+          exact Channel.traceOutLeft_prod_id_applyState_id_prod
             (p := Prod r a) (r := r) N ψ.state
       _ = ((Channel.idChannel r).prod N).applyState ρ := by
           rw [State.traceOut_purifiedInputForHypothesisTestingDPI]

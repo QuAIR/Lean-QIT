@@ -35,33 +35,6 @@ namespace Channel
 
 variable (N : Channel a b)
 
-/-- Assembly theorem for the asymptotic upper-bound route.
-
-After `EntanglementAssistedAsymptoticUpperInput` is supplied, this theorem
-returns the source-facing ordinary upper-bound and strong-converse conclusions,
-together with the two capacity inequalities needed by the final capacity
-theorem. -/
-theorem entanglementAssisted_asymptoticUpperBounds_of_asymptoticUpperInput
-    (hach :
-      N.IsAchievableEntanglementAssistedClassicalRate
-        N.entanglementAssistedInformation)
-    (H : N.EntanglementAssistedAsymptoticUpperInput) :
-    N.IsEntanglementAssistedClassicalRateUpperBound
-        N.entanglementAssistedInformation ∧
-      N.IsStrongConverseEntanglementAssistedClassicalRate
-        N.entanglementAssistedInformation ∧
-      N.entanglementAssistedClassicalCapacity ≤
-        N.entanglementAssistedInformation ∧
-      N.strongConverseEntanglementAssistedClassicalCapacity ≤
-        N.entanglementAssistedInformation := by
-  exact
-    ⟨N.entanglementAssistedInformation_isRateUpperBound_of_asymptoticUpperInput H,
-      N.entanglementAssistedInformation_isStrongConverseRate_of_asymptoticUpperInput H,
-      N.entanglementAssistedClassicalCapacity_le_information_of_asymptoticUpperInput
-        hach H,
-      N.strongConverseEntanglementAssistedClassicalCapacity_le_information_of_asymptoticUpperInput
-        hach H⟩
-
 /-- Assembly theorem for the source-shaped asymptotic upper-bound route.
 
 This is the intended handoff target after the sandwiched-Renyi additivity and

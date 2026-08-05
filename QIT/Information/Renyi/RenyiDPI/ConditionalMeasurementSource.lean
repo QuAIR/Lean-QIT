@@ -8,7 +8,6 @@ module
 
 import QIT.Channels.Diamond
 
-public import QIT.Information.Renyi.RenyiDPI.ConditionalMeasurement
 public import QIT.Information.Renyi.RenyiDPI.ReferenceOrder
 public import QIT.Information.Renyi.ConditionalSandwichedRenyiClassicalConditioning
 public import QIT.Information.Renyi.AlphaEntropyContinuity
@@ -183,71 +182,6 @@ theorem conditionalSandwichedRenyiUpSourceCandidate_le_measureSubsystemState
     exact EReal.neg_le_neg_iff.mpr hdiv'
   exact EReal.coe_le_coe_iff.mp hsource
 
-/-- Compatibility corollary for the historical full-rank finite-real
-conditional-entropy candidate. -/
-theorem conditionalSandwichedRenyiCandidate_le_measureSubsystemState
-    (rho : State (Prod a b)) (hrho : rho.matrix.PosDef)
-    (M : POVM c a) (hMUnit : measurementMapDoesNotEnlargeUnit M)
-    (hrhoM : (measureSubsystemState M rho).matrix.PosDef)
-    (alpha : Real) (halpha : 1 / 2 <= alpha) (halpha1 : alpha ≠ 1)
-    (sigma : State b) (hsigma : sigma.matrix.PosDef) :
-    rho.conditionalSandwichedRenyiCandidate hrho sigma hsigma alpha (by linarith) halpha1 <=
-      (measureSubsystemState M rho).conditionalSandwichedRenyiCandidate
-        hrhoM sigma hsigma alpha (by linarith) halpha1 := by
-  simpa only [conditionalSandwichedRenyiUpSourceCandidate_eq_old] using
-    conditionalSandwichedRenyiUpSourceCandidate_le_measureSubsystemState
-      rho M hMUnit alpha halpha halpha1 sigma hsigma
-
-/-- The upward conditional sandwiched Renyi candidate set is bounded above
-throughout the source DPI range. -/
-theorem conditionalSandwichedRenyiValueSet_bddAbove_of_half_le_ne_one
-    (rho : State (Prod a b)) (hrho : rho.matrix.PosDef)
-    (alpha : Real) (halpha : 1 / 2 <= alpha) (halpha1 : alpha ≠ 1) :
-    BddAbove (rho.conditionalSandwichedRenyiValueSet hrho alpha halpha halpha1) := by
-  apply conditionalSandwichedRenyiValueSet_bddAbove_log2_card_of_normalizedReference_nonneg
-  intro sigma hsigma
-  apply sandwichedRenyi_nonneg_of_half_le_ne_one
-  exact halpha
-
-/-- Measuring the first subsystem with a sub-unital measurement map cannot
-decrease upward sandwiched conditional Renyi entropy.
-
-This is Tomamichel's source theorem in `cond.tex:268-291`.  The implementation
-uses reference dominance followed by divergence DPI and optimization over the
-side-information state, rather than the repository's older duality/reverse-
-channel sufficient conditions. -/
-theorem measurementMap_conditionalRenyi_monotonicity
-    (rho : State (Prod a b)) (hrho : rho.matrix.PosDef)
-    (M : POVM c a) (hMUnit : measurementMapDoesNotEnlargeUnit M)
-    (hrhoM : (measureSubsystemState M rho).matrix.PosDef)
-    (alpha : Real) (halpha : 1 / 2 <= alpha) (halpha1 : alpha ≠ 1) :
-    conditionalSandwichedRenyi (measureSubsystemState M rho) hrhoM alpha halpha halpha1 ≥
-      conditionalSandwichedRenyi rho hrho alpha halpha halpha1 := by
-  haveI : Nonempty b := by
-    rcases rho.nonempty with ⟨i⟩
-    exact ⟨i.2⟩
-  apply conditionalSandwichedRenyi_le_of_forall_candidate_le
-  intro sigma hsigma
-  exact le_trans
-    (conditionalSandwichedRenyiCandidate_le_measureSubsystemState
-      rho hrho M hMUnit hrhoM alpha halpha halpha1 sigma hsigma)
-    (conditionalSandwichedRenyiCandidate_le_conditionalSandwichedRenyi_of_bddAbove
-      (measureSubsystemState M rho) hrhoM sigma hsigma alpha halpha halpha1
-      (conditionalSandwichedRenyiValueSet_bddAbove_of_half_le_ne_one
-        (measureSubsystemState M rho) hrhoM alpha halpha halpha1))
-
-/-- The historical proposition wrapper is discharged by the canonical source
-theorem. -/
-theorem measurementMap_conditionalRenyi_monotonicity_statement_proved
-    (rho : State (Prod a b)) (hrho : rho.matrix.PosDef)
-    (M : POVM c a) (hMUnit : measurementMapDoesNotEnlargeUnit M)
-    (hrhoM : (measureSubsystemState M rho).matrix.PosDef)
-    (alpha : Real) (halpha : 1 / 2 <= alpha) (halpha1 : alpha ≠ 1) :
-    RenyiDPI.Statement.measurementMap_conditionalRenyi_monotonicity_statement
-      rho hrho M hMUnit hrhoM alpha halpha halpha1 := by
-  exact measurementMap_conditionalRenyi_monotonicity
-    rho hrho M hMUnit hrhoM alpha halpha halpha1
-
 /-! ## Source-shaped arbitrary-state finite orders -/
 
 /-- The source-shaped upward candidate set is bounded above throughout the
@@ -304,14 +238,6 @@ theorem measurementMap_conditionalSandwichedRenyiUpSource_monotonicity
 
 /-! ## Boundary order `alpha = infinity` -/
 
-private theorem cMatrix_real_smul_le_smul
-    {i : Type*} [Fintype i] [DecidableEq i]
-    {A B : CMatrix i} {t : Real} (ht : 0 <= t) (hAB : A <= B) :
-    (t : Complex) • A <= (t : Complex) • B := by
-  rw [Matrix.le_iff] at hAB ⊢
-  have htC : (0 : Complex) <= (t : Complex) := by exact_mod_cast ht
-  have h := hAB.smul htC
-  simpa [smul_sub] using h
 
 /-- A conditional-min feasible exponent remains feasible after a sub-unital
 measurement of the first subsystem. -/
@@ -335,7 +261,7 @@ theorem ConditionalMinEntropyFeasible.measureSubsystemState
       simpa [t, rin, ConditionalMinEntropyFeasible, Matrix.le_iff] using h
     simpa [map_sub, map_smul] using Phi.mapsPositive _ hpos
   have hscaleRef : (t : Complex) • Phi.map rin <= (t : Complex) • rout :=
-    cMatrix_real_smul_le_smul ht hmapRef
+    cMatrix_ofReal_smul_le_smul ht hmapRef
   rw [ConditionalMinEntropyFeasible]
   have hfinal : Phi.map rho.matrix <= (t : Complex) • rout :=
     hmapFeas.trans (by simpa [map_smul] using hscaleRef)
@@ -699,29 +625,6 @@ theorem relativeEntropyPSDReferenceTraceLogE_real_smul_identityTensor_marginalB_
       field_simp [hlog]]
   rw [hMarginalEntropy]
   ring
-
-/-- A local channel on the first register preserves the second marginal. -/
-theorem marginalB_applyState_prod_id
-    (rho : State (Prod a b)) (D : Channel a c) :
-    ((D.prod (Channel.idChannel b)).applyState rho).marginalB = rho.marginalB := by
-  apply State.ext
-  change partialTraceA (a := c) (b := b)
-      (MatrixMap.kron D.map (Channel.idChannel b).map rho.matrix) =
-    partialTraceA (a := a) (b := b) rho.matrix
-  ext j j'
-  simp only [partialTraceA]
-  let S : CMatrix a := fun i i' => rho.matrix (i, j) (i', j')
-  have htrace : (D.map S).trace = S.trace := D.tracePreserving S
-  calc
-    (∑ i : c, MatrixMap.kron D.map (Channel.idChannel b).map rho.matrix
-        (i, j) (i, j')) =
-        ∑ i : c, D.map S i i := by
-          refine Finset.sum_congr rfl fun i _ => ?_
-          simpa [S] using
-            (MatrixMap.kron_idChannel_apply_slice (a := a) (b := c) (r := b)
-              D.map rho.matrix (i, j) (i, j'))
-    _ = ∑ i : a, rho.matrix (i, j) (i, j') := by
-      simpa [S, Matrix.trace] using htrace
 
 /-- Conditional von Neumann entropy cannot decrease under the sub-unital
 measurement when the side marginal is full-rank. The proof is exactly

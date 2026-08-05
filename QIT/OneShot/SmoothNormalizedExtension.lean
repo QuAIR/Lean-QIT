@@ -7,7 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.OneShot.SmoothAttainment
-public import QIT.Util.BlockMatrix
+public import QIT.States.TraceNorm.BlockMatrix
 
 /-!
 # Normalized extensions for smooth conditional min-entropy

@@ -69,13 +69,6 @@ theorem block_pad_ge_of_ratio
     _ = hswMessageRate M (t * k + r) := by
         rw [block_pad_eq (M := M) ht hk]
 
-private theorem rpow_two_log2_pos {x : ℝ} (hx : 0 < x) :
-    Real.rpow 2 (log2 x) = x := by
-  apply Real.log_injOn_pos (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _) hx
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2)]
-  unfold log2
-  have hlog2 : Real.log 2 ≠ 0 := (Real.log_pos one_lt_two).ne'
-  field_simp [hlog2]
 
 /-- The operational message rate exactly exponentiates back to the message
 cardinality for positive block lengths. -/

@@ -11,7 +11,7 @@ public import QIT.States.TraceNorm.Distance
 public import QIT.States.Purification.PureGeometry
 public import QIT.States.Purification.Uhlmann
 import QIT.States.TraceNorm.Spectral
-import QIT.HypothesisTesting.Audenaert
+import QIT.States.TraceNorm.Audenaert
 import Mathlib.LinearAlgebra.Dimension.Constructions
 
 /-!
@@ -51,14 +51,6 @@ private theorem partialTraceA_mul_kronecker_one
   simp [partialTraceA, Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
     Matrix.one_apply, Fintype.sum_prod_type, Finset.sum_mul]
   rw [Finset.sum_comm]
-
-omit [DecidableEq a] in
-private theorem partialTraceA_sub
-    {b : Type v} [Fintype b] (X Y : CMatrix (Prod a b)) :
-    partialTraceA (a := a) (b := b) (X - Y) =
-      partialTraceA (a := a) (b := b) X - partialTraceA (a := a) (b := b) Y := by
-  ext j j'
-  simp [partialTraceA, Finset.sum_sub_distrib]
 
 private theorem partialTraceA_mul_trace_eq_trace_mul_kronecker_one
     {b : Type v} [Fintype b] (X : CMatrix (Prod a b)) (U : CMatrix b) :
@@ -167,9 +159,9 @@ theorem normalizedTraceDistance_le_sqrt_one_sub_overlapSq (ψ φ : PureVector a)
   have hsq_normDist : ((1 / 2 : ℝ) * traceNorm D) ^ 2 ≤ 1 - ψ.overlapSq φ := by
     nlinarith
   rw [State.normalizedTraceDistance_eq_matrix, QIT.normalizedTraceDistance_eq]
-  change (1 / 2 : ℝ) * traceDistance ψ.state.matrix φ.state.matrix ≤
+  change (1 / 2 : ℝ) * traceNormDistance ψ.state.matrix φ.state.matrix ≤
       Real.sqrt (1 - ψ.overlapSq φ)
-  rw [traceDistance]
+  rw [traceNormDistance]
   change (1 / 2 : ℝ) * traceNorm D ≤ Real.sqrt (1 - ψ.overlapSq φ)
   exact Real.le_sqrt_of_sq_le hsq_normDist
 
@@ -246,7 +238,7 @@ private theorem audenaert_half_ge_one_sub_normalizedTraceDistance (ρ σ : State
       ((ρ.matrix + σ.matrix - CFC.abs (ρ.matrix - σ.matrix)).trace).re / 2 =
         1 - ρ.normalizedTraceDistance σ := by
     rw [State.normalizedTraceDistance_eq_matrix, QIT.normalizedTraceDistance_eq]
-    simp [QIT.traceDistance]
+    simp [QIT.traceNormDistance]
     rw [hnorm]
     simp [ρ.trace_eq_one, σ.trace_eq_one]
     ring
@@ -328,14 +320,14 @@ theorem fuchs_van_de_graaf_upper (ρ σ : State a) :
     ρ.normalizedTraceDistance σ =
         (1 / 2 : ℝ) * traceNorm (ρ.matrix - σ.matrix) := by
           simp [State.normalizedTraceDistance, QIT.normalizedTraceDistance,
-            QIT.traceDistance]
+            QIT.traceNormDistance]
     _ = (1 / 2 : ℝ) * traceNorm (partialTraceA (a := a) (b := a) D) := by
           rw [hdiff]
     _ ≤ (1 / 2 : ℝ) * traceNorm D := by
           exact mul_le_mul_of_nonneg_left (traceNorm_partialTraceA_le D) (by norm_num)
     _ = Ψ.state.normalizedTraceDistance Φ.state := by
           simp [State.normalizedTraceDistance, QIT.normalizedTraceDistance,
-            QIT.traceDistance, D]
+            QIT.traceNormDistance, D]
     _ ≤ Real.sqrt (1 - Ψ.overlapSq Φ) :=
           PureVector.normalizedTraceDistance_le_sqrt_one_sub_overlapSq Ψ Φ
     _ = Real.sqrt (1 - ρ.squaredFidelity σ) := by

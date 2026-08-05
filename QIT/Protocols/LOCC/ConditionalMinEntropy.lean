@@ -357,7 +357,7 @@ theorem refinedKraus_conditionalMinEntropyDualEffectFeasible
   apply State.conditionalMinEntropyDualEffectOfKraus_feasible
   rw [MatrixMap.smoothEndpointKrausStack_conjTranspose_mul]
   have hcomplete := M.sum_conjTranspose_refinedKraus_mul_refinedKraus
-  simpa [MatrixMap.smoothEndpointKrausAdjoint, Matrix.mul_one] using hcomplete.le
+  simpa [MatrixMap.krausAdjoint, Matrix.mul_one] using hcomplete.le
 
 /-- Summing complementary Gram matrices after the complete refined Alice
 instrument recovers the input complementary Gram matrix.  The matrix `S`

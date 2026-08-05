@@ -10,6 +10,8 @@ public import QIT.Information.Renyi.ConditionalPetzRenyi
 public import QIT.Information.Entropy.EntropyTensorPower
 public import QIT.Information.Entropy.RelativeEntropyDPI
 public import QIT.States.Schatten
+public import QIT.Util.BlockMatrix
+public import QIT.Util.Matrix
 public import Mathlib.Analysis.Convex.Deriv
 public import Mathlib.Analysis.Complex.Exponential
 public import Mathlib.Analysis.Complex.ExponentialBounds
@@ -575,80 +577,6 @@ theorem alphaCoshMajorant_two_mul_taylor_bound
       field_simp [ne_of_gt hβ, ne_of_gt hlog2_pos]
       ring
 
-private theorem rpow_two_log2_pos {x : ℝ} (hx : 0 < x) :
-    Real.rpow 2 (log2 x) = x := by
-  apply Real.log_injOn_pos (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _) hx
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2)]
-  unfold log2
-  have hlog2 : Real.log 2 ≠ 0 := (Real.log_pos one_lt_two).ne'
-  field_simp [hlog2]
-
-private theorem spectrum_real_diagonal_ofReal {n : Type u} [Fintype n] [DecidableEq n]
-    (d : n → ℝ) :
-    spectrum ℝ (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) = Set.range d := by
-  ext r
-  rw [← spectrum.algebraMap_mem_iff ℂ]
-  change (r : ℂ) ∈ spectrum ℂ (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) ↔
-    r ∈ Set.range d
-  rw [spectrum_diagonal]
-  constructor
-  · rintro ⟨i, hi⟩
-    exact ⟨i, Complex.ofReal_injective hi⟩
-  · rintro ⟨i, rfl⟩
-    exact ⟨i, rfl⟩
-
-private theorem aeval_diagonal_ofReal {n : Type u} [Fintype n] [DecidableEq n]
-    (d : n → ℝ) (p : ℝ[X]) :
-    aeval (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) p =
-      Matrix.diagonal (fun i => ((p.eval (d i) : ℝ) : ℂ)) := by
-  let dC : n → ℂ := fun i => (d i : ℂ)
-  change aeval (Matrix.diagonal dC) p =
-    Matrix.diagonal (fun i => ((p.eval (d i) : ℝ) : ℂ))
-  rw [show Matrix.diagonal dC = Matrix.diagonalAlgHom (R := ℝ) dC by rfl]
-  rw [Polynomial.aeval_algHom (Matrix.diagonalAlgHom (R := ℝ)) dC]
-  rw [Polynomial.aeval_pi]
-  ext i j
-  by_cases h : i = j
-  · subst j
-    simpa [Matrix.diagonal, dC, Polynomial.aeval_def] using
-      (Polynomial.eval₂_at_apply (p := p) (algebraMap ℝ ℂ) (d i))
-  · simp [Matrix.diagonal, h]
-
-private theorem cfc_diagonal_ofReal {n : Type u} [Fintype n] [DecidableEq n]
-    (d : n → ℝ) (f : ℝ → ℝ) :
-    cfc f (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) =
-      Matrix.diagonal (fun i => ((f (d i) : ℝ) : ℂ)) := by
-  classical
-  obtain ⟨p, hp⟩ :=
-    (Polynomial.exists_eval_eq_iff d (fun i => f (d i))).mpr (by
-      intro i j hij
-      simp [hij])
-  calc
-    cfc f (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) =
-        cfc p.eval (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) := by
-      apply cfc_congr
-      intro x hx
-      rw [spectrum_real_diagonal_ofReal d] at hx
-      rcases hx with ⟨i, rfl⟩
-      exact (hp i).symm
-    _ = aeval (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n) p := by
-      exact cfc_polynomial (q := p)
-        (a := (Matrix.diagonal fun i => (d i : ℂ) : CMatrix n))
-        (ha := by
-          rw [isSelfAdjoint_iff, star_eq_conjTranspose, Matrix.diagonal_conjTranspose]
-          ext i j
-          by_cases h : i = j
-          · subst j
-            simp
-          · simp [Matrix.diagonal, h])
-    _ = Matrix.diagonal (fun i => ((f (d i) : ℝ) : ℂ)) := by
-      rw [aeval_diagonal_ofReal d p]
-      ext i j
-      by_cases h : i = j
-      · subst j
-        simp [hp i]
-      · simp [Matrix.diagonal, h]
-
 private theorem cfc_conjStarAlgAut_posDef
     {n : Type u} [Fintype n] [DecidableEq n]
     (u : Matrix.unitaryGroup n ℂ) {A : CMatrix n} (hA : A.PosDef)
@@ -1119,63 +1047,6 @@ theorem conditionalEntropyRelative_to_conditionalEntropy
       simp [State.marginalB_matrix]
     _ = ((ρ.marginalB.matrix * psdLog ρ.marginalB.matrix hρB).trace).re := by
       rw [Matrix.trace_mul_comm]
-
-omit [DecidableEq a] [DecidableEq b] in
-private theorem finset_sum_b_b_a_reorder {R : Type*} [AddCommMonoid R]
-    (F : a -> b -> b -> R) :
-    (∑ j : b, ∑ k : b, ∑ i : a, F i j k) =
-      ∑ i : a, ∑ j : b, ∑ k : b, F i j k := by
-  calc
-    (∑ j : b, ∑ k : b, ∑ i : a, F i j k) =
-        ∑ k : b, ∑ j : b, ∑ i : a, F i j k := by
-      rw [Finset.sum_comm]
-    _ = ∑ k : b, ∑ i : a, ∑ j : b, F i j k := by
-      apply Finset.sum_congr rfl
-      intro k _
-      rw [Finset.sum_comm]
-    _ = ∑ i : a, ∑ k : b, ∑ j : b, F i j k := by
-      rw [Finset.sum_comm]
-    _ = ∑ i : a, ∑ j : b, ∑ k : b, F i j k := by
-      apply Finset.sum_congr rfl
-      intro i _
-      rw [Finset.sum_comm]
-
-omit [DecidableEq b] in
-private theorem partialTraceA_quadratic_eq_sum_slice
-    (M : CMatrix (Prod a b)) (y : b -> ℂ) :
-    let z : a -> Prod a b -> ℂ := fun i p => if p.1 = i then y p.2 else 0
-    star y ⬝ᵥ (partialTraceA (a := a) (b := b) M).mulVec y =
-      ∑ i, star (z i) ⬝ᵥ M.mulVec (z i) := by
-  intro z
-  simp [z, partialTraceA, Matrix.mulVec, dotProduct, Fintype.sum_prod_type,
-    Finset.mul_sum, Finset.sum_mul, apply_ite]
-  rw [finset_sum_b_b_a_reorder (a := a) (b := b)
-    (F := fun i j k => starRingEnd ℂ (y j) * (M (i, j) (i, k) * y k))]
-
-omit [DecidableEq b] in
-private theorem partialTraceA_posDef_of_posDef [Nonempty a]
-    {M : CMatrix (Prod a b)} (hM : M.PosDef) :
-    (partialTraceA (a := a) (b := b) M).PosDef := by
-  refine Matrix.PosDef.of_dotProduct_mulVec_pos
-    (partialTraceA_posSemidef (a := a) (b := b) hM.posSemidef).1 ?_
-  intro y hy
-  let z : a -> Prod a b -> ℂ := fun i p => if p.1 = i then y p.2 else 0
-  have hz (i : a) : z i ≠ 0 := by
-    intro hzi
-    apply hy
-    funext j
-    have h := congr_fun hzi (i, j)
-    simpa [z] using h
-  have hnonneg : ∀ i : a, 0 ≤ star (z i) ⬝ᵥ M.mulVec (z i) := by
-    intro i
-    exact hM.posSemidef.dotProduct_mulVec_nonneg (z i)
-  have hpos :
-      0 < star (z (Classical.choice inferInstance)) ⬝ᵥ
-        M.mulVec (z (Classical.choice inferInstance)) :=
-    hM.dotProduct_mulVec_pos (hz (Classical.choice inferInstance))
-  rw [partialTraceA_quadratic_eq_sum_slice (M := M) (y := y)]
-  exact Finset.sum_pos' (fun i _ => hnonneg i)
-    ⟨Classical.choice inferInstance, Finset.mem_univ _, hpos⟩
 
 theorem marginalB_posDef_of_posDef
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef) :
@@ -2568,28 +2439,6 @@ private theorem unitary_conj_diagonal_re_le_of_le
     noncomm_ring
   rw [hexpand] at hnonneg
   simpa using hnonneg
-
-private theorem cMatrix_fromBlocks_self_le_posSemidef
-    {n : Type u} [Fintype n] [DecidableEq n]
-    {A C : CMatrix n}
-    (hA : A.PosSemidef) (hCminusA : (C - A).PosSemidef) :
-    (Matrix.fromBlocks A A A C : CMatrix (Sum n n)).PosSemidef := by
-  classical
-  let D : CMatrix (Sum n n) := Matrix.fromBlocks A 0 0 (C - A)
-  let T : CMatrix (Sum n n) := Matrix.fromBlocks 1 1 0 1
-  have hD : D.PosSemidef := by
-    simpa [D] using
-      Matrix.fromBlocks_diagonal_posSemidef
-        (A := A) (D := C - A) hA hCminusA
-  have hconj : (T.conjTranspose * D * T).PosSemidef := by
-    simpa [Matrix.mul_assoc] using hD.mul_mul_conjTranspose_same T.conjTranspose
-  have hfactor :
-      T.conjTranspose * D * T =
-        (Matrix.fromBlocks A A A C : CMatrix (Sum n n)) := by
-    (ext i j; cases i) <;> cases j <;>
-      simp [D, T, Matrix.fromBlocks_multiply, Matrix.fromBlocks_conjTranspose,
-        sub_eq_add_neg]
-  simpa [hfactor] using hconj
 
 private theorem cMatrix_mul_inv_mul_self_le_smul_of_posSemidef_le_posDef
     {n : Type u} [Fintype n] [DecidableEq n]

@@ -6,7 +6,6 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.OneShot.Smooth
 public import QIT.Information.Renyi.Renyi
 
 /-!

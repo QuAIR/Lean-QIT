@@ -13,6 +13,7 @@ public import QIT.Information.Renyi.ConditionalRenyiMinimax
 public import QIT.Information.Renyi.SandwichedRenyiOptimizedUSC
 public import QIT.HypothesisTesting.DPI
 public import QIT.States.Purification.Canonical
+public import QIT.Util.Matrix
 public import QIT.Util.Order.EReal
 
 /-!
@@ -581,66 +582,6 @@ theorem cMatrix_rpow_reindex_posSemidef_support
   rw [hdiagPowAlg, hstarUAlg]
   rfl
 
-private theorem additivity_finset_sum_b_b_a_reorder
-    {a : Type u1} {b : Type v1} [Fintype a] [Fintype b]
-    {R : Type*} [AddCommMonoid R]
-    (F : a -> b -> b -> R) :
-    (∑ j : b, ∑ k : b, ∑ i : a, F i j k) =
-      ∑ i : a, ∑ j : b, ∑ k : b, F i j k := by
-  calc
-    (∑ j : b, ∑ k : b, ∑ i : a, F i j k) =
-        ∑ k : b, ∑ j : b, ∑ i : a, F i j k := by
-      rw [Finset.sum_comm]
-    _ = ∑ k : b, ∑ i : a, ∑ j : b, F i j k := by
-      apply Finset.sum_congr rfl
-      intro k _
-      rw [Finset.sum_comm]
-    _ = ∑ i : a, ∑ k : b, ∑ j : b, F i j k := by
-      rw [Finset.sum_comm]
-    _ = ∑ i : a, ∑ j : b, ∑ k : b, F i j k := by
-      apply Finset.sum_congr rfl
-      intro i _
-      rw [Finset.sum_comm]
-
-private theorem additivity_partialTraceA_quadratic_eq_sum_slice
-    {a : Type u1} {b : Type v1} [Fintype a] [DecidableEq a]
-    [Fintype b] [DecidableEq b]
-    (M : CMatrix (Prod a b)) (y : b -> ℂ) :
-    let z : a -> Prod a b -> ℂ := fun i p => if p.1 = i then y p.2 else 0
-    star y ⬝ᵥ (partialTraceA (a := a) (b := b) M).mulVec y =
-      ∑ i, star (z i) ⬝ᵥ M.mulVec (z i) := by
-  intro z
-  simp [z, partialTraceA, Matrix.mulVec, dotProduct, Fintype.sum_prod_type,
-    Finset.mul_sum, Finset.sum_mul, apply_ite]
-  rw [additivity_finset_sum_b_b_a_reorder (a := a) (b := b)
-    (F := fun i j k => starRingEnd ℂ (y j) * (M (i, j) (i, k) * y k))]
-
-private theorem additivity_partialTraceA_posDef_of_posDef
-    {a : Type u1} {b : Type v1} [Fintype a] [DecidableEq a]
-    [Fintype b] [DecidableEq b] [Nonempty a]
-    {M : CMatrix (Prod a b)} (hM : M.PosDef) :
-    (partialTraceA (a := a) (b := b) M).PosDef := by
-  refine Matrix.PosDef.of_dotProduct_mulVec_pos
-    (partialTraceA_posSemidef (a := a) (b := b) hM.posSemidef).1 ?_
-  intro y hy
-  let z : a -> Prod a b -> ℂ := fun i p => if p.1 = i then y p.2 else 0
-  have hz (i : a) : z i ≠ 0 := by
-    intro hzi
-    apply hy
-    funext j
-    have h := congr_fun hzi (i, j)
-    simpa [z] using h
-  have hnonneg : ∀ i : a, 0 <= star (z i) ⬝ᵥ M.mulVec (z i) := by
-    intro i
-    exact hM.posSemidef.dotProduct_mulVec_nonneg (z i)
-  have hpos :
-      0 < star (z (Classical.choice inferInstance)) ⬝ᵥ
-        M.mulVec (z (Classical.choice inferInstance)) :=
-    hM.dotProduct_mulVec_pos (hz (Classical.choice inferInstance))
-  rw [additivity_partialTraceA_quadratic_eq_sum_slice (M := M) (y := y)]
-  exact Finset.sum_pos' (fun i _ => hnonneg i)
-    ⟨Classical.choice inferInstance, Finset.mem_univ _, hpos⟩
-
 private theorem State.marginalB_posDef_of_posDef
     {a : Type u1} {b : Type v1} [Fintype a] [DecidableEq a]
     [Fintype b] [DecidableEq b]
@@ -650,7 +591,7 @@ private theorem State.marginalB_posDef_of_posDef
     rcases rhoAB.nonempty with ⟨x⟩
     exact ⟨x.1⟩
   simpa [State.marginalB_matrix] using
-    (additivity_partialTraceA_posDef_of_posDef
+    (partialTraceA_posDef_of_posDef
       (a := a) (b := b) (M := rhoAB.matrix) hrho)
 
 theorem State.marginalA_posDef_of_posDef
@@ -677,17 +618,9 @@ theorem State.prod_right_posDef_of_posDef
     sigmaB.matrix.PosDef := by
   have hpt :
       (partialTraceA (a := a) (b := b) (rhoA.prod sigmaB).matrix).PosDef :=
-    additivity_partialTraceA_posDef_of_posDef
+    partialTraceA_posDef_of_posDef
       (a := a) (b := b) (M := (rhoA.prod sigmaB).matrix) hprod
   simpa [State.partialTraceA_prod rhoA sigmaB] using hpt
-
-/-- Positive-argument logarithm rule for `log2` and real powers. -/
-private theorem log2_rpow_pos {x y : ℝ} (hx : 0 < x) :
-    log2 (Real.rpow x y) = y * log2 x := by
-  unfold log2
-  change Real.log (x ^ y) / Real.log 2 = y * (Real.log x / Real.log 2)
-  rw [Real.log_rpow hx]
-  ring
 
 /-- Infimum of independently optimized real-valued objectives over a product
 domain.  This is the order-theoretic scalar step used in the KW source when an

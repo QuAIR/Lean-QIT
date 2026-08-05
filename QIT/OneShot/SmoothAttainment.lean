@@ -9,6 +9,7 @@ module
 public import QIT.OneShot.SmoothEndpoint
 public import QIT.States.SubnormalizedTopology
 public import Mathlib.Topology.Semicontinuity.Basic
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # Smooth min/max entropy attainment
@@ -46,18 +47,6 @@ theorem continuous_identityTensorStateMatrix :
   exact continuous_const.mul
     ((continuous_apply j.2).comp ((continuous_apply i.2).comp continuous_matrix))
 
-omit [Fintype a] [Fintype b] [DecidableEq b] in
-/-- The map `T_B ↦ I_A ⊗ T_B` is continuous on side-information matrices. -/
-theorem continuous_kronecker_one_matrix :
-    Continuous fun T : CMatrix b => Matrix.kronecker (1 : CMatrix a) T := by
-  refine continuous_pi ?_
-  intro i
-  refine continuous_pi ?_
-  intro j
-  simp [Matrix.kronecker, Matrix.kroneckerMap_apply]
-  exact continuous_const.mul
-    ((continuous_apply j.2).comp ((continuous_apply i.2).comp continuous_id))
-
 /-- For fixed side information, the raw squared-fidelity max-entropy candidate
 is continuous in the optimized subnormalized state. -/
 theorem continuous_conditionalMaxEntropyExponentCandidate_left
@@ -71,56 +60,6 @@ theorem continuous_conditionalMaxEntropyExponentCandidate_left
       traceNorm (psdSqrt ρ.matrix * psdSqrt (identityTensorStateMatrix (a := a) σ)) :=
     traceNorm_continuous_forTopology.comp hmul
   simpa [conditionalMaxEntropyExponentCandidate] using hnorm.pow 2
-
-/-- PSD matrices with trace bounded by `R`. -/
-def psdTraceBoundedMatrixSet (b : Type v) [Fintype b] (R : ℝ) : Set (CMatrix b) :=
-  {T | T.PosSemidef ∧ T.trace.re ≤ R}
-
-omit [DecidableEq b] in
-theorem mem_psdTraceBoundedMatrixSet_iff {R : ℝ} {T : CMatrix b} :
-    T ∈ psdTraceBoundedMatrixSet b R ↔ T.PosSemidef ∧ T.trace.re ≤ R :=
-  Iff.rfl
-
-omit [DecidableEq b] in
-/-- The trace-bounded PSD matrix domain is closed. -/
-theorem psdTraceBoundedMatrixSet_isClosed (R : ℝ) :
-    IsClosed (psdTraceBoundedMatrixSet b R) := by
-  classical
-  have hpsd : IsClosed ({T : CMatrix b | T.PosSemidef} : Set (CMatrix b)) := by
-    simpa using (psdCone b).isClosed
-  have htrace :
-      IsClosed ({T : CMatrix b | T.trace.re ≤ R} : Set (CMatrix b)) := by
-    exact isClosed_le
-      (Complex.continuous_re.comp (Continuous.matrix_trace continuous_id))
-      continuous_const
-  have hset :
-      psdTraceBoundedMatrixSet b R =
-        ({T : CMatrix b | T.PosSemidef} ∩
-          {T : CMatrix b | T.trace.re ≤ R}) := by
-    ext T
-    rfl
-  rw [hset]
-  exact hpsd.inter htrace
-
-/-- The trace-bounded PSD matrix domain is bounded. -/
-theorem psdTraceBoundedMatrixSet_isBounded {R : ℝ} :
-    Bornology.IsBounded (psdTraceBoundedMatrixSet b R) := by
-  rw [isBounded_iff_forall_norm_le]
-  refine ⟨R * ‖(1 : CMatrix b)‖, ?_⟩
-  intro T hT
-  rcases hT with ⟨hTpsd, hTtrace⟩
-  have hnorm := State.norm_le_trace_re_mul_norm_one_of_posSemidef (a := b) hTpsd
-  have htrace_bound :
-      T.trace.re * ‖(1 : CMatrix b)‖ ≤ R * ‖(1 : CMatrix b)‖ :=
-    mul_le_mul_of_nonneg_right hTtrace (norm_nonneg _)
-  exact le_trans hnorm htrace_bound
-
-/-- The trace-bounded PSD matrix domain is compact. -/
-theorem psdTraceBoundedMatrixSet_isCompact {R : ℝ} :
-    IsCompact (psdTraceBoundedMatrixSet b R) :=
-  Metric.isCompact_of_isClosed_isBounded
-    (psdTraceBoundedMatrixSet_isClosed (b := b) R)
-    (psdTraceBoundedMatrixSet_isBounded (b := b))
 
 /-- Compact feasible pairs `(ρ', T_B)` for the conditional-min scale over a
 purified-distance ball, with a harmless trace cap on `T_B`. -/
@@ -307,13 +246,6 @@ theorem smoothConditionalMaxEntropy_exists_optimizer
       exact hρmax_min hρ'_ball
   · intro ρ' _hρ' hρ'_ball
     exact hρmax_min hρ'_ball
-
-private theorem neg_log2_antitone_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    -log2 y ≤ -log2 x := by
-  unfold log2
-  exact neg_le_neg
-    (div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-      (le_of_lt (Real.log_pos one_lt_two)))
 
 /-- Smooth subnormalized conditional min-entropy attains its maximum together
 with an optimal feasible side operator.  This is the source-level witness pair

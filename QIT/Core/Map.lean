@@ -210,6 +210,15 @@ theorem krausAdjoint_sub_apply {κ : Type w} [Fintype κ]
   ext i j
   simp [krausAdjoint, Matrix.mul_sub, Matrix.sub_mul, Finset.sum_sub_distrib]
 
+omit [DecidableEq a] [DecidableEq b] in
+/-- Kraus Heisenberg adjoints are monotone on effects. -/
+theorem krausAdjoint_mono {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ) {E F : CMatrix b} (hEF : E ≤ F) :
+    krausAdjoint K E ≤ krausAdjoint K F := by
+  rw [Matrix.le_iff] at hEF ⊢
+  have hpsd := krausAdjoint_mapsPositive K (F - E) hEF
+  simpa [krausAdjoint_sub_apply] using hpsd
+
 /-- Trace duality between a Kraus map and its Heisenberg adjoint. -/
 theorem ofKraus_trace_duality {κ : Type w} [Fintype κ]
     (K : κ → Matrix b a ℂ) (X : CMatrix a) (E : CMatrix b) :

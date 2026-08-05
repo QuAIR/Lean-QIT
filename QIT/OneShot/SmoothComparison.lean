@@ -9,6 +9,7 @@ module
 public import QIT.OneShot.SmoothComparisonFidelity
 public import QIT.OneShot.SmoothNormalizedExtension
 public import QIT.States.Geometry.PurifiedDistanceAngle
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # Smooth conditional min/max entropy comparison
@@ -49,17 +50,6 @@ private theorem generalizedFidelity_ge_one_sub_sq_of_purifiedDistance_le
   have hsq : (ρ.purifiedDistance σ) ^ 2 = 1 - ρ.generalizedFidelity σ := by
     rw [SubnormalizedState.purifiedDistance_eq, Real.sq_sqrt hinside]
   nlinarith
-
-private theorem log2_mono_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    log2 x ≤ log2 y := by
-  unfold log2
-  exact div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-    (le_of_lt (Real.log_pos one_lt_two))
-
-private theorem log2_one_div (x : ℝ) : log2 (1 / x) = -log2 x := by
-  unfold log2
-  rw [one_div, Real.log_inv]
-  ring
 
 end SmoothComparison
 
@@ -188,7 +178,7 @@ private theorem smoothConditionalMinEntropy_le_smoothConditionalMaxEntropy_add_d
   have hlog_product :
       log2 (1 - δ ^ 2) ≤
         log2 (ρmaxPlus.matrix.trace.re * (ω.fidelity ρhat) ^ 2) :=
-    SmoothComparison.log2_mono_of_pos hpenalty_pos hfid_product
+    QIT.log2_mono_of_pos hpenalty_pos hfid_product
   have hlog_mul :
       log2 (ρmaxPlus.matrix.trace.re * (ω.fidelity ρhat) ^ 2) =
         log2 ρmaxPlus.matrix.trace.re + log2 ((ω.fidelity ρhat) ^ 2) := by
@@ -199,7 +189,7 @@ private theorem smoothConditionalMinEntropy_le_smoothConditionalMaxEntropy_add_d
   rw [← hmin_eq, State.smoothConditionalMaxEntropy_eq_toSubnormalized, hmax_eq]
   change ρhat.conditionalMinEntropy ≤
     ρmax.conditionalMaxEntropyRaw + log2 (1 / (1 - δ ^ 2))
-  rw [← hmax_isometry, hmax_scale, SmoothComparison.log2_one_div, hρhat_value]
+  rw [← hmax_isometry, hmax_scale, QIT.log2_one_div, hρhat_value]
   linarith
 
 /-- Smooth min/max comparison in the epsilon form used by the fixed-error

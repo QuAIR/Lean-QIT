@@ -783,7 +783,7 @@ structure ADHWFQSWIidCompressedSourceWitness
      L * source.state.matrix * Matrix.conjTranspose L =
        T.normalizedTypicalSource.matrix)
   source_traceNorm_le_original :
-    traceDistance T.normalizedTypicalSource.matrix (adhwFQSWIidSourceState ψ n).matrix ≤ ε
+    traceNormDistance T.normalizedTypicalSource.matrix (adhwFQSWIidSourceState ψ n).matrix ≤ ε
 
 namespace ADHWFQSWIidCompressedSourceWitness
 
@@ -1210,15 +1210,15 @@ private theorem physicalOutputChannel_applyState
     Channel.reindex_applyState]
   rfl
 
-theorem physicalOutput_traceDistance_le
+theorem physicalOutput_traceNormDistance_le
     (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
     (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e)))
     (ρ σ : State
       (Prod (Prod (TensorPower a n) (TensorPower b n)) (TensorPower r n))) :
-    traceDistance
+    traceNormDistance
         ((W.toFQSWBlockProtocol H).outputStateOfBlockState ρ).matrix
         ((W.toFQSWBlockProtocol H).outputStateOfBlockState σ).matrix ≤
-      traceDistance ρ.matrix σ.matrix := by
+      traceNormDistance ρ.matrix σ.matrix := by
   have hρ :
       (W.physicalOutputChannel H).applyState ρ =
         (W.toFQSWBlockProtocol H).outputStateOfBlockState ρ := by
@@ -1239,32 +1239,32 @@ registers cannot increase their trace-norm error. -/
 theorem decodedOneShot_traceNormError_le
     (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
     (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
-    traceDistance (W.decodedOneShotOutputState H).matrix
+    traceNormDistance (W.decodedOneShotOutputState H).matrix
         (W.normalizedTypicalTargetState H).matrix ≤
       H.toOneShotProtocol.traceNormError := by
   let Φ := W.sourceDecoder.prod (Channel.idChannel (Prod e e))
   have h := Channel.normalizedTraceDistance_applyState_le Φ
     H.toOneShotProtocol.outputState H.toOneShotProtocol.targetState
   have hraw :
-      traceDistance (W.decodedOneShotOutputState H).matrix
+      traceNormDistance (W.decodedOneShotOutputState H).matrix
           (W.decodedOneShotTargetState H).matrix ≤
         H.toOneShotProtocol.traceNormError := by
     unfold decodedOneShotOutputState decodedOneShotTargetState
-    change traceDistance
+    change traceNormDistance
         (Φ.applyState H.toOneShotProtocol.outputState).matrix
         (Φ.applyState H.toOneShotProtocol.targetState).matrix ≤
-      traceDistance H.toOneShotProtocol.outputState.matrix
+      traceNormDistance H.toOneShotProtocol.outputState.matrix
         H.toOneShotProtocol.targetState.matrix
     unfold State.normalizedTraceDistance normalizedTraceDistance at h
     nlinarith
   rw [← W.decodedOneShotTargetState_eq_normalizedTypicalTargetState H]
   exact hraw
 
-private theorem adhwFQSW_traceDistance_triangle
+private theorem adhwFQSW_traceNormDistance_triangle
     {α : Type*} [Fintype α] [DecidableEq α]
     (ρ σ τ : State α) :
-    traceDistance ρ.matrix τ.matrix ≤
-      traceDistance ρ.matrix σ.matrix + traceDistance σ.matrix τ.matrix := by
+    traceNormDistance ρ.matrix τ.matrix ≤
+      traceNormDistance ρ.matrix σ.matrix + traceNormDistance σ.matrix τ.matrix := by
   have h := State.normalizedTraceDistance_triangle ρ σ τ
   unfold State.normalizedTraceDistance normalizedTraceDistance at h
   nlinarith
@@ -1285,10 +1285,10 @@ set_option maxHeartbeats 800000
 Both perturbation terms are distances between the original IID source and the
 normalized simultaneous-typical source; the middle term is the computed
 one-shot protocol error transported through the physical decoders. -/
-theorem toFQSWBlockProtocol_output_traceDistance_le_sourceRoute
+theorem toFQSWBlockProtocol_output_traceNormDistance_le_sourceRoute
     (W : ADHWFQSWIidCompressedSourceWitness ψ n δ ε T atyp btyp rtyp q e)
     (H : ADHWFQSWOneShotBound W.source q e (Equiv.refl (Prod q e))) :
-    traceDistance
+    traceNormDistance
         ((W.toFQSWBlockProtocol H).outputStateOfBlockState
           (adhwFQSWIidSourceState ψ n)).matrix
         (W.toFQSWBlockProtocol H).targetState.matrix ≤
@@ -1297,16 +1297,16 @@ theorem toFQSWBlockProtocol_output_traceDistance_le_sourceRoute
   let source := adhwFQSWIidSourceState ψ n
   let typical := T.normalizedTypicalSource
   let ebit := State.maximallyEntangled H.toOneShotProtocol.ebitPairing
-  have hsource : traceDistance source.matrix typical.matrix ≤ ε := by
-    rw [traceDistance_comm]
+  have hsource : traceNormDistance source.matrix typical.matrix ≤ ε := by
+    rw [traceNormDistance_comm]
     exact W.source_traceNorm_le_original
   have htransport :
-      traceDistance (C.outputStateOfBlockState source).matrix
+      traceNormDistance (C.outputStateOfBlockState source).matrix
           (C.outputStateOfBlockState typical).matrix ≤
-        traceDistance source.matrix typical.matrix := by
-    exact W.physicalOutput_traceDistance_le H source typical
+        traceNormDistance source.matrix typical.matrix := by
+    exact W.physicalOutput_traceNormDistance_le H source typical
   have hmiddle :
-      traceDistance (C.outputStateOfBlockState typical).matrix
+      traceNormDistance (C.outputStateOfBlockState typical).matrix
           (typical.prod ebit).matrix ≤
         H.toOneShotProtocol.traceNormError := by
     rw [show C.outputStateOfBlockState typical = W.decodedOneShotOutputState H by
@@ -1314,22 +1314,22 @@ theorem toFQSWBlockProtocol_output_traceDistance_le_sourceRoute
     simpa [typical, ebit, normalizedTypicalTargetState] using
       W.decodedOneShot_traceNormError_le H
   have htarget :
-      traceDistance (typical.prod ebit).matrix C.targetState.matrix ≤ ε := by
-    change traceDistance (typical.prod ebit).matrix (source.prod ebit).matrix ≤ ε
-    exact (fqswProdRight_traceDistance_le typical source ebit).trans
+      traceNormDistance (typical.prod ebit).matrix C.targetState.matrix ≤ ε := by
+    change traceNormDistance (typical.prod ebit).matrix (source.prod ebit).matrix ≤ ε
+    exact (fqswProdRight_traceNormDistance_le typical source ebit).trans
       W.source_traceNorm_le_original
   calc
-    traceDistance (C.outputStateOfBlockState source).matrix C.targetState.matrix ≤
-        traceDistance (C.outputStateOfBlockState source).matrix
+    traceNormDistance (C.outputStateOfBlockState source).matrix C.targetState.matrix ≤
+        traceNormDistance (C.outputStateOfBlockState source).matrix
             (C.outputStateOfBlockState typical).matrix +
-          traceDistance (C.outputStateOfBlockState typical).matrix
+          traceNormDistance (C.outputStateOfBlockState typical).matrix
             C.targetState.matrix :=
-      adhwFQSW_traceDistance_triangle _ _ _
-    _ ≤ traceDistance source.matrix typical.matrix +
-          (traceDistance (C.outputStateOfBlockState typical).matrix
+      adhwFQSW_traceNormDistance_triangle _ _ _
+    _ ≤ traceNormDistance source.matrix typical.matrix +
+          (traceNormDistance (C.outputStateOfBlockState typical).matrix
               (typical.prod ebit).matrix +
-            traceDistance (typical.prod ebit).matrix C.targetState.matrix) :=
-      add_le_add htransport (adhwFQSW_traceDistance_triangle _ _ _)
+            traceNormDistance (typical.prod ebit).matrix C.targetState.matrix) :=
+      add_le_add htransport (adhwFQSW_traceNormDistance_triangle _ _ _)
     _ ≤ ε + (H.toOneShotProtocol.traceNormError + ε) :=
       add_le_add hsource (add_le_add hmiddle htarget)
     _ = 2 * ε + H.toOneShotProtocol.traceNormError := by ring
@@ -1342,7 +1342,7 @@ theorem toFQSWBlockProtocol_traceNormError_le_sourceRoute
       2 * ε + H.toOneShotProtocol.traceNormError := by
   unfold FQSWBlockProtocol.traceNormError
   rw [fqswBlock_outputState_eq_adhwIidSource]
-  exact W.toFQSWBlockProtocol_output_traceDistance_le_sourceRoute H
+  exact W.toFQSWBlockProtocol_output_traceNormDistance_le_sourceRoute H
 
 end
 

@@ -68,13 +68,6 @@ theorem invSqrtTwo_mul_star_invSqrtTwo :
     TwoQubit.invSqrtTwo * star TwoQubit.invSqrtTwo = (1 / 2 : Complex) := by
   rw [TwoQubit.star_invSqrtTwo, TwoQubit.invSqrtTwo_mul_self]
 
-/-- The squared modulus of the Hadamard amplitude in `starRingEnd` form. -/
-@[simp]
-theorem invSqrtTwo_mul_starRingEnd_invSqrtTwo :
-    TwoQubit.invSqrtTwo * (starRingEnd ℂ) TwoQubit.invSqrtTwo = (1 / 2 : Complex) := by
-  change TwoQubit.invSqrtTwo * star TwoQubit.invSqrtTwo = (1 / 2 : Complex)
-  rw [TwoQubit.star_invSqrtTwo, TwoQubit.invSqrtTwo_mul_self]
-
 /-- The squared modulus of the Hadamard amplitude, with conjugate first. -/
 @[simp]
 theorem star_invSqrtTwo_mul_invSqrtTwo :
@@ -99,7 +92,8 @@ theorem prepare_normalized (bit : Bit) (basis : Basis) :
     selfOverlap (prepareAmp bit basis) = 1 := by
   cases bit <;> cases basis <;>
     simp [selfOverlap, prepareAmp, computationalZero, computationalOne,
-      hadamardPlus, hadamardMinus, dotProduct] <;> norm_num
+      hadamardPlus, hadamardMinus, dotProduct,
+      TwoQubit.invSqrtTwo_mul_starRingEnd_invSqrtTwo] <;> norm_num
 
 /-- The prepare-state as a State. -/
 def prepareState (bit : Bit) (basis : Basis) : State Qubit where
@@ -134,7 +128,8 @@ def projectiveMeasurement (basis : Basis) : ProjectiveMeasurement Bit Qubit wher
     cases basis <;> cases outcome <;> cases i <;> cases j <;>
       simp [measurementEffect, prepareAmp, computationalZero, computationalOne,
         hadamardPlus, hadamardMinus, Matrix.mul_apply,
-        TwoQubit.invSqrtTwo_mul_self] <;> norm_num
+        TwoQubit.invSqrtTwo_mul_self,
+        TwoQubit.invSqrtTwo_mul_starRingEnd_invSqrtTwo] <;> norm_num
   orthogonal := by
     intro i j hij
     ext r c
@@ -157,7 +152,8 @@ theorem matched_basis_trace_self (bit basis : Bit) :
     Complex.re (((prepareState bit basis).matrix * measurementEffect basis bit).trace) = 1 := by
   cases bit <;> cases basis <;>
     simp [prepareState, measurementEffect, prepareAmp, computationalZero, computationalOne,
-      hadamardPlus, hadamardMinus, Matrix.mul_apply, Matrix.trace] <;> norm_num
+      hadamardPlus, hadamardMinus, Matrix.mul_apply, Matrix.trace,
+      TwoQubit.invSqrtTwo_mul_starRingEnd_invSqrtTwo] <;> norm_num
 
 /-- In the matched basis, the Born-rule trace for the complementary bit is zero. -/
 theorem matched_basis_trace_compl (bit basis : Bit) :

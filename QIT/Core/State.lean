@@ -171,6 +171,12 @@ conditional entropy definitions. -/
 def identityTensorStateMatrix (sigma : State b) : CMatrix (Prod a b) :=
   Matrix.kronecker (1 : CMatrix a) sigma.matrix
 
+/-- The matrix `I_A ⊗ σ_B` is positive semidefinite. -/
+theorem identityTensorStateMatrix_posSemidef (sigma : State b) :
+    (identityTensorStateMatrix (a := a) sigma).PosSemidef := by
+  change (Matrix.kronecker (1 : CMatrix a) sigma.matrix).PosSemidef
+  exact Matrix.PosSemidef.one.kronecker sigma.pos
+
 /-- `Tr_A (rho_A tensor sigma_B) = sigma_B`. -/
 theorem partialTraceA_prod (rho : State a) (sigma : State b) :
     partialTraceA (a := a) (b := b) (rho.prod sigma).matrix = sigma.matrix := by

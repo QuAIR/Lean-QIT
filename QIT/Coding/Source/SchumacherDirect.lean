@@ -9,6 +9,7 @@ module
 public import QIT.Coding.Source.Schumacher
 public import QIT.Channels.Diamond
 public import QIT.OneShot.GentleMeasurement
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # Schumacher compression direct achievability
@@ -469,16 +470,6 @@ private theorem kron_idChannel_ofKraus_apply
   congr 1 with q
   rw [Finset.sum_mul]
 
-/-- The trace norm of a positive semidefinite matrix is its real trace. -/
-private theorem traceNorm_posSemidef_eq_trace_re {a : Type u} [Fintype a]
-    [DecidableEq a] {P : CMatrix a} (hP : P.PosSemidef) :
-    traceNorm P = P.trace.re := by
-  have hstar : Matrix.conjTranspose P = P := hP.isHermitian.eq
-  have hsqrt : psdSqrt (P * P) = P := by
-    have : CFC.sqrt (P * P) = P := CFC.sqrt_unique (b := P) rfl hP.nonneg
-    exact this
-  rw [traceNorm, hstar, hsqrt]
-
 end BipartiteKraus
 
 /-! ### The fidelity bound for typical-subspace compression
@@ -489,20 +480,6 @@ code built above: the joint (purification) trace-distance error is at most
 `√(atypical) + atypical/2`, and the rate is at most `S(ρ) + δ`.  These two
 estimates combine at the end of the section to give `schumacher_direct_achievable`.
 -/
-
-/-- `log₂ (2 ^ t) = t` for the QIT custom `log2`.  Reproved locally because the
-QIT `log2` is `Real.log x / Real.log 2`, not mathlib's `Real.logb`. -/
-private theorem log2_two_rpow (t : ℝ) : log2 (2 ^ t : ℝ) = t := by
-  unfold log2
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2)]
-  field_simp
-
-/-- `log2` is monotone on `(0, ∞)`. -/
-private theorem log2_le_log2 {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    log2 x ≤ log2 y := by
-  unfold log2
-  exact div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-    (le_of_lt (Real.log_pos (by norm_num : (1 : ℝ) < 2)))
 
 /-- The composed compression channel's Kraus family.  Index `(encoder idx, decoder idx)`;
 the decoder contributes a single Kraus `V` (the typical isometry), so each entry is
@@ -587,8 +564,8 @@ public theorem typicalCompressionCode_jointError_le (ρ : State a) (n : ℕ) (δ
         (typicalCorrectionKraus ρ n δ i0 l)).conjTranspose
   -- 0. `C.jointError = ½ · traceNorm (ω.matrix - φ.matrix)`.
   have herr_def : C.jointError = (1 / 2 : ℝ) * traceNorm (ω.matrix - φ.matrix) := by
-    show (1 / 2 : ℝ) * QIT.traceDistance ω.matrix φ.matrix = _
-    rw [traceDistance_eq_traceNorm_sub]
+    show (1 / 2 : ℝ) * QIT.traceNormDistance ω.matrix φ.matrix = _
+    rw [traceNormDistance_eq_traceNorm_sub]
   -- 1. `PiMat.PosSemidef`, hence `PiMat.conjTranspose = PiMat`.
   have hPiMat_psd : PiMat.PosSemidef :=
     Matrix.PosSemidef.one.kronecker (ρ.typicalSubspaceProjector_posSemidef n δ)
@@ -660,7 +637,7 @@ public theorem typicalCompressionCode_jointError_le (ρ : State a) (n : ℕ) (δ
     linarith [ρ.typicalSubspaceSpectralWeight_add_atypical n δ]
   -- 8. Trace-norm of `ω_corr` (PSD ⇒ traceNorm = real trace).
   have htn_ω_corr : traceNorm ω_corr = ρ.atypicalSubspaceSpectralWeight n δ := by
-    rw [traceNorm_posSemidef_eq_trace_re hω_corr_psd, htrace_ω_corr]
+    rw [traceNorm_posSemidef_eq_trace_re _ hω_corr_psd, htrace_ω_corr]
   -- 9. Gentle projector bound on the projective part.
   have hgentle : traceNorm (PiMat * φ.matrix * PiMat - φ.matrix) ≤
       2 * Real.sqrt (ρ.atypicalSubspaceSpectralWeight n δ) := by
@@ -699,9 +676,9 @@ public theorem typicalCompressionCode_jointError_le (ρ : State a) (n : ℕ) (δ
 /-- The register rate of the typical compression code is at most `S(ρ) + δ`.
 
 Uses `card_typicalSubspaceIndex`, `typicalSubspaceDimension_le_two_pow`, and the
-local `log2_two_rpow` / `log2_le_log2` lemmas (QIT's custom `log2`).  The
+base-two logarithm monotonicity / inversion lemmas (QIT's custom `log2`).  The
 `Nonempty` of the typical register (provided by `i0`) gives the strict
-positivity of `typicalSubspaceDimension` required by `log2_le_log2`. -/
+positivity of `typicalSubspaceDimension` required by `log2_mono_of_pos`. -/
 public theorem typicalCompressionCode_rate_le (ρ : State a) (n : ℕ) (δ : ℝ)
     (hn : 1 ≤ n) (i0 : TypicalSubspaceIndex ρ n δ) :
     (typicalCompressionCode ρ n δ i0).rate ≤ ρ.schumacherRate + δ := by
@@ -721,7 +698,7 @@ public theorem typicalCompressionCode_rate_le (ρ : State a) (n : ℕ) (δ : ℝ
     ρ.typicalSubspaceDimension_le_two_pow n δ
   have hlog2 : log2 (ρ.typicalSubspaceDimension n δ) ≤
       (n : ℝ) * (ρ.vonNeumann + δ) :=
-    (log2_le_log2 hdim_pos hdim_le).trans (le_of_eq (log2_two_rpow _))
+    (log2_mono_of_pos hdim_pos hdim_le).trans (le_of_eq (log2_two_rpow _))
   rw [mul_comm]
   exact hlog2
 

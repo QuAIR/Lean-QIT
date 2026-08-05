@@ -14,6 +14,7 @@ public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.Additivity.Channe
 public import QIT.HypothesisTesting.PetzComparison
 public import QIT.Information.Entropy.EntropyTensorPower
 public import QIT.Information.AlickiFannesWinter
+import QIT.Util.TensorPower
 
 /-!
 # Asymptotic basic helpers
@@ -227,13 +228,6 @@ theorem state_reindex_symm_reindex {α : Type u} {β : Type v}
   ext i j
   simp [State.reindex]
 
-theorem tensorPower_nonempty_of_nonempty {α : Type u} [Nonempty α] :
-    (n : ℕ) → Nonempty (QIT.TensorPower α n)
-  | 0 => ⟨PUnit.unit⟩
-  | n + 1 =>
-      haveI : Nonempty (QIT.TensorPower α n) := tensorPower_nonempty_of_nonempty n
-      inferInstanceAs (Nonempty (Prod α (QIT.TensorPower α n)))
-
 theorem cMatrix_rpow_reindex_nonneg {α : Type u} {β : Type v}
     [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
     (e : α ≃ β) (A : CMatrix α) (hA : A.PosSemidef)
@@ -353,24 +347,6 @@ theorem partialProductOutput_marginalAB
   rw [hmatrix]
   exact hsum.symm
 
-theorem vonNeumann_punit_eq_zero (ρ : State PUnit.{u + 1}) :
-    ρ.vonNeumann = 0 := by
-  exact le_antisymm (by simpa [log2] using vonNeumann_le_log_card ρ) (vonNeumann_nonneg ρ)
-
-theorem mutualInformation_punit_punit_eq_zero
-    (ρ : State (Prod PUnit.{u + 1} PUnit.{v + 1})) :
-    QIT.mutualInformation ρ = 0 := by
-  have hA : ρ.marginalA.vonNeumann = 0 := vonNeumann_punit_eq_zero ρ.marginalA
-  have hB : ρ.marginalB.vonNeumann = 0 := vonNeumann_punit_eq_zero ρ.marginalB
-  have hAB : ρ.vonNeumann = 0 := by
-    exact le_antisymm (by simpa [log2] using vonNeumann_le_log_card ρ) (vonNeumann_nonneg ρ)
-  simp [QIT.mutualInformation, hA, hB, hAB]
-
-/-- Mutual information is additive on repartitioned product bipartite states:
-`I(A₁A₂;B₁B₂)_{ρ⊗σ} = I(A₁;B₁)_ρ + I(A₂;B₂)_σ`.
-
-This is the entropy-form version used along the source route in
-Khatri--Wilde, `Chapters/EA_capacity.tex`, lines 1044-1058. -/
 theorem mutualInformation_bipartiteProduct
     {a₁ : Type u} {b₁ : Type v} {a₂ : Type w} {b₂ : Type x}
     [Fintype a₁] [DecidableEq a₁] [Fintype b₁] [DecidableEq b₁]

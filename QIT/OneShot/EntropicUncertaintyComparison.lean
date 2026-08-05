@@ -367,15 +367,6 @@ private theorem referenceIsometry_compression_ofReferenceIsometry_applyState
             simp only [Matrix.mul_assoc]
     _ = rho.matrix := by rw [V.isometry, Matrix.one_mul, Matrix.mul_one]
 
-private theorem cMatrix_real_smul_le_smul
-    {p : Type*} [Fintype p] [DecidableEq p]
-    {M N : CMatrix p} {t : Real} (ht : 0 <= t) (hMN : M <= N) :
-    (t : Complex) • M <= (t : Complex) • N := by
-  rw [Matrix.le_iff] at hMN ⊢
-  have htC : (0 : Complex) <= (t : Complex) := by exact_mod_cast ht
-  have h := hMN.smul htC
-  simpa [smul_sub] using h
-
 /-- The diagonal copied-outcome blocks of a `Y'B` state sum to its `B`
 marginal. This is the final equality in `apps.tex:212`. -/
 theorem sum_copiedOutcomeBlock_eq_marginalB
@@ -774,7 +765,7 @@ theorem conditionalMinEntropyFeasible_coherentMeasurement_sub_log2
   have hscaled :
       (t : Complex) • Phi.map rin <=
         (t : Complex) • ((c : Complex) • rout) :=
-    cMatrix_real_smul_le_smul ht hdom
+    cMatrix_ofReal_smul_le_smul ht hdom
   have htc : t * c = Real.rpow 2 (-(lam - log2 c)) := by
     dsimp [t]
     rw [show -(lam - log2 c) = -lam + log2 c by ring,

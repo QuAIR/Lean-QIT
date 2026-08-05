@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Core.Channel
+public import QIT.Classical.Bridge
 public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import QIT.States.TraceNorm.PositivePart
 public import QIT.States.TraceNorm.Variational
@@ -59,6 +60,42 @@ def ancillaNormalizedTraceAction (Δ : MatrixMap a b) (ω : State (Prod a r)) : 
 when it never increases the real trace of a PSD matrix. -/
 def IsTraceNonincreasing (Φ : MatrixMap a b) : Prop :=
   ∀ X : CMatrix a, X.PosSemidef → (Φ X).trace.re ≤ X.trace.re
+
+omit [DecidableEq a] [DecidableEq b] in theorem krausAdjoint_posSemidef
+    {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ) {E : CMatrix b} (hE : E.PosSemidef) :
+    (krausAdjoint K E).PosSemidef := by
+  unfold krausAdjoint
+  exact Matrix.posSemidef_sum Finset.univ fun k _ => by
+    simpa [Matrix.conjTranspose_conjTranspose, Matrix.mul_assoc]
+      using hE.mul_mul_conjTranspose_same (Matrix.conjTranspose (K k))
+
+/-- `krausAdjoint` of the unit is bounded by the unit for a trace-nonincreasing
+Kraus map. -/
+theorem krausAdjoint_one_le_of_traceNonincreasing
+    {κ : Type w} [Fintype κ]
+    (K : κ → Matrix b a ℂ)
+    (hTNI : IsTraceNonincreasing (ofKraus K)) :
+    krausAdjoint K (1 : CMatrix b) ≤ 1 := by
+  rw [Matrix.le_iff]
+  refine (cMatrix_posSemidef_iff_trace_mul_posSemidef_re_nonneg ?_).2 ?_
+  · exact Matrix.IsHermitian.sub Matrix.isHermitian_one
+      (krausAdjoint_posSemidef K Matrix.PosSemidef.one).isHermitian
+  · intro A hA
+    have hle := hTNI A hA
+    have hdual :
+        (((ofKraus K) A) * (1 : CMatrix b)).trace =
+          (A * krausAdjoint K (1 : CMatrix b)).trace :=
+      ofKraus_trace_duality K A (1 : CMatrix b)
+    rw [Matrix.mul_one] at hdual
+    have htrace :
+        ((A * ((1 : CMatrix a) - krausAdjoint K (1 : CMatrix b))).trace).re =
+          A.trace.re - ((A * krausAdjoint K (1 : CMatrix b)).trace).re := by
+      simp [Matrix.mul_sub, Matrix.trace_sub]
+    rw [Matrix.trace_mul_comm]
+    rw [htrace]
+    rw [← hdual]
+    exact sub_nonneg.mpr hle
 
 /-- Minimal finite-dimensional trace-nonincreasing completely positive map
 interface used by CKR extraction maps. -/
@@ -177,15 +214,6 @@ theorem partialTraceA_apply (X : CMatrix (Prod a b)) :
     partialTraceA a b X = QIT.partialTraceA (a := a) (b := b) X :=
   rfl
 
-omit [DecidableEq a] [DecidableEq b] in
-private theorem krausAdjoint_posSemidef' {κ : Type w} [Fintype κ]
-    (K : κ → Matrix b a ℂ) (E : CMatrix b) (hE : E.PosSemidef) :
-    (krausAdjoint K E).PosSemidef := by
-  unfold krausAdjoint
-  exact Matrix.posSemidef_sum Finset.univ fun k _ => by
-    simpa [Matrix.conjTranspose_conjTranspose, Matrix.mul_assoc]
-      using hE.mul_mul_conjTranspose_same (Matrix.conjTranspose (K k))
-
 noncomputable def TraceNonincreasingCP.lossEffect {Φ : MatrixMap a b}
     (hΦ : TraceNonincreasingCP Φ) : CMatrix a :=
   1 - krausAdjoint hΦ.kraus (1 : CMatrix b)
@@ -197,7 +225,7 @@ theorem TraceNonincreasingCP.lossEffect_posSemidef {Φ : MatrixMap a b}
   let K := hΦ.kraus
   let A : CMatrix a := krausAdjoint K (1 : CMatrix b)
   have hApos : A.PosSemidef := by
-    exact krausAdjoint_posSemidef' K (1 : CMatrix b) Matrix.PosSemidef.one
+    exact krausAdjoint_posSemidef K Matrix.PosSemidef.one
   have hHerm : (1 - A).IsHermitian :=
     Matrix.isHermitian_one.sub hApos.isHermitian
   rw [lossEffect]
@@ -637,6 +665,90 @@ theorem kron_idChannel_apply_applyMatrixRight
         Matrix.mul_apply, Matrix.sum_apply, Matrix.smul_apply,
         MatrixMap.kron_idChannel_apply_slice, Finset.mul_sum,
         mul_assoc, mul_left_comm, mul_comm]
+
+/-- A map on the target/right factor commutes with an isometry acting on the
+left/reference factor. -/
+theorem kron_idChannel_left_apply_applyMatrix
+    {r₁ : Type w} {r₂ : Type x}
+    [Fintype r₁] [DecidableEq r₁] [Fintype r₂] [DecidableEq r₂]
+    (Φ : MatrixMap a b) (V : ReferenceIsometry r₁ r₂)
+    (X : CMatrix (Prod r₁ a)) :
+    MatrixMap.kron (Channel.idChannel r₂).map Φ (V.applyMatrix X) =
+      V.applyMatrix (MatrixMap.kron (Channel.idChannel r₁).map Φ X) := by
+  ext rb rb'
+  rw [MatrixMap.kron_idChannel_left_apply_slice]
+  have hslice :
+      (fun j j' => V.applyMatrix X (rb.1, j) (rb'.1, j')) =
+        ∑ y : r₁, ∑ x : r₁,
+          (V.matrix rb.1 x * star (V.matrix rb'.1 y)) •
+            (fun j j' => X (x, j) (y, j')) := by
+    ext j j'
+    simp [ReferenceIsometry.applyMatrix, ReferenceIsometry.targetBlock,
+      Matrix.mul_apply, Finset.sum_mul, mul_assoc, mul_comm]
+  rw [hslice]
+  have hmap :
+      Φ (∑ y : r₁, ∑ x : r₁,
+          (V.matrix rb.1 x * star (V.matrix rb'.1 y)) •
+            (fun j j' => X (x, j) (y, j'))) =
+        ∑ y : r₁, ∑ x : r₁,
+          (V.matrix rb.1 x * star (V.matrix rb'.1 y)) •
+            Φ (fun j j' => X (x, j) (y, j')) := by
+    rw [map_sum]
+    refine Finset.sum_congr rfl fun y _ => ?_
+    rw [map_sum]
+    refine Finset.sum_congr rfl fun x _ => ?_
+    exact LinearMap.map_smul Φ (V.matrix rb.1 x * star (V.matrix rb'.1 y))
+      (fun j j' => X (x, j) (y, j'))
+  have hmapEntry := congrFun (congrFun hmap rb.2) rb'.2
+  calc
+    Φ (∑ y : r₁, ∑ x : r₁,
+        (V.matrix rb.1 x * star (V.matrix rb'.1 y)) •
+          (fun j j' => X (x, j) (y, j'))) rb.2 rb'.2
+        = (∑ y : r₁, ∑ x : r₁,
+            (V.matrix rb.1 x * star (V.matrix rb'.1 y)) •
+              Φ (fun j j' => X (x, j) (y, j'))) rb.2 rb'.2 := hmapEntry
+    _ = V.applyMatrix (MatrixMap.kron (Channel.idChannel r₁).map Φ X) rb rb' := by
+      simp [ReferenceIsometry.applyMatrix, ReferenceIsometry.targetBlock,
+        Matrix.mul_apply, Matrix.sum_apply, Matrix.smul_apply,
+        MatrixMap.kron_idChannel_left_apply_slice, Finset.mul_sum,
+        mul_assoc, mul_left_comm, mul_comm]
+
+/-- Composition of two Kronecker-structured matrix maps acts by composing each
+factor. -/
+theorem kron_comp_apply_general
+    {α β γ δ η θ : Type*}
+    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    [Fintype γ] [DecidableEq γ] [Fintype δ] [DecidableEq δ]
+    [Fintype η] [DecidableEq η] [Fintype θ] [DecidableEq θ]
+    (Φ₁ : MatrixMap α β) (Ψ₁ : MatrixMap γ δ)
+    (Φ₂ : MatrixMap η α) (Ψ₂ : MatrixMap θ γ) (X : CMatrix (Prod η θ)) :
+    kron Φ₁ Ψ₁ ((kron Φ₂ Ψ₂) X) =
+      kron (Φ₁.comp Φ₂) (Ψ₁.comp Ψ₂) X := by
+  ext bd bd'
+  rw [map_eq_sum_single (kron Φ₂ Ψ₂) X]
+  simp_rw [map_sum]
+  simp_rw [map_smul]
+  simp only [Matrix.sum_apply]
+  rw [map_eq_sum_single (kron (Φ₁.comp Φ₂) (Ψ₁.comp Ψ₂)) X]
+  simp only [Matrix.sum_apply]
+  change
+    (∑ ef : Prod η θ, ∑ ef' : Prod η θ,
+      (X ef ef' • (kron Φ₁ Ψ₁ ((kron Φ₂ Ψ₂) (Matrix.single ef ef' 1)))) bd bd') =
+    (∑ ef : Prod η θ, ∑ ef' : Prod η θ,
+      (X ef ef' • (kron (Φ₁.comp Φ₂) (Ψ₁.comp Ψ₂) (Matrix.single ef ef' 1))) bd bd')
+  refine Finset.sum_congr rfl fun ef _ => ?_
+  refine Finset.sum_congr rfl fun ef' _ => ?_
+  simp only [Matrix.smul_apply]
+  congr 1
+  cases ef with
+  | mk e0 f0 =>
+  cases ef' with
+  | mk e1 f1 =>
+  rw [single_prod_eq_kronecker_single]
+  rw [kron_apply_kronecker]
+  rw [kron_apply_kronecker]
+  rw [kron_apply_kronecker]
+  rfl
 
 private theorem trace_kron_id_left_eq_trace_apply_partialTraceA
     {c : Type w} {d : Type x} [Fintype c] [DecidableEq c]
@@ -1455,36 +1567,6 @@ end ReferenceIsometryChannel
 
 variable {κ : Type x} [Fintype κ]
 
-omit [DecidableEq a] [DecidableEq b] in
-private theorem krausAdjoint_posSemidef
-    (K : κ → Matrix b a ℂ) (E : CMatrix b) (hE : E.PosSemidef) :
-    (krausAdjoint K E).PosSemidef := by
-  unfold krausAdjoint
-  exact Matrix.posSemidef_sum Finset.univ fun k _ => by
-    simpa [Matrix.conjTranspose_conjTranspose, Matrix.mul_assoc]
-      using hE.mul_mul_conjTranspose_same (Matrix.conjTranspose (K k))
-
-omit [Fintype a] [DecidableEq a] [DecidableEq b] in
-private theorem krausAdjoint_sub (K : κ → Matrix b a ℂ) (E F : CMatrix b) :
-    krausAdjoint K (E - F) = krausAdjoint K E - krausAdjoint K F := by
-  ext i j
-  simp [krausAdjoint, Matrix.mul_sub, Matrix.sub_mul, Finset.sum_sub_distrib]
-
-private theorem krausAdjoint_effect
-    (K : κ → Matrix b a ℂ) (hTP : IsTracePreserving (ofKraus K))
-    {E : CMatrix b} (hEpos : E.PosSemidef) (hEle : E ≤ 1) :
-    (krausAdjoint K E).PosSemidef ∧ krausAdjoint K E ≤ 1 := by
-  refine ⟨krausAdjoint_posSemidef K E hEpos, ?_⟩
-  rw [Matrix.le_iff]
-  have hcomp : (1 - E).PosSemidef := by
-    rwa [← Matrix.le_iff]
-  have hcompAdj : (krausAdjoint K (1 - E)).PosSemidef :=
-    krausAdjoint_posSemidef K (1 - E) hcomp
-  have hone := krausAdjoint_one_of_tracePreserving K hTP
-  have hsub := krausAdjoint_sub K (1 : CMatrix b) E
-  rw [hone] at hsub
-  rwa [← hsub]
-
 /-- Scalar-output effect functional `X ↦ Tr(XE)`.
 
 The Kraus form uses `sqrt(E)` so complete positivity is immediate when `E` is
@@ -1590,6 +1672,48 @@ variable {a : Type u} {b : Type v} {r : Type w}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 variable [Fintype r] [DecidableEq r]
 
+/-- A chosen finite Kraus representation of a channel. -/
+def kraus (Φ : Channel a b) : (Prod a b) → Matrix b a ℂ :=
+  Classical.choose (MatrixMap.exists_kraus_of_choi_psd Φ.map Φ.completelyPositive)
+
+theorem map_eq_ofKraus (Φ : Channel a b) :
+    Φ.map = MatrixMap.ofKraus (Φ.kraus) :=
+  Classical.choose_spec (MatrixMap.exists_kraus_of_choi_psd Φ.map Φ.completelyPositive)
+
+/-- Heisenberg-picture pullback of an output effect along a channel. -/
+def dualEffect (Φ : Channel a b) (E : CMatrix b) : CMatrix a :=
+  MatrixMap.krausAdjoint Φ.kraus E
+
+theorem applyState_dualEffect_trace
+    (Φ : Channel a b) (ρ : State a) (E : CMatrix b) :
+    (((Φ.applyState ρ).matrix * E).trace) =
+      (ρ.matrix * Φ.dualEffect E).trace := by
+  unfold dualEffect
+  change ((Φ.map ρ.matrix) * E).trace =
+    (ρ.matrix * MatrixMap.krausAdjoint Φ.kraus E).trace
+  rw [Φ.map_eq_ofKraus]
+  exact MatrixMap.ofKraus_trace_duality Φ.kraus ρ.matrix E
+
+theorem dualEffect_posSemidef
+    (Φ : Channel a b) {E : CMatrix b} (hE : E.PosSemidef) :
+    (Φ.dualEffect E).PosSemidef := by
+  exact MatrixMap.krausAdjoint_posSemidef Φ.kraus hE
+
+theorem dualEffect_one_le (Φ : Channel a b) :
+    Φ.dualEffect (1 : CMatrix b) ≤ 1 := by
+  unfold dualEffect
+  refine MatrixMap.krausAdjoint_one_le_of_traceNonincreasing Φ.kraus ?_
+  intro X hX
+  have hTNI :=
+    (MatrixMap.traceNonincreasingCP_of_tracePreserving Φ.completelyPositive
+      Φ.tracePreserving).traceNonincreasing X hX
+  simpa [Φ.map_eq_ofKraus] using hTNI
+
+theorem dualEffect_le_one_of_le_one
+    (Φ : Channel a b) {E : CMatrix b} (hE : E ≤ 1) :
+    Φ.dualEffect E ≤ 1 := by
+  exact le_trans (MatrixMap.krausAdjoint_mono Φ.kraus hE) Φ.dualEffect_one_le
+
 /-- The channel induced by a finite reference isometry. -/
 def ofReferenceIsometry (V : ReferenceIsometry a b) : Channel a b where
   map := MatrixMap.ofReferenceIsometry V
@@ -1603,6 +1727,19 @@ def ofReferenceIsometry (V : ReferenceIsometry a b) : Channel a b where
 theorem ofReferenceIsometry_map (V : ReferenceIsometry a b) :
     (Channel.ofReferenceIsometry V).map = MatrixMap.ofReferenceIsometry V :=
   rfl
+
+/-- Applying a reference isometry on the left tensor factor to a product with the
+identity channel acts by `ReferenceIsometry.applyMatrix`. -/
+theorem ofReferenceIsometry_prod_id_applyState_matrix
+    {r₁ : Type w} {r₂ : Type x}
+    [Fintype r₁] [DecidableEq r₁] [Fintype r₂] [DecidableEq r₂]
+    (V : ReferenceIsometry r₁ r₂) (ρ : State (Prod r₁ a)) :
+    (((Channel.ofReferenceIsometry V).prod (Channel.idChannel a)).applyState ρ).matrix =
+      V.applyMatrix ρ.matrix := by
+  change MatrixMap.kron (Channel.ofReferenceIsometry V).map
+      (Channel.idChannel a).map ρ.matrix = V.applyMatrix ρ.matrix
+  rw [Channel.ofReferenceIsometry_map]
+  exact MatrixMap.kron_ofReferenceIsometry_idChannel_apply_eq_applyMatrixLeft V ρ.matrix
 
 /-- Relabel a finite channel system along a basis equivalence. -/
 def reindex (e : a ≃ b) : Channel a b where
@@ -1679,6 +1816,74 @@ theorem traceOutLeft_applyState (ρ : State (Prod a b)) :
   apply State.ext
   rfl
 
+@[simp]
+theorem traceOutLeft_map (X : CMatrix (Prod a b)) :
+    (traceOutLeft a b).map X = QIT.partialTraceA (a := a) (b := b) X :=
+  rfl
+
+/-- Tracing out a left reference factor commutes with applying a channel on the
+right tensor factor. -/
+theorem traceOutLeft_prod_id_applyState_id_prod
+    {p : Type u} {r : Type v} {a : Type w} {b : Type x}
+    [Fintype p] [DecidableEq p] [Fintype r] [DecidableEq r]
+    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+    (N : Channel a b) (ρ : State (Prod (Prod p r) a)) :
+    ((traceOutLeft p r).prod (Channel.idChannel b)).applyState
+        (((Channel.idChannel (Prod p r)).prod N).applyState ρ) =
+      ((Channel.idChannel r).prod N).applyState
+        (((traceOutLeft p r).prod (Channel.idChannel a)).applyState ρ) := by
+  apply State.ext
+  change
+    MatrixMap.kron (traceOutLeft p r).map
+        (Channel.idChannel b).map
+        (MatrixMap.kron (Channel.idChannel (Prod p r)).map N.map ρ.matrix) =
+      MatrixMap.kron (Channel.idChannel r).map N.map
+        (MatrixMap.kron (traceOutLeft p r).map
+          (Channel.idChannel a).map ρ.matrix)
+  have hleft₁ :
+      (traceOutLeft p r).map.comp
+          (Channel.idChannel (Prod p r)).map =
+        (traceOutLeft p r).map := by
+    ext X i j
+    simp [Channel.idChannel, MatrixMap.ofKraus]
+  have hleft₂ :
+      (Channel.idChannel b).map.comp N.map = N.map := by
+    ext X i j
+    simp [Channel.idChannel, MatrixMap.ofKraus]
+  have hright₁ :
+      (Channel.idChannel r).map.comp (traceOutLeft p r).map =
+        (traceOutLeft p r).map := by
+    ext X i j
+    simp [Channel.idChannel, MatrixMap.ofKraus]
+  have hright₂ :
+      N.map.comp (Channel.idChannel a).map = N.map := by
+    ext X i j
+    simp [Channel.idChannel, MatrixMap.ofKraus]
+  calc
+    MatrixMap.kron (traceOutLeft p r).map
+        (Channel.idChannel b).map
+        (MatrixMap.kron (Channel.idChannel (Prod p r)).map N.map ρ.matrix) =
+      MatrixMap.kron
+        ((traceOutLeft p r).map.comp
+          (Channel.idChannel (Prod p r)).map)
+        ((Channel.idChannel b).map.comp N.map) ρ.matrix := by
+        exact MatrixMap.kron_comp_apply_general
+          (traceOutLeft p r).map (Channel.idChannel b).map
+          (Channel.idChannel (Prod p r)).map N.map ρ.matrix
+    _ = MatrixMap.kron (traceOutLeft p r).map N.map ρ.matrix := by
+        rw [hleft₁, hleft₂]
+    _ = MatrixMap.kron
+        ((Channel.idChannel r).map.comp (traceOutLeft p r).map)
+        (N.map.comp (Channel.idChannel a).map) ρ.matrix := by
+        rw [hright₁, hright₂]
+    _ = MatrixMap.kron (Channel.idChannel r).map N.map
+        (MatrixMap.kron (traceOutLeft p r).map
+          (Channel.idChannel a).map ρ.matrix) := by
+        exact (MatrixMap.kron_comp_apply_general
+          (Channel.idChannel r).map N.map
+          (traceOutLeft p r).map (Channel.idChannel a).map
+          ρ.matrix).symm
+
 /-- Channel form of discarding a finite system and retaining only its trace. -/
 def traceToUnit (a : Type u) [Fintype a] [DecidableEq a] :
     Channel a PUnit.{u + 1} where
@@ -1748,7 +1953,7 @@ theorem normalizedTraceDistance_applyState_le
     exact Φ.tracePreserving
   let E : CMatrix a := MatrixMap.krausAdjoint K P
   have hEeffect : E.PosSemidef ∧ E ≤ 1 := by
-    simpa [E] using MatrixMap.krausAdjoint_effect K hTPK hPpos hPle
+    simpa [E] using MatrixMap.krausAdjoint_effect_of_tracePreserving K hTPK hPpos hPle
   have hHOut_eq : HOut = MatrixMap.ofKraus K HIn := by
     simp [HOut, HIn, Channel.applyState, hK, map_sub]
   have hscore_out :
@@ -1808,16 +2013,9 @@ def diamondTraceDistance [Nonempty a] (Φ Ψ : Channel a b) : ℝ :=
     ((Φ.prod (idChannel a)).applyState ω).normalizedTraceDistance
       ((Ψ.prod (idChannel a)).applyState ω))
 
-private def basisState (α : Type u) [Fintype α] [DecidableEq α] [Nonempty α] : State α where
-  matrix := Matrix.single (Classical.choice (inferInstance : Nonempty α))
-    (Classical.choice (inferInstance : Nonempty α)) 1
-  pos := posSemidef_single (Classical.choice (inferInstance : Nonempty α))
-  trace_eq_one := by
-    simp [Matrix.trace, Matrix.single]
-
 private theorem state_prod_self_nonempty [Nonempty a] :
     Nonempty (State (Prod a a)) :=
-  ⟨basisState (Prod a a)⟩
+  ⟨Classical.basisState (Classical.choice (inferInstance : Nonempty (Prod a a)))⟩
 
 /-- A pointwise bound on the input-reference trace distance bounds the
 source-shaped diamond trace distance. -/
@@ -1844,5 +2042,120 @@ theorem diamondTraceDistance_le_of_ancillaBound [Nonempty a]
 end Channel
 
 end
+
+namespace State
+
+/-- A channel applied to the left subsystem (tensored with the identity on the
+right) preserves the right marginal. Single shared home for this marginal
+identity (previously duplicated in `HypothesisTesting.DPI` and
+`Information.Renyi.RenyiDPI.ConditionalMeasurementSource`). -/
+theorem marginalB_applyState_prod_id {a : Type u} {b : Type v} {c : Type w}
+    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+    [Fintype c] [DecidableEq c]
+    (ρ : State (Prod a b)) (D : Channel a c) :
+    ((D.prod (Channel.idChannel b)).applyState ρ).marginalB = ρ.marginalB := by
+  apply State.ext
+  change partialTraceA (a := c) (b := b)
+      (MatrixMap.kron D.map (Channel.idChannel b).map ρ.matrix) =
+    partialTraceA (a := a) (b := b) ρ.matrix
+  ext j j'
+  simp only [partialTraceA]
+  let S : CMatrix a := fun i i' => ρ.matrix (i, j) (i', j')
+  have htrace :
+      (D.map S).trace = S.trace :=
+    D.tracePreserving S
+  calc
+    ∑ i : c, MatrixMap.kron D.map (Channel.idChannel b).map ρ.matrix (i, j) (i, j') =
+        ∑ i : c, D.map S i i := by
+          refine Finset.sum_congr rfl fun i _ => ?_
+          simpa [S] using
+            (MatrixMap.kron_idChannel_apply_slice (a := a) (b := c) (r := b)
+              (Φ := D.map) (X := ρ.matrix) (br := (i, j)) (br' := (i, j')))
+    _ = ∑ i : a, ρ.matrix (i, j) (i, j') := by
+          simpa [S, Matrix.trace] using htrace
+
+/-- A channel applied to the right subsystem (tensored with the identity on the
+left) preserves the left marginal. -/
+theorem marginalA_applyState_id_prod {a : Type u} {b : Type v} {c : Type w}
+    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+    [Fintype c] [DecidableEq c]
+    (ρ : State (Prod a b)) (D : Channel b c) :
+    (((Channel.idChannel a).prod D).applyState ρ).marginalA = ρ.marginalA := by
+  apply State.ext
+  change partialTraceB (a := a) (b := c)
+      (MatrixMap.kron (Channel.idChannel a).map D.map ρ.matrix) =
+    partialTraceB (a := a) (b := b) ρ.matrix
+  ext i i'
+  simp only [partialTraceB]
+  let S : CMatrix b := fun j j' => ρ.matrix (i, j) (i', j')
+  have htrace :
+      (D.map S).trace = S.trace :=
+    D.tracePreserving S
+  calc
+    ∑ j : c, MatrixMap.kron (Channel.idChannel a).map D.map ρ.matrix (i, j) (i', j) =
+        ∑ j : c, D.map S j j := by
+          refine Finset.sum_congr rfl fun j _ => ?_
+          simpa [S] using
+            (MatrixMap.kron_idChannel_left_apply_slice (a := a)
+              (Φ := D.map) (X := ρ.matrix) (ad := (i, j)) (ad' := (i', j)))
+    _ = ∑ j : b, ρ.matrix (i, j) (i', j) := by
+          simpa [S, Matrix.trace] using htrace
+
+/-- The left marginal of a state transformed by a channel on the left factor
+equals the channel applied to the left marginal. -/
+theorem marginalA_applyState_prod_id {a : Type u} {b : Type v} {c : Type w}
+    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+    [Fintype c] [DecidableEq c]
+    (ρ : State (Prod a b)) (D : Channel a c) :
+    ((D.prod (Channel.idChannel b)).applyState ρ).marginalA =
+      D.applyState ρ.marginalA := by
+  apply State.ext
+  change partialTraceB (a := c) (b := b)
+      (MatrixMap.kron D.map (Channel.idChannel b).map ρ.matrix) =
+    D.map (partialTraceB (a := a) (b := b) ρ.matrix)
+  ext i i'
+  simp only [partialTraceB]
+  let S : b → CMatrix a := fun j => fun x x' => ρ.matrix (x, j) (x', j)
+  have hsum :
+      (fun x x' => ∑ j : b, ρ.matrix (x, j) (x', j)) =
+        ∑ j : b, S j := by
+    ext x x'
+    change (∑ j : b, ρ.matrix (x, j) (x', j)) =
+      (∑ j : b, S j) x x'
+    simp only [Matrix.sum_apply]
+    rfl
+  change (∑ j : b,
+      MatrixMap.kron D.map (Channel.idChannel b).map ρ.matrix (i, j) (i', j)) =
+    D.map (fun x x' => ∑ j : b, ρ.matrix (x, j) (x', j)) i i'
+  rw [hsum, map_sum]
+  simp only [Matrix.sum_apply]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  simpa [S] using
+    (MatrixMap.kron_idChannel_apply_slice (a := a) (b := c) (r := b)
+      (Φ := D.map) (X := ρ.matrix) (br := (i, j)) (br' := (i', j)))
+
+end State
+
+/-- Applying a trace-nonincreasing CP extraction map on a terminal reference
+register and then dropping the unit output does not increase trace norm on
+Hermitian trace-zero inputs. -/
+theorem traceNorm_dropRightUnitMatrix_kron_id_le_of_traceNonincreasingCP
+    {α : Type u} {β : Type v}
+    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    {T : MatrixMap β PUnit} (hT : T.TraceNonincreasingCP)
+    {H : CMatrix (Prod α β)} (hH : H.IsHermitian) (htr : H.trace = 0) :
+    traceNorm
+        (dropRightUnitMatrix
+          ((MatrixMap.kron (Channel.idChannel α).map T) H)) ≤
+      traceNorm H := by
+  calc
+    traceNorm
+        (dropRightUnitMatrix
+          ((MatrixMap.kron (Channel.idChannel α).map T) H)) ≤
+        traceNorm ((MatrixMap.kron (Channel.idChannel α).map T) H) :=
+          traceNorm_dropRightUnitMatrix_le _
+    _ ≤ traceNorm H :=
+          MatrixMap.traceNorm_apply_le_of_traceNonincreasingCP
+            (MatrixMap.traceNonincreasingCP_id_kron (a := α) hT) hH htr
 
 end QIT

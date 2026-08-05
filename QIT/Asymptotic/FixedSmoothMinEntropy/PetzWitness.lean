@@ -24,87 +24,6 @@ variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 namespace State
 /-! ## Fixed-reference feasible witnesses -/
 
-private theorem neg_log2_rpow_two_neg (lam : ℝ) :
-    -log2 (Real.rpow 2 (-lam)) = lam := by
-  unfold log2
-  change -(Real.log ((2 : ℝ) ^ (-lam)) / Real.log 2) = lam
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2) (-lam)]
-  have hlog2 : Real.log 2 ≠ 0 := ne_of_gt (Real.log_pos one_lt_two)
-  field_simp [hlog2]
-
-private theorem rpow_two_log2_pos {x : ℝ} (hx : 0 < x) :
-    Real.rpow 2 (log2 x) = x := by
-  apply Real.log_injOn_pos
-    (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _)
-    hx
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2)]
-  unfold log2
-  field_simp [ne_of_gt (Real.log_pos one_lt_two)]
-
-private theorem rpow_two_mul_log2_pos {x gamma : ℝ} (hx : 0 < x) :
-    Real.rpow 2 (gamma * log2 x) = x ^ gamma := by
-  apply Real.log_injOn_pos
-    (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _)
-    (Real.rpow_pos_of_pos hx gamma)
-  rw [Real.log_rpow (by norm_num : (0 : ℝ) < 2),
-    Real.log_rpow hx]
-  unfold log2
-  field_simp [ne_of_gt (Real.log_pos one_lt_two)]
-
-private theorem rpow_two_neg_sub_mul_log2_pos {H gamma x : ℝ} (hx : 0 < x) :
-    Real.rpow 2 (-(H - gamma * log2 x)) =
-      Real.rpow 2 (-H) * x ^ gamma := by
-  calc
-    Real.rpow 2 (-(H - gamma * log2 x)) =
-        Real.rpow 2 (-H + gamma * log2 x) := by ring_nf
-    _ = Real.rpow 2 (-H) * Real.rpow 2 (gamma * log2 x) := by
-        exact Real.rpow_add (by norm_num : (0 : ℝ) < 2) (-H) (gamma * log2 x)
-    _ = Real.rpow 2 (-H) * x ^ gamma := by
-        rw [rpow_two_mul_log2_pos hx]
-
-private theorem cMatrix_trace_mul_le_of_le {ι : Type*} [Fintype ι] [DecidableEq ι]
-    {D X Y : CMatrix ι} (hD : D.PosSemidef) (hXY : X ≤ Y) :
-    ((D * X).trace).re ≤ ((D * Y).trace).re := by
-  rw [Matrix.le_iff] at hXY
-  have hnonneg : 0 ≤ ((D * (Y - X)).trace).re := by
-    let S := psdSqrt D
-    have hpsd : (S * (Y - X) * S).PosSemidef := by
-      have h := hXY.mul_mul_conjTranspose_same S
-      rw [psdSqrt_isHermitian D] at h
-      exact h
-    have htrace_re : 0 ≤ ((S * (Y - X) * S).trace).re :=
-      (Matrix.PosSemidef.trace_nonneg hpsd).1
-    have hEq : (D * (Y - X)).trace = (S * (Y - X) * S).trace := by
-      have hSsq : S * S = D := by
-        simpa [S] using psdSqrt_mul_self_of_posSemidef hD
-      rw [← hSsq]
-      calc
-        ((S * S) * (Y - X)).trace = (S * (S * (Y - X))).trace := by
-          rw [Matrix.mul_assoc]
-        _ = ((S * (Y - X)) * S).trace := by rw [Matrix.trace_mul_comm]
-        _ = (S * (Y - X) * S).trace := by rw [Matrix.mul_assoc]
-    rwa [hEq]
-  have hcalc :
-      ((D * (Y - X)).trace).re =
-        ((D * Y).trace).re - ((D * X).trace).re := by
-    simp [Matrix.mul_sub, Matrix.trace_sub]
-  linarith
-
-private theorem trace_conjTranspose_mul_hermitian_re_eq
-    {ι : Type*} [Fintype ι] {G D : CMatrix ι} (hD : D.IsHermitian) :
-    ((Matrix.conjTranspose G * D).trace).re = ((G * D).trace).re := by
-  have htrace :
-      (Matrix.conjTranspose G * D).trace = star ((G * D).trace) := by
-    calc
-      (Matrix.conjTranspose G * D).trace =
-          (D * Matrix.conjTranspose G).trace := by
-        rw [Matrix.trace_mul_comm]
-      _ = (Matrix.conjTranspose (G * D)).trace := by
-        rw [Matrix.conjTranspose_mul, hD.eq]
-      _ = star ((G * D).trace) := Matrix.trace_conjTranspose _
-  rw [htrace]
-  simp
-
 /-- Fixed-reference Petz threshold exponent used in the TCR smooth-min lower
 bound. -/
 def petzSmoothMinThresholdExponent
@@ -647,7 +566,7 @@ theorem fixedPetzSmoothMinWitnessMatrix_trace_re_le_one_of_contract
   have htrace_le :
       ((ρ.matrix * (Matrix.conjTranspose G * G)).trace).re ≤
         ((ρ.matrix * 1).trace).re :=
-    cMatrix_trace_mul_le_of_le ρ.pos hcontract
+    cMatrix_trace_mul_le_of_le_posSemidef_left ρ.pos hcontract
   have hcyc :
       (ρ.fixedPetzSmoothMinWitnessMatrix σ lambda).trace =
         (ρ.matrix * (Matrix.conjTranspose G * G)).trace := by
@@ -791,7 +710,7 @@ theorem fixedPetzSmoothMinG_trace_loss_le_positivePart_trace
   have hρ_le_A : ρ.matrix ≤ A := by
     simpa [A, Λ, Δ] using ρ.fixedPetzSmoothMin_state_le_lambda_add_delta σ lambda
   have htrace_le : ((E * ρ.matrix).trace).re ≤ ((E * A).trace).re :=
-    cMatrix_trace_mul_le_of_le hEpos hρ_le_A
+    cMatrix_trace_mul_le_of_le_posSemidef_left hEpos hρ_le_A
   have hGρ_conj :
       ((Matrix.conjTranspose G * ρ.matrix).trace).re =
         ((G * ρ.matrix).trace).re :=
@@ -820,7 +739,7 @@ theorem fixedPetzSmoothMinG_trace_loss_le_positivePart_trace
   have hS_le_sqrtA : S ≤ psdSqrt A := by
     simpa [S] using psdSqrt_le_psdSqrt_of_le hΛ_le_A
   have htrace_S : Λ.trace.re ≤ ((S * psdSqrt A).trace).re := by
-    have h := cMatrix_trace_mul_le_of_le hSpos hS_le_sqrtA
+    have h := cMatrix_trace_mul_le_of_le_posSemidef_left hSpos hS_le_sqrtA
     simpa [hS2] using h
   have hG_eq : G = S * R := by
     simp [G, S, R, A, Λ, Δ, fixedPetzSmoothMinG]

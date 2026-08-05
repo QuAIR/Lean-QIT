@@ -8,6 +8,7 @@ module
 
 public import QIT.Core.Pure
 public import QIT.States.SubnormalizedTopology
+public import QIT.States.Geometry.PurifiedDistance
 public import Mathlib.Topology.MetricSpace.ProperSpace
 
 /-!
@@ -110,6 +111,33 @@ theorem continuous_toSubnormalized :
   rw [continuous_induced_rng]
   change Continuous fun ρ : State a => ρ.toSubnormalized.matrix
   simpa [State.toSubnormalized_matrix] using continuous_matrix
+
+/-- A closed purified-distance ball in the normalized-state topology. -/
+theorem purifiedBall_isClosed (ρ : State a) (ε : ℝ) :
+    IsClosed ({σ : State a | ρ.purifiedBall ε σ}) := by
+  have hclosed :
+      IsClosed
+        ({σ : State a |
+          ρ.toSubnormalized.purifiedBall ε σ.toSubnormalized}) :=
+    (SubnormalizedState.purifiedBall_isClosed (a := a) ρ.toSubnormalized ε).preimage
+      State.continuous_toSubnormalized
+  have hset :
+      {σ : State a | ρ.purifiedBall ε σ} =
+        {σ : State a | ρ.toSubnormalized.purifiedBall ε σ.toSubnormalized} := by
+    ext σ
+    show ρ.purifiedBall ε σ ↔
+      ρ.toSubnormalized.purifiedBall ε σ.toSubnormalized
+    rw [State.purifiedBall_eq, SubnormalizedState.purifiedBall_eq,
+      State.toSubnormalized_purifiedDistance_eq]
+  rwa [hset]
+
+/-- A purified-distance ball is compact as a closed subset of the compact
+normalized-state space. -/
+theorem purifiedBall_isCompact (ρ : State a) (ε : ℝ) :
+    IsCompact ({σ : State a | ρ.purifiedBall ε σ}) := by
+  have hcompact :=
+    (State.isCompact_univ (a := a)).inter_right (purifiedBall_isClosed (a := a) ρ ε)
+  simpa [Set.univ_inter] using hcompact
 
 variable {b : Type v} [Fintype b] [DecidableEq b]
 

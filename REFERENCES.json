@@ -392,6 +392,51 @@
       "arxiv_id": "2011.04672",
       "doi": "10.48550/arXiv.2011.04672",
       "url": "https://arxiv.org/abs/2011.04672"
+    },
+    {
+      "key": "Chiribella2007Architecture",
+      "source_id": "chiribella-2007-architecture",
+      "title": "Quantum Circuits Architecture",
+      "authors": [
+        "Giulio Chiribella",
+        "Giacomo Mauro D'Ariano",
+        "Paolo Perinotti"
+      ],
+      "year": 2007,
+      "kind": "paper",
+      "arxiv_id": "0712.1325",
+      "doi": "10.1103/PhysRevLett.101.060401",
+      "url": "https://arxiv.org/abs/0712.1325"
+    },
+    {
+      "key": "Chiribella2008Supermaps",
+      "source_id": "chiribella-2008-supermaps",
+      "title": "Transforming quantum operations: quantum supermaps",
+      "authors": [
+        "Giulio Chiribella",
+        "Giacomo Mauro D'Ariano",
+        "Paolo Perinotti"
+      ],
+      "year": 2008,
+      "kind": "preprint",
+      "arxiv_id": "0804.0180",
+      "doi": "10.1209/0295-5075/83/30004",
+      "url": "https://arxiv.org/abs/0804.0180"
+    },
+    {
+      "key": "Chiribella2009Networks",
+      "source_id": "chiribella-2009-networks",
+      "title": "Theoretical framework for quantum networks",
+      "authors": [
+        "Giulio Chiribella",
+        "Giacomo Mauro D'Ariano",
+        "Paolo Perinotti"
+      ],
+      "year": 2009,
+      "kind": "paper",
+      "arxiv_id": "0904.4483",
+      "doi": "10.1103/PhysRevA.80.022339",
+      "url": "https://arxiv.org/abs/0904.4483"
     }
   ]
 }

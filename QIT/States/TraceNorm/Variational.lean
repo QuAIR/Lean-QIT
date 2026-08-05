@@ -10,6 +10,8 @@ public import QIT.States.Purification.GramFactorization
 public import QIT.States.Purification.ReferenceUnitary
 public import QIT.States.TraceNorm.Spectral
 public import Mathlib.Analysis.CStarAlgebra.Matrix
+public import QIT.States.Purification.ReferenceIsometry
+public import QIT.States.TraceNorm.BlockMatrix
 
 /-!
 # Trace-norm variational witness
@@ -44,7 +46,7 @@ noncomputable section
 
 variable {a : Type u} [Fintype a] [DecidableEq a]
 
-private theorem complex_normSq_le_sq_of_abs_le {z : ℂ} {r : ℝ}
+theorem complex_normSq_le_sq_of_abs_le {z : ℂ} {r : ℝ}
     (h : Complex.abs z ≤ r) :
     Complex.normSq z ≤ r ^ 2 := by
   have hz : 0 ≤ ‖z‖ := norm_nonneg z
@@ -618,6 +620,24 @@ theorem traceNorm_partialTraceB_le_matrix
               (U : CMatrix a)
     _ ≤ traceNorm X := traceNorm_variational_unitary_abs_trace_le X Ubig
 
+/-- Drop a terminal unit register from a matrix. -/
+def dropRightUnitMatrix {α : Type u} [Fintype α] [DecidableEq α]
+    (X : CMatrix (Prod α PUnit)) : CMatrix α :=
+  fun i j => X (i, PUnit.unit) (j, PUnit.unit)
+
+/-- Dropping a terminal unit register is a partial trace over that unit
+register, hence it does not increase trace norm. -/
+theorem traceNorm_dropRightUnitMatrix_le
+    {α : Type u} [Fintype α] [DecidableEq α]
+    (X : CMatrix (Prod α PUnit)) :
+    traceNorm (dropRightUnitMatrix X) ≤ traceNorm X := by
+  have hdrop :
+      dropRightUnitMatrix X = partialTraceB (a := α) (b := PUnit) X := by
+    ext i j
+    simp [dropRightUnitMatrix, partialTraceB]
+  rw [hdrop]
+  exact traceNorm_partialTraceB_le_matrix X
+
 /-- A square reference isometry acting on the right/reference tensor factor
 does not increase the trace norm.  Since the source and target reference
 dimensions agree, the isometry is unitary, so this is unitary conjugation
@@ -689,7 +709,7 @@ theorem normalizedTraceDistance_triangle (A B C : CMatrix a) :
     _ ≤ (1 / 2 : ℝ) * (traceNorm (A - B) + traceNorm (B - C)) :=
         mul_le_mul_of_nonneg_left htri (by norm_num)
     _ = normalizedTraceDistance A B + normalizedTraceDistance B C := by
-        simp [normalizedTraceDistance, traceDistance, mul_add]
+        simp [normalizedTraceDistance, traceNormDistance, mul_add]
 
 namespace State
 
@@ -720,6 +740,101 @@ theorem traceNorm_real_smul_le {c : ℝ} (hc : 0 ≤ c) (M : CMatrix a) :
       simp [Complex.abs, Real.norm_eq_abs, abs_of_nonneg hc]
     _ ≤ c * traceNorm M := mul_le_mul_of_nonneg_left
       (traceNorm_variational_unitary_abs_trace_le M U) hc
+
+theorem trace_abs_le_traceNorm {a : Type u} [Fintype a] [DecidableEq a]
+    (M : CMatrix a) :
+    Complex.abs M.trace ≤ traceNorm M := by
+  simpa using traceNorm_variational_unitary_abs_trace_le M (1 : Matrix.unitaryGroup a ℂ)
+
+/-- Trace norm is invariant under conjugate transpose. -/
+theorem traceNorm_conjTranspose {a : Type u} [Fintype a] [DecidableEq a]
+    (A : CMatrix a) :
+    traceNorm (Matrix.conjTranspose A) = traceNorm A := by
+  apply le_antisymm
+  · obtain ⟨U, hU⟩ :=
+      traceNorm_variational_exists_unitary_abs_trace (Matrix.conjTranspose A)
+    let V : Matrix.unitaryGroup a ℂ := U⁻¹
+    have hcoe : (V : CMatrix a) = star (U : CMatrix a) := by rfl
+    have hstar : Matrix.conjTranspose (star (U : CMatrix a)) = (U : CMatrix a) := by
+      rw [← Matrix.star_eq_conjTranspose, star_star]
+    have htrace :
+        ((Matrix.conjTranspose A * (U : CMatrix a)).trace) =
+          star ((A * (V : CMatrix a)).trace) := by
+      rw [hcoe]
+      calc
+        (Matrix.conjTranspose A * (U : CMatrix a)).trace =
+            ((U : CMatrix a) * Matrix.conjTranspose A).trace := by
+              rw [Matrix.trace_mul_comm]
+        _ = (Matrix.conjTranspose (A * star (U : CMatrix a))).trace := by
+            rw [Matrix.conjTranspose_mul, hstar]
+        _ = star ((A * star (U : CMatrix a)).trace) :=
+            Matrix.trace_conjTranspose _
+    calc
+      traceNorm (Matrix.conjTranspose A) =
+          Complex.abs ((Matrix.conjTranspose A * (U : CMatrix a)).trace) := hU.symm
+      _ = Complex.abs ((A * (V : CMatrix a)).trace) := by simp [htrace]
+      _ ≤ traceNorm A := traceNorm_variational_unitary_abs_trace_le A V
+  · obtain ⟨U, hU⟩ := traceNorm_variational_exists_unitary_abs_trace A
+    let V : Matrix.unitaryGroup a ℂ := U⁻¹
+    have hcoe : (V : CMatrix a) = star (U : CMatrix a) := by rfl
+    have hstar : Matrix.conjTranspose (star (U : CMatrix a)) = (U : CMatrix a) := by
+      rw [← Matrix.star_eq_conjTranspose, star_star]
+    have htrace :
+        ((A * (U : CMatrix a)).trace) =
+          star ((Matrix.conjTranspose A * (V : CMatrix a)).trace) := by
+      rw [hcoe]
+      calc
+        (A * (U : CMatrix a)).trace =
+            ((U : CMatrix a) * A).trace := by rw [Matrix.trace_mul_comm]
+        _ = (Matrix.conjTranspose (Matrix.conjTranspose A * star (U : CMatrix a))).trace := by
+            rw [Matrix.conjTranspose_mul, hstar, Matrix.conjTranspose_conjTranspose]
+        _ = star ((Matrix.conjTranspose A * star (U : CMatrix a)).trace) :=
+            Matrix.trace_conjTranspose _
+    calc
+      traceNorm A = Complex.abs ((A * (U : CMatrix a)).trace) := hU.symm
+      _ = Complex.abs ((Matrix.conjTranspose A * (V : CMatrix a)).trace) := by
+            simp [htrace]
+      _ ≤ traceNorm (Matrix.conjTranspose A) :=
+          traceNorm_variational_unitary_abs_trace_le (Matrix.conjTranspose A) V
+
+theorem traceNorm_real_smul_eq {a : Type u} [Fintype a] [DecidableEq a]
+    {c : ℝ} (hc : 0 ≤ c) (M : CMatrix a) :
+    traceNorm (((c : ℂ) • M)) = c * traceNorm M := by
+  by_cases hcz : c = 0
+  · simp [hcz]
+  · have hcpos : 0 < c := lt_of_le_of_ne hc (Ne.symm hcz)
+    apply le_antisymm
+    · exact traceNorm_real_smul_le hc M
+    · have hInvNonneg : 0 ≤ c⁻¹ := inv_nonneg.mpr hc
+      have hle := traceNorm_real_smul_le hInvNonneg (((c : ℂ) • M))
+      have hscale : (((c⁻¹ : ℝ) : ℂ) • ((c : ℂ) • M)) = M := by
+        rw [smul_smul]
+        have hcC : ((c : ℂ) ≠ 0) := by exact_mod_cast hcz
+        simp [hcC]
+      rw [hscale] at hle
+      have hmul := mul_le_mul_of_nonneg_left hle hc
+      have htrace_nonneg : 0 ≤ traceNorm (((c : ℂ) • M)) :=
+        traceNorm_nonneg _
+      have hc_inv : c * c⁻¹ = 1 := mul_inv_cancel₀ hcz
+      nlinarith
+
+theorem traceNorm_eq_trace_psdSqrt_mul_conjTranspose (A : CMatrix a) :
+    traceNorm A = (psdSqrt (A * Matrix.conjTranspose A)).trace.re := by
+  rw [← traceNorm_conjTranspose A]
+  simp [traceNorm, Matrix.conjTranspose_conjTranspose]
+
+theorem traceNorm_eq_of_mul_conjTranspose_eq {A B : CMatrix a}
+    (h : A * Matrix.conjTranspose A = B * Matrix.conjTranspose B) :
+    traceNorm A = traceNorm B := by
+  rw [traceNorm_eq_trace_psdSqrt_mul_conjTranspose A,
+    traceNorm_eq_trace_psdSqrt_mul_conjTranspose B, h]
+
+theorem traceNorm_eq_of_conjTranspose_mul_eq {A B : CMatrix a}
+    (h : Matrix.conjTranspose A * A = Matrix.conjTranspose B * B) :
+    traceNorm A = traceNorm B := by
+  rw [← traceNorm_conjTranspose A, ← traceNorm_conjTranspose B]
+  apply traceNorm_eq_of_mul_conjTranspose_eq
+  simpa [Matrix.conjTranspose_conjTranspose] using h
 
 private theorem reindex_unitary_mem {b : Type v} [Fintype b] [DecidableEq b]
     (e : a ≃ b) (U : Matrix.unitaryGroup b ℂ) :
@@ -782,6 +897,53 @@ theorem traceNorm_submatrix_equiv {b : Type v} [Fintype b] [DecidableEq b]
   · exact traceNorm_submatrix_equiv_le e M
   · have h := traceNorm_submatrix_equiv_le e.symm (M.submatrix e e)
     simpa using h
+
+namespace ReferenceIsometry
+
+universe w
+
+variable {b : Type v} [Fintype b] [DecidableEq b]
+
+def prodSumRightEquiv
+    (a : Type u) (extra : Type w) (b : Type v) :
+    Sum (Prod a extra) (Prod a b) ≃ Prod a (Sum extra b) where
+  toFun x := match x with
+    | Sum.inl ae => (ae.1, Sum.inl ae.2)
+    | Sum.inr ab => (ab.1, Sum.inr ab.2)
+  invFun x := match x.2 with
+    | Sum.inl e => Sum.inl (x.1, e)
+    | Sum.inr y => Sum.inr (x.1, y)
+  left_inv := by intro x; cases x <;> rfl
+  right_inv := by intro x; cases x with | mk i s => cases s <;> rfl
+
+omit [Fintype a] [DecidableEq a] in
+theorem applyMatrixRight_sumInr_submatrix_prodSumRightEquiv
+    {extra : Type w} [Fintype extra] [DecidableEq extra]
+    (X : CMatrix (Prod a b)) :
+    ((ReferenceIsometry.sumInr extra b).applyMatrixRight X).submatrix
+      (prodSumRightEquiv a extra b) (prodSumRightEquiv a extra b) =
+        (Matrix.fromBlocks (0 : CMatrix (Prod a extra)) 0 0 X :
+          CMatrix (Sum (Prod a extra) (Prod a b))) := by
+  ext x y
+  cases x <;> cases y <;>
+    simp [prodSumRightEquiv, ReferenceIsometry.applyMatrixRight,
+      ReferenceIsometry.rightBlock, ReferenceIsometry.sumInr, Matrix.mul_apply]
+
+/-- Concrete right-summand reference padding preserves trace norm. -/
+theorem traceNorm_applyMatrixRight_sumInr
+    {extra : Type w} [Fintype extra] [DecidableEq extra]
+    (X : CMatrix (Prod a b)) :
+    traceNorm ((ReferenceIsometry.sumInr extra b).applyMatrixRight X) =
+      traceNorm X := by
+  let e := prodSumRightEquiv a extra b
+  have htn := traceNorm_submatrix_equiv e
+    ((ReferenceIsometry.sumInr extra b).applyMatrixRight X)
+  rw [applyMatrixRight_sumInr_submatrix_prodSumRightEquiv (a := a)
+    (b := b) (extra := extra) X] at htn
+  rw [← htn]
+  rw [Matrix.traceNorm_fromBlocks_diagonal]
+  simp
+end ReferenceIsometry
 
 /-- Finite subadditivity of the trace norm. -/
 theorem traceNorm_sum_le_sum_traceNorm {ι : Type v} (s : Finset ι)

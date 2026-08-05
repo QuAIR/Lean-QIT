@@ -9,6 +9,7 @@ module
 public import QIT.OneShot.SmoothEndpoint.Order
 public import QIT.OneShot.SmoothEndpoint.MaximallyEntangledProjector
 public import QIT.States.MaximallyMixed
+public import QIT.States.TraceNorm.Spectral
 
 @[expose] public section
 
@@ -128,93 +129,6 @@ omit [DecidableEq a] in theorem trace_re_le_of_le {X Y : CMatrix a} (hXY : X ≤
     simp [Matrix.trace_sub]
   linarith
 
-/-- A positive semidefinite finite matrix is bounded above by its trace times the
-identity. -/
-theorem posSemidef_le_trace_re_smul_one {A : CMatrix a} (hA : A.PosSemidef) :
-    A ≤ (((A.trace.re : ℝ) : ℂ) • (1 : CMatrix a)) := by
-  classical
-  rw [Matrix.le_iff]
-  let U : Matrix.unitaryGroup a ℂ := hA.1.eigenvectorUnitary
-  let D : CMatrix a := Matrix.diagonal fun i => ((hA.1.eigenvalues i : ℝ) : ℂ)
-  have hdiag : A = (U : CMatrix a) * D * star (U : CMatrix a) := by
-    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hA.1.spectral_theorem
-  have heig_sum : ∑ i, hA.1.eigenvalues i = A.trace.re := by
-    have hc : A.trace = ∑ i, ((hA.1.eigenvalues i : ℝ) : ℂ) := by
-      exact hA.1.trace_eq_sum_eigenvalues
-    have hre := congrArg Complex.re hc
-    simpa using hre.symm
-  have heig_le_trace : ∀ i, hA.1.eigenvalues i ≤ A.trace.re := by
-    intro i
-    have hnonneg (j : a) : 0 ≤ hA.1.eigenvalues j := hA.eigenvalues_nonneg j
-    calc hA.1.eigenvalues i
-        ≤ hA.1.eigenvalues i +
-            ∑ j ∈ Finset.univ.erase i, hA.1.eigenvalues j :=
-          le_add_of_nonneg_right (Finset.sum_nonneg (fun j _ => hnonneg j))
-      _ = ∑ j, hA.1.eigenvalues j := by
-          rw [add_comm]
-          exact Finset.sum_erase_add (s := Finset.univ)
-            (f := fun j => hA.1.eigenvalues j) (Finset.mem_univ i)
-      _ = A.trace.re := heig_sum
-  let c : ℂ := ((A.trace.re : ℝ) : ℂ)
-  have hsub :
-      c • (1 : CMatrix a) - A =
-        (U : CMatrix a) * (c • (1 : CMatrix a) - D) * star (U : CMatrix a) := by
-    have hunit_scalar :
-        (U : CMatrix a) * (c • (1 : CMatrix a)) * star (U : CMatrix a) =
-          c • (1 : CMatrix a) := by
-      have hunit : (U : CMatrix a) * star (U : CMatrix a) = 1 := by
-        simp
-      calc
-        (U : CMatrix a) * (c • (1 : CMatrix a)) * star (U : CMatrix a) =
-            c • ((U : CMatrix a) * (1 : CMatrix a) * star (U : CMatrix a)) := by
-          simp
-        _ = c • (1 : CMatrix a) := by
-          simp [hunit]
-    calc
-      c • (1 : CMatrix a) - A =
-          c • (1 : CMatrix a) - (U : CMatrix a) * D * star (U : CMatrix a) := by
-        rw [hdiag]
-      _ = (U : CMatrix a) * (c • (1 : CMatrix a)) * star (U : CMatrix a) -
-            (U : CMatrix a) * D * star (U : CMatrix a) := by
-        rw [hunit_scalar]
-      _ = (U : CMatrix a) * (c • (1 : CMatrix a) - D) * star (U : CMatrix a) := by
-        rw [Matrix.mul_sub, Matrix.sub_mul]
-  have hdiag_sub :
-      c • (1 : CMatrix a) - D =
-        Matrix.diagonal fun i => (((A.trace.re - hA.1.eigenvalues i : ℝ) : ℝ) : ℂ) := by
-    ext i j
-    by_cases hij : i = j
-    · subst hij
-      simp [D, c]
-    · simp [D, Matrix.diagonal, hij]
-  rw [hsub]
-  rw [Matrix.IsUnit.posSemidef_star_right_conjugate_iff (Unitary.isUnit_coe :
-    IsUnit (U : CMatrix a))]
-  rw [hdiag_sub]
-  rw [Matrix.posSemidef_diagonal_iff]
-  intro i
-  exact_mod_cast sub_nonneg.mpr (heig_le_trace i)
-
-set_option maxHeartbeats 900000 in
-/-- The operator norm of a PSD matrix is controlled by its trace. -/
-theorem norm_le_trace_re_mul_norm_one_of_posSemidef {A : CMatrix a} (hA : A.PosSemidef) :
-    ‖A‖ ≤ A.trace.re * ‖(1 : CMatrix a)‖ := by
-  have hA0 : (0 : CMatrix a) ≤ A := by
-    simpa [Matrix.le_iff] using hA
-  have hle := posSemidef_le_trace_re_smul_one (a := a) hA
-  have hnorm :
-      ‖A‖ ≤ ‖(((A.trace.re : ℝ) : ℂ) • (1 : CMatrix a))‖ :=
-    CStarAlgebra.norm_le_norm_of_nonneg_of_le
-      (A := CMatrix a) (a := A)
-      (b := (((A.trace.re : ℝ) : ℂ) • (1 : CMatrix a))) hA0 hle
-  calc
-    ‖A‖ ≤ ‖(((A.trace.re : ℝ) : ℂ) • (1 : CMatrix a))‖ := hnorm
-    _ = A.trace.re * ‖(1 : CMatrix a)‖ := by
-      rw [norm_smul]
-      have htr_nonneg : 0 ≤ A.trace.re := (Matrix.PosSemidef.trace_nonneg hA).1
-      rw [Complex.norm_of_nonneg htr_nonneg]
-
 /-- The maximally mixed state on a nonempty finite system. -/
 theorem identityTensorStateMatrix_trace_re (σ : State b) :
     (identityTensorStateMatrix (a := a) σ).trace.re = (Fintype.card a : ℝ) := by
@@ -325,11 +239,6 @@ theorem conditionalMaxEntropyExponentCandidate_maximallyMixed_pos
     lt_of_lt_of_le htrace_abs_pos (trace_abs_le_traceNorm _)
   unfold conditionalMaxEntropyExponentCandidate
   exact sq_pos_of_pos htn_pos
-
-theorem identityTensorStateMatrix_posSemidef (σ : State b) :
-    (identityTensorStateMatrix (a := a) σ).PosSemidef := by
-  change (Matrix.kronecker (1 : CMatrix a) σ.matrix).PosSemidef
-  exact Matrix.PosSemidef.one.kronecker σ.pos
 
 theorem psdSqrt_identityTensorStateMatrix (σ : State b) :
     psdSqrt (identityTensorStateMatrix (a := a) σ) =
@@ -704,7 +613,7 @@ theorem ConditionalMaxFidelityBlockFeasible.of_scaled_le_blockExponentValue [Non
 
 /-! ### Block-SDP feasible points are fidelity-bounded -/
 
-private def pureVectorOfAmplitudeMatrix {r : Type*} {α : Type*}
+def pureVectorOfAmplitudeMatrix {r : Type*} {α : Type*}
     [Fintype r] [DecidableEq r] [Fintype α] [DecidableEq α]
     (A : Matrix α r ℂ) (htrace : (A * Aᴴ).trace = 1) :
     PureVector (Prod r α) where
@@ -722,14 +631,13 @@ private def pureVectorOfAmplitudeMatrix {r : Type*} {α : Type*}
             simp [Matrix.trace, Matrix.mul_apply, Matrix.conjTranspose_apply]
       _ = 1 := htrace
 
-@[simp]
-private theorem pureVectorOfAmplitudeMatrix_amplitudeMatrix {r : Type*} {α : Type*}
+theorem pureVectorOfAmplitudeMatrix_amplitudeMatrix {r : Type*} {α : Type*}
     [Fintype r] [DecidableEq r] [Fintype α] [DecidableEq α]
     (A : Matrix α r ℂ) (htrace : (A * Aᴴ).trace = 1) :
     (pureVectorOfAmplitudeMatrix A htrace).amplitudeMatrix = A := by
   rfl
 
-private theorem pureVectorOfAmplitudeMatrix_purifies {r : Type*} {α : Type*}
+theorem pureVectorOfAmplitudeMatrix_purifies {r : Type*} {α : Type*}
     [Fintype r] [DecidableEq r] [Fintype α] [DecidableEq α]
     {A : Matrix α r ℂ} {ρ : State α}
     (hgram : A * Aᴴ = ρ.matrix) (htrace : (A * Aᴴ).trace = 1) :
@@ -739,7 +647,7 @@ private theorem pureVectorOfAmplitudeMatrix_purifies {r : Type*} {α : Type*}
   rw [PureVector.partialTraceA_rankOneMatrix_eq_amplitudeMatrix_mul_conjTranspose]
   simpa [pureVectorOfAmplitudeMatrix_amplitudeMatrix] using hgram
 
-private def pureVectorNormalize {α : Type*} [Fintype α] [DecidableEq α]
+def pureVectorNormalize {α : Type*} [Fintype α] [DecidableEq α]
     (v : α → ℂ) (hpos : 0 < (rankOneMatrix v).trace.re) : PureVector α where
   amp := fun x => (((Real.sqrt (rankOneMatrix v).trace.re)⁻¹ : ℝ) : ℂ) * v x
   trace_rankOne_eq_one := by
@@ -773,14 +681,13 @@ private def pureVectorNormalize {α : Type*} [Fintype α] [DecidableEq α]
             rw [htrace_complex]
       _ = 1 := hcoeff
 
-@[simp]
-private theorem pureVectorNormalize_amp {α : Type*} [Fintype α] [DecidableEq α]
+theorem pureVectorNormalize_amp {α : Type*} [Fintype α] [DecidableEq α]
     (v : α → ℂ) (hpos : 0 < (rankOneMatrix v).trace.re) :
     (pureVectorNormalize v hpos).amp =
       fun x => (((Real.sqrt (rankOneMatrix v).trace.re)⁻¹ : ℝ) : ℂ) * v x :=
   rfl
 
-private def maxEntangledSideAmplitude {r : Type*} {a : Type*} {b : Type*}
+def maxEntangledSideAmplitude {r : Type*} {a : Type*} {b : Type*}
     [Fintype r] [DecidableEq r] [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
     [Nonempty a]
     (η : PureVector (Prod r b)) : Matrix (Prod a b) (Prod r a) ℂ :=
@@ -788,7 +695,7 @@ private def maxEntangledSideAmplitude {r : Type*} {a : Type*} {b : Type*}
     (((Real.sqrt ((Fintype.card a : ℝ)⁻¹)) : ℝ) : ℂ) *
       (if y.2 = x.1 then η.amp (y.1, x.2) else 0)
 
-private theorem maxEntangledSideAmplitude_gram {r : Type*} {a : Type*} {b : Type*}
+theorem maxEntangledSideAmplitude_gram {r : Type*} {a : Type*} {b : Type*}
     [Fintype r] [DecidableEq r] [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
     [Nonempty a] (η : PureVector (Prod r b)) :
     maxEntangledSideAmplitude (a := a) η *
@@ -840,7 +747,7 @@ private theorem maxEntangledSideAmplitude_gram {r : Type*} {a : Type*} {b : Type
       State.prod, State.maximallyMixed, Matrix.kronecker, Matrix.kroneckerMap_apply,
       Fintype.sum_prod_type, hxy]
 
-private def maxEntangledSidePureVector {r : Type*} {a : Type*} {b : Type*}
+def maxEntangledSidePureVector {r : Type*} {a : Type*} {b : Type*}
     [Fintype r] [DecidableEq r] [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
     [Nonempty a] (η : PureVector (Prod r b)) :
     PureVector (Prod (Prod r a) (Prod a b)) :=
@@ -848,7 +755,7 @@ private def maxEntangledSidePureVector {r : Type*} {a : Type*} {b : Type*}
     rw [maxEntangledSideAmplitude_gram]
     exact ((State.maximallyMixed a).prod η.state.marginalB).trace_eq_one)
 
-private theorem maxEntangledSidePureVector_purifies {r : Type*} {a : Type*} {b : Type*}
+theorem maxEntangledSidePureVector_purifies {r : Type*} {a : Type*} {b : Type*}
     [Fintype r] [DecidableEq r] [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
     [Nonempty a] (η : PureVector (Prod r b)) :
     (maxEntangledSidePureVector (a := a) η).Purifies
@@ -909,7 +816,7 @@ private theorem blockSqrtTopRow_mul_bottomRow_conjTranspose {α : Type*}
     simpa [Matrix.conjTranspose_apply] using h
   rw [hk]
 
-private theorem pureVector_abs_overlap_le_fidelity {r : Type*} {α : Type*}
+theorem pureVector_abs_overlap_le_fidelity {r : Type*} {α : Type*}
     [Fintype r] [DecidableEq r] [Fintype α] [DecidableEq α]
     {Ψ Φ : PureVector (Prod r α)} {ρ σ : State α}
     (hΨ : Ψ.Purifies ρ) (hΦ : Φ.Purifies σ) :

@@ -1099,7 +1099,6 @@ theorem SmoothMinRateUpperFromContinuity.afw_of_tensorPower_ordering
     nhdsWithin_le_nhds (Iio_mem_nhds (by norm_num : (0 : ℝ) < 1))
   filter_upwards [hlin_small, hε_pos, hε_lt_one] with ε hlin hε0 hε1
   intro _hε_nonneg _hε_lt_one
-  have hεle : ε ≤ 1 := le_of_lt hε1
   let δ : ℝ := (1 - ε) ^ 2
   have hδpos : 0 < δ := by
     dsimp [δ]
@@ -1178,7 +1177,7 @@ theorem SmoothMinRateUpperFromContinuity.afw_of_tensorPower_ordering
     have hafw :
         |ρn.conditionalEntropy - τhat.conditionalEntropy| ≤
           afwContinuityModulus (Fintype.card (TensorPower a n)) ε :=
-      State.alickiFannesWinter_conditionalEntropy ρn τhat ε hdist hεle
+      State.alickiFannesWinter_conditionalEntropy ρn τhat ε hdist
     have hent_le :
         τhat.conditionalEntropy ≤
           ρn.conditionalEntropy +

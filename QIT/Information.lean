@@ -10,11 +10,9 @@ public import QIT.Information.Foundations
 public import QIT.OneShot
 public import QIT.Information.Entropy
 public import QIT.Information.Renyi
+public import QIT.Information.BinaryHypothesisTest
 public import QIT.Information.AlickiFannesWinter
 public import QIT.Information.Fannes
-public import QIT.Information.PositionBasedCoding
-public import QIT.Information.SequentialDecoding
-public import QIT.Information.PositionNaimarkTrace
 public import QIT.HypothesisTesting.PetzComparison
 public import QIT.HypothesisTesting.SandwichedComparison
 public import QIT.Information.Basic

@@ -6,7 +6,6 @@ Authors: QuAIR Team
 
 module
 
-public import QIT.Coding.Classical.Holevo
 public import QIT.Coding.Classical.HSW
 public import QIT.Coding.Classical.HayashiNagaoka
 public import QIT.Coding.Classical.PackingLemma
@@ -18,7 +17,7 @@ public import QIT.Coding.Classical.HSWLimit
 /-!
 # Classical coding
 
-Import surface for Holevo information, HSW, and classical coding auxiliaries.
+Import surface for HSW and classical coding auxiliaries.
 -/
 
 @[expose] public section

@@ -10,6 +10,7 @@ public import QIT.Core.System
 public import QIT.Core.State
 public import QIT.Core.Pure
 public import QIT.Core.Map
+public import QIT.Core.Map.ChoiCharacterization
 public import QIT.Core.Channel
 public import QIT.Core.Measurement
 public import QIT.Core.POVMProbability

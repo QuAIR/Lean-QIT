@@ -347,6 +347,39 @@ theorem partialTraceB_applyState_prod (Phi : Channel a b) (Psi : Channel c d)
   rw [applyState_prod]
   exact State.partialTraceB_prod (Phi.applyState rho) (Psi.applyState sigma)
 
+end Channel
+
+namespace State
+
+variable {c : Type w} [Fintype c] [DecidableEq c]
+
+/-- The identity channel leaves every input state unchanged. -/
+theorem idChannel_applyState (rho : State a) :
+    (Channel.idChannel a).applyState rho = rho := by
+  apply State.ext
+  change (Channel.idChannel a).map rho.matrix = rho.matrix
+  simp [Channel.idChannel, MatrixMap.ofKraus]
+
+/-- Applying a channel on the right tensor factor to a product state leaves the
+left factor untouched. -/
+theorem applyState_id_prod_prod
+    (rhoA : State a) (sigmaB : State b) (D : Channel b c) :
+    ((Channel.idChannel a).prod D).applyState (rhoA.prod sigmaB) =
+      rhoA.prod (D.applyState sigmaB) := by
+  rw [Channel.applyState_prod, idChannel_applyState]
+
+/-- Applying a channel on the left tensor factor to a product state leaves the
+right factor untouched. -/
+theorem applyState_prod_id_prod
+    (rhoA : State a) (sigmaB : State b) (D : Channel a c) :
+    (D.prod (Channel.idChannel b)).applyState (rhoA.prod sigmaB) =
+      (D.applyState rhoA).prod sigmaB := by
+  rw [Channel.applyState_prod, idChannel_applyState]
+
+end State
+
+namespace Channel
+
 variable (Phi : Channel a b)
 
 /-- Recursive tensor power of a channel for memoryless repeated uses. -/

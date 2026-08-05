@@ -7,10 +7,11 @@ Authors: QuAIR Team
 module
 
 public import QIT.Information.Entropy.ConditionalEntropyConcavity
-public import QIT.Coding.Classical.Holevo
+public import QIT.Information.Entropy.Entropy
 public import QIT.Information.Entropy.MutualInformationDPI
 public import QIT.States.TraceNorm.PositivePart
 public import Mathlib.Analysis.SpecialFunctions.Log.NegMulLog
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # Alicki--Fannes--Winter continuity
@@ -41,92 +42,6 @@ namespace State
 
 variable {a : Type u} [Fintype a] [DecidableEq a]
 variable {b : Type v} [Fintype b] [DecidableEq b]
-
-private theorem vonNeumann_punit_eq_zero (ρ : State PUnit.{1}) :
-    ρ.vonNeumann = 0 := by
-  exact le_antisymm (by simpa [log2] using vonNeumann_le_log_card ρ) (vonNeumann_nonneg ρ)
-
-private theorem roots_X_pow_map_re_xlog2_sum_zero (n : ℕ) :
-    ((Polynomial.X ^ n : Polynomial ℂ).roots.map fun z : ℂ => xlog2 z.re).sum = 0 := by
-  rw [Polynomial.roots_X_pow, Multiset.map_nsmul, Multiset.sum_nsmul,
-    Multiset.map_singleton, Multiset.sum_singleton]
-  simp [xlog2]
-
-private theorem roots_re_xlog2_sum_eq_of_X_pow_mul_eq
-    {P Q : Polynomial ℂ} (m n : ℕ) (hP : P ≠ 0) (hQ : Q ≠ 0)
-    (h : Polynomial.X ^ m * P = Polynomial.X ^ n * Q) :
-    (P.roots.map fun z : ℂ => xlog2 z.re).sum =
-      (Q.roots.map fun z : ℂ => xlog2 z.re).sum := by
-  have hXm : (Polynomial.X ^ m : Polynomial ℂ) ≠ 0 := by simp
-  have hXn : (Polynomial.X ^ n : Polynomial ℂ) ≠ 0 := by simp
-  have hleft_ne : (Polynomial.X ^ m : Polynomial ℂ) * P ≠ 0 := mul_ne_zero hXm hP
-  have hright_ne : (Polynomial.X ^ n : Polynomial ℂ) * Q ≠ 0 := mul_ne_zero hXn hQ
-  have hroots := congrArg Polynomial.roots h
-  rw [Polynomial.roots_mul hleft_ne, Polynomial.roots_mul hright_ne] at hroots
-  have hsum :=
-    congrArg (fun s : Multiset ℂ => (s.map fun z : ℂ => xlog2 z.re).sum) hroots
-  simp only [Multiset.map_add, Multiset.sum_add] at hsum
-  rw [roots_X_pow_map_re_xlog2_sum_zero m,
-    roots_X_pow_map_re_xlog2_sum_zero n] at hsum
-  simpa using hsum
-
-private theorem pureVector_marginalA_matrix_eq_conjTranspose_mul_amplitudeMatrix
-    {r : Type u} {α : Type v} [Fintype r] [DecidableEq r] [Fintype α] [DecidableEq α]
-    (Ψ : PureVector (Prod r α)) :
-    Ψ.state.marginalA.matrix =
-      Matrix.transpose Ψ.amplitudeMatrix *
-        Matrix.conjTranspose (Matrix.transpose Ψ.amplitudeMatrix) := by
-  ext i j
-  simp [PureVector.amplitudeMatrix, State.marginalA, QIT.partialTraceB,
-    Matrix.mul_apply, Matrix.conjTranspose_apply, Matrix.transpose_apply,
-    PureVector.state_matrix, rankOneMatrix_apply]
-
-/-- Complementary marginals of a finite-dimensional pure bipartite state have
-the same von Neumann entropy. -/
-theorem pureVector_marginalA_vonNeumann_eq_marginalB
-    {r : Type u} {α : Type v} [Fintype r] [DecidableEq r] [Fintype α] [DecidableEq α]
-    (Ψ : PureVector (Prod r α)) :
-    Ψ.state.marginalA.vonNeumann = Ψ.state.marginalB.vonNeumann := by
-  let A : Matrix α r ℂ := Ψ.amplitudeMatrix
-  let AT : Matrix r α ℂ := Matrix.transpose A
-  have hA :
-      Ψ.state.marginalA.matrix = AT * Matrix.conjTranspose AT := by
-    simpa [A, AT] using pureVector_marginalA_matrix_eq_conjTranspose_mul_amplitudeMatrix Ψ
-  have hB :
-      Ψ.state.marginalB.matrix = A * Matrix.conjTranspose A := by
-    rw [State.marginalB_matrix, PureVector.state_matrix]
-    simpa [A] using
-      PureVector.partialTraceA_rankOneMatrix_eq_amplitudeMatrix_mul_conjTranspose Ψ
-  have hright_matrix :
-      Matrix.conjTranspose AT * AT =
-        Matrix.transpose (A * Matrix.conjTranspose A) := by
-    ext i j
-    simp [A, AT, Matrix.mul_apply, Matrix.conjTranspose_apply, Matrix.transpose_apply,
-      mul_comm]
-  rw [vonNeumann_eq_neg_sum_eigenvalueMultiset,
-    vonNeumann_eq_neg_sum_eigenvalueMultiset]
-  congr 1
-  have hchar :
-      Polynomial.X ^ Fintype.card α * Ψ.state.marginalA.matrix.charpoly =
-        Polynomial.X ^ Fintype.card r * Ψ.state.marginalB.matrix.charpoly := by
-    rw [hA, hB]
-    have hcomm :=
-      Matrix.charpoly_mul_comm' (A := AT) (B := Matrix.conjTranspose AT)
-    rw [hright_matrix, Matrix.charpoly_transpose] at hcomm
-    simpa [A, AT, Matrix.mul_assoc] using hcomm
-  have hP : Ψ.state.marginalA.matrix.charpoly ≠ 0 :=
-    (Matrix.charpoly_monic _).ne_zero
-  have hQ : Ψ.state.marginalB.matrix.charpoly ≠ 0 :=
-    (Matrix.charpoly_monic _).ne_zero
-  have hroot :=
-    roots_re_xlog2_sum_eq_of_X_pow_mul_eq
-      (P := Ψ.state.marginalA.matrix.charpoly)
-      (Q := Ψ.state.marginalB.matrix.charpoly)
-      (Fintype.card α) (Fintype.card r) hP hQ hchar
-  have hrootsA := Ψ.state.marginalA.pos.isHermitian.roots_charpoly_eq_eigenvalues
-  have hrootsB := Ψ.state.marginalB.pos.isHermitian.roots_charpoly_eq_eigenvalues
-  rw [hrootsA, hrootsB] at hroot
-  simpa [eigenvalueMultiset, Multiset.map_map, Function.comp_def] using hroot
 
 private def punitProdEquiv (α : Type v) : α ≃ Prod PUnit.{1} α where
   toFun x := (PUnit.unit, x)
@@ -246,15 +161,6 @@ theorem conditionalEntropy_neg_marginalA_le (τ : State (Prod a b)) :
   rw [conditionalEntropy_eq]
   linarith
 
-private theorem mutualInformation_punit_punit_eq_zero (ρ : State (Prod PUnit.{1} PUnit.{1})) :
-    QIT.mutualInformation ρ = 0 := by
-  have hA : ρ.marginalA.vonNeumann = 0 := vonNeumann_punit_eq_zero ρ.marginalA
-  have hB : ρ.marginalB.vonNeumann = 0 := vonNeumann_punit_eq_zero ρ.marginalB
-  have hAB : ρ.vonNeumann = 0 := by
-    exact le_antisymm (by simpa [log2] using vonNeumann_le_log_card ρ) (vonNeumann_nonneg ρ)
-  simp [QIT.mutualInformation, hA, hB, hAB]
-
-/-- Quantum mutual information is nonnegative. -/
 theorem mutualInformation_nonneg (ρ : State (Prod a b)) :
     0 ≤ QIT.mutualInformation ρ := by
   have hDPI :=
@@ -451,10 +357,6 @@ end State
 def afwContinuityModulus (d : ℕ) (ε : ℝ) : ℝ :=
   2 * ε * log2 (d : ℝ) +
     (1 + ε) * binaryEntropy (ε / (1 + ε))
-
-private theorem log2_one : log2 1 = 0 := by
-  unfold log2
-  simp
 
 @[simp] theorem binaryEntropy_zero : binaryEntropy 0 = 0 := by
   simp [binaryEntropy, xlog2, log2_one]
@@ -706,9 +608,8 @@ private theorem afw_scaledLog_mono_of_pos {δ ε : ℝ} (hδpos : 0 < δ) (hδε
   exact hmono ⟨le_rfl, hδε⟩ ⟨hδε, le_rfl⟩ hδε
 
 theorem afwContinuityModulus_mono_epsilon {d : ℕ} {δ ε : ℝ}
-    (hδ0 : 0 ≤ δ) (hδε : δ ≤ ε) (hε1 : ε ≤ 1) :
+    (hδ0 : 0 ≤ δ) (hδε : δ ≤ ε) :
     afwContinuityModulus d δ ≤ afwContinuityModulus d ε := by
-  have _hε1 : ε ≤ 1 := hε1
   have hε0 : 0 ≤ ε := hδ0.trans hδε
   have hfirst : 2 * δ * log2 (d : ℝ) ≤ 2 * ε * log2 (d : ℝ) := by
     gcongr
@@ -886,13 +787,12 @@ error parameter `ε`.  Nonnegativity of `ε` is forced by
 needed. -/
 theorem alickiFannesWinter_conditionalEntropy
     (ρ σ : State (Prod a b)) (ε : ℝ)
-    (hεdist : ρ.normalizedTraceDistance σ ≤ ε)
-    (hεle : ε ≤ 1) :
+    (hεdist : ρ.normalizedTraceDistance σ ≤ ε) :
     |ρ.conditionalEntropy - σ.conditionalEntropy| ≤
       afwContinuityModulus (Fintype.card a) ε := by
   exact (conditionalEntropy_dist_le_afwModulus ρ σ).trans
     (afwContinuityModulus_mono_epsilon
-      (State.normalizedTraceDistance_nonneg ρ σ) hεdist hεle)
+      (State.normalizedTraceDistance_nonneg ρ σ) hεdist)
 
 end State
 

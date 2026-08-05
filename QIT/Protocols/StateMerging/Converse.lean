@@ -96,7 +96,7 @@ theorem finalNormalizedBranch_entanglement_sub_target_le_howFannes
     |(L.finalNormalizedBranch input j).entanglementEntropy - target.entanglementEntropy| ≤
       log2 (Fintype.card B' : Real) *
         howFannesEta
-          ((L.finalNormalizedBranch input j).state.marginalB.traceDistance
+          ((L.finalNormalizedBranch input j).state.marginalB.traceNormDistance
             target.state.marginalB) := by
   exact State.vonNeumann_dist_le_howFannes
     (L.finalNormalizedBranch input j).state.marginalB target.state.marginalB
@@ -114,7 +114,7 @@ theorem sum_jointPositiveBranchProbability_mul_abs_entanglement_sub_target_le
         howFannesEta
           (∑ j : L.jointPositiveSupport input,
             (L.jointPositiveBranchProbability input j : Real) *
-              (L.finalNormalizedBranch input j).state.marginalB.traceDistance
+              (L.finalNormalizedBranch input j).state.marginalB.traceNormDistance
                 target.state.marginalB) := by
   have hq := L.sum_jointPositiveBranchProbability_eq_one input
   have hpointSum :
@@ -126,7 +126,7 @@ theorem sum_jointPositiveBranchProbability_mul_abs_entanglement_sub_target_le
           ∑ j : L.jointPositiveSupport input,
             (L.jointPositiveBranchProbability input j : Real) *
               howFannesEta
-                ((L.finalNormalizedBranch input j).state.marginalB.traceDistance
+                ((L.finalNormalizedBranch input j).state.marginalB.traceNormDistance
                   target.state.marginalB) := by
     calc
       (∑ j : L.jointPositiveSupport input,
@@ -137,7 +137,7 @@ theorem sum_jointPositiveBranchProbability_mul_abs_entanglement_sub_target_le
             (L.jointPositiveBranchProbability input j : Real) *
               (log2 (Fintype.card B' : Real) *
                 howFannesEta
-                  ((L.finalNormalizedBranch input j).state.marginalB.traceDistance
+                  ((L.finalNormalizedBranch input j).state.marginalB.traceNormDistance
                     target.state.marginalB)) := by
         apply Finset.sum_le_sum
         intro j _
@@ -148,7 +148,7 @@ theorem sum_jointPositiveBranchProbability_mul_abs_entanglement_sub_target_le
           ∑ j : L.jointPositiveSupport input,
             (L.jointPositiveBranchProbability input j : Real) *
               howFannesEta
-                ((L.finalNormalizedBranch input j).state.marginalB.traceDistance
+                ((L.finalNormalizedBranch input j).state.marginalB.traceNormDistance
                   target.state.marginalB) := by
         rw [Finset.mul_sum]
         apply Finset.sum_congr rfl
@@ -156,9 +156,9 @@ theorem sum_jointPositiveBranchProbability_mul_abs_entanglement_sub_target_le
         ring
   have hjensen := howFannesEta_weighted_le
     (fun j : L.jointPositiveSupport input => L.jointPositiveBranchProbability input j)
-    (fun j => (L.finalNormalizedBranch input j).state.marginalB.traceDistance
+    (fun j => (L.finalNormalizedBranch input j).state.marginalB.traceNormDistance
       target.state.marginalB)
-    hq (fun j => State.traceDistance_nonneg _ _)
+    hq (fun j => State.traceNormDistance_nonneg _ _)
   exact hpointSum.trans
     (mul_le_mul_of_nonneg_left hjensen (log2_nat_cast_nonneg _))
 
@@ -523,14 +523,14 @@ theorem log2_converseBobOutput_card :
 
 /-- The physical positive branches of the lifted protocol obey HOW's averaged
 Bob-marginal trace-distance bound. -/
-theorem converseLOCC_average_marginalB_traceDistance_le :
+theorem converseLOCC_average_marginalB_traceNormDistance_le :
     (∑ j : C.converseLOCC.jointPositiveSupport C.converseInputPureVector,
       (C.converseLOCC.jointPositiveBranchProbability C.converseInputPureVector j : Real) *
-        (C.converseLOCC.finalNormalizedBranch C.converseInputPureVector j).state.marginalB.traceDistance
+        (C.converseLOCC.finalNormalizedBranch C.converseInputPureVector j).state.marginalB.traceNormDistance
           C.converseTargetPureVector.state.marginalB) ≤
       2 * Real.sqrt C.fidelityError := by
   have h :=
-    C.converseLOCC.sum_jointPositiveBranchProbability_mul_marginalB_traceDistance_le
+    C.converseLOCC.sum_jointPositiveBranchProbability_mul_marginalB_traceNormDistance_le
       C.converseInputPureVector C.converseTargetPureVector
   rw [C.converseLOCC_fidelityError] at h
   exact h
@@ -551,8 +551,8 @@ theorem converseLOCC_average_abs_entanglement_sub_target_le :
       C.converseInputPureVector C.converseTargetPureVector
   have hmono := howFannesEta_mono
     (Finset.sum_nonneg fun j _ =>
-      mul_nonneg (NNReal.coe_nonneg _) (State.traceDistance_nonneg _ _))
-    C.converseLOCC_average_marginalB_traceDistance_le
+      mul_nonneg (NNReal.coe_nonneg _) (State.traceNormDistance_nonneg _ _))
+    C.converseLOCC_average_marginalB_traceNormDistance_le
   exact hgeneric.trans
     (mul_le_mul_of_nonneg_left hmono (log2_nat_cast_nonneg _))
 

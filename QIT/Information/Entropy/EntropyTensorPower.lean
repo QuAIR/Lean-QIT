@@ -42,8 +42,6 @@ unitary similarity.
 
 @[expose] public section
 
-set_option linter.unusedSectionVars false
-
 open scoped ComplexOrder MatrixOrder
 
 open Matrix Polynomial
@@ -87,6 +85,7 @@ theorem eigenvalueMultiset_reindex {α : Type u} {β : Type v}
   rw [← (hM.submatrix e.symm).roots_charpoly_eq_eigenvalues,
     ← hM.roots_charpoly_eq_eigenvalues, hchar]
 
+omit [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b] in
 /-- The Kronecker product of two Hermitian matrices is Hermitian. -/
 theorem kronecker_isHermitian (A : CMatrix a) (B : CMatrix b)
     (hA : A.IsHermitian) (hB : B.IsHermitian) :
@@ -247,6 +246,7 @@ theorem charpoly_blockDiagonal {ι : Type v} [Fintype ι] [DecidableEq ι]
   rw [hCharm, Matrix.det_blockDiagonal]
   rfl
 
+omit [Fintype a] [DecidableEq a] in
 /-- A block-diagonal matrix with Hermitian blocks is Hermitian. -/
 theorem blockDiagonal_isHermitian {ι : Type v} [Fintype ι] [DecidableEq ι]
     (M : ι → CMatrix a) (hM : ∀ x, (M x).IsHermitian) :
@@ -275,6 +275,7 @@ theorem eigenvalueMultiset_blockDiagonal {ι : Type v} [Fintype ι] [DecidableEq
   simp_rw [(hM _).roots_charpoly_eq_eigenvalues]
   simp only [Multiset.map_bind, Multiset.map_map, Function.comp_def]
 
+omit [Fintype a] [DecidableEq a] in
 /-- Real scalar multiples of Hermitian matrices are Hermitian. -/
 theorem smul_isHermitian_ofReal (c : ℝ) (A : CMatrix a) (hA : A.IsHermitian) :
     ((c : ℂ) • A).IsHermitian :=

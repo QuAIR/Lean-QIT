@@ -8,8 +8,9 @@ module
 
 public import QIT.Information.Renyi.Renyi
 public import QIT.Information.Renyi.RenyiDPI.Domain
-public import QIT.HypothesisTesting.Audenaert
+public import QIT.States.TraceNorm.Audenaert
 public import QIT.Util.BlockMatrix
+import QIT.Util.CMatrixCLM
 public import Mathlib.Data.EReal.Basic
 
 /-!
@@ -465,21 +466,6 @@ public theorem andoIntegralRepresentation_posDef
           Matrix.andoResolventIntegrand (a := a) (b := b) r A B ∂μ := by
         rfl
 
-private noncomputable def cMatrixEntryCLMComplex {ι : Type v}
-    [Fintype ι] [DecidableEq ι] (i j : ι) : CMatrix ι →L[ℂ] ℂ :=
-  LinearMap.toContinuousLinearMap
-    ({ toFun := fun M => M i j
-       map_add' := by intro M N; simp
-       map_smul' := by intro c M; simp [Matrix.smul_apply] } :
-      CMatrix ι →ₗ[ℂ] ℂ)
-
-private noncomputable def cMatrixConjTransposeCLM {ι : Type v}
-    [Fintype ι] [DecidableEq ι] : CMatrix ι →L[ℝ] CMatrix ι :=
-  LinearMap.toContinuousLinearMap
-    ({ toFun := fun M => Matrix.conjTranspose M
-       map_add' := by intro M N; simp
-       map_smul' := by intro c M; ext i j; simp } : CMatrix ι →ₗ[ℝ] CMatrix ι)
-
 private theorem cMatrix_integral_conjTranspose {α : Type*} [MeasurableSpace α]
     {μ : Measure α} {ι : Type v} [Fintype ι] [DecidableEq ι]
     {f : α → CMatrix ι} (hf : Integrable f μ) :
@@ -487,22 +473,6 @@ private theorem cMatrix_integral_conjTranspose {α : Type*} [MeasurableSpace α]
       ∫ x, Matrix.conjTranspose (f x) ∂μ := by
   simpa [cMatrixConjTransposeCLM] using
     ((cMatrixConjTransposeCLM (ι := ι)).integral_comp_comm hf).symm
-
-private noncomputable def cMatrixQuadraticCLM {ι : Type v}
-    [Fintype ι] [DecidableEq ι] (x : ι → ℂ) : CMatrix ι →L[ℂ] ℂ :=
-  ∑ i, ∑ j, (star (x i) * x j) •
-    cMatrixEntryCLMComplex (ι := ι) i j
-
-private theorem cMatrixQuadraticCLM_apply {ι : Type v}
-    [Fintype ι] [DecidableEq ι] (x : ι → ℂ) (A : CMatrix ι) :
-    cMatrixQuadraticCLM x A = dotProduct (star x) (Matrix.mulVec A x) := by
-  simp [cMatrixQuadraticCLM, cMatrixEntryCLMComplex, Matrix.mulVec, dotProduct]
-  refine Finset.sum_congr rfl ?_
-  intro i _
-  rw [Finset.mul_sum]
-  refine Finset.sum_congr rfl ?_
-  intro j _
-  ring
 
 private theorem cMatrix_integral_dotProduct_mulVec {α : Type*} [MeasurableSpace α]
     {μ : Measure α} {ι : Type v} [Fintype ι] [DecidableEq ι]
@@ -538,7 +508,7 @@ private theorem continuous_cMatrix_quadraticForm {ι : Type v}
   exact continuous_finsetSum x.support fun i _ =>
     continuous_finsetSum x.support fun j _ =>
       Continuous.mul (Continuous.mul continuous_const
-        (cMatrixEntryCLMComplex (ι := ι) i j).continuous) continuous_const
+        (cMatrixEntryCLM_complex (ι := ι) i j).continuous) continuous_const
 
 /-- The finite-dimensional cone of positive semidefinite complex matrices is
 closed in the norm topology. -/

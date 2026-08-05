@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.Additivity.PureVectorBridge
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # State product branch for sandwiched EA additivity

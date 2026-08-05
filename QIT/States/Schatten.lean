@@ -3663,85 +3663,6 @@ theorem psdTracePower_nonneg (A : CMatrix a) (hA : A.PosSemidef) (p : ℝ) :
     0 ≤ psdTracePower A hA p :=
   (Matrix.PosSemidef.trace_nonneg (cMatrix_rpow_posSemidef (A := A) (s := p) hA)).1
 
-private theorem cMatrix_rpow_kronecker_nonneg_for_psdTracePower
-    {b : Type v} [Fintype b] [DecidableEq b]
-    {A : CMatrix a} {B : CMatrix b} (hA : A.PosSemidef) (hB : B.PosSemidef)
-    {s : ℝ} (_hs0 : 0 ≤ s) :
-    CFC.rpow (Matrix.kronecker A B) s =
-      Matrix.kronecker (CFC.rpow A s) (CFC.rpow B s) := by
-  let UA := hA.isHermitian.eigenvectorUnitary
-  let UB := hB.isHermitian.eigenvectorUnitary
-  let U : Matrix.unitaryGroup (Prod a b) ℂ :=
-    ⟨Matrix.kronecker (UA : CMatrix a) (UB : CMatrix b),
-      Matrix.kronecker_mem_unitary UA.2 UB.2⟩
-  let da : a -> ℝ := hA.isHermitian.eigenvalues
-  let db : b -> ℝ := hB.isHermitian.eigenvalues
-  let dprod : Prod a b -> ℝ := fun i => da i.1 * db i.2
-  have hda : ∀ i, 0 ≤ da i := by
-    intro i
-    exact hA.eigenvalues_nonneg i
-  have hdb : ∀ i, 0 ≤ db i := by
-    intro i
-    exact hB.eigenvalues_nonneg i
-  have hdprod : ∀ i, 0 ≤ dprod i := by
-    intro i
-    exact mul_nonneg (hda i.1) (hdb i.2)
-  have hA_spec :
-      A = Unitary.conjStarAlgAut ℂ _ UA
-        (Matrix.diagonal (fun i => (da i : ℂ))) := by
-    simpa [UA, da, Function.comp_def] using hA.isHermitian.spectral_theorem
-  have hB_spec :
-      B = Unitary.conjStarAlgAut ℂ _ UB
-        (Matrix.diagonal (fun i => (db i : ℂ))) := by
-    simpa [UB, db, Function.comp_def] using hB.isHermitian.spectral_theorem
-  have hAB_spec :
-      Matrix.kronecker A B =
-        Unitary.conjStarAlgAut ℂ _ U
-          (Matrix.diagonal (fun i => (dprod i : ℂ))) := by
-    rw [hA_spec, hB_spec]
-    simp [U, dprod, Unitary.conjStarAlgAut_apply, star_eq_conjTranspose,
-      Matrix.conjTranspose_kronecker, Matrix.mul_kronecker_mul,
-      Matrix.diagonal_kronecker_diagonal, Matrix.mul_assoc]
-  have hA_rpow :
-      CFC.rpow A s =
-        Unitary.conjStarAlgAut ℂ _ UA
-          (Matrix.diagonal (fun i => ((da i ^ s : ℝ) : ℂ))) := by
-    rw [hA_spec]
-    simpa [Unitary.conjStarAlgAut_apply] using
-      cMatrix_rpow_unitary_conj_diagonal_ofReal UA da hda s
-  have hB_rpow :
-      CFC.rpow B s =
-        Unitary.conjStarAlgAut ℂ _ UB
-          (Matrix.diagonal (fun i => ((db i ^ s : ℝ) : ℂ))) := by
-    rw [hB_spec]
-    simpa [Unitary.conjStarAlgAut_apply] using
-      cMatrix_rpow_unitary_conj_diagonal_ofReal UB db hdb s
-  have hleft :
-      CFC.rpow (Matrix.kronecker A B) s =
-        Unitary.conjStarAlgAut ℂ _ U
-          (Matrix.diagonal (fun i => ((dprod i ^ s : ℝ) : ℂ))) := by
-    rw [hAB_spec]
-    simpa [Unitary.conjStarAlgAut_apply] using
-      cMatrix_rpow_unitary_conj_diagonal_ofReal U dprod hdprod s
-  have hdiag :
-      Matrix.diagonal (fun i : Prod a b => ((dprod i ^ s : ℝ) : ℂ)) =
-        Matrix.diagonal (fun i : Prod a b => (((da i.1 ^ s) * (db i.2 ^ s) : ℝ) : ℂ)) := by
-    ext i j
-    by_cases hij : i = j
-    · subst j
-      simp [dprod, Real.mul_rpow (hda i.1) (hdb i.2)]
-    · simp [Matrix.diagonal, hij]
-  have hright :
-      Matrix.kronecker (CFC.rpow A s) (CFC.rpow B s) =
-        Unitary.conjStarAlgAut ℂ _ U
-          (Matrix.diagonal
-            (fun i : Prod a b => (((da i.1 ^ s) * (db i.2 ^ s) : ℝ) : ℂ))) := by
-    rw [hA_rpow, hB_rpow]
-    simp [U, Unitary.conjStarAlgAut_apply, star_eq_conjTranspose,
-      Matrix.conjTranspose_kronecker, Matrix.mul_kronecker_mul,
-      Matrix.diagonal_kronecker_diagonal, Matrix.mul_assoc]
-  rw [hleft, hdiag, hright]
-
 /-- PSD power traces multiply over Kronecker products. -/
 theorem psdTracePower_kronecker
     {b : Type v} [Fintype b] [DecidableEq b]
@@ -3749,7 +3670,7 @@ theorem psdTracePower_kronecker
     {p : Real} (hp : 0 <= p) :
     psdTracePower (Matrix.kronecker A B) (hA.kronecker hB) p =
       psdTracePower A hA p * psdTracePower B hB p := by
-  rw [psdTracePower, cMatrix_rpow_kronecker_nonneg_for_psdTracePower hA hB hp]
+  rw [psdTracePower, cMatrix_rpow_kronecker_nonneg hA hB hp]
   change (Matrix.kroneckerMap (fun x y => x * y) (CFC.rpow A p)
       (CFC.rpow B p)).trace.re =
     psdTracePower A hA p * psdTracePower B hB p

@@ -9,7 +9,6 @@ module
 public import QIT.Information.Renyi.RenyiDPI.Domain
 public import QIT.Information.Renyi.RenyiDPI.HighAlpha
 public import QIT.Information.Renyi.RenyiDPI.LowAlpha
-public import QIT.Information.Renyi.RenyiDPI.ConditionalMeasurement
 public import QIT.Information.Renyi.RenyiDPI.TraceLogBridge
 public import QIT.Information.Renyi.RenyiDPI.AlphaToOne
 public import QIT.Information.Renyi.RenyiDPI.ReferenceOrder

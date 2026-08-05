@@ -7,6 +7,8 @@ Authors: QuAIR Team
 module
 
 public import QIT.Coding.EntanglementAssisted.Renyi.Sandwiched.Additivity.StateProduct
+import QIT.States.Purification.Uhlmann
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # Channel alternate expression for sandwiched EA additivity
@@ -845,38 +847,6 @@ theorem sandwichedSideWeightMap_prod_posDef
         bd bd'
   rw [cMatrix_rpow_kronecker_posDef hsigma1 hsigma2 ((1 - alpha) / (2 * alpha))]
 
-private theorem kron_comp_apply_general_local
-    {x1 y1 z1 x2 y2 z2 : Type*}
-    [Fintype x1] [DecidableEq x1] [Fintype y1] [DecidableEq y1]
-    [Fintype z1] [DecidableEq z1] [Fintype x2] [DecidableEq x2]
-    [Fintype y2] [DecidableEq y2] [Fintype z2] [DecidableEq z2]
-    (Phi1 : MatrixMap y1 z1) (Phi2 : MatrixMap y2 z2)
-    (Psi1 : MatrixMap x1 y1) (Psi2 : MatrixMap x2 y2)
-    (X : CMatrix (Prod x1 x2)) :
-    MatrixMap.kron Phi1 Phi2 (MatrixMap.kron Psi1 Psi2 X) =
-      MatrixMap.kron (Phi1.comp Psi1) (Phi2.comp Psi2) X := by
-  ext cd cd'
-  rw [MatrixMap.map_eq_sum_single (MatrixMap.kron Psi1 Psi2) X]
-  simp_rw [map_sum]
-  simp_rw [map_smul]
-  simp only [Matrix.sum_apply]
-  rw [MatrixMap.map_eq_sum_single
-    (MatrixMap.kron (Phi1.comp Psi1) (Phi2.comp Psi2)) X]
-  simp only [Matrix.sum_apply]
-  refine Finset.sum_congr rfl fun ac _ => ?_
-  refine Finset.sum_congr rfl fun ac' _ => ?_
-  simp only [Matrix.smul_apply]
-  congr 1
-  cases ac with
-  | mk a0 c0 =>
-  cases ac' with
-  | mk a1 c1 =>
-  rw [single_prod_eq_kronecker_single]
-  rw [MatrixMap.kron_apply_kronecker]
-  rw [MatrixMap.kron_apply_kronecker]
-  rw [MatrixMap.kron_apply_kronecker]
-  rfl
-
 /-- Reference lifting commutes with composition in the expected
 `id_R ⊗ (Psi o Phi)` form. -/
 theorem referenceLift_comp_apply
@@ -888,7 +858,7 @@ theorem referenceLift_comp_apply
   change MatrixMap.kron (Channel.idChannel a1).map Psi
       (MatrixMap.kron (Channel.idChannel a1).map Phi X) =
     MatrixMap.kron (Channel.idChannel a1).map (Psi.comp Phi) X
-  rw [kron_comp_apply_general_local
+  rw [kron_comp_apply_general
     (Channel.idChannel a1).map Psi (Channel.idChannel a1).map Phi X]
   have hid :
       ((Channel.idChannel a1).map.comp (Channel.idChannel a1).map) =
@@ -1138,7 +1108,7 @@ theorem sandwichedSideWeightMap_prod_comp_kron_posDef
   rw [sandwichedSideWeightMap_prod_posDef sigma1 sigma2 hsigma1 hsigma2 alpha]
   ext X bd bd'
   exact congrFun (congrFun
-    (kron_comp_apply_general_local
+    (kron_comp_apply_general
       (sandwichedSideWeightMap sigma1 alpha)
       (sandwichedSideWeightMap sigma2 alpha)
       Phi1 Phi2 X) bd) bd'
@@ -1273,7 +1243,7 @@ theorem hypothesisTestingOutputState_sandwichedRenyiMutualInformationE_le_channe
   have hφ : φ.Purifies ψ.state.marginalB := by
     exact ψ.state.marginalB.canonicalPurification_purifies
   have hψ : ψ.Purifies ψ.state.marginalB :=
-    ψ.purifies_marginalB_forHypothesisTestingDPI
+    ψ.purifies_marginalB
   rcases PureVector.exists_referenceIsometry_applyPureVector_eq_of_purifies_same_state
       hφ hψ hcard with ⟨V, hV⟩
   have hout :
@@ -1309,7 +1279,7 @@ theorem hypothesisTestingOutputState_sandwichedRenyiMutualInformationE_le_canoni
   have hφ : φ.Purifies ψ.state.marginalB := by
     exact ψ.state.marginalB.canonicalPurification_purifies
   have hψ : ψ.Purifies ψ.state.marginalB :=
-    ψ.purifies_marginalB_forHypothesisTestingDPI
+    ψ.purifies_marginalB
   rcases PureVector.exists_referenceIsometry_applyPureVector_eq_of_purifies_same_state
       hφ hψ (Nat.le_refl (Fintype.card a1)) with ⟨V, hV⟩
   rw [hV]
@@ -1480,141 +1450,6 @@ theorem swappedCanonical_referenceInner_eq_referenceLift_cbOneToAlphaOriginalInp
             exact (Matrix.PosSemidef.one.kronecker
               (cMatrix_rpow_posSemidef (A := sigma.matrix) (s := s) sigma.pos)).isHermitian.eq
           rw [hDherm]
-
-/-- Support-convention product rule for the sandwiched `Q` functional.
-
-This is the PSD/high-`alpha` algebra hidden in KW
-`EA_capacity.tex:1183-1186`: even when the references are singular, the
-repository support convention for `CFC.rpow` makes the tensor-product
-Schatten trace factorize. -/
-private theorem sandwichedRenyiQ_kronecker_posSemidef_support
-    {x : Type u1} {y : Type v1} [Fintype x] [DecidableEq x]
-    [Fintype y] [DecidableEq y]
-    {rho1 sigma1 : CMatrix x} {rho2 sigma2 : CMatrix y}
-    (hrho1 : rho1.PosSemidef) (hsigma1 : sigma1.PosSemidef)
-    (hrho2 : rho2.PosSemidef) (hsigma2 : sigma2.PosSemidef)
-    (alpha : ℝ) (halpha_nonneg : 0 ≤ alpha) :
-    State.sandwichedRenyiQ
-        (Matrix.kronecker rho1 rho2)
-        (Matrix.kronecker sigma1 sigma2)
-        (hrho1.kronecker hrho2) (hsigma1.kronecker hsigma2) alpha =
-      State.sandwichedRenyiQ rho1 sigma1 hrho1 hsigma1 alpha *
-        State.sandwichedRenyiQ rho2 sigma2 hrho2 hsigma2 alpha := by
-  let s : ℝ := (1 - alpha) / (2 * alpha)
-  let C1 : CMatrix x := CFC.rpow sigma1 s
-  let C2 : CMatrix y := CFC.rpow sigma2 s
-  let inner1 : CMatrix x := C1 * rho1 * C1
-  let inner2 : CMatrix y := C2 * rho2 * C2
-  have hC :
-      CFC.rpow (Matrix.kronecker sigma1 sigma2) s =
-        Matrix.kronecker C1 C2 := by
-    simpa [C1, C2, s] using
-      State.cMatrix_rpow_kronecker_posSemidef_support hsigma1 hsigma2 s
-  have hinner :
-      CFC.rpow (Matrix.kronecker sigma1 sigma2) s *
-          Matrix.kronecker rho1 rho2 *
-          CFC.rpow (Matrix.kronecker sigma1 sigma2) s =
-        Matrix.kronecker inner1 inner2 := by
-    rw [hC]
-    simp [inner1, inner2, Matrix.mul_kronecker_mul, Matrix.mul_assoc]
-  have hC1_hm : C1.IsHermitian :=
-    (cMatrix_rpow_posSemidef (A := sigma1) (s := s) hsigma1).isHermitian
-  have hC2_hm : C2.IsHermitian :=
-    (cMatrix_rpow_posSemidef (A := sigma2) (s := s) hsigma2).isHermitian
-  have hinner1_psd : inner1.PosSemidef := by
-    have h := Matrix.PosSemidef.conjTranspose_mul_mul_same hrho1 C1
-    rwa [hC1_hm.eq] at h
-  have hinner2_psd : inner2.PosSemidef := by
-    have h := Matrix.PosSemidef.conjTranspose_mul_mul_same hrho2 C2
-    rwa [hC2_hm.eq] at h
-  have htraceC :
-      (CFC.rpow
-        (CFC.rpow (Matrix.kronecker sigma1 sigma2) s * Matrix.kronecker rho1 rho2 *
-          CFC.rpow (Matrix.kronecker sigma1 sigma2) s) alpha).trace =
-        (CFC.rpow inner1 alpha).trace * (CFC.rpow inner2 alpha).trace := by
-    rw [hinner]
-    rw [cMatrix_rpow_kronecker_nonneg hinner1_psd hinner2_psd halpha_nonneg]
-    change
-      (Matrix.kroneckerMap (fun x y => x * y)
-        (CFC.rpow inner1 alpha) (CFC.rpow inner2 alpha)).trace =
-        (CFC.rpow inner1 alpha).trace * (CFC.rpow inner2 alpha).trace
-    rw [Matrix.trace_kronecker]
-  have him1 : ((CFC.rpow inner1 alpha).trace).im = 0 := by
-    have htrace_nonneg : 0 ≤ (CFC.rpow inner1 alpha).trace :=
-      Matrix.PosSemidef.trace_nonneg
-        (Matrix.nonneg_iff_posSemidef.mp (CFC.rpow_nonneg (a := inner1) (y := alpha)))
-    exact htrace_nonneg.2.symm
-  have him2 : ((CFC.rpow inner2 alpha).trace).im = 0 := by
-    have htrace_nonneg : 0 ≤ (CFC.rpow inner2 alpha).trace :=
-      Matrix.PosSemidef.trace_nonneg
-        (Matrix.nonneg_iff_posSemidef.mp (CFC.rpow_nonneg (a := inner2) (y := alpha)))
-    exact htrace_nonneg.2.symm
-  unfold State.sandwichedRenyiQ
-  change
-    (CFC.rpow
-      (CFC.rpow (Matrix.kronecker sigma1 sigma2) s * Matrix.kronecker rho1 rho2 *
-        CFC.rpow (Matrix.kronecker sigma1 sigma2) s) alpha).trace.re =
-      (CFC.rpow inner1 alpha).trace.re * (CFC.rpow inner2 alpha).trace.re
-  rw [htraceC, Complex.mul_re, him1, him2]
-  ring
-
-/-- Product rule for the supported high-`alpha` finite PSD-reference branch.
-
-This is the finite-branch form of the KW step
-`EA_capacity.tex:1183-1186`, where the sandwiched Renyi divergence of product
-states against product references splits into the sum of the two divergences.
-The hypotheses are exactly support-convention hypotheses, not full-rank
-assumptions. -/
-private theorem sandwichedRenyiPSDReferenceHighAlphaFinite_prod_of_supports
-    {x : Type u1} {y : Type v1} [Fintype x] [DecidableEq x]
-    [Fintype y] [DecidableEq y]
-    (rho1 : State x) (rho2 : State y)
-    {sigma1 : CMatrix x} {sigma2 : CMatrix y}
-    (hsigma1 : sigma1.PosSemidef) (hsigma2 : sigma2.PosSemidef)
-    (hsupport1 : Matrix.Supports rho1.matrix sigma1)
-    (hsupport2 : Matrix.Supports rho2.matrix sigma2)
-    {alpha : ℝ} (halpha : 1 < alpha) :
-    QIT.State.sandwichedRenyiPSDReferenceHighAlphaFinite (rho1.prod rho2)
-        (Matrix.kronecker sigma1 sigma2) (hsigma1.kronecker hsigma2) alpha =
-      QIT.State.sandwichedRenyiPSDReferenceHighAlphaFinite rho1 sigma1 hsigma1 alpha +
-        QIT.State.sandwichedRenyiPSDReferenceHighAlphaFinite rho2 sigma2 hsigma2 alpha := by
-  have halpha_pos : 0 < alpha := lt_trans zero_lt_one halpha
-  have hq :=
-    sandwichedRenyiQ_kronecker_posSemidef_support
-      (rho1 := rho1.matrix) (sigma1 := sigma1)
-      (rho2 := rho2.matrix) (sigma2 := sigma2)
-      rho1.pos hsigma1 rho2.pos hsigma2 alpha (le_of_lt halpha_pos)
-  have htrace :
-      psdTracePower
-          (QIT.State.sandwichedRenyiReferenceInner (rho1.prod rho2)
-            (Matrix.kronecker sigma1 sigma2) alpha)
-          (QIT.State.sandwichedRenyiReferenceInner_posSemidef (rho1.prod rho2)
-            (hsigma1.kronecker hsigma2) alpha)
-          alpha =
-        psdTracePower (QIT.State.sandwichedRenyiReferenceInner rho1 sigma1 alpha)
-            (QIT.State.sandwichedRenyiReferenceInner_posSemidef rho1 hsigma1 alpha)
-            alpha *
-          psdTracePower (QIT.State.sandwichedRenyiReferenceInner rho2 sigma2 alpha)
-            (QIT.State.sandwichedRenyiReferenceInner_posSemidef rho2 hsigma2 alpha)
-            alpha := by
-    simpa [QIT.State.sandwichedRenyiQ, QIT.State.sandwichedRenyiReferenceInner,
-      State.prod_matrix_kronecker, psdTracePower] using hq
-  have hq1_pos :
-      0 < psdTracePower (QIT.State.sandwichedRenyiReferenceInner rho1 sigma1 alpha)
-          (QIT.State.sandwichedRenyiReferenceInner_posSemidef rho1 hsigma1 alpha)
-          alpha :=
-    QIT.State.sandwichedRenyiReferenceInner_psdTracePower_pos_of_supports
-      rho1 hsigma1 hsupport1 alpha
-  have hq2_pos :
-      0 < psdTracePower (QIT.State.sandwichedRenyiReferenceInner rho2 sigma2 alpha)
-          (QIT.State.sandwichedRenyiReferenceInner_posSemidef rho2 hsigma2 alpha)
-          alpha :=
-    QIT.State.sandwichedRenyiReferenceInner_psdTracePower_pos_of_supports
-      rho2 hsigma2 hsupport2 alpha
-  unfold QIT.State.sandwichedRenyiPSDReferenceHighAlphaFinite
-  rw [htrace]
-  rw [log2_mul (ne_of_gt hq1_pos) (ne_of_gt hq2_pos)]
-  ring
 
 /-- KW weighted rank-one alternate expression for an arbitrary pure input.
 

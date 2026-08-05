@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.OneShot.SmoothSupportRestriction
+public import QIT.States.Purification.ReferenceIsometry
 
 set_option maxHeartbeats 3000000
 
@@ -155,22 +156,6 @@ private theorem applyMatrix_mul
     applyMatrix_eq_kron_conj V (X * Y)]
   exact ((Matrix.isometryConjNonUnitalStarAlgHom K hK).map_mul X Y).symm
 
-private theorem matrix_mul_conjTranspose_mul_matrix
-    (V : ReferenceIsometry r₁ r₂) (B C : CMatrix r₁) :
-    (V.matrix * B * Matrix.conjTranspose V.matrix) *
-        (V.matrix * C * Matrix.conjTranspose V.matrix) =
-      V.matrix * (B * C) * Matrix.conjTranspose V.matrix := by
-  calc
-    (V.matrix * B * Matrix.conjTranspose V.matrix) *
-        (V.matrix * C * Matrix.conjTranspose V.matrix) =
-      V.matrix * B * (Matrix.conjTranspose V.matrix * V.matrix) *
-        C * Matrix.conjTranspose V.matrix := by
-          simp only [Matrix.mul_assoc]
-    _ = V.matrix * B * (1 : CMatrix r₁) * C * Matrix.conjTranspose V.matrix := by
-          rw [V.isometry]
-    _ = V.matrix * (B * C) * Matrix.conjTranspose V.matrix := by
-          simp only [Matrix.mul_one, Matrix.mul_assoc]
-
 private theorem applyMatrix_posSemidef
     (V : ReferenceIsometry r₁ r₂) {X : CMatrix (Prod r₁ a)}
     (hX : X.PosSemidef) :
@@ -206,14 +191,6 @@ private theorem partialTraceB_applyMatrix
   rw [Finset.sum_comm]
   refine Finset.sum_congr rfl fun j _ => ?_
   rw [Finset.sum_comm]
-
-omit [DecidableEq a] in
-private theorem trace_applyMatrix
-    (V : ReferenceIsometry r₁ r₂) (X : CMatrix (Prod r₁ a)) :
-    (V.applyMatrix X).trace = X.trace := by
-  have h := V.partialTraceA_applyMatrix X
-  have ht := congrArg Matrix.trace h
-  simpa [partialTraceA_trace] using ht
 
 private theorem traceNorm_applyMatrix
     (V : ReferenceIsometry r₁ r₂) (X : CMatrix (Prod r₁ a)) :

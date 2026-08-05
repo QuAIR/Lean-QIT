@@ -9,7 +9,6 @@ module
 public import Mathlib.Topology.Bases
 public import QIT.Information.Entropy.Entropy
 public import QIT.OneShot.Smooth
-public import QIT.Asymptotic.Typicality
 public import QIT.Symmetry.UnitaryTwirl
 import QIT.States.TraceNorm.Spectral
 import Mathlib.Analysis.CStarAlgebra.Classes
@@ -211,104 +210,6 @@ theorem haydenSourceProjectedRE_eq_haydenProjectedAE {ap : Type x} {b : Type w}
         (haydenPostStinespringAEState (a := a) (e := e) phi W).matrix U :=
   rfl
 
-/-- Hilbert--Schmidt square used in the Step 4 variance computation. -/
-def hilbertSchmidtSq [Fintype a] [DecidableEq a] (M : CMatrix a) : ℝ :=
-  ((star M * M).trace).re
-
-theorem hilbertSchmidtSq_nonneg [Fintype a] [DecidableEq a] (M : CMatrix a) :
-    0 ≤ hilbertSchmidtSq M := by
-  exact (Matrix.PosSemidef.trace_nonneg
-    (Matrix.posSemidef_conjTranspose_mul_self M)).1
-
-private theorem hilbertSchmidtSq_eq_trace_mul_self_of_isHermitian [Fintype a] [DecidableEq a]
-    {M : CMatrix a} (hM : M.IsHermitian) :
-    hilbertSchmidtSq M = (M * M).trace.re := by
-  unfold hilbertSchmidtSq
-  rw [show star M = M by simpa [Matrix.star_eq_conjTranspose] using hM.eq]
-
-private theorem decouplingTraceNorm_continuous [Fintype a] [DecidableEq a] :
-    Continuous (traceNorm : CMatrix a → ℝ) := by
-  have hgram : Continuous (fun M : CMatrix a => star M * M) := by
-    exact (Continuous.star continuous_id).matrix_mul continuous_id
-  have hnonneg : ∀ M : CMatrix a, (star M * M) ∈ {A : CMatrix a | 0 ≤ A} := by
-    intro M
-    exact Matrix.nonneg_iff_posSemidef.mpr
-      (Matrix.posSemidef_conjTranspose_mul_self M)
-  have hsqrtOn :
-      ContinuousOn (CFC.sqrt : CMatrix a → CMatrix a) {A : CMatrix a | 0 ≤ A} := by
-    exact CFC.continuousOn_sqrt
-  have hsqrt : Continuous (fun M : CMatrix a => CFC.sqrt (star M * M)) := by
-    exact hsqrtOn.comp_continuous hgram hnonneg
-  have htrace : Continuous (fun M : CMatrix a => (CFC.sqrt (star M * M)).trace) :=
-    Continuous.matrix_trace hsqrt
-  simpa [traceNorm, psdSqrt] using Complex.continuous_re.comp htrace
-
-/-- The trace norm is continuous on finite-dimensional complex matrices. -/
-theorem traceNorm_continuous [Fintype a] [DecidableEq a] :
-    Continuous (traceNorm : CMatrix a → ℝ) :=
-  decouplingTraceNorm_continuous
-
-theorem traceNorm_sq_le_card_mul_hilbertSchmidtSq [Fintype a] [DecidableEq a]
-    (M : CMatrix a) :
-    traceNorm M ^ 2 ≤ (Fintype.card a : ℝ) * hilbertSchmidtSq M := by
-  have hmain := traceNorm_sq_le_finrank_range_mul_hilbertSchmidt M
-  have hrank : (Module.finrank ℂ (LinearMap.range M.toEuclideanLin) : ℝ) ≤
-      (Fintype.card a : ℝ) := by
-    have hnat : Module.finrank ℂ (LinearMap.range M.toEuclideanLin) ≤ Fintype.card a := by
-      simpa [finrank_euclideanSpace] using
-        (Submodule.finrank_le (LinearMap.range M.toEuclideanLin))
-    exact_mod_cast hnat
-  exact hmain.trans
-    (mul_le_mul_of_nonneg_right hrank (hilbertSchmidtSq_nonneg M))
-
-/-- A trace-one positive semidefinite matrix has purity at least `1 / d`.
-This is the Hilbert--Schmidt Cauchy--Schwarz estimate in trace-norm form. -/
-theorem State.one_le_card_mul_hilbertSchmidtSq_matrix [Fintype a] [DecidableEq a]
-    (ρ : State a) :
-    (1 : ℝ) ≤ (Fintype.card a : ℝ) * hilbertSchmidtSq ρ.matrix := by
-  have htn : traceNorm ρ.matrix = 1 := by
-    rw [traceNorm_posSemidef_eq_trace_re ρ.matrix ρ.pos]
-    exact ρ.trace_re_eq_one
-  have h := traceNorm_sq_le_card_mul_hilbertSchmidtSq ρ.matrix
-  nlinarith
-
-/-- If a state is bounded above by `c • I`, then its Hilbert--Schmidt purity is
-at most `c`. -/
-theorem State.hilbertSchmidtSq_matrix_le_of_le_smul_one [Fintype a] [DecidableEq a]
-    (ρ : State a) {c : ℝ} (hc : 0 ≤ c)
-    (hρ : ρ.matrix ≤ ((c : ℂ) • (1 : CMatrix a))) :
-    hilbertSchmidtSq ρ.matrix ≤ c := by
-  have _hcC : (0 : ℂ) ≤ (c : ℂ) := by
-    exact_mod_cast hc
-  have hpair :=
-    cMatrix_trace_mul_le_of_le_posSemidef_left
-      (A := ρ.matrix) (B := ((c : ℂ) • (1 : CMatrix a))) (W := ρ.matrix)
-      ρ.pos hρ
-  have hright :
-      ((ρ.matrix * ((c : ℂ) • (1 : CMatrix a))).trace).re = c := by
-    calc
-      ((ρ.matrix * ((c : ℂ) • (1 : CMatrix a))).trace).re =
-          (((c : ℂ) • ρ.matrix).trace).re := by
-            rw [Matrix.mul_smul, Matrix.mul_one]
-      _ = ((c : ℂ) * ρ.matrix.trace).re := by
-            simp [Matrix.trace_smul]
-      _ = c := by
-            rw [ρ.trace_eq_one]
-            simp
-  calc
-    hilbertSchmidtSq ρ.matrix = (ρ.matrix * ρ.matrix).trace.re :=
-      hilbertSchmidtSq_eq_trace_mul_self_of_isHermitian ρ.pos.isHermitian
-    _ ≤ ((ρ.matrix * ((c : ℂ) • (1 : CMatrix a))).trace).re := hpair
-    _ = c := hright
-
-theorem traceNorm_sq_le_rankBound_mul_hilbertSchmidtSq [Fintype a] [DecidableEq a]
-    (M : CMatrix a) {r : ℝ}
-    (hrank : (Module.finrank ℂ (LinearMap.range M.toEuclideanLin) : ℝ) ≤ r) :
-    traceNorm M ^ 2 ≤ r * hilbertSchmidtSq M := by
-  have hmain := traceNorm_sq_le_finrank_range_mul_hilbertSchmidt M
-  simpa [hilbertSchmidtSq] using hmain.trans
-    (mul_le_mul_of_nonneg_right hrank (hilbertSchmidtSq_nonneg M))
-
 private theorem finrank_range_toEuclideanLin_le_of_left_fixed [Fintype a] [DecidableEq a]
     {K M : CMatrix a} (hKM : K * M = M) :
     Module.finrank ℂ (LinearMap.range M.toEuclideanLin) ≤
@@ -446,73 +347,6 @@ private theorem haydenProjectedAE_diff_finrank_range_le_projected_dim
     exact_mod_cast hrange
   simpa [Delta, K] using hrange_real.trans_eq hKrank
 
-theorem integral_traceNorm_le_sqrt_integral_hilbertSchmidtSq_of_rank_bound
-    {α : Type w} [MeasurableSpace α] {μ : Measure α}
-    {ι : Type u} [Fintype ι] [DecidableEq ι] [IsProbabilityMeasure μ]
-    {f : α → CMatrix ι} {r : ℝ}
-    (hrank : ∀ x,
-      (Module.finrank ℂ (LinearMap.range (f x).toEuclideanLin) : ℝ) ≤ r)
-    (hf_trace : Integrable (fun x => traceNorm (f x)) μ)
-    (hf_hs : Integrable (fun x => hilbertSchmidtSq (f x)) μ) :
-    (∫ x, traceNorm (f x) ∂μ) ≤
-      Real.sqrt (r * ∫ x, hilbertSchmidtSq (f x) ∂μ) := by
-  let g : α → ℝ := fun x => traceNorm (f x)
-  let h : α → ℝ := fun x => hilbertSchmidtSq (f x)
-  have hg_nonneg : 0 ≤ᵐ[μ] g := by
-    filter_upwards with x
-    exact traceNorm_nonneg (f x)
-  have hh_nonneg : 0 ≤ᵐ[μ] h := by
-    filter_upwards with x
-    exact hilbertSchmidtSq_nonneg (f x)
-  have hg_sq_le : ∀ x, g x ^ 2 ≤ r * h x := by
-    intro x
-    exact traceNorm_sq_le_rankBound_mul_hilbertSchmidtSq (f x) (hrank x)
-  have hg_sq_int : Integrable (fun x => g x ^ 2) μ := by
-    refine Integrable.mono' (hf_hs.const_mul r) ?_ ?_
-    · exact (hf_trace.aestronglyMeasurable.aemeasurable.pow_const (2 : ℕ)).aestronglyMeasurable
-    · filter_upwards [hh_nonneg] with x _hhx
-      have hleft : ‖g x ^ 2‖ = g x ^ 2 := by
-        rw [Real.norm_of_nonneg (sq_nonneg (g x))]
-      rw [hleft]
-      simpa [h] using hg_sq_le x
-  have hg_memLp_two : MemLp g (ENNReal.ofReal (2 : ℝ)) μ := by
-    convert (memLp_two_iff_integrable_sq hf_trace.aestronglyMeasurable).2
-      (by simpa [g, pow_two] using hg_sq_int) using 1
-    norm_num
-  have hone_memLp_two : MemLp (fun _ : α => (1 : ℝ)) (ENNReal.ofReal (2 : ℝ)) μ :=
-    memLp_const (1 : ℝ)
-  have hholder := integral_mul_le_Lp_mul_Lq_of_nonneg
-    (μ := μ) (p := (2 : ℝ)) (q := (2 : ℝ)) Real.HolderConjugate.two_two
-    (f := fun _ : α => (1 : ℝ)) (g := g)
-    (by filter_upwards with _; norm_num) hg_nonneg hone_memLp_two hg_memLp_two
-  have hleft :
-      (∫ x, (1 : ℝ) * g x ∂μ) = ∫ x, g x ∂μ := by simp
-  rw [hleft] at hholder
-  have hone_int : (∫ _ : α, (1 : ℝ) ^ (2 : ℝ) ∂μ) ^ (1 / (2 : ℝ)) = 1 := by
-    simp [measureReal_def]
-  rw [hone_int, one_mul] at hholder
-  have hholder_nat :
-      (∫ x, g x ∂μ) ≤ (∫ x, g x ^ 2 ∂μ) ^ (1 / (2 : ℝ)) := by
-    simpa [Real.rpow_natCast] using hholder
-  have hsquare_int_le :
-      (∫ x, g x ^ 2 ∂μ) ≤ r * ∫ x, h x ∂μ := by
-    have hpoint : ∀ᵐ x ∂μ, g x ^ 2 ≤ r * h x := by
-      filter_upwards with x
-      exact hg_sq_le x
-    have hright_int : Integrable (fun x => r * h x) μ := hf_hs.const_mul r
-    calc
-      (∫ x, g x ^ 2 ∂μ) ≤ ∫ x, r * h x ∂μ :=
-        integral_mono_ae hg_sq_int hright_int
-          (show (fun x => g x ^ 2) ≤ᶠ[ae μ] fun x => r * h x from hpoint)
-      _ = r * ∫ x, h x ∂μ := by
-        rw [integral_const_mul]
-  have hsqrt_step :
-      (∫ x, g x ^ 2 ∂μ) ^ (1 / (2 : ℝ)) ≤
-        Real.sqrt (r * ∫ x, h x ∂μ) := by
-    rw [← Real.sqrt_eq_rpow]
-    exact Real.sqrt_le_sqrt hsquare_int_le
-  exact hholder_nat.trans hsqrt_step
-
 /-- On a probability space, the integral of a nonnegative real function is at
 most the square root of its second moment. -/
 theorem integral_le_sqrt_integral_sq_of_nonneg
@@ -575,78 +409,6 @@ theorem integral_sq_le_two_add_two_of_ae_le_add
       rw [integral_add (hg_int.const_mul 2) (hh_int.const_mul 2)]
       rw [integral_const_mul, integral_const_mul]
 
-theorem integral_traceNorm_le_sqrt_integral_hilbertSchmidtSq
-    {α : Type w} [MeasurableSpace α] {μ : Measure α}
-    {ι : Type u} [Fintype ι] [DecidableEq ι] [IsProbabilityMeasure μ]
-    {f : α → CMatrix ι}
-    (hf_trace : Integrable (fun x => traceNorm (f x)) μ)
-    (hf_hs : Integrable (fun x => hilbertSchmidtSq (f x)) μ) :
-    (∫ x, traceNorm (f x) ∂μ) ≤
-      Real.sqrt ((Fintype.card ι : ℝ) * ∫ x, hilbertSchmidtSq (f x) ∂μ) := by
-  let g : α → ℝ := fun x => traceNorm (f x)
-  let h : α → ℝ := fun x => hilbertSchmidtSq (f x)
-  have hg_nonneg : 0 ≤ᵐ[μ] g := by
-    filter_upwards with x
-    exact traceNorm_nonneg (f x)
-  have hh_nonneg : 0 ≤ᵐ[μ] h := by
-    filter_upwards with x
-    exact hilbertSchmidtSq_nonneg (f x)
-  have hg_sq_le : ∀ x, g x ^ 2 ≤ (Fintype.card ι : ℝ) * h x := by
-    intro x
-    exact traceNorm_sq_le_card_mul_hilbertSchmidtSq (f x)
-  have hg_sq_int : Integrable (fun x => g x ^ 2) μ := by
-    refine Integrable.mono' (hf_hs.const_mul (Fintype.card ι : ℝ)) ?_ ?_
-    · exact (hf_trace.aestronglyMeasurable.aemeasurable.pow_const (2 : ℕ)).aestronglyMeasurable
-    · filter_upwards [hh_nonneg] with x hhx
-      have hleft : ‖g x ^ 2‖ = g x ^ 2 := by
-        rw [Real.norm_of_nonneg (sq_nonneg (g x))]
-      rw [hleft]
-      exact (hg_sq_le x).trans_eq (by ring)
-  have hg_memLp_two : MemLp g (ENNReal.ofReal (2 : ℝ)) μ := by
-    convert (memLp_two_iff_integrable_sq hf_trace.aestronglyMeasurable).2
-      (by simpa [g, pow_two] using hg_sq_int) using 1
-    norm_num
-  have hone_memLp_two : MemLp (fun _ : α => (1 : ℝ)) (ENNReal.ofReal (2 : ℝ)) μ :=
-    memLp_const (1 : ℝ)
-  have hholder := integral_mul_le_Lp_mul_Lq_of_nonneg
-    (μ := μ) (p := (2 : ℝ)) (q := (2 : ℝ)) Real.HolderConjugate.two_two
-    (f := fun _ : α => (1 : ℝ)) (g := g)
-    (by filter_upwards with _; norm_num) hg_nonneg hone_memLp_two hg_memLp_two
-  have hleft :
-      (∫ x, (1 : ℝ) * g x ∂μ) = ∫ x, g x ∂μ := by simp
-  rw [hleft] at hholder
-  have hone_int : (∫ _ : α, (1 : ℝ) ^ (2 : ℝ) ∂μ) ^ (1 / (2 : ℝ)) = 1 := by
-    simp [measureReal_def]
-  rw [hone_int, one_mul] at hholder
-  have hholder_nat :
-      (∫ x, g x ∂μ) ≤ (∫ x, g x ^ 2 ∂μ) ^ (1 / (2 : ℝ)) := by
-    simpa [Real.rpow_natCast] using hholder
-  have hsquare_int_le :
-      (∫ x, g x ^ 2 ∂μ) ≤
-        (Fintype.card ι : ℝ) * ∫ x, h x ∂μ := by
-    have hpoint : ∀ᵐ x ∂μ, g x ^ 2 ≤ (Fintype.card ι : ℝ) * h x := by
-      filter_upwards with x
-      exact hg_sq_le x
-    have hright_int : Integrable (fun x => (Fintype.card ι : ℝ) * h x) μ :=
-      hf_hs.const_mul (Fintype.card ι : ℝ)
-    calc
-      (∫ x, g x ^ 2 ∂μ) ≤ ∫ x, (Fintype.card ι : ℝ) * h x ∂μ :=
-        integral_mono_ae hg_sq_int hright_int
-          (show (fun x => g x ^ 2) ≤ᶠ[ae μ] fun x =>
-            (Fintype.card ι : ℝ) * h x from hpoint)
-      _ = (Fintype.card ι : ℝ) * ∫ x, h x ∂μ := by
-        rw [integral_const_mul]
-  have hsqrt_step :
-      (∫ x, g x ^ 2 ∂μ) ^ (1 / (2 : ℝ)) ≤
-        Real.sqrt ((Fintype.card ι : ℝ) * ∫ x, h x ∂μ) := by
-    have hnonneg_int : 0 ≤ ∫ x, g x ^ 2 ∂μ :=
-      integral_nonneg (fun x => sq_nonneg (g x))
-    have hright_nonneg : 0 ≤ (Fintype.card ι : ℝ) * ∫ x, h x ∂μ := by
-      exact mul_nonneg (Nat.cast_nonneg _) (integral_nonneg_of_ae hh_nonneg)
-    rw [← Real.sqrt_eq_rpow]
-    exact Real.sqrt_le_sqrt hsquare_int_le
-  exact hholder_nat.trans hsqrt_step
-
 private theorem haydenProjectedAE_isHermitian [Fintype a] [Fintype e]
     [DecidableEq a] [DecidableEq e]
     (P : CMatrix a) (d : ℝ) (rho : CMatrix (Prod a e))
@@ -692,8 +454,10 @@ private theorem haydenProjectedAE_meanTarget_hilbertSchmidtSq [Fintype a] [Finty
   rw [hPid, hPtr]
   simp [Complex.ofReal_inv, Complex.ofReal_re]
   field_simp [hd]
-  ring_nf
-  exact Or.inl trivial
+  -- The mean-target scalar `(1/d : ℝ) : ℂ` makes `field_simp` leave a trivial
+  -- `True ∨ _` residue (cf. the sibling proofs in this file, which close with a
+  -- bare `ring_nf` because they carry the full nonzero-hypothesis set).
+  tauto
 
 private theorem hilbertSchmidtSq_sub_of_isHermitian [Fintype a] [DecidableEq a]
     (X M : CMatrix a) (hX : X.IsHermitian) (hM : M.IsHermitian) :
@@ -2145,7 +1909,7 @@ private theorem haydenProjectedAE_traceNorm_diff_integrable [Fintype a] [Fintype
       haydenProjectedAE (a := a) (e := e) P d rho U -
         haydenProjectedAE_meanTarget (a := a) (e := e) P d rho :=
     hproj.sub continuous_const
-  exact (decouplingTraceNorm_continuous.comp hdiff).integrable_of_hasCompactSupport
+  exact (traceNorm_continuous.comp hdiff).integrable_of_hasCompactSupport
     (HasCompactSupport.of_compactSpace _)
 
 private theorem haydenProjectedAE_secondMoment_trace_integrable [Fintype a] [Fintype e]

@@ -108,6 +108,7 @@ theorem rangeProjection_amplitudeGram_mul_rangeProjection_eq_zero
     Matrix.rangeProjection_toEuclideanLin]
   simpa using congrArg ContinuousLinearMap.toLinearMap hstar
 
+omit [DecidableEq HB] in
 /--
 If a product of two Bob-local operators kills a bipartite vector, then the
 corresponding Bob-side amplitude ranges are orthogonal.

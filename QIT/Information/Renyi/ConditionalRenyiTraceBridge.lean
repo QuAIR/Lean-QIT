@@ -132,19 +132,6 @@ def upwardRenyiDualityCommonBracket (ψ : PureVector (Prod (Prod a b) c))
     (σB : State b) (τC : State c) (alphaPrime : ℝ) : ℂ :=
   ψ.tripartiteBracket (State.abcSideStatePowerMatrix (a := a) σB τC alphaPrime)
 
-/-- Predicate packaging the normalized pure-state trace-functional bridge
-needed before the Sion minimax step. -/
-def NormalizedPureTraceFunctionalBridge (ψ : PureVector (Prod (Prod a b) c))
-    (σB : State b) (τC : State c) (alphaPrime : ℝ) : Prop :=
-  ψ.upwardRenyiDualityCommonBracket σB τC alphaPrime =
-    ψ.tripartiteBracket (State.abcSideStatePowerMatrix (a := a) σB τC alphaPrime)
-
-/-- The normalized source-shaped pure-state trace-functional bridge. -/
-theorem normalizedPureTraceFunctionalBridge (ψ : PureVector (Prod (Prod a b) c))
-    (σB : State b) (τC : State c) (alphaPrime : ℝ) :
-    NormalizedPureTraceFunctionalBridge ψ σB τC alphaPrime :=
-  rfl
-
 /-- Scale a normalized pure vector state into a subnormalized state.
 
 This is only the scale-compatible trace bridge; the final subnormalized

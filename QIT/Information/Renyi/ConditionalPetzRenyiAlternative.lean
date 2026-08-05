@@ -8,6 +8,7 @@ module
 
 public import QIT.Information.Renyi.ConditionalRenyiSource
 public import QIT.Information.Renyi.SandwichedRenyiOptimizedUSC
+public import QIT.Information.Entropy.Log2Lemmas
 
 /-!
 # Alternative expression for upward Petz conditional Renyi entropy
@@ -36,11 +37,6 @@ variable {a : Type u} {b : Type v}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 
 namespace State
-
-private theorem log2_mono_of_pos {x y : ℝ} (hx : 0 < x) (hxy : x ≤ y) :
-    log2 x ≤ log2 y :=
-  div_le_div_of_nonneg_right (Real.log_le_log hx hxy)
-    (le_of_lt (Real.log_pos one_lt_two))
 
 private theorem petzUp_log2_rpow_pos {x y : ℝ} (hx : 0 < x) :
     log2 (x ^ y) = y * log2 x := by

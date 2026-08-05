@@ -27,29 +27,6 @@ local instance deFinettiRennerProjectorsCMatrixContinuousENorm
     ContinuousENorm (CMatrix α) :=
   SeminormedAddGroup.toContinuousENorm
 
-private theorem posSemidef_one_sub_of_posSemidef_idempotent (P : CMatrix a)
-    (hPpos : P.PosSemidef) (hPid : P * P = P) :
-    (1 - P).PosSemidef := by
-  let Q : CMatrix a := 1 - P
-  have hPherm : P.IsHermitian := hPpos.isHermitian
-  have hQherm : Q.IsHermitian := by
-    dsimp [Q]
-    exact Matrix.IsHermitian.sub (by simp [Matrix.IsHermitian]) hPherm
-  have hQid : Q * Q = Q := by
-    dsimp [Q]
-    calc
-      (1 - P) * (1 - P) = (1 - P) * 1 - (1 - P) * P := by
-        rw [Matrix.mul_sub]
-      _ = (1 - P) - (1 * P - P * P) := by
-        rw [Matrix.mul_one, Matrix.sub_mul]
-      _ = 1 - P := by
-        rw [Matrix.one_mul, hPid]
-        abel
-  have hPSD : (Matrix.conjTranspose Q * Q).PosSemidef :=
-    Matrix.posSemidef_conjTranspose_mul_self Q
-  convert hPSD using 1
-  rw [hQherm.eq, hQid]
-
 omit [Fintype a] [DecidableEq a] in
 private theorem cMatrix_eq_zero_of_posSemidef_and_neg_posSemidef_general
     {A : CMatrix a} (hA : A.PosSemidef) (hneg : (-A).PosSemidef) :
@@ -151,7 +128,7 @@ private theorem rankOneMatrix_le_one_of_trace_eq_one (ψ : a → ℂ)
   have hid : rankOneMatrix ψ * rankOneMatrix ψ = rankOneMatrix ψ := by
     let Ψ : PureVector a := ⟨ψ, hnorm⟩
     simpa [Ψ, PureVector.state_matrix] using Ψ.state_matrix_mul_self
-  exact posSemidef_one_sub_of_posSemidef_idempotent (rankOneMatrix ψ) hpos hid
+  exact MatrixMap.posSemidef_one_sub_of_posSemidef_idempotent (rankOneMatrix ψ) hpos hid
 
 omit [DecidableEq a] in
 private theorem exists_nonzero_coord_of_rankOne_trace_one (ψ : a → ℂ)
@@ -300,7 +277,7 @@ theorem rennerMIIDProjectorFor_le_one {m r : ℕ} (ν : PureVector a) :
     rennerMIIDProjectorFor (a := a) m r ν ≤
       (1 : CMatrix (TensorPower a (m + r))) := by
   rw [Matrix.le_iff]
-  exact posSemidef_one_sub_of_posSemidef_idempotent
+  exact MatrixMap.posSemidef_one_sub_of_posSemidef_idempotent
     (rennerMIIDProjectorFor (a := a) m r ν)
     (rennerMIIDProjectorFor_posSemidef (a := a) ν)
     (rennerMIIDProjectorFor_idempotent (a := a) ν)
@@ -344,7 +321,7 @@ theorem rennerMIIDProjector_le_one {m r : ℕ} (ν : PureVector a)
     rennerMIIDProjector (a := a) m r ν U ≤
       (1 : CMatrix (TensorPower a (m + r))) := by
   rw [Matrix.le_iff]
-  exact posSemidef_one_sub_of_posSemidef_idempotent
+  exact MatrixMap.posSemidef_one_sub_of_posSemidef_idempotent
     (rennerMIIDProjector (a := a) m r ν U)
     (rennerMIIDProjector_posSemidef (a := a) ν U)
     (rennerMIIDProjector_idempotent (a := a) ν U)
@@ -994,7 +971,7 @@ theorem rennerMIIDProjectorIdZero_le_one
     rennerMIIDProjectorIdZero (a := a) m ν ≤
       (1 : CMatrix (TensorPower a m)) := by
   rw [Matrix.le_iff]
-  exact posSemidef_one_sub_of_posSemidef_idempotent
+  exact MatrixMap.posSemidef_one_sub_of_posSemidef_idempotent
     (rennerMIIDProjectorIdZero (a := a) m ν)
     (rennerMIIDProjectorIdZero_posSemidef (a := a) m ν)
     (rennerMIIDProjectorIdZero_idempotent (a := a) m ν)
@@ -1030,7 +1007,7 @@ theorem rennerMIIDProjectorZero_le_one
     rennerMIIDProjectorZero (a := a) m ν U ≤
       (1 : CMatrix (TensorPower a m)) := by
   rw [Matrix.le_iff]
-  exact posSemidef_one_sub_of_posSemidef_idempotent
+  exact MatrixMap.posSemidef_one_sub_of_posSemidef_idempotent
     (rennerMIIDProjectorZero (a := a) m ν U)
     (rennerMIIDProjectorZero_posSemidef (a := a) m ν U)
     (rennerMIIDProjectorZero_idempotent (a := a) m ν U)
@@ -1402,66 +1379,6 @@ private theorem integral_posSemidef_of_forall {α : Type*} [MeasurableSpace α]
     rw [integral_dotProduct_mulVec (hf := hf) x]
     exact integral_nonneg fun t => (hpos t).dotProduct_mulVec_nonneg x
 
-private theorem traceNorm_eq_trace_re_of_posSemidef {ι : Type v}
-    [Fintype ι] [DecidableEq ι] (A : CMatrix ι) (hA : A.PosSemidef) :
-    traceNorm A = A.trace.re := by
-  rw [traceNorm]
-  have hherm : Matrix.conjTranspose A = A := hA.isHermitian.eq
-  have hs : psdSqrt (Matrix.conjTranspose A * A) = A := by
-    rw [hherm]
-    simpa [psdSqrt, sq] using (CFC.sqrt_sq A hA.nonneg)
-  rw [hs]
-
-private theorem traceNorm_conjTranspose {ι : Type v} [Fintype ι] [DecidableEq ι]
-    (A : CMatrix ι) :
-    traceNorm (Matrix.conjTranspose A) = traceNorm A := by
-  apply le_antisymm
-  · obtain ⟨U, hU⟩ :=
-      traceNorm_variational_exists_unitary_abs_trace (Matrix.conjTranspose A)
-    let V : Matrix.unitaryGroup ι ℂ := U⁻¹
-    have hcoe : (V : CMatrix ι) = star (U : CMatrix ι) := by rfl
-    have hstar : Matrix.conjTranspose (star (U : CMatrix ι)) = (U : CMatrix ι) := by
-      rw [← Matrix.star_eq_conjTranspose, star_star]
-    have htrace :
-        ((Matrix.conjTranspose A * (U : CMatrix ι)).trace) =
-          star ((A * (V : CMatrix ι)).trace) := by
-      rw [hcoe]
-      calc
-        (Matrix.conjTranspose A * (U : CMatrix ι)).trace =
-            ((U : CMatrix ι) * Matrix.conjTranspose A).trace := by
-              rw [Matrix.trace_mul_comm]
-        _ = (Matrix.conjTranspose (A * star (U : CMatrix ι))).trace := by
-            rw [Matrix.conjTranspose_mul, hstar]
-        _ = star ((A * star (U : CMatrix ι)).trace) :=
-            Matrix.trace_conjTranspose _
-    calc
-      traceNorm (Matrix.conjTranspose A) =
-          Complex.abs ((Matrix.conjTranspose A * (U : CMatrix ι)).trace) := hU.symm
-      _ = Complex.abs ((A * (V : CMatrix ι)).trace) := by simp [htrace]
-      _ ≤ traceNorm A := traceNorm_variational_unitary_abs_trace_le A V
-  · obtain ⟨U, hU⟩ := traceNorm_variational_exists_unitary_abs_trace A
-    let V : Matrix.unitaryGroup ι ℂ := U⁻¹
-    have hcoe : (V : CMatrix ι) = star (U : CMatrix ι) := by rfl
-    have hstar : Matrix.conjTranspose (star (U : CMatrix ι)) = (U : CMatrix ι) := by
-      rw [← Matrix.star_eq_conjTranspose, star_star]
-    have htrace :
-        ((A * (U : CMatrix ι)).trace) =
-          star ((Matrix.conjTranspose A * (V : CMatrix ι)).trace) := by
-      rw [hcoe]
-      calc
-        (A * (U : CMatrix ι)).trace =
-            ((U : CMatrix ι) * A).trace := by rw [Matrix.trace_mul_comm]
-        _ = (Matrix.conjTranspose (Matrix.conjTranspose A * star (U : CMatrix ι))).trace := by
-            rw [Matrix.conjTranspose_mul, hstar, Matrix.conjTranspose_conjTranspose]
-        _ = star ((Matrix.conjTranspose A * star (U : CMatrix ι)).trace) :=
-            Matrix.trace_conjTranspose _
-    calc
-      traceNorm A = Complex.abs ((A * (U : CMatrix ι)).trace) := hU.symm
-      _ = Complex.abs ((Matrix.conjTranspose A * (V : CMatrix ι)).trace) := by
-            simp [htrace]
-      _ ≤ traceNorm (Matrix.conjTranspose A) :=
-          traceNorm_variational_unitary_abs_trace_le (Matrix.conjTranspose A) V
-
 private theorem trace_re_le_traceNorm {ι : Type v} [Fintype ι] [DecidableEq ι]
     (A : CMatrix ι) :
     A.trace.re ≤ traceNorm A := by
@@ -1477,7 +1394,7 @@ private theorem one_sub_projection_posSemidef {ι : Type v}
     [Fintype ι] [DecidableEq ι] {P : CMatrix ι}
     (hPpos : P.PosSemidef) (hPid : P * P = P) :
     (1 - P).PosSemidef :=
-  posSemidef_one_sub_of_posSemidef_idempotent P hPpos hPid
+  MatrixMap.posSemidef_one_sub_of_posSemidef_idempotent P hPpos hPid
 
 private theorem one_sub_projection_idempotent {ι : Type v}
     [Fintype ι] [DecidableEq ι] {P : CMatrix ι}
@@ -1538,7 +1455,7 @@ private theorem rennerGentle_integral_traceNorm_bound {α : Type*}
               rw [hQid]
   have hEnorm_le_Dnorm : traceNorm E ≤ traceNorm D := by
     calc
-      traceNorm E = E.trace.re := traceNorm_eq_trace_re_of_posSemidef E hEpos
+      traceNorm E = E.trace.re := traceNorm_posSemidef_eq_trace_re E hEpos
       _ = D.trace.re := by rw [hEtrace_eq_Dtrace]
       _ ≤ traceNorm D := trace_re_le_traceNorm D
   have hRnorm : traceNorm R = traceNorm D := by
@@ -2882,46 +2799,6 @@ abbrev postSelectionPurifiedReferenceState [Nonempty a] (n : ℕ) :
     State (Prod (TensorPower a n)
       (Prod (QIT.TensorPower a n) (ckrPurifyingRegister a n))) :=
   ckrPostSelectionPurifiedReferenceState (a := a) n
-
-/-- Drop a terminal unit register from a matrix. -/
-def dropRightUnitMatrix {α : Type u} [Fintype α] [DecidableEq α]
-    (X : CMatrix (Prod α PUnit)) : CMatrix α :=
-  fun i j => X (i, PUnit.unit) (j, PUnit.unit)
-
-/-- Dropping a terminal unit register is a partial trace over that unit
-register, hence it does not increase trace norm. -/
-theorem traceNorm_dropRightUnitMatrix_le
-    {α : Type u} [Fintype α] [DecidableEq α]
-    (X : CMatrix (Prod α PUnit)) :
-    traceNorm (dropRightUnitMatrix X) ≤ traceNorm X := by
-  have hdrop :
-      dropRightUnitMatrix X = partialTraceB (a := α) (b := PUnit) X := by
-    ext i j
-    simp [dropRightUnitMatrix, partialTraceB]
-  rw [hdrop]
-  exact traceNorm_partialTraceB_le_matrix X
-
-/-- Applying a trace-nonincreasing CP extraction map on a terminal reference
-register and then dropping the unit output does not increase trace norm on
-Hermitian trace-zero inputs. -/
-theorem traceNorm_dropRightUnitMatrix_kron_id_le_of_traceNonincreasingCP
-    {α : Type u} {β : Type v}
-    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
-    {T : MatrixMap β PUnit} (hT : T.TraceNonincreasingCP)
-    {H : CMatrix (Prod α β)} (hH : H.IsHermitian) (htr : H.trace = 0) :
-    traceNorm
-        (dropRightUnitMatrix
-          ((MatrixMap.kron (Channel.idChannel α).map T) H)) ≤
-      traceNorm H := by
-  calc
-    traceNorm
-        (dropRightUnitMatrix
-          ((MatrixMap.kron (Channel.idChannel α).map T) H)) ≤
-        traceNorm ((MatrixMap.kron (Channel.idChannel α).map T) H) :=
-          traceNorm_dropRightUnitMatrix_le _
-    _ ≤ traceNorm H :=
-          MatrixMap.traceNorm_apply_le_of_traceNonincreasingCP
-            (MatrixMap.traceNonincreasingCP_id_kron (a := α) hT) hH htr
 
 end
 

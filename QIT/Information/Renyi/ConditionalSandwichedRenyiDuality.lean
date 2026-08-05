@@ -1696,41 +1696,6 @@ theorem conditionalSandwichedRenyiUpSource_duality
 
 end PureVector
 
-namespace State.RenyiDPI.Statement
-
-/-- The historical pure-tripartite statement surface is proved in the
-accepted internal orientation `alpha > 1`, `1/2 < beta < 1`.
-
-The positive-definiteness assumptions occur only because the historical
-statement is phrased through the old full-rank API.  The source duality used
-in the proof has no positive-definiteness assumption on either marginal. -/
-theorem conditionalSandwichedRenyi_duality_pureTripartite_statement_of_source
-    [Nonempty b] [Nonempty c]
-    (psi : PureVector (Prod (Prod a b) c))
-    (hAB : psi.state.marginalAB.matrix.PosDef)
-    (hAC : psi.state.marginalAC.matrix.PosDef)
-    {alpha beta : Real} (halpha : 1 < alpha)
-    (hbeta_half : 1 / 2 < beta) (hbeta_one : beta < 1)
-    (hconj : 1 / alpha + 1 / beta = 2) :
-    conditionalSandwichedRenyi_duality_pureTripartite_statement
-      psi hAB hAC alpha beta (by linarith) hbeta_half.le
-        (ne_of_gt halpha) (ne_of_lt hbeta_one) hconj := by
-  unfold conditionalSandwichedRenyi_duality_pureTripartite_statement
-  unfold conditionalSandwichedRenyi_duality_pair_algebraic_statement
-  change psi.state.marginalAB.conditionalSandwichedRenyiUp
-      hAB alpha (by linarith) (ne_of_gt halpha) =
-    -psi.state.marginalAC.conditionalSandwichedRenyiUp
-      hAC beta hbeta_half.le (ne_of_lt hbeta_one)
-  rw [← State.conditionalSandwichedRenyiUpSource_eq_conditionalSandwichedRenyiUp
-      psi.state.marginalAB hAB alpha (by linarith) (ne_of_gt halpha),
-    ← State.conditionalSandwichedRenyiUpSource_eq_conditionalSandwichedRenyiUp
-      psi.state.marginalAC hAC beta hbeta_half.le (ne_of_lt hbeta_one)]
-  have hdual := psi.conditionalSandwichedRenyiUpSource_duality
-    halpha hbeta_half hbeta_one hconj
-  linarith
-
-end State.RenyiDPI.Statement
-
 namespace SubnormalizedState
 
 /-- The positive-trace extension of the source-shaped upward sandwiched
