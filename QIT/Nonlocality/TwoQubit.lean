@@ -147,6 +147,7 @@ theorem singletPureVector_marginalB :
 /-- The two-qubit singlet is maximally entangled. -/
 theorem singletPureVector_isMaximallyEntangled :
     singletPureVector.IsMaximallyEntangled := by
+  apply PureVector.HasMaximallyMixedMarginals.isMaximallyEntangled
   constructor
   · exact singletPureVector_marginalA
   · exact singletPureVector_marginalB

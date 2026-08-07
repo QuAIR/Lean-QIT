@@ -393,6 +393,7 @@ theorem generalizedBellPureVector_isMaximallyEntangled
     (d : Type u) [Fintype d] [DecidableEq d] [Nonempty d]
     (outcome : Prod d d) :
     (generalizedBellPureVector d outcome).IsMaximallyEntangled := by
+  apply PureVector.HasMaximallyMixedMarginals.isMaximallyEntangled
   constructor
   · apply State.ext
     change (generalizedBellPureVector d outcome).state.marginalA.matrix =
