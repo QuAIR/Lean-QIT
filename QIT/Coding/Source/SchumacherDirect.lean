@@ -372,18 +372,6 @@ variable {α : Type u} {β : Type v}
     [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
     {κ : Type v} [Fintype κ] [DecidableEq κ]
 
-/-- Single-point collapse of an indicator sum. -/
-private lemma sum_ite_eq_single_f (i : α) (T : α → ℂ) :
-    ∑ a : α, (if i = a then T a else (0 : ℂ)) = T i := by
-  have hkey : ∑ a : α, (if i = a then T a else (0 : ℂ)) =
-      (if i = i then T i else (0 : ℂ)) := by
-    apply Finset.sum_eq_single (a := i)
-    · intro a _ ha
-      exact if_neg ha.symm
-    · intro h
-      exact (h (Finset.mem_univ i)).elim
-  rw [hkey, if_pos rfl]
-
 omit [DecidableEq β] in
 /-- Entry of a `(I ⊗ A) X (I ⊗ A)ᴴ` conjugation collapses to a partial slice.
 Here `A` is square on `β` (the right-factor system). -/

@@ -164,18 +164,18 @@ private theorem matrix_smul_mul_smul {n : Type u} [Fintype n]
   ext i j
   simp [Matrix.mul_apply, Finset.mul_sum, mul_comm, mul_left_comm]
 
-private theorem circle_star_mul_self_local (z : Circle) :
-    star (z : ℂ) * (z : ℂ) = 1 := by
-  have h : (Complex.normSq (z : ℂ) : ℂ) = star (z : ℂ) * (z : ℂ) :=
-    Complex.normSq_eq_conj_mul_self
-  rw [Circle.normSq_coe] at h
-  simpa [Complex.star_def] using h.symm
-
 private theorem fourierRoot_pow_star_mul_self (d : ℕ) [NeZero d] (n : ℕ) :
     star ((fourierRoot d) ^ n) * (fourierRoot d) ^ n = 1 := by
   have hroot : star (fourierRoot d) * fourierRoot d = 1 := by
-    dsimp [fourierRoot]
-    exact circle_star_mul_self_local (ZMod.toCircle 1)
+    change star (((ZMod.toCircle (1 : ZMod d) : Circle) : ℂ)) *
+        (((ZMod.toCircle (1 : ZMod d) : Circle) : ℂ)) = 1
+    have h :
+        (Complex.normSq (((ZMod.toCircle (1 : ZMod d) : Circle) : ℂ)) : ℂ) =
+          star (((ZMod.toCircle (1 : ZMod d) : Circle) : ℂ)) *
+            (((ZMod.toCircle (1 : ZMod d) : Circle) : ℂ)) :=
+      Complex.normSq_eq_conj_mul_self
+    rw [Circle.normSq_coe] at h
+    simpa [Complex.star_def] using h.symm
   rw [star_pow, ← mul_pow, hroot, one_pow]
 
 private theorem projectionFamily_sum_idempotent {H : Type u} [Fintype H] [DecidableEq H]

@@ -260,14 +260,6 @@ private theorem submatrix_one_equiv
   ext i j
   simp [Matrix.one_apply]
 
-private theorem submatrix_sub_equiv
-    {α : Type u} {β : Type v} [Fintype α] [DecidableEq α]
-    [Fintype β] [DecidableEq β] (e : α ≃ β) (X Y : CMatrix α) :
-    (X - Y).submatrix e.symm e.symm =
-      X.submatrix e.symm e.symm - Y.submatrix e.symm e.symm := by
-  ext i j
-  rfl
-
 namespace HypothesisTestingEffect
 
 variable {α : Type u} {β : Type v} [Fintype α] [DecidableEq α]
@@ -281,6 +273,11 @@ def reindex (Λ : HypothesisTestingEffect ρ ε) (e : α ≃ β) :
   effect := Λ.effect.submatrix e.symm e.symm
   pos := Λ.pos.submatrix e.symm
   le_one := by
+    have submatrix_sub_equiv (e : α ≃ β) (X Y : CMatrix α) :
+        (X - Y).submatrix e.symm e.symm =
+          X.submatrix e.symm e.symm - Y.submatrix e.symm e.symm := by
+      ext i j
+      rfl
     have hle_one := Λ.le_one
     rw [Matrix.le_iff] at hle_one ⊢
     simpa [submatrix_sub_equiv e (1 : CMatrix α) Λ.effect,
@@ -386,17 +383,6 @@ theorem hypothesisTestingRelativeEntropy_reindex
     simp [hypothesisTestingRelativeEntropy, hzero, hzero',
       hypothesisTestingRelativeEntropyFinite_reindex ρ σ ε hε e]
 
-private theorem prod_reindex_prodCongr_forHypothesisTestingDPI
-    {α : Type u} {β : Type v} {γ : Type w} {δ : Type x}
-    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
-    [Fintype γ] [DecidableEq γ] [Fintype δ] [DecidableEq δ]
-    (ρ : State α) (σ : State γ) (e : α ≃ β) (f : γ ≃ δ) :
-    (ρ.prod σ).reindex (Equiv.prodCongr e f) =
-      (ρ.reindex e).prod (σ.reindex f) := by
-  apply State.ext
-  ext i j
-  simp [State.reindex, State.prod, Matrix.kronecker]
-
 theorem hypothesisTestingMutualInformation_reindex_prodCongr_le
     {α : Type u} {β : Type v} {γ : Type w} {δ : Type x}
     [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
@@ -405,6 +391,13 @@ theorem hypothesisTestingMutualInformation_reindex_prodCongr_le
     (e : α ≃ β) (f : γ ≃ δ) :
     (ρ.reindex (Equiv.prodCongr e f)).hypothesisTestingMutualInformation ε ≤
       ρ.hypothesisTestingMutualInformation ε := by
+  have prod_reindex_prodCongr_forHypothesisTestingDPI
+      (ρ : State α) (σ : State γ) (e : α ≃ β) (f : γ ≃ δ) :
+      (ρ.prod σ).reindex (Equiv.prodCongr e f) =
+        (ρ.reindex e).prod (σ.reindex f) := by
+    apply State.ext
+    ext i j
+    simp [State.reindex, State.prod, Matrix.kronecker]
   let ρ' : State (Prod β δ) := ρ.reindex (Equiv.prodCongr e f)
   rw [hypothesisTestingMutualInformation_eq_sInf]
   refine le_sInf ?_

@@ -116,13 +116,6 @@ theorem liftBlockOneShot_channelInputState
   apply State.ext
   rfl
 
-private theorem unit_map_eq_idChannel_forAsymptotic :
-    (Channel.unit : Channel PUnit PUnit).map = (Channel.idChannel PUnit).map := by
-  ext X i j
-  cases i
-  cases j
-  simp [Channel.unit, MatrixMap.unit, Channel.idChannel, MatrixMap.ofKraus]
-
 /-- Applying a one-fold tensor-power channel and then dropping the terminal unit
 register agrees with dropping the unit input register first and applying the
 underlying channel. -/
@@ -135,6 +128,12 @@ theorem applyState_tensorPower_one_prod_id_reindex
         (ρ.reindex (Equiv.prodCongr (tensorPowerOneEquiv q) (Equiv.refl s))) =
       (((D.tensorPower 1).prod (Channel.idChannel s)).applyState ρ).reindex
         (Equiv.prodCongr (tensorPowerOneEquiv r) (Equiv.refl s)) := by
+  have unit_map_eq_idChannel_forAsymptotic :
+      (Channel.unit : Channel PUnit PUnit).map = (Channel.idChannel PUnit).map := by
+    ext X i j
+    cases i
+    cases j
+    simp [Channel.unit, MatrixMap.unit, Channel.idChannel, MatrixMap.ofKraus]
   apply State.ext
   ext x y
   rcases x with ⟨xr, xs⟩

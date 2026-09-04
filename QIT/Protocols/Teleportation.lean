@@ -89,11 +89,6 @@ private theorem star_stdAddChar_mul_self
   rw [← Circle.coe_mul]
   simp
 
-private theorem stdAddChar_mul_star_self
-    {n : ℕ} [NeZero n] (x : ZMod n) :
-    ZMod.stdAddChar x * star (ZMod.stdAddChar x) = 1 := by
-  simpa [mul_comm] using star_stdAddChar_mul_self x
-
 private theorem star_stdAddChar_eq_neg
     {n : ℕ} [NeZero n] (x : ZMod n) :
     star (ZMod.stdAddChar x) = ZMod.stdAddChar (-x) := by

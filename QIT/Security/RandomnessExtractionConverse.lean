@@ -116,20 +116,18 @@ private theorem fiber_gram_pos
     Matrix.posSemidef_conjTranspose_mul_self (Matrix.conjTranspose Yi)
 
 omit [DecidableEq ι] in
-private theorem stacked_overlap_trace
-    (A : ι → CMatrix β) (Y : Matrix β (Prod ι β) ℂ) :
-    (((stackedPsdSqrt A)ᴴ * Y).trace) =
-      ∑ i : ι, (((psdSqrt (A i))ᴴ * fiberMatrix Y i).trace) := by
-  classical
-  simp [Matrix.trace, Matrix.mul_apply, Matrix.conjTranspose_apply, stackedPsdSqrt,
-    fiberMatrix]
-  rw [Fintype.sum_prod_type]
-
-omit [DecidableEq ι] in
 private theorem stacked_overlap_abs_le_sum_abs
     (A : ι → CMatrix β) (Y : Matrix β (Prod ι β) ℂ) :
     Complex.abs (((stackedPsdSqrt A)ᴴ * Y).trace) ≤
       ∑ i : ι, Complex.abs ((((psdSqrt (A i))ᴴ * fiberMatrix Y i).trace)) := by
+  have stacked_overlap_trace
+      (A : ι → CMatrix β) (Y : Matrix β (Prod ι β) ℂ) :
+      (((stackedPsdSqrt A)ᴴ * Y).trace) =
+        ∑ i : ι, (((psdSqrt (A i))ᴴ * fiberMatrix Y i).trace) := by
+    classical
+    simp [Matrix.trace, Matrix.mul_apply, Matrix.conjTranspose_apply, stackedPsdSqrt,
+      fiberMatrix]
+    rw [Fintype.sum_prod_type]
   rw [stacked_overlap_trace]
   simpa [Complex.abs] using
     norm_sum_le (Finset.univ : Finset ι)
@@ -1427,11 +1425,6 @@ private theorem subnormalizedIdentityTensorStateMatrix_trace (σ : Subnormalized
     (Fintype.card a : ℂ) * σ.matrix.trace
   rw [Matrix.trace_kronecker, Matrix.trace_one]
 
-private theorem cqState_eq_subnormalizedBlockDiagonal_cqBlock (E : Ensemble a b) :
-    E.cqState.matrix = Classical.blockDiagonal fun x => E.cqBlock x := by
-  rw [Classical.cqState_eq_blockDiagonal]
-  rfl
-
 /-- Blockwise domination by the same scaled subnormalized `B` state is the
 global cq order constraint used by subnormalized conditional min-entropy. -/
 theorem subnormalizedConditionalMinEntropyFeasible_of_cqBlock_le
@@ -1440,6 +1433,10 @@ theorem subnormalizedConditionalMinEntropyFeasible_of_cqBlock_le
     SubnormalizedState.ConditionalMinEntropyFeasible (a := a)
       E.cqState.toSubnormalized σ lam := by
   classical
+  have cqState_eq_subnormalizedBlockDiagonal_cqBlock (E : Ensemble a b) :
+      E.cqState.matrix = Classical.blockDiagonal fun x => E.cqBlock x := by
+    rw [Classical.cqState_eq_blockDiagonal]
+    rfl
   let c : ℂ := (Real.rpow 2 (-lam) : ℂ)
   rw [SubnormalizedState.ConditionalMinEntropyFeasible_eq, Matrix.le_iff]
   have hblocks : ∀ x, (c • σ.matrix - E.cqBlock x).PosSemidef := by

@@ -837,18 +837,6 @@ private theorem sideTwirl_integral_block [Fintype a] [Fintype e] [DecidableEq a]
   filter_upwards with U
   rw [sideBlock_sideTwirlIntegrand]
 
-/-- Second-moment side-block specialization used to feed the two-copy twirl
-decomposition. -/
-private theorem sideTwirl_integral_block_two [Fintype a] [Fintype e]
-    [DecidableEq a] [DecidableEq e] [Nonempty a]
-    (X : CMatrix (Prod (TensorPower a 2) e)) (r s : e) :
-    sideBlock (a := a) (e := e) 2
-        (∫ U : Matrix.unitaryGroup a ℂ,
-          sideTwirlIntegrand (a := a) (e := e) 2 X U ∂unitaryHaarMeasure (a := a))
-        r s =
-      unitaryTwirl 2 (sideBlock (a := a) (e := e) 2 X r s) := by
-  rw [sideTwirl_integral_block]
-
 /-- Drop the terminal unit register in a one-fold tensor power. -/
 private def decouplingTensorPowerOneEquiv (q : Type*) : TensorPower q 1 ≃ q where
   toFun x := x.1
@@ -1732,17 +1720,16 @@ theorem haydenProjectedAE_secondMoment_trace_integral_decomposition [Fintype a] 
           hayden_secondMomentTwirl_scaled_trace_integral_decomposition
             (a := a) (e := e) P hP rho d
 
-private theorem symmetricProjectionMatrix_one_eq_one [Fintype a] [DecidableEq a] :
-    symmetricProjectionMatrix (a := a) 1 = 1 := by
-  rw [symmetricProjectionMatrix_eq_perm_average]
-  ext x y
-  simp [permutationMatrix, permEquiv_one, Matrix.one_apply]
-
 private theorem unitaryTwirl_one_eq_trace_smul_one [Fintype a] [DecidableEq a] [Nonempty a]
     (A : CMatrix (TensorPower a 1)) :
     unitaryTwirl 1 A = (A.trace / (Fintype.card a : ℂ)) • 1 := by
+  have symmetricProjectionMatrix_one_eq_one :
+      symmetricProjectionMatrix (a := a) 1 = 1 := by
+    rw [symmetricProjectionMatrix_eq_perm_average]
+    ext x y
+    simp [permutationMatrix, permEquiv_one, Matrix.one_apply]
   have h := unitaryTwirl_mul_symmetricProjectionMatrix_eq_trace_smul (a := a) 1 A
-  rw [symmetricProjectionMatrix_one_eq_one (a := a), Matrix.mul_one] at h
+  rw [symmetricProjectionMatrix_one_eq_one, Matrix.mul_one] at h
   rw [h]
   congr 2
   · simp

@@ -1390,13 +1390,6 @@ theorem cqGuessingProbability_le_dualValue (E : Ensemble ι b) {T : CMatrix b}
     (fun score hscore => cqPrimalValueSet_le_dualValue E hT hscore)
     (Matrix.PosSemidef.trace_nonneg hT.1).1
 
-omit [Fintype ι] in
-private theorem identityTensorStateMatrix_block_self (σ : State b) (x : ι) :
-    Classical.block (State.identityTensorStateMatrix (a := ι) σ) x x = σ.matrix := by
-  ext i j
-  simp [Classical.block, State.identityTensorStateMatrix, Matrix.kronecker,
-    Matrix.kroneckerMap_apply]
-
 /-- Every conditional-min-entropy feasible pair gives a feasible matrix for the
 cq guessing dual program. -/
 theorem cqDualFeasible_of_conditionalMinEntropyFeasible (E : Ensemble ι b) (σ : State b)
@@ -1404,6 +1397,11 @@ theorem cqDualFeasible_of_conditionalMinEntropyFeasible (E : Ensemble ι b) (σ 
     (h : State.ConditionalMinEntropyFeasible (a := ι) E.cqState σ lam) :
     E.cqDualFeasible ((Real.rpow 2 (-lam) : ℂ) • σ.matrix) := by
   classical
+  have identityTensorStateMatrix_block_self (σ : State b) (x : ι) :
+      Classical.block (State.identityTensorStateMatrix (a := ι) σ) x x = σ.matrix := by
+    ext i j
+    simp [Classical.block, State.identityTensorStateMatrix, Matrix.kronecker,
+      Matrix.kroneckerMap_apply]
   let c : ℂ := (Real.rpow 2 (-lam) : ℂ)
   have hc_nonneg : 0 ≤ c := by
     dsimp [c]

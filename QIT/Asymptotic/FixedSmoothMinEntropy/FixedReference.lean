@@ -247,19 +247,6 @@ theorem conditionalMinEntropyFixed_le_log2_card_left
   · rw [Set.not_nonempty_iff_eq_empty.mp hne, Real.sSup_empty]
     exact log2_card_left_nonneg (a := a) ρ
 
-private theorem conditionalMinEntropy_le_log2_card_left_of_fixedSmooth
-    (ρ : State (Prod a b)) :
-    ρ.conditionalMinEntropy ≤ log2 (Fintype.card a : ℝ) := by
-  rw [conditionalMinEntropy_eq]
-  by_cases hne :
-      ({lam : ℝ | ∃ τ : State b,
-        ConditionalMinEntropyFeasible (a := a) ρ τ lam}).Nonempty
-  · exact csSup_le hne fun lam hlam =>
-      let ⟨_, hτ⟩ := hlam
-      ConditionalMinEntropyFeasible_le_log2_card_left (a := a) hτ
-  · rw [Set.not_nonempty_iff_eq_empty.mp hne, Real.sSup_empty]
-    exact log2_card_left_nonneg (a := a) ρ
-
 theorem ConditionalMinEntropyFeasible_le_conditionalEntropy_of_posDef_reference
     (ρ : State (Prod a b)) (σ : State b) (hσ : σ.matrix.PosDef) {lam : ℝ}
     (hfeas : ConditionalMinEntropyFeasible (a := a) ρ σ lam) :

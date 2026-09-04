@@ -367,18 +367,6 @@ private theorem sum_a_a_b_c_c_k_reorder {α : Type*} {β : Type*} {γ : Type*} {
         rcases t with ⟨⟨⟨⟨⟨x, y⟩, j⟩, k⟩, l⟩, m⟩
         rfl))
 
-private theorem sum_outer_mul_inner_expand {δ : Type*} {β : Type*} {α : Type*} {γ : Type*}
-    [Fintype δ] [Fintype β] [Fintype α] [Fintype γ]
-    (s : ℂ) (A B : δ → β → α → γ → ℂ)
-    (C : δ → β → α → γ → α → γ → ℂ) :
-    (∑ m : δ, ∑ j : β, ∑ x : α, ∑ k : γ,
-        A m j x k * (s * (B m j x k *
-          ∑ y : α, ∑ l : γ, s * C m j x k y l))) =
-      ∑ m : δ, ∑ j : β, ∑ x : α, ∑ k : γ, ∑ y : α, ∑ l : γ,
-        A m j x k * (s * (s * (B m j x k * C m j x k y l))) := by
-  classical
-  simp [Finset.mul_sum, mul_left_comm]
-
 private theorem sum_success_norm_expand {δ : Type*} {β : Type*} {α : Type*} {γ : Type*}
     [Fintype δ] [Fintype β] [Fintype α] [Fintype γ]
     (s : ℂ) (hs : star s = s) (K : δ → α → γ → ℂ)

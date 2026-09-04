@@ -514,19 +514,16 @@ private theorem centerCoeffC_eq_ofReal (H : HashFamily F Z S)
   unfold centerCoeffC centerCoeffR
   by_cases h : H.hash f z = s <;> simp [h]
 
-omit [DecidableEq Z] [DecidableEq F] [Nonempty F] [Fintype S] [Nonempty S] in
-private theorem if_cqBlock_eq_indicator_smul
-    (H : HashFamily F Z S) (E : Ensemble Z e) (f : F) (s : S) (z : Z) :
-    (if H.hash f z = s then E.cqBlock z else 0) =
-      ((if H.hash f z = s then (1 : ℂ) else 0) • E.cqBlock z) := by
-  by_cases h : H.hash f z = s <;> simp [h]
-
 omit [DecidableEq Z] [DecidableEq F] [Nonempty F] [Nonempty S] in
 private theorem extractorSeedCenteredResidual_eq_centerCoeff_sum
     (H : HashFamily F Z S) (E : Ensemble Z e) (f : F) (s : S) :
     H.extractorSeedCenteredResidual E f s =
       ∑ z : Z, H.centerCoeffC f s z • E.cqBlock z := by
   classical
+  have if_cqBlock_eq_indicator_smul (z : Z) :
+      (if H.hash f z = s then E.cqBlock z else 0) =
+        ((if H.hash f z = s then (1 : ℂ) else 0) • E.cqBlock z) := by
+    by_cases h : H.hash f z = s <;> simp [h]
   unfold extractorSeedCenteredResidual extractorSeedOutputBucket extractorCqTotalBlock centerCoeffC
   calc
     (∑ z : Z, if H.hash f z = s then E.cqBlock z else 0) -
@@ -839,19 +836,17 @@ private theorem extractorSeedSideInfoMatrix_eq_totalBlock
         rw [Matrix.sum_apply]
 
 omit [DecidableEq Z] [DecidableEq F] [Nonempty F] in
-private theorem extractorSeedIdealMatrix_output_offdiag
-    (H : HashFamily F Z S) (E : Ensemble Z e) (f : F)
-    {s s' : S} {i j : e} (hss : s ≠ s') :
-    extractorSeedIdealMatrix H E f (s, i) (s', j) = 0 := by
-  unfold extractorSeedIdealMatrix
-  simp [Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.diagonal, hss]
-
-omit [DecidableEq Z] [DecidableEq F] [Nonempty F] in
 private theorem extractorSeedDiff_output_offdiag
     (H : HashFamily F Z S) (E : Ensemble Z e) (f : F)
     {s s' : S} {i j : e} (hss : s ≠ s') :
     (extractorSeedOutputMatrix H E f - extractorSeedIdealMatrix H E f)
         (s, i) (s', j) = 0 := by
+  have extractorSeedIdealMatrix_output_offdiag
+      (H : HashFamily F Z S) (E : Ensemble Z e) (f : F)
+      {s s' : S} {i j : e} (hss : s ≠ s') :
+      extractorSeedIdealMatrix H E f (s, i) (s', j) = 0 := by
+    unfold extractorSeedIdealMatrix
+    simp [Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.diagonal, hss]
   rw [Matrix.sub_apply, extractorSeedOutputMatrix_output_offdiag H E f hss,
     extractorSeedIdealMatrix_output_offdiag H E f hss]
   simp

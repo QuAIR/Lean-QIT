@@ -73,20 +73,13 @@ private theorem fourier_scale_norm (d : ℕ) [NeZero d] :
     _ = (d : ℂ)⁻¹ * (d : ℂ) := by rw [hsq]
     _ = 1 := inv_mul_cancel₀ hdne
 
-private theorem circle_star_mul_self (z : Circle) :
-    star (z : ℂ) * (z : ℂ) = 1 := by
-  have h : (Complex.normSq (z : ℂ) : ℂ) = star (z : ℂ) * (z : ℂ) :=
-    Complex.normSq_eq_conj_mul_self
-  rw [Circle.normSq_coe] at h
-  simpa [Complex.star_def] using h.symm
-
 private theorem stdAddChar_star_mul (d : ℕ) [NeZero d] (a b : ZMod d) :
     star (ZMod.stdAddChar a) * ZMod.stdAddChar b = ZMod.stdAddChar (b - a) := by
   rw [ZMod.stdAddChar_apply, ZMod.stdAddChar_apply, ZMod.stdAddChar_apply]
   have hstar :
       star ((ZMod.toCircle a : Circle) : ℂ) = (((ZMod.toCircle a : Circle) : ℂ))⁻¹ := by
-    have h := circle_star_mul_self (ZMod.toCircle a)
-    exact eq_inv_of_mul_eq_one_left h
+    rw [Complex.star_def, ← Circle.coe_inv_eq_conj]
+    exact Circle.coe_inv _
   rw [hstar, ← Circle.coe_inv, ← Circle.coe_mul]
   congr 1
   rw [← (ZMod.toCircle : AddChar (ZMod d) Circle).map_neg_eq_inv]

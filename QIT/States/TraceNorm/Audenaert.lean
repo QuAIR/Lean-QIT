@@ -1320,11 +1320,6 @@ theorem audenaertResolvent_mul_eq_one_sub {r : ℝ}
           rw [hright]
           simp
 
-omit [Fintype a] in
-private theorem one_sub_smul_sub_one_sub_smul (r : ℝ) (X Y : CMatrix a) :
-    (1 : CMatrix a) - r • X - ((1 : CMatrix a) - r • Y) = r • (Y - X) := by
-  simp [sub_eq_add_neg, add_comm, add_left_comm, add_assoc]
-
 /-- Audenaert's resolvent difference identity, with `Δ = A - B`. -/
 theorem audenaertResolventDifference {r : ℝ}
     {A B : CMatrix a} (hr : 0 < r) (hA : A.PosSemidef) (hB : B.PosSemidef) :
@@ -1332,6 +1327,9 @@ theorem audenaertResolventDifference {r : ℝ}
         B * (B + r • (1 : CMatrix a))⁻¹ =
       r • ((B + r • (1 : CMatrix a))⁻¹ * (A - B) *
         (A + r • (1 : CMatrix a))⁻¹) := by
+  have one_sub_smul_sub_one_sub_smul (r : ℝ) (X Y : CMatrix a) :
+      (1 : CMatrix a) - r • X - ((1 : CMatrix a) - r • Y) = r • (Y - X) := by
+    simp [sub_eq_add_neg, add_comm, add_left_comm, add_assoc]
   rw [audenaertResolvent_mul_eq_one_sub hr hA,
     audenaertResolvent_mul_eq_one_sub hr hB]
   rw [one_sub_smul_sub_one_sub_smul]

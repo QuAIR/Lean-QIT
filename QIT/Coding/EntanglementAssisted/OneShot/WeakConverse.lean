@@ -93,12 +93,6 @@ private theorem measurement_map_eq_diagonal_re (M : POVM Bool a)
 private def logZero2 (x : ℝ) : ℝ :=
   if x = 0 then 0 else log2 x
 
-private theorem logZero_div_log2 (x : ℝ) :
-    (if x = 0 then 0 else Real.log x) / Real.log 2 = logZero2 x := by
-  by_cases hx : x = 0
-  · simp [logZero2, hx]
-  · simp [logZero2, hx, log2]
-
 end EntanglementAssistedWeakConverse
 
 namespace HypothesisTestingEffect

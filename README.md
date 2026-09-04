@@ -20,13 +20,14 @@ Reusable achievability, converse, and limit components support formal proofs of 
 | Structure and applications | `QIT.Symmetry`, `QIT.Entanglement`, `QIT.Nonlocality`, `QIT.Security`: de Finetti tools, separability, Bell phenomena, self-testing, and QKD. |
 
 ## Installation
-Add Lean-QIT to `lakefile.toml` and use the Lean version pinned by `lean-toolchain`:
+For reproducible builds, add the latest tagged Lean-QIT release to `lakefile.toml` and use the Lean version pinned by `lean-toolchain`:
 ```toml
 [[require]]
 name = "QIT"
 git = "https://github.com/QuAIR/Lean-QIT.git"
-rev = "main"
+rev = "v0.1.0"
 ```
+The `main` branch tracks unreleased work and may change between tagged releases.
 Import the complete public API:
 ```lean
 import QIT

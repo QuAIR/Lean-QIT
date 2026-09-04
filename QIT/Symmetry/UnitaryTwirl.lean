@@ -831,12 +831,6 @@ theorem unitaryInvariant_profileMatrixCoeff_eq_zero_of_ne
     ring
   exact (mul_eq_zero.mp hmul).resolve_left hnonzero
 
-private theorem unitaryTensorPowerMatrix_mul_star_self (U : Matrix.unitaryGroup a ℂ) (n : ℕ) :
-    (unitaryTensorPowerMatrix U n : CMatrix (TensorPower a n)) *
-        star (unitaryTensorPowerMatrix U n : CMatrix (TensorPower a n)) =
-      1 := by
-  simp
-
 theorem unitaryInvariant_commutes_unitaryTensorPowerMatrix
     {n : ℕ} (B : CMatrix (TensorPower a n))
     (hinv : ∀ U : Matrix.unitaryGroup a ℂ,
@@ -1307,13 +1301,6 @@ private theorem twoLevelGeneratorEntry_eq_neg_one_of_left {i j x y : a}
     twoLevelGeneratorEntry i j x y = -1 := by
   rcases hxy with ⟨rfl, rfl⟩
   simp
-
-omit [Fintype a] in
-private theorem twoLevelGeneratorEntry_eq_one_of_right {i j x y : a}
-    (hij : i ≠ j) (hxy : x = j ∧ y = i) :
-    twoLevelGeneratorEntry i j x y = 1 := by
-  rcases hxy with ⟨rfl, rfl⟩
-  exact twoLevelGeneratorEntry_self_right (a := a) hij
 
 /-- The tensor-power infinitesimal generator induced by the two-level
 one-copy generator.  It is written directly on tensor words: sum over the

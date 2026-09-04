@@ -261,21 +261,6 @@ def adhwFQSWIidProjectedSourceMatrix
   let Pi := adhwFQSWIidLiftProjectorTriple (a := a) (b := b) (r := r) n PA PB PR
   Pi * (adhwFQSWIidSourceState ψ n).matrix * Pi
 
-/-- The lifted triple projector factors as the product of the three
-single-register lifted projectors. -/
-private theorem adhwFQSWIidLiftProjectorTriple_eq_mul
-    (n : ℕ) (PA : CMatrix (TensorPower a n)) (PB : CMatrix (TensorPower b n))
-    (PR : CMatrix (TensorPower r n)) :
-    adhwFQSWIidLiftProjectorTriple (a := a) (b := b) (r := r) n PA PB PR =
-      adhwFQSWIidLiftProjectorA (b := b) (r := r) n PA *
-        adhwFQSWIidLiftProjectorB (a := a) (r := r) n PB *
-          adhwFQSWIidLiftProjectorR (a := a) (b := b) n PR := by
-  ext x y
-  simp [adhwFQSWIidLiftProjectorTriple, adhwFQSWIidLiftProjectorA,
-    adhwFQSWIidLiftProjectorB, adhwFQSWIidLiftProjectorR, Matrix.mul_apply,
-    Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.one_apply,
-    Fintype.sum_prod_type]
-
 -- Algebraic decomposition behind the simultaneous-projector union bound.
 omit [Fintype a] [Fintype b] [Fintype r] in
 private theorem adhwFQSWIidLiftProjector_union_decomp
@@ -836,13 +821,6 @@ private theorem adhwFQSW_smul_le_smul_of_nonneg
     Matrix.PosSemidef.smul hAB (by exact_mod_cast hc)
   simpa [smul_sub] using hscaled
 
-private theorem adhwFQSW_real_smul_smul
-    {α : Type u} (c d : ℝ) (M : CMatrix α) :
-    (((c : ℝ) : ℂ) • (((d : ℝ) : ℂ) • M)) =
-      ((((c * d : ℝ) : ℂ) • M)) := by
-  ext i j
-  simp [Matrix.smul_apply, smul_eq_mul, Complex.ofReal_mul, mul_assoc]
-
 private theorem adhwFQSW_complex_smul_smul
     {α : Type u} (c d : ℂ) (M : CMatrix α) :
     c • (d • M) = (c * d) • M := by
@@ -1083,17 +1061,6 @@ private theorem adhwFQSWIidLiftProjectorB_idempotent
     _ = adhwFQSWIidLiftProjectorB (a := a) (r := r) n PB := by
           rw [hAB]
           simp [adhwFQSWIidLiftProjectorB]
-
-omit [DecidableEq r] in
-private theorem adhwFQSWIidLiftProjectorR_idempotent
-    (n : ℕ) (PR : CMatrix (TensorPower r n)) (hPRid : PR * PR = PR) :
-    adhwFQSWIidLiftProjectorR (a := a) (b := b) n PR *
-      adhwFQSWIidLiftProjectorR (a := a) (b := b) n PR =
-        adhwFQSWIidLiftProjectorR (a := a) (b := b) n PR := by
-  simpa [adhwFQSWIidLiftProjectorR, hPRid] using
-    (Matrix.mul_kronecker_mul
-      (1 : CMatrix (Prod (TensorPower a n) (TensorPower b n)))
-      (1 : CMatrix (Prod (TensorPower a n) (TensorPower b n))) PR PR).symm
 
 omit [DecidableEq a] [DecidableEq b] [DecidableEq r] in
 theorem adhwFQSWIidLiftProjectorTriple_idempotent

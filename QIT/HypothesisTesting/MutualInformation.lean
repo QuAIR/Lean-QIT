@@ -427,16 +427,15 @@ private theorem effectAcceptProbability_le_effect_trace_for_htmi
     _ = Lambda.effect.trace.re := by
           rw [Matrix.mul_one]
 
-private theorem real_smul_one_effect_trace_re_for_htmi
-    (c : ℝ) (E : CMatrix a) :
-    (((E * (c • (1 : CMatrix a))).trace).re : ℝ) = c * E.trace.re := by
-  rw [Matrix.mul_smul, Matrix.mul_one, Matrix.trace_smul]
-  simp
-
 private theorem scalar_trace_le_typeIIError_of_matrix_lower_bound_for_htmi
     {c : ℝ} (Lambda : HypothesisTestingEffect rho epsilon)
     (hlower : c • (1 : CMatrix a) ≤ sigma.matrix) :
     c * Lambda.effect.trace.re ≤ Lambda.typeIIError sigma := by
+  have real_smul_one_effect_trace_re_for_htmi
+      (c : ℝ) (E : CMatrix a) :
+      (((E * (c • (1 : CMatrix a))).trace).re : ℝ) = c * E.trace.re := by
+    rw [Matrix.mul_smul, Matrix.mul_one, Matrix.trace_smul]
+    simp
   have htrace := cMatrix_trace_mul_le_of_le_posSemidef_left Lambda.pos hlower
   unfold HypothesisTestingEffect.typeIIError effectTypeIIError effectAcceptProbability
   calc

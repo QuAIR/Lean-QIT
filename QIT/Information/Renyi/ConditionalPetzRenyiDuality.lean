@@ -392,13 +392,6 @@ private theorem kronecker_right_mulVec_apply_forPetz
   rw [← Finset.univ_product_univ, Finset.sum_product]
   simp [Matrix.one_apply]
 
-/-- Parameter bookkeeping for the old Petz downward-duality conjugacy
-`alpha + beta = 2`. -/
-private theorem petzRenyiDualParam_beta_eq_two_sub
-    {alpha beta : Real} (hdual : alpha + beta = 2) :
-    beta = 2 - alpha := by
-  linarith
-
 /-- Under `alpha + beta = 2`, the state exponent on the `AC` side is
 `beta - 1 = 1 - alpha`. -/
 private theorem petzRenyiDualParam_beta_sub_one_eq_one_sub

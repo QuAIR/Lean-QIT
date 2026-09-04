@@ -854,17 +854,6 @@ theorem sandwichedRenyiMutualInformationCandidateEndpoint_lower_of_traceLogFinit
       (rhoAB.marginalA.prod sigmaB).pos hSupport]
   rwa [hendpoint]
 
-/-- The terminal measurement channel maps every normalized state matrix to the
-one-by-one identity matrix. -/
-private theorem terminalMeasureChannel_map_state_matrix_for_sandwichedLimit
-    (rho : State a) :
-    (terminalMeasureChannel a).map rho.matrix = (1 : CMatrix PUnit.{1}) := by
-  ext i j
-  cases i
-  cases j
-  simp [terminalMeasureChannel, terminalPOVM, Channel.measure, Channel.measureMap,
-    rho.trace_eq_one]
-
 /-- The source trace-log relative entropy of the unit state against the unit
 reference is zero. -/
 private theorem relativeEntropyPSDReferenceTraceLogE_unit_one_eq_zero :

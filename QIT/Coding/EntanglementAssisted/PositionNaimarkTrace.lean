@@ -811,13 +811,6 @@ theorem positionSelection_prod_id_applyState_matrix
   exact Channel.positionSelectionMap_apply_sum (a := a) k m
     (fun i i' => ρ.matrix (i, ref) (i', ref')) out out'
 
-private theorem unit_map_eq_idChannel_for_positionTrace :
-    (Channel.unit : Channel PUnit PUnit).map = (Channel.idChannel PUnit).map := by
-  ext X i j
-  cases i
-  cases j
-  simp [Channel.unit, MatrixMap.unit, Channel.idChannel, MatrixMap.ofKraus]
-
 set_option maxHeartbeats 800000 in
 /-- Applying a one-use channel to the selected transmitted coordinate commutes
 with taking the selected reference/output marginal. -/
@@ -832,6 +825,12 @@ theorem selectedReferenceOutputMarginal_apply_channel
       ((Channel.idChannel a).prod N).applyState
         ((ρ.reindex (TensorPower.outputReferenceCoordEquiv
           (a := a) (b := a) k m)).marginalA) := by
+  have unit_map_eq_idChannel_for_positionTrace :
+      (Channel.unit : Channel PUnit PUnit).map = (Channel.idChannel PUnit).map := by
+    ext X i j
+    cases i
+    cases j
+    simp [Channel.unit, MatrixMap.unit, Channel.idChannel, MatrixMap.ofKraus]
   apply State.ext
   ext x y
   rcases x with ⟨xr, xb⟩

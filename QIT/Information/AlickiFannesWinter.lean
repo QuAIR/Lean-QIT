@@ -247,11 +247,6 @@ theorem conditionalEntropy_neg_log_card_left_le (τ : State (Prod a b)) :
     vonNeumann_le_log_card τ.marginalA
   linarith
 
-private theorem binaryWeights_sum (p : ℝ) (hp0 : 0 ≤ p) (hp1 : p ≤ 1) :
-    Real.toNNReal (1 - p) + Real.toNNReal p = 1 := by
-  apply Subtype.ext
-  simp [Real.toNNReal_of_nonneg hp0, Real.toNNReal_of_nonneg (sub_nonneg.mpr hp1)]
-
 /-- Binary convex mixture `(1 - p)ρ + pτ` of two states. -/
 def binaryMix (p : ℝ) (ρ τ : State a) (hp0 : 0 ≤ p) (hp1 : p ≤ 1) : State a where
   matrix := (Real.toNNReal (1 - p)) • ρ.matrix + (Real.toNNReal p) • τ.matrix
@@ -634,12 +629,6 @@ namespace State
 
 variable {a : Type u} [Fintype a] [DecidableEq a]
 variable {b : Type v} [Fintype b] [DecidableEq b]
-
-private theorem afw_one_sub_weight_eq {δ : ℝ} (hδ0 : 0 ≤ δ) :
-    1 - δ / (1 + δ) = (1 + δ)⁻¹ := by
-  have hden : 1 + δ ≠ 0 := by linarith
-  field_simp [hden]
-  ring
 
 private theorem afw_common_state_eq
     (ρ σ : State (Prod a b)) (hδ : 0 < ρ.normalizedTraceDistance σ) :

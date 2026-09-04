@@ -629,12 +629,6 @@ private theorem normalizedTraceDistance_eq_posPart_trace_of_seedDiff
     _ = (1 / 2 : ℝ) * (2 * (D⁺).trace.re) := by rw [hnorm]
     _ = (D⁺).trace.re := by ring
 
-omit [DecidableEq S] [Nonempty S] [DecidableEq e] in
-private theorem trace_seedBlock_smul_mul (c : ℝ≥0) (D E : CMatrix (S × e)) :
-    (((c • D) * E).trace).re = (c : ℝ) * (((D * E).trace).re) := by
-  rw [Matrix.smul_mul, Matrix.trace_smul]
-  simp [NNReal.smul_def]
-
 omit [DecidableEq Z] [Nonempty F] in
 private theorem fullDiff_posPart_trace_le_seedAverage (H : HashFamily F Z S)
     (E : Ensemble Z e) :
@@ -642,6 +636,10 @@ private theorem fullDiff_posPart_trace_le_seedAverage (H : HashFamily F Z S)
       (idealExtractorOutputState (extractorOutputState H E)).matrix)⁺).trace).re ≤
         extractorSeedAverageTraceDistance H E := by
   classical
+  have trace_seedBlock_smul_mul (c : ℝ≥0) (D E : CMatrix (S × e)) :
+      (((c • D) * E).trace).re = (c : ℝ) * (((D * E).trace).re) := by
+    rw [Matrix.smul_mul, Matrix.trace_smul]
+    simp [NNReal.smul_def]
   let Dfull : CMatrix (S × (F × e)) :=
     (extractorOutputState H E).matrix -
       (idealExtractorOutputState (extractorOutputState H E)).matrix

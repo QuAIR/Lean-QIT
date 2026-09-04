@@ -303,14 +303,6 @@ private theorem classical_block_le_one {ι : Type w} {β : Type x}
   ext x y
   simp [Classical.block, Matrix.sub_apply, Matrix.one_apply]
 
-private theorem classical_block_isHermitian {ι : Type w} {β : Type x}
-    [Fintype ι] [DecidableEq ι] [Fintype β] [DecidableEq β]
-    {M : CMatrix (Prod ι β)} (hM : M.IsHermitian) (i : ι) :
-    (Classical.block M i i).IsHermitian := by
-  rw [Matrix.IsHermitian]
-  ext x y
-  simpa [Classical.block, Matrix.conjTranspose] using congrFun (congrFun hM (i, x)) (i, y)
-
 private theorem classical_blockDiagonal_offdiag {ι : Type w} {β : Type x}
     [Fintype ι] [DecidableEq ι] [Fintype β] [DecidableEq β]
     (blocks : ι → CMatrix β) {i j : ι} (hij : i ≠ j) (x y : β) :
@@ -684,11 +676,6 @@ private theorem inputPermutationLabelExtension_action_reindexed_eq_blockDiagonal
             ((((permutationChannel (a := a) n π).prod (Channel.idChannel r)).applyState ω).matrix))
       hπσ br br']
 
-private theorem cMatrix_isHermitian_real_smul {β : Type x} [Fintype β] [DecidableEq β]
-    {c : ℝ} {M : CMatrix β} (hM : M.IsHermitian) :
-    (((c : ℂ) • M) : CMatrix β).IsHermitian := by
-  exact hM.smul (by simp [IsSelfAdjoint])
-
 private theorem inputPermutationLabelExtension_channelDifference_action_traceNorm_eq_sum
     {r : Type w} [Fintype r] [DecidableEq r]
     {b : Type x} [Fintype b] [DecidableEq b]
@@ -721,13 +708,12 @@ private theorem inputPermutationLabelExtension_channelDifference_action_traceNor
         (a := a) (r := r) (b := b) Δ ω
   have hblocks : ∀ π, (blocks π).IsHermitian := by
     intro π
-    simpa [blocks, Δ] using cMatrix_isHermitian_real_smul
-      (c := (Fintype.card (Equiv.Perm (Fin n)) : ℝ)⁻¹)
-      (M := MatrixMap.kron (MatrixMap.channelDifference Φ Ψ) (Channel.idChannel r).map
-        ((((permutationChannel (a := a) n π).prod (Channel.idChannel r)).applyState ω).matrix))
-      (MatrixMap.channelDifference_kron_id_apply_isHermitian
+    have hM := MatrixMap.channelDifference_kron_id_apply_isHermitian
       (a := TensorPower a n) (b := b) (r := r) Φ Ψ
-      (((permutationChannel (a := a) n π).prod (Channel.idChannel r)).applyState ω))
+      (((permutationChannel (a := a) n π).prod (Channel.idChannel r)).applyState ω)
+    have hc : IsSelfAdjoint (((Fintype.card (Equiv.Perm (Fin n)) : ℝ)⁻¹ : ℂ)) := by
+      simp [IsSelfAdjoint]
+    simpa [blocks, Δ] using hM.smul hc
   have htr : ∀ π, (blocks π).trace = 0 := by
     intro π
     dsimp [blocks, Δ]

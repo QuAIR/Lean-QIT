@@ -66,12 +66,6 @@ private theorem recordedOutcomeState_eq_originalRecordedOutcomeState :
     C.recordedOutcomeState = C.originalRecordedOutcomeState := by
   rfl
 
-private theorem idealRecordedConditioningEnsemble_states_eq_sourceReference
-    (i : C.recordedOutcomeIndex) :
-    C.idealRecordedConditioningEnsemble.states i =
-      (stateMergingBlockSource psi n).state.marginalB := by
-  rfl
-
 /-- Berta's one-shot smooth-min-entropy converse for a concrete physical
 state-merging block protocol. -/
 theorem oneShotSmoothMinEntropy_converse

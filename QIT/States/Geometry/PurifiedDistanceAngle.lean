@@ -77,30 +77,6 @@ private theorem phase_amp {a : Type u} [Fintype a] [DecidableEq a]
     (phase Ψ c hc).amp i = c * Ψ.amp i :=
   rfl
 
-private theorem phase_state {a : Type u} [Fintype a] [DecidableEq a]
-    (Ψ : PureVector a) (c : ℂ) (hc : Complex.normSq c = 1) :
-    (phase Ψ c hc).state = Ψ.state := by
-  apply State.ext
-  ext i j
-  have hunit : c * star c = 1 := by
-    have hcC : (Complex.normSq c : ℂ) = 1 := by exact_mod_cast hc
-    rw [Complex.normSq_eq_conj_mul_self] at hcC
-    simpa [mul_comm] using hcC
-  change c * Ψ.amp i * star (c * Ψ.amp j) = Ψ.amp i * star (Ψ.amp j)
-  rw [star_mul]
-  calc
-    c * Ψ.amp i * (star (Ψ.amp j) * star c) =
-        (c * star c) * (Ψ.amp i * star (Ψ.amp j)) := by ring
-    _ = Ψ.amp i * star (Ψ.amp j) := by rw [hunit, one_mul]
-
-private theorem phase_purifies {r a : Type u}
-    [Fintype r] [DecidableEq r] [Fintype a] [DecidableEq a]
-    {Ψ : PureVector (Prod r a)} {ρ : State a}
-    (hΨ : Ψ.Purifies ρ) (c : ℂ) (hc : Complex.normSq c = 1) :
-    (phase Ψ c hc).Purifies ρ := by
-  rw [PureVector.purifies_iff, phase_state]
-  exact hΨ
-
 private theorem overlap_phase_left {a : Type u} [Fintype a] [DecidableEq a]
     (Ψ Φ : PureVector a) (c : ℂ) (hc : Complex.normSq c = 1) :
     (phase Ψ c hc).overlap Φ = star c * Ψ.overlap Φ := by
@@ -138,14 +114,6 @@ private theorem norm_ampVector {a : Type u} [Fintype a] [DecidableEq a]
     exact h.symm
   have hsq : ‖ampVector Ψ‖ ^ 2 = (1 : ℝ) := by exact_mod_cast hsqC
   nlinarith [norm_nonneg (ampVector Ψ)]
-
-private theorem overlap_norm_le_one {a : Type u} [Fintype a] [DecidableEq a]
-    (Ψ Φ : PureVector a) : ‖Ψ.overlap Φ‖ ≤ 1 := by
-  have hsq : Ψ.overlapSq Φ ≤ 1 :=
-    (PureVector.overlapSq_le_state_squaredFidelity Ψ Φ).trans
-      (State.squaredFidelity_le_one_of_uhlmann Ψ.state Φ.state)
-  rw [PureVector.overlapSq_eq_normSq, Complex.normSq_eq_norm_sq] at hsq
-  nlinarith [norm_nonneg (Ψ.overlap Φ)]
 
 theorem sin_projectiveAngle {a : Type u} [Fintype a] [DecidableEq a]
     (Ψ Φ : PureVector a) :

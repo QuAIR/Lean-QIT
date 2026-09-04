@@ -2013,10 +2013,6 @@ def diamondTraceDistance [Nonempty a] (Φ Ψ : Channel a b) : ℝ :=
     ((Φ.prod (idChannel a)).applyState ω).normalizedTraceDistance
       ((Ψ.prod (idChannel a)).applyState ω))
 
-private theorem state_prod_self_nonempty [Nonempty a] :
-    Nonempty (State (Prod a a)) :=
-  ⟨Classical.basisState (Classical.choice (inferInstance : Nonempty (Prod a a)))⟩
-
 /-- A pointwise bound on the input-reference trace distance bounds the
 source-shaped diamond trace distance. -/
 theorem diamondTraceDistance_le_of_inputReferenceBound [Nonempty a]
@@ -2026,7 +2022,8 @@ theorem diamondTraceDistance_le_of_inputReferenceBound [Nonempty a]
         ((Ψ.prod (idChannel a)).applyState ω) ≤ ε) :
     diamondTraceDistance Φ Ψ ≤ ε := by
   unfold diamondTraceDistance
-  haveI : Nonempty (State (Prod a a)) := state_prod_self_nonempty (a := a)
+  haveI : Nonempty (State (Prod a a)) :=
+    ⟨Classical.basisState (Classical.choice (inferInstance : Nonempty (Prod a a)))⟩
   exact csSup_le (Set.range_nonempty _) fun y hy => by
     rcases hy with ⟨ω, rfl⟩
     exact h ω

@@ -387,15 +387,6 @@ private def classicalConditioningPinchState
     (sourceCoordinatePinchChannel (a := y) (b := b)).map
     (sourceCoordinatePinchChannel (a := y) (b := b)).traceNonincreasingCP_map
 
-private theorem classicalConditioningPinchState_matrix
-    (sigma : SubnormalizedState (y × b)) :
-    (classicalConditioningPinchState (y := y) (b := b) sigma).matrix =
-      classicalConditioningPinch sigma.matrix := by
-  ext i j
-  simp [classicalConditioningPinchState,
-    SubnormalizedState.applyTraceNonincreasingCP_matrix,
-    classicalConditioningPinch, sourceCoordinatePinchChannel_map_apply]
-
 private theorem conditionalMaxEntropyRaw_le_classicalPinch_of_trace_pos
     [Nonempty a] [Nonempty b]
     (rho : SubnormalizedState ((a × x) × (y × b)))
@@ -2179,20 +2170,6 @@ private theorem ConditionalMinEntropyScaleFeasible.classicalCoherentPinch
           (a := a) (x := x) (c := c) (y' := y'))).matrix).PosSemidef
     simpa only [SubnormalizedState.applyTraceNonincreasingCP] using hsum
 
-private theorem classicalCoherentMap_trace_re
-    {c : Type*} [Fintype c] [DecidableEq c]
-    {y' : Type*} [Fintype y'] [DecidableEq y']
-    {rho : SubnormalizedState ((a × x) × (c × x × y'))}
-    (hclassical : classicalCoherentOn rho) :
-    (rho.applyTraceNonincreasingCP
-      (classicalCoherentMap (a := a) (x := x) (c := c) (y' := y'))
-      (classicalCoherentMapTraceNonincreasingCP
-        (a := a) (x := x) (c := c) (y' := y'))).matrix.trace.re =
-      rho.matrix.trace.re := by
-  exact congrArg
-    (fun s : SubnormalizedState ((a × x) × (c × x × y')) => s.matrix.trace.re)
-    (classicalCoherentMap_fixed hclassical)
-
 private theorem conditionalMinEntropyScale_classicalCoherentMap_le
     {c : Type*} [Fintype c] [DecidableEq c]
     {y' : Type*} [Fintype y'] [DecidableEq y']
@@ -2318,12 +2295,6 @@ private def canonicalComplementaryMarginal
     (rho : State ((a × x) × (y × b))) :
     State ((a × x) × ((a × x) × (y × b))) :=
   State.acMarginalFromABPurification rho.canonicalPurification
-
-private theorem canonicalComplementaryPurification_purifies
-    (rho : State ((a × x) × (y × b))) :
-    (canonicalComplementaryPurification rho).Purifies
-      (canonicalComplementaryMarginal rho) := by
-  exact PureVector.purifies_marginalB (canonicalComplementaryPurification rho)
 
 /-! ## Uhlmann max-candidate seam
 
@@ -3563,17 +3534,6 @@ private theorem smoothClassical_sum_ite_pair_rev
     (∑ x : α, ∑ y : β, if a = x ∧ b = y then f x y else 0) = f a b := by
   simpa [eq_comm] using smoothClassical_sum_ite_pair f a b
 
-private theorem smoothClassical_if_pair3_zero
-    {α β γ : Type*} [DecidableEq α] [DecidableEq β]
-    [Zero γ] (p q : α) (s : β) (z : α) (w : β) (u : γ)
-    (hbad : ¬ (p = z ∧ q = z)) :
-    (if p = z ∧ q = z ∧ s = w then u else 0) = 0 := by
-  by_cases hp : p = z
-  · by_cases hq : q = z
-    · exact False.elim (hbad ⟨hp, hq⟩)
-    · simp [hp, hq]
-  · simp [hp]
-
 private theorem smoothClassical_if_pair4_zero
     {α β γ : Type*} [DecidableEq α] [DecidableEq β]
     [Zero γ] (p q r : α) (s : β) (z : α) (w : β) (u : γ)
@@ -3652,19 +3612,6 @@ private theorem smoothClassical_referenceIsometry_prod_refl_applyMatrix
     Fintype.sum_prod_type, Finset.sum_mul, Finset.mul_sum,
     mul_assoc, mul_comm]
 -/
-
-private theorem canonicalXYCoherentPurification_reindex_marginalA
-    (rho : State ((a × x) × (y × b))) :
-    ((canonicalXYCoherentPurification (a := a) (x := x) (y := y) (b := b) rho).reindex
-      (Equiv.prodComm ((a × b) × (x × y)) ((a × x) × (y × b)))).state.marginalA =
-      rho := by
-  have hpur := canonicalXYCoherentPurification_purifies
-    (a := a) (x := x) (y := y) (b := b) rho
-  rw [PureVector.purifies_iff] at hpur
-  apply State.ext
-  simpa [PureVector.reindex_state, State.reindex, State.marginalA,
-    partialTraceB, PureVector.state_matrix, rankOneMatrix_apply,
-    Equiv.prodComm] using hpur
 
 private theorem canonicalXYMaxAmplitude_gram_eq
     (rho : State ((a × x) × (y × b)))

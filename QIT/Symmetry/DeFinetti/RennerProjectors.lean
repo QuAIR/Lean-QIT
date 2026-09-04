@@ -489,17 +489,6 @@ private theorem tensorPower_span_le_RennerMIIDSubspace_zero
   exact pureVector_mem_RennerMIIDSubspace (a := a)
     (PureVector.tensorPower_reindex_addZero_isRennerMIIDIn_zero (a := a) ν m)
 
-private theorem RennerMIIDSubspace_zero_eq_tensorPower_span
-    (m : ℕ) (ν : PureVector a) :
-    RennerMIIDSubspace a m 0 ν =
-      Submodule.span ℂ
-        ({WithLp.toLp 2
-            ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).amp} :
-          Set (EuclideanSpace ℂ (TensorPower a (m + 0)))) :=
-  le_antisymm
-    (RennerMIIDSubspace_zero_le_tensorPower_span (a := a) m ν)
-    (tensorPower_span_le_RennerMIIDSubspace_zero (a := a) m ν)
-
 set_option synthInstance.maxHeartbeats 80000 in
 private theorem starProjection_singleton_apply {ι : Type _} [Fintype ι] [DecidableEq ι]
     (v x : EuclideanSpace ℂ ι) (hv : inner ℂ v v = 1)
@@ -743,16 +732,6 @@ theorem rennerMIIDProjector_eq_unitaryTwirlIntegrand
       unitaryTwirlIntegrand (a := a) (m + r)
         (rennerMIIDProjectorId (a := a) m r ν) U := rfl
 
-private theorem rennerMIIDProjector_integrable
-    [Nonempty a] (m r : ℕ) (ν : PureVector a) :
-    Integrable
-      (fun U : Matrix.unitaryGroup a ℂ =>
-        rennerMIIDProjector (a := a) m r ν U)
-      (unitaryHaarMeasure (a := a)) := by
-  have h := unitaryTwirl_integrand_integrable (a := a) (m + r)
-    (rennerMIIDProjectorId (a := a) m r ν)
-  simpa [rennerMIIDProjector_eq_unitaryTwirlIntegrand] using h
-
 private theorem rennerMIIDProjector_continuous
     (m r : ℕ) (ν : PureVector a) :
     Continuous fun U : Matrix.unitaryGroup a ℂ =>
@@ -803,12 +782,6 @@ private theorem submatrix_equiv_star_renner {ι κ : Type*} [Fintype ι] [Fintyp
   ext i j
   simp [Matrix.star_eq_conjTranspose, Matrix.conjTranspose_apply]
 
-private theorem submatrix_equiv_symm_submatrix_equiv_renner {ι κ : Type*}
-    [Fintype ι] [Fintype κ] (e : ι ≃ κ) (A : CMatrix κ) :
-    (A.submatrix e e).submatrix e.symm e.symm = A := by
-  ext i j
-  simp
-
 private theorem unitaryTwirlIntegrand_takeDrop_submatrix
     (n k : ℕ) (A : CMatrix (Prod (TensorPower a n) (TensorPower a k)))
     (U : Matrix.unitaryGroup a ℂ) :
@@ -833,6 +806,10 @@ private theorem unitaryTwirlIntegrand_takeDrop_submatrix
   have hU : Un.submatrix e.symm e.symm = Us := by
     simpa [Un, Us, e] using
       unitaryTensorPowerMatrix_takeDrop_submatrix (a := a) n k U
+  have submatrix_equiv_symm_submatrix_equiv_renner :
+      (A.submatrix e e).submatrix e.symm e.symm = A := by
+    ext i j
+    simp
   dsimp [unitaryTwirlIntegrand]
   change (Un * A.submatrix e e * star Un).submatrix e.symm e.symm =
     Us * A * star Us
@@ -1174,13 +1151,6 @@ private noncomputable def deFinettiCMatrixEntryCLM {ι : Type v}
         simp [Matrix.smul_apply] } :
       CMatrix ι →ₗ[ℝ] ℂ)
 
-private theorem integral_cMatrix_apply_apply {α : Type*} [MeasurableSpace α]
-    {μ : Measure α} {ι : Type v} [Fintype ι] [DecidableEq ι]
-    {f : α → CMatrix ι} (hf : Integrable f μ) (i j : ι) :
-    (∫ x, f x ∂μ) i j = ∫ x, f x i j ∂μ := by
-  simpa [deFinettiCMatrixEntryCLM] using
-    ((deFinettiCMatrixEntryCLM (ι := ι) i j).integral_comp_comm hf).symm
-
 private theorem integrable_cMatrix_apply_apply {α : Type*} [MeasurableSpace α]
     {μ : Measure α} {ι : Type v} [Fintype ι] [DecidableEq ι]
     {f : α → CMatrix ι} (hf : Integrable f μ) (i j : ι) :
@@ -1345,23 +1315,22 @@ private noncomputable def definettiCMatrixQuadraticCLM {ι : Type v}
   ∑ i, ∑ j, (star (x i) * x j) •
     definettiCMatrixEntryCLMComplex (ι := ι) i j
 
-private theorem definettiCMatrixQuadraticCLM_apply {ι : Type v}
-    [Fintype ι] [DecidableEq ι] (x : ι → ℂ) (A : CMatrix ι) :
-    definettiCMatrixQuadraticCLM x A = dotProduct (star x) (Matrix.mulVec A x) := by
-  simp [definettiCMatrixQuadraticCLM, definettiCMatrixEntryCLMComplex,
-    Matrix.mulVec, dotProduct]
-  refine Finset.sum_congr rfl ?_
-  intro i _
-  rw [Finset.mul_sum]
-  refine Finset.sum_congr rfl ?_
-  intro j _
-  ring
-
 private theorem integral_dotProduct_mulVec {α : Type*} [MeasurableSpace α]
     {μ : Measure α} {ι : Type v} [Fintype ι] [DecidableEq ι]
     {f : α → CMatrix ι} (hf : Integrable f μ) (x : ι → ℂ) :
     dotProduct (star x) (Matrix.mulVec (∫ t, f t ∂μ) x) =
       ∫ t, dotProduct (star x) (Matrix.mulVec (f t) x) ∂μ := by
+  have definettiCMatrixQuadraticCLM_apply {ι : Type v}
+      [Fintype ι] [DecidableEq ι] (x : ι → ℂ) (A : CMatrix ι) :
+      definettiCMatrixQuadraticCLM x A = dotProduct (star x) (Matrix.mulVec A x) := by
+    simp [definettiCMatrixQuadraticCLM, definettiCMatrixEntryCLMComplex,
+      Matrix.mulVec, dotProduct]
+    refine Finset.sum_congr rfl ?_
+    intro i _
+    rw [Finset.mul_sum]
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    ring
   simp_rw [← definettiCMatrixQuadraticCLM_apply x]
   exact
     ((definettiCMatrixQuadraticCLM x).integral_comp_comm hf).symm
@@ -1643,15 +1612,6 @@ private theorem rennerRhoUMatrix_continuous [Nonempty a] {n k : ℕ}
     (partialTraceBCLM (ι := TensorPower a n) (κ := TensorPower a k)).continuous.comp hK
   simpa [rennerRhoUMatrix, X] using
     hPT.const_smul (((Fintype.card (TensorPowerProfile a k) : ℝ) : ℂ))
-
-private theorem rennerRhoUMatrix_integrable [Nonempty a] {n k : ℕ}
-    (ρ : State (TensorPower a (n + k))) (ν : PureVector a) :
-    Integrable
-      (fun U : Matrix.unitaryGroup a ℂ =>
-        ρ.rennerRhoUMatrix (a := a) (n := n) (k := k) ν U)
-      (unitaryHaarMeasure (a := a)) :=
-  (rennerRhoUMatrix_continuous (a := a) (n := n) (k := k) ρ ν).integrable_of_hasCompactSupport
-    (HasCompactSupport.of_compactSpace _)
 
 /-- Renner's projected family
 `barρ_U = P_U^{m,r} ρ_U P_U^{m,r}` on the retained `m+r`

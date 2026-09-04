@@ -610,18 +610,15 @@ private lemma sum_xlog2_inv_card (M : Type u) [Fintype M] [Nonempty M] :
     rw [Finset.sum_const, nsmul_eq_mul]; rfl
   rw [hsum, card_mul_xlog2_inv M]
 
-/-- `xlog2 (if c then a else 0) = if c then xlog2 a else 0` (the zero case uses
-`0 log 0 := 0`). -/
-private lemma xlog2_ite {c : Prop} [Decidable c] {a : ℝ} :
-    xlog2 (if c then a else 0) = if c then xlog2 a else 0 := by
-  by_cases hc : c
-  · simp [hc]
-  · simp [hc, xlog2]
-
 /-- Sum of `xlog2` of the maximally-correlated diagonal over `M × M`. -/
 private lemma sum_xlog2_diag_prod (M : Type u) [Fintype M] [DecidableEq M] [Nonempty M] :
     ∑ (ij : Prod M M), xlog2 (if ij.1 = ij.2 then ((Fintype.card M : ℝ)⁻¹) else 0) =
       -log2 (Fintype.card M) := by
+  have xlog2_ite {c : Prop} [Decidable c] {a : ℝ} :
+      xlog2 (if c then a else 0) = if c then xlog2 a else 0 := by
+    by_cases hc : c
+    · simp [hc]
+    · simp [hc, xlog2]
   rw [show ∑ (ij : Prod M M), xlog2 (if ij.1 = ij.2 then _ else 0) =
         ∑ (ij : Prod M M), (if ij.1 = ij.2 then xlog2 ((Fintype.card M : ℝ)⁻¹) else 0) from by
         simp only [xlog2_ite]]

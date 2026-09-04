@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use Lean-QIT, please cite the software and the associated paper."
+title: "Lean-QIT"
+type: software
+version: 0.1.0
+date-released: 2026-09-04
+license: Apache-2.0
+repository-code: "https://github.com/QuAIR/Lean-QIT"
+url: "https://quair.github.io/Lean-QIT/"
+authors:
+  - family-names: Zhu
+    given-names: Chengkai
+  - family-names: Tang
+    given-names: Ziao
+  - family-names: Zhen
+    given-names: Guocheng
+  - family-names: Cao
+    given-names: Yimeng
+  - family-names: Zhao
+    given-names: Yusheng
+  - family-names: Chen
+    given-names: Ranyiliu
+  - family-names: Zhao
+    given-names: Xuanqiang
+  - family-names: Zhang
+    given-names: Lei
+  - family-names: Wang
+    given-names: Xin
+identifiers:
+  - type: doi
+    value: "10.48550/arXiv.2607.09632"
+    description: "Associated Lean-QIT paper"

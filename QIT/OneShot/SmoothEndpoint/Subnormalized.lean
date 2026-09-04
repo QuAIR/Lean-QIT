@@ -323,14 +323,6 @@ theorem referenceIsometry_conjTranspose_traceNonincreasingCP
     simpa [MatrixMap.ofKraus] using
       trace_re_conjTranspose_referenceIsometry_le V hX
 
-omit [Fintype a] [DecidableEq a] in
-private theorem referenceIsometry_rightBlock_applyMatrixRight
-    {bPlus : Type*} [Fintype bPlus] [DecidableEq bPlus]
-    (V : ReferenceIsometry b bPlus) (X : CMatrix (Prod a b)) (i j : a) :
-    ReferenceIsometry.rightBlock (V.applyMatrixRight X) i j =
-      V.matrix * ReferenceIsometry.rightBlock X i j * Matrix.conjTranspose V.matrix := by
-  rfl
-
 private theorem referenceIsometry_rightCompression_applyMatrixRight
     {bPlus : Type*} [Fintype bPlus] [DecidableEq bPlus]
     (V : ReferenceIsometry b bPlus) (X : CMatrix (Prod a b)) :
@@ -500,13 +492,6 @@ theorem ConditionalMinEntropyScaleFeasible.compress_conditioningIsometry
     rw [referenceIsometry_rightCompression_applyMatrixRight]
     simp [Channel.idChannel, MatrixMap.ofKraus]
 
-private theorem referenceIsometry_leftCompression_one
-    {aPlus : Type*} [Fintype aPlus] [DecidableEq aPlus]
-    (V : ReferenceIsometry a aPlus) :
-    MatrixMap.ofKraus (fun _ : Unit => Matrix.conjTranspose V.matrix)
-      (1 : CMatrix aPlus) = (1 : CMatrix a) := by
-  simp [MatrixMap.ofKraus, V.isometry]
-
 /-- Feasible side operators on an arbitrarily isometrically enlarged source
 register compress back without changing the conditioning side operator. -/
 theorem ConditionalMinEntropyScaleFeasible.sourceIsometryCompressed
@@ -515,6 +500,10 @@ theorem ConditionalMinEntropyScaleFeasible.sourceIsometryCompressed
     (V : ReferenceIsometry a aPlus)
     (hT : ConditionalMinEntropyScaleFeasible (a := aPlus) ρPlus T) :
     ConditionalMinEntropyScaleFeasible (a := a) (ρPlus.sourceIsometryCompressed V) T := by
+  have referenceIsometry_leftCompression_one :
+      MatrixMap.ofKraus (fun _ : Unit => Matrix.conjTranspose V.matrix)
+        (1 : CMatrix aPlus) = (1 : CMatrix a) := by
+    simp [MatrixMap.ofKraus, V.isometry]
   constructor
   · exact hT.1
   · let Γ : MatrixMap aPlus a :=
