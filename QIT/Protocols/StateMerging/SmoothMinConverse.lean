@@ -86,8 +86,8 @@ theorem conditionalEntropy_le_of_isAchievableStateMergingRate
     (psi : PureVector (Prod (Prod a b) r)) (R : Real)
     (hR : IsAchievableStateMergingRate.{u, v, w, x, y, z, p, q} psi R) :
     psi.state.marginalA.conditionalEntropy ≤ R := by
-  letI : Nonempty a := ⟨(Classical.choice psi.state.nonempty).1.1⟩
-  letI : Nonempty r := ⟨(Classical.choice psi.state.nonempty).2⟩
+  let : Nonempty a := ⟨(Classical.choice psi.state.nonempty).1.1⟩
+  let : Nonempty r := ⟨(Classical.choice psi.state.nonempty).2⟩
   let eta : Real := 1 / 2
   have hetaPos : 0 < eta := by simp [eta]
   have heta0 : 0 ≤ eta := le_of_lt hetaPos
@@ -118,19 +118,19 @@ theorem conditionalEntropy_le_of_isAchievableStateMergingRate
       lB, lBFintype, lBDecidableEq,
       outcome, outcomeFintype, outcomeDecidableEq, outcomeNonempty,
       C, hrate, herror⟩ := hcodes n hnN
-  letI : Fintype kA := kAFintype
-  letI : DecidableEq kA := kADecidableEq
-  letI : Nonempty kA := kANonempty
-  letI : Fintype kB := kBFintype
-  letI : DecidableEq kB := kBDecidableEq
-  letI : Fintype lA := lAFintype
-  letI : DecidableEq lA := lADecidableEq
-  letI : Nonempty lA := lANonempty
-  letI : Fintype lB := lBFintype
-  letI : DecidableEq lB := lBDecidableEq
-  letI : Fintype outcome := outcomeFintype
-  letI : DecidableEq outcome := outcomeDecidableEq
-  letI : Nonempty outcome := outcomeNonempty
+  let : Fintype kA := kAFintype
+  let : DecidableEq kA := kADecidableEq
+  let : Nonempty kA := kANonempty
+  let : Fintype kB := kBFintype
+  let : DecidableEq kB := kBDecidableEq
+  let : Fintype lA := lAFintype
+  let : DecidableEq lA := lADecidableEq
+  let : Nonempty lA := lANonempty
+  let : Fintype lB := lBFintype
+  let : DecidableEq lB := lBDecidableEq
+  let : Fintype outcome := outcomeFintype
+  let : DecidableEq outcome := outcomeDecidableEq
+  let : Nonempty outcome := outcomeNonempty
   have hradius : C.oneShotConversePurifiedRadius ≤ eta := by
     simpa only [StateMergingBlockProtocol.oneShotConversePurifiedRadius, eta] using
       stateMergingPurifiedRadius_le_half C.fidelityError_nonneg herror

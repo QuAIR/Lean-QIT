@@ -136,6 +136,7 @@ private theorem unit_map_eq_idChannel :
   cases i
   cases j
   simp [Channel.unit, MatrixMap.unit, Channel.idChannel, MatrixMap.ofKraus]
+  rfl
 
 /-- One-use pre-channel state with the message and Bob side-information grouped
 as the reference register and the channel input as the target register. -/
@@ -199,7 +200,8 @@ theorem oneUseReferenceOutputState_eq_channel_referenceInputState
       MatrixMap.kron (Channel.idChannel (Prod M EB)).map N.map
         C.oneUseReferenceInputState.matrix
         ((xm, xe), xb) ((ym, ye), yb)
-  rw [MatrixMap.kron_idChannel_apply_slice]
+  refine (MatrixMap.kron_idChannel_apply_slice (N.tensorPower 1).map _
+    ((xb, PUnit.unit), xe) ((yb, PUnit.unit), ye)).trans ?_
   change
     (N.tensorPower 1).map
         (fun z z' =>
@@ -218,7 +220,8 @@ theorem oneUseReferenceOutputState_eq_channel_referenceInputState
         C.oneUseReferenceInputState.matrix
         ((xm, xe), xb) ((ym, ye), yb)
   rw [unit_map_eq_idChannel]
-  rw [MatrixMap.kron_idChannel_apply_slice]
+  refine (MatrixMap.kron_idChannel_apply_slice N.map _
+    (xb, PUnit.unit) (yb, PUnit.unit)).trans ?_
   rw [MatrixMap.kron_idChannel_left_apply_slice]
   change
     N.map

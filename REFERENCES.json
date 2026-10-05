@@ -437,6 +437,33 @@
       "arxiv_id": "0904.4483",
       "doi": "10.1103/PhysRevA.80.022339",
       "url": "https://arxiv.org/abs/0904.4483"
+    },
+    {
+      "key": "BeigiTomamichel2026BlowingUp",
+      "source_id": "beigi-tomamichel-2026-blowing-up",
+      "title": "Strong Converse for Quantum Capacity via a Fully Quantum Blowing-Up Lemma",
+      "authors": [
+        "Salman Beigi",
+        "Marco Tomamichel"
+      ],
+      "year": 2026,
+      "kind": "preprint",
+      "arxiv_id": "2609.11771",
+      "doi": "10.48550/arXiv.2609.11771",
+      "url": "https://arxiv.org/abs/2609.11771"
+    },
+    {
+      "key": "Sherstov2020AlgorithmicPolynomials",
+      "source_id": "sherstov-2020-algorithmic-polynomials",
+      "title": "Algorithmic polynomials",
+      "authors": [
+        "Alexander A. Sherstov"
+      ],
+      "year": 2020,
+      "kind": "paper",
+      "arxiv_id": "1801.04607",
+      "doi": "10.1137/19M1278831",
+      "url": "https://arxiv.org/abs/1801.04607"
     }
   ]
 }

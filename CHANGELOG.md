@@ -4,6 +4,10 @@ This file records notable changes to the public Lean-QIT package.
 
 ## [Unreleased]
 
+### Changed
+
+- Pinned Lean and mathlib to `v4.34.0`.
+
 ## [0.1.0] - 2026-09-04
 
 ### Added

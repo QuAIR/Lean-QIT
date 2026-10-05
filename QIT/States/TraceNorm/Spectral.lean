@@ -36,6 +36,10 @@ universe u
 
 noncomputable section
 
+/-- Hilbert--Schmidt square used in the Step 4 variance computation. -/
+def hilbertSchmidtSq {a : Type u} [Fintype a] [DecidableEq a] (M : CMatrix a) : ℝ :=
+  ((star M * M).trace).re
+
 variable {a : Type u} [Fintype a] [DecidableEq a]
 
 /-- Finite singular-value sum for a square complex matrix, expressed through
@@ -212,10 +216,6 @@ theorem traceNorm_sq_le_finrank_range_mul_hilbertSchmidt (M : CMatrix a) :
     exact_mod_cast h
   simpa [Finsupp.sum, hcard] using hcs
 
-/-- Hilbert--Schmidt square used in the Step 4 variance computation. -/
-def hilbertSchmidtSq [Fintype a] [DecidableEq a] (M : CMatrix a) : ℝ :=
-  ((star M * M).trace).re
-
 omit [Fintype a] [DecidableEq a] in
 theorem hilbertSchmidtSq_nonneg [Fintype a] [DecidableEq a] (M : CMatrix a) :
     0 ≤ hilbertSchmidtSq M := by
@@ -316,8 +316,13 @@ theorem posSemidef_le_trace_re_smul_one {A : CMatrix a} (hA : A.PosSemidef) :
   let U : Matrix.unitaryGroup a ℂ := hA.1.eigenvectorUnitary
   let D : CMatrix a := Matrix.diagonal fun i => ((hA.1.eigenvalues i : ℝ) : ℂ)
   have hdiag : A = (U : CMatrix a) * D * star (U : CMatrix a) := by
+    have hspec := hA.1.spectral_theorem
+    -- 4.34: `spectral_theorem` states the diagonal with `RCLike.ofReal ∘`;
+    -- the composition is rfl-equal to the pointwise coercion used here.
+    rw [show (RCLike.ofReal ∘ hA.1.eigenvalues) =
+          (fun i => ((hA.1.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hA.1.spectral_theorem
+      using hspec
   have heig_sum : ∑ i, hA.1.eigenvalues i = A.trace.re := by
     have hc : A.trace = ∑ i, ((hA.1.eigenvalues i : ℝ) : ℂ) := by
       exact hA.1.trace_eq_sum_eigenvalues
@@ -384,9 +389,10 @@ theorem norm_le_trace_re_mul_norm_one_of_posSemidef {A : CMatrix a} (hA : A.PosS
   have hle := posSemidef_le_trace_re_smul_one (a := a) hA
   have hnorm :
       ‖A‖ ≤ ‖(((A.trace.re : ℝ) : ℂ) • (1 : CMatrix a))‖ :=
-    CStarAlgebra.norm_le_norm_of_nonneg_of_le
+    -- 4.34: renamed to `..._of_le_of_nonneg` with the two hypotheses swapped.
+    CStarAlgebra.norm_le_norm_of_le_of_nonneg
       (A := CMatrix a) (a := A)
-      (b := (((A.trace.re : ℝ) : ℂ) • (1 : CMatrix a))) hA0 hle
+      (b := (((A.trace.re : ℝ) : ℂ) • (1 : CMatrix a))) hle hA0
   calc
     ‖A‖ ≤ ‖(((A.trace.re : ℝ) : ℂ) • (1 : CMatrix a))‖ := hnorm
     _ = A.trace.re * ‖(1 : CMatrix a)‖ := by

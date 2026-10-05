@@ -328,7 +328,7 @@ valid without adding a `Nonempty` assumption on the finite index type. -/
 theorem cMatrix_l2OperatorNorm_one_le :
     ‖(1 : CMatrix a)‖ ≤ (1 : ℝ) := by
   rw [Matrix.cstar_norm_def]
-  simpa using
+  simpa [ContinuousLinearMap.one_def] using
     (ContinuousLinearMap.norm_id_le (𝕜 := ℂ) (E := EuclideanSpace ℂ a))
 
 /-- Matrix unit-ball criterion for the L2 operator norm.
@@ -343,7 +343,7 @@ theorem cMatrix_l2OperatorNorm_le_one_of_conjTranspose_mul_self_le_one
       (Matrix.posSemidef_conjTranspose_mul_self X)
   have hnorm_sq_le_norm_one :
       ‖Matrix.conjTranspose X * X‖ ≤ ‖(1 : CMatrix a)‖ :=
-    CStarAlgebra.norm_le_norm_of_nonneg_of_le hpos hX
+    CStarAlgebra.norm_le_norm_of_le_of_nonneg hX hpos
   have hnorm_one_le : ‖(1 : CMatrix a)‖ ≤ (1 : ℝ) :=
     cMatrix_l2OperatorNorm_one_le
   have hnorm_sq_le_one : ‖Matrix.conjTranspose X * X‖ ≤ (1 : ℝ) :=
@@ -453,7 +453,7 @@ theorem cMatrix_l2OperatorNorm_sq_le_of_conjTranspose_mul_self_le_smul_one
       (Matrix.posSemidef_conjTranspose_mul_self Y)
   have hnorm_le :
       ‖Matrix.conjTranspose Y * Y‖ ≤ ‖((r : ℂ) • (1 : CMatrix b))‖ :=
-    CStarAlgebra.norm_le_norm_of_nonneg_of_le hpos hY
+    CStarAlgebra.norm_le_norm_of_le_of_nonneg hY hpos
   have hone : ‖(1 : CMatrix b)‖ ≤ (1 : ℝ) :=
     cMatrix_l2OperatorNorm_one_le
   have hnorm_rhs : ‖((r : ℂ) • (1 : CMatrix b))‖ ≤ r := by
@@ -1109,7 +1109,7 @@ theorem nnreal_classical_renyi_power_sum_pos
   classical
   have hnonempty : Nonempty ι := by
     by_contra h
-    haveI : IsEmpty ι := not_nonempty_iff.mp h
+    have : IsEmpty ι := not_nonempty_iff.mp h
     have hzero : (∑ i, p i) = 0 := by simp
     rw [hzero] at hp_sum
     exact zero_ne_one hp_sum

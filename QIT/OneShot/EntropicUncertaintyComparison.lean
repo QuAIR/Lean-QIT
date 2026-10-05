@@ -197,13 +197,20 @@ private theorem ofEquiv_compression_eq_reindex_symm
         (ReferenceIsometry.ofEquiv e).matrix =
       Matrix.reindex e.symm e.symm M := by
   classical
+  have hcong : ∀ (i : p) (j : q), ((ReferenceIsometry.ofEquiv e).matrix)ᴴ i j =
+      if j = e i then (1:ℂ) else 0 := by
+    intro i' j'
+    show star (if j' = e i' then (1:ℂ) else 0) = if j' = e i' then 1 else 0
+    by_cases h : j' = e i' <;> simp [h]
   ext i j
   rw [Matrix.mul_apply, Finset.sum_eq_single (e j)]
   · rw [Matrix.mul_apply, Finset.sum_eq_single (e i)]
-    · simp [ReferenceIsometry.ofEquiv, Matrix.reindex_apply]
+    · rw [hcong i (e i)]
+      simp [Matrix.reindex_apply, ReferenceIsometry.ofEquiv]
     · intro k _ hk
       have hki : k ≠ e i := by simpa [eq_comm] using hk
-      simp [ReferenceIsometry.ofEquiv, Matrix.conjTranspose_apply, hki]
+      rw [hcong i k]
+      simp [hki]
     · simp
   · intro k _ hk
     simp [ReferenceIsometry.ofEquiv, hk]
@@ -269,19 +276,34 @@ theorem coherentMeasurementState_eq_reindex_prod
     subst j'
     simp [MatrixMap.ofReferenceIsometry_apply, Matrix.mul_apply,
       coherentGroupedSideIsometry_matrix, coherentSideIsometry_matrix,
-      coherentChannel_map_apply, coherentBracket, Fintype.sum_prod_type,
-      Finset.sum_mul, Finset.sum_ite_eq, eq_comm, mul_assoc]
-    simp [apply_ite, map_zero, Finset.sum_ite_eq, eq_comm]
+      Fintype.sum_prod_type,
+      Finset.sum_mul, Finset.sum_ite_eq, mul_assoc]
+    have hmap := coherentChannel_map_apply hY
+      (fun i i' => rho.matrix (i, k) (i', k')) (i, i) (i', i')
+    simp only [hmap]
+    simp [apply_ite, map_zero, Finset.sum_ite_eq, coherentBracket, mul_assoc]
     rw [Finset.sum_comm]
   · simp [MatrixMap.ofReferenceIsometry_apply, Matrix.mul_apply,
       coherentGroupedSideIsometry_matrix, coherentSideIsometry_matrix,
-      coherentChannel_map_apply, hij, hi'j']
+      hij, hi'j']
+    have hmap := coherentChannel_map_apply hY
+      (fun i i' => rho.matrix (i, k) (i', k')) (j, j) (i', j')
+    simp only [hmap]
+    simp [hi'j']
   · simp [MatrixMap.ofReferenceIsometry_apply, Matrix.mul_apply,
       coherentGroupedSideIsometry_matrix, coherentSideIsometry_matrix,
-      coherentChannel_map_apply, hij, hi'j']
+      hij, hi'j']
+    have hmap := coherentChannel_map_apply hY
+      (fun i i' => rho.matrix (i, k) (i', k')) (i, j) (j', j')
+    simp only [hmap]
+    simp [hij]
   · simp [MatrixMap.ofReferenceIsometry_apply, Matrix.mul_apply,
       coherentGroupedSideIsometry_matrix, coherentSideIsometry_matrix,
-      coherentChannel_map_apply, hij, hi'j']
+      hij, hi'j']
+    have hmap := coherentChannel_map_apply hY
+      (fun i i' => rho.matrix (i, k) (i', k')) (i, j) (i', j')
+    simp only [hmap]
+    simp [hij, hi'j']
 
 /-- Tracing both coherent outcome registers leaves the original side
 information marginal. -/
@@ -328,7 +350,8 @@ theorem coherentGroupedSideIsometry_compression_identityTensor
   let T := State.identityTensorStateMatrix (a := y) sigma
   have hreindex : Matrix.conjTranspose P * T * P =
       copiedIdentityTensor (y := y) sigma.matrix := by
-    simpa [P, T, e, ProjectiveMeasurement.IsRankOne.copiedIdentityTensor] using
+    simpa [P, T, e, ProjectiveMeasurement.IsRankOne.copiedIdentityTensor,
+      State.identityTensorStateMatrix] using
       ofEquiv_compression_eq_reindex_symm e T
   change Matrix.conjTranspose (P * V) * T * (P * V) =
     Matrix.conjTranspose V * copiedIdentityTensor (y := y) sigma.matrix * V
@@ -392,8 +415,7 @@ theorem measureCoherentPullback_le_overlap_identityTensorMarginal
   have hblock : forall outcome,
       (copiedOutcomeBlock sigma.matrix outcome).PosSemidef := by
     intro outcome
-    simpa [copiedOutcomeBlock] using
-      sigma.pos.submatrix (fun side : b => (outcome, side))
+    exact sigma.pos.submatrix (fun side : b => (outcome, side))
   rw [hY.measureCoherentPullback_rankOne hX]
   calc
     (Finset.univ.sum fun measured => Finset.univ.sum fun outcome =>
@@ -424,7 +446,7 @@ theorem conditionalSandwichedRenyiUpSourceCandidate_coherentMeasurement_sub_log2
       (measureSubsystemState X.toPOVM rho).conditionalSandwichedRenyiUpSourceCandidate
         sigma.marginalB (sigma.marginalB_posDef_of_posDef hsigma)
         alpha halpha_pos halpha_one := by
-  letI : Nonempty a := by
+  let : Nonempty a := by
     rcases rho.nonempty with ⟨i, _⟩
     exact ⟨i⟩
   let coherent := hY.coherentMeasurementState rho
@@ -469,8 +491,7 @@ theorem conditionalSandwichedRenyiUpSourceCandidate_coherentMeasurement_sub_log2
         rho hrin.posSemidef Phi alpha hrange
     simpa [measured, Phi, measureSubsystemState] using h
   have hdom : Phi.map rin <= c • rout := by
-    simpa [Phi, rin, rout, c] using
-      hX.measureCoherentPullback_le_overlap_identityTensorMarginal hY sigma
+    exact hX.measureCoherentPullback_le_overlap_identityTensorMarginal hY sigma
   have hscaled : (c • rout).PosDef :=
     Matrix.PosDef.smul hrout hc
   have hreference :
@@ -541,10 +562,10 @@ theorem conditionalSandwichedRenyiUpSource_coherentMeasurement_sub_log2_le
     alpha hpos halpha_one
   let T := measured.conditionalSandwichedRenyiUpSourceValueSet
     alpha hpos halpha_one
-  letI : Nonempty (Prod y b) := by
+  let : Nonempty (Prod y b) := by
     rcases coherent.nonempty with ⟨_, side⟩
     exact ⟨side⟩
-  letI : Nonempty b := by
+  let : Nonempty b := by
     rcases rho.nonempty with ⟨_, side⟩
     exact ⟨side⟩
   have hS : S.Nonempty := by
@@ -582,7 +603,7 @@ theorem conditionalEntropy_coherentMeasurement_sub_log2_le
     (hY.coherentMeasurementState rho).conditionalEntropy -
         log2 (X.rankOneTraceOverlap Y) <=
       (measureSubsystemState X.toPOVM rho).conditionalEntropy := by
-  letI : Nonempty a := by
+  let : Nonempty a := by
     rcases rho.nonempty with ⟨input, _side⟩
     exact ⟨input⟩
   let coherent := hY.coherentMeasurementState rho
@@ -623,8 +644,7 @@ theorem conditionalEntropy_coherentMeasurement_sub_log2_le
         rho hrin Phi
     simpa [measured, Phi, measureSubsystemState] using h
   have hdom : Phi.map rin <= c • rout := by
-    simpa [Phi, rin, rout, c] using
-      hX.measureCoherentPullback_le_overlap_identityTensorMarginal hY sigma
+    exact hX.measureCoherentPullback_le_overlap_identityTensorMarginal hY sigma
   have hscaled : (c • rout).PosSemidef :=
     Matrix.PosSemidef.smul hrout hc.le
   have hreference :
@@ -675,7 +695,7 @@ theorem conditionalMaxEntropy_coherentMeasurement_sub_log2_le
   let measured := measureSubsystemState X.toPOVM rho
   let S := coherent.conditionalSandwichedRenyiUpSourceValueSet
     (1 / 2 : Real) (by norm_num) (by norm_num)
-  letI : Nonempty (Prod y b) := by
+  let : Nonempty (Prod y b) := by
     rcases coherent.nonempty with ⟨_, side⟩
     exact ⟨side⟩
   have hS : S.Nonempty := by
@@ -715,7 +735,7 @@ theorem conditionalMinEntropyFeasible_coherentMeasurement_sub_log2
     State.ConditionalMinEntropyFeasible (a := x)
       (measureSubsystemState X.toPOVM rho) sigma.marginalB
       (lam - log2 (X.rankOneTraceOverlap Y)) := by
-  letI : Nonempty a := by
+  let : Nonempty a := by
     rcases rho.nonempty with ⟨i, _⟩
     exact ⟨i⟩
   let coherent := hY.coherentMeasurementState rho
@@ -760,8 +780,7 @@ theorem conditionalMinEntropyFeasible_coherentMeasurement_sub_log2
       simpa [Matrix.le_iff] using hcompressed
     simpa [map_sub, map_smul] using Phi.mapsPositive _ hpos
   have hdom : Phi.map rin <= (c : Complex) • rout := by
-    simpa [Phi, rin, rout, c] using
-      hX.measureCoherentPullback_le_overlap_identityTensorMarginal hY sigma
+    exact hX.measureCoherentPullback_le_overlap_identityTensorMarginal hY sigma
   have hscaled :
       (t : Complex) • Phi.map rin <=
         (t : Complex) • ((c : Complex) • rout) :=
@@ -783,7 +802,7 @@ theorem conditionalMinEntropyFeasible_coherentMeasurement_sub_log2
         simp only [smul_smul]
         norm_cast
         rw [htc]
-  simpa [Phi, measured, rout, c, measureSubsystemState] using hfinal
+  exact hfinal
 
 /-- The `alpha = infinity` endpoint of Tomamichel's coherent-measurement
 comparison. -/
@@ -796,7 +815,7 @@ theorem conditionalMinEntropy_coherentMeasurement_sub_log2_le
   let measured := measureSubsystemState X.toPOVM rho
   let S := coherent.conditionalMinEntropyFeasibleExponentValueSet (a := y)
   let T := measured.conditionalMinEntropyFeasibleExponentValueSet (a := x)
-  letI : Nonempty (Prod y b) := by
+  let : Nonempty (Prod y b) := by
     rcases coherent.nonempty with ⟨_, side⟩
     exact ⟨side⟩
   have hS : S.Nonempty :=

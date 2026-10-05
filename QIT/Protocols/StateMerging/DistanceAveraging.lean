@@ -120,7 +120,7 @@ theorem sum_jointPositiveBranchProbability_mul_squaredFidelity_eq_output
         (L.finalNormalizedBranch psi j).state.squaredFidelity target.state) =
       (L.toChannel.applyState psi.state).squaredFidelity target.state := by
   apply State.squaredFidelity_sum_smul_pure_right
-  simpa using L.sum_jointPositiveBranchProbability_smul_finalNormalizedBranch_state_matrix psi
+  exact L.sum_jointPositiveBranchProbability_smul_finalNormalizedBranch_state_matrix psi
 
 /-- The HOW branch average of full trace distances is controlled by the
 fidelity error of the realized one-way LOCC output. -/

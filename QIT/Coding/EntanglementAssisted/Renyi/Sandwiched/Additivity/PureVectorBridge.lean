@@ -1190,7 +1190,9 @@ theorem weightedPurification_holderUnitBall_sSup_le_sandwichedMutualInformationS
     rw [psdTraceHolderUnitBall_sSup_eq (M := M) hM (p := alpha)
       (q := Real.conjExponent alpha)
       (Real.HolderConjugate.conjExponent halpha)] at hle
-    simpa [M, q] using hle
+    have hle' : sandwichedMutualInformationSionBracketRe rhoA ψ σB τC alpha ≤
+        Real.rpow ((CFC.rpow M alpha).trace.re) (1 / alpha) := hle
+    exact hle'
   have hholderNonempty :
       (psdTraceHolderUnitBallValueSet M q).Nonempty :=
     Set.nonempty_of_mem (psdTraceHolderUnitBall_isGreatest hM hpq).1
@@ -1243,7 +1245,6 @@ theorem weightedPurification_holderUnitBall_sSup_le_sandwichedMutualInformationS
     let τC : State c := { matrix := T, pos := hT, trace_eq_one := hTtrace }
     have hτpow : CFC.rpow τC.matrix r = N := by
       dsimp [τC, T]
-      change (N ^ q) ^ r = N
       rw [CFC.rpow_rpow_of_exponent_nonneg N q r hq_nonneg hr_nonneg
         (Matrix.nonneg_iff_posSemidef.mpr hN)]
       rw [hqr]
@@ -1330,7 +1331,9 @@ theorem weightedPurification_holderUnitBall_sSup_le_sandwichedMutualInformationS
     rw [psdTraceHolderUnitBall_sSup_eq (M := M) hM (p := alpha)
       (q := Real.conjExponent alpha)
       (Real.HolderConjugate.conjExponent halpha)] at hle
-    simpa [M, q] using hle
+    have hle' : sandwichedMutualInformationSionBracketRe rhoA ψ σB τC alpha ≤
+        Real.rpow ((CFC.rpow M alpha).trace.re) (1 / alpha) := hle
+    exact hle'
   have hholderNonempty :
       (psdTraceHolderUnitBallValueSet M q).Nonempty :=
     Set.nonempty_of_mem (psdTraceHolderUnitBall_isGreatest hM hpq).1
@@ -1383,7 +1386,6 @@ theorem weightedPurification_holderUnitBall_sSup_le_sandwichedMutualInformationS
     let τC : State c := { matrix := T, pos := hT, trace_eq_one := hTtrace }
     have hτpow : CFC.rpow τC.matrix r = N := by
       dsimp [τC, T]
-      change (N ^ q) ^ r = N
       rw [CFC.rpow_rpow_of_exponent_nonneg N q r hq_nonneg hr_nonneg
         (Matrix.nonneg_iff_posSemidef.mpr hN)]
       rw [hqr]
@@ -1860,7 +1862,7 @@ theorem exists_uniformlyPositiveDensityMatrixSet_mem_of_posDef
     ∃ delta : ℝ, 0 < delta ∧ delta ≤ (Fintype.card b : ℝ)⁻¹ ∧
       σ.matrix ∈ State.uniformlyPositiveDensityMatrixSet delta b := by
   classical
-  haveI : Nonempty b := σ.nonempty
+  have : Nonempty b := σ.nonempty
   rcases σ.exists_pos_scalar_smul_one_le_matrix_of_posDef hσ with ⟨c, hc_pos, hc_le⟩
   have hcard_pos : 0 < (Fintype.card b : ℝ) := by
     exact_mod_cast Fintype.card_pos_iff.mpr ‹Nonempty b›
@@ -2187,7 +2189,7 @@ theorem sandwichedACTraceMatrixLog_le_fullRankSionBracketLog_iInf
       sInf (Set.range fun σB : {σ : State b // σ.matrix.PosDef} =>
         alpha / (alpha - 1) *
           log2 (sandwichedMutualInformationSionBracketRe rhoA ψ σB.1 τC alpha)) := by
-  haveI : Nonempty {σ : State b // σ.matrix.PosDef} :=
+  have : Nonempty {σ : State b // σ.matrix.PosDef} :=
     ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   refine le_csInf (Set.range_nonempty _) ?_
   rintro y ⟨σB, rfl⟩
@@ -2401,7 +2403,7 @@ theorem sandwichedMutualInformationSionBracketRe_fullRank_sInf_eq_psdSchattenPNo
   let S := {sigma : State b // sigma.matrix.PosDef}
   let f : S -> Real := fun sigmaB =>
     sandwichedMutualInformationSionBracketRe rhoA psi sigmaB.1 tauC alpha
-  haveI : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
+  have : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   have hLower : target ∈ lowerBounds (Set.range f) := by
     intro y hy
     rcases hy with ⟨sigmaB, rfl⟩
@@ -2474,7 +2476,7 @@ theorem sandwichedMutualInformationSionBracketRe_fullRank_sInf_eq_psdSchattenPNo
       have hpow :=
         (Real.continuousAt_rpow_const (1 : Real) r (Or.inl one_ne_zero)).tendsto.comp
           htraceScale
-      simpa using hpow
+      simpa [Function.comp_def] using hpow
     have hregValue :
         Filter.Tendsto
           (fun eps : Real => ((M * CFC.rpow (reg eps) r).trace).re)
@@ -2593,7 +2595,7 @@ theorem sandwichedMutualInformationSionBracketLog_fullRank_sInf_eq_ACTraceMatrix
       (sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha)
       (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA psi tauC alpha)
       (sandwichedAlternateSchattenOrder halpha)
-  haveI : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
+  have : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   have hraw_sInf : sInf (Set.range raw) = target := by
     simpa [S, raw, target] using
       sandwichedMutualInformationSionBracketRe_fullRank_sInf_eq_psdSchattenPNorm
@@ -2698,7 +2700,7 @@ theorem sandwichedMutualInformationSionBracketLog_fullRank_sInf_eq_ACTraceMatrix
       (sandwichedMutualInformationACTraceMatrix rhoA psi tauC alpha)
       (sandwichedMutualInformationACTraceMatrix_posSemidef rhoA psi tauC alpha)
       (sandwichedAlternateSchattenOrder halpha)
-  haveI : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
+  have : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   have hraw_sInf : sInf (Set.range raw) = target := by
     simpa [S, raw, target] using
       sandwichedMutualInformationSionBracketRe_fullRank_sInf_eq_psdSchattenPNorm

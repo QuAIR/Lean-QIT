@@ -186,10 +186,9 @@ private theorem vonNeumann_eq_cfc_trace (ρ : State a) :
     ρ.vonNeumann = ((cfc entropyCfcComplex ρ.matrix).trace).re := by
   rw [State.vonNeumann]
   have hreal :
-      cfc entropyCfcScalar ρ.matrix = cfc entropyCfcComplex ρ.matrix := by
-    simpa [entropyCfcComplex] using
-      (cfc_real_eq_complex (a := ρ.matrix) entropyCfcScalar
-        (ha := ρ.pos.isHermitian.isSelfAdjoint))
+      cfc entropyCfcScalar ρ.matrix = cfc entropyCfcComplex ρ.matrix :=
+    cfc_real_eq_complex (a := ρ.matrix) entropyCfcScalar
+      (ha := ρ.pos.isHermitian.isSelfAdjoint)
   rw [← hreal]
   have hcfc :
       cfc entropyCfcScalar ρ.matrix =
@@ -261,9 +260,9 @@ theorem vonNeumann_nonneg (ρ : State a) : 0 ≤ vonNeumann ρ := by
   apply Finset.sum_nonpos
   intro i _
   by_cases hl : hH.eigenvalues i = 0
-  · simp only [xlog2, if_pos hl]
+  · simp only [xlog2, ite_eq_left hl]
     exact le_rfl
-  · simp only [xlog2, if_neg hl]
+  · simp only [xlog2, ite_eq_right hl]
     have hpos : 0 < hH.eigenvalues i := lt_of_le_of_ne (hnonneg i) (Ne.symm hl)
     have hlog2le : log2 (hH.eigenvalues i) ≤ 0 := by
       unfold log2
@@ -292,7 +291,7 @@ theorem vonNeumann_le_log_card (ρ : State a) :
   have hcard_pos : 0 < Fintype.card a := by
     by_contra hcard
     have hcard_zero : Fintype.card a = 0 := Nat.eq_zero_of_not_pos hcard
-    haveI : IsEmpty a := Fintype.card_eq_zero_iff.mp hcard_zero
+    have : IsEmpty a := Fintype.card_eq_zero_iff.mp hcard_zero
     have hsum_zero : ∑ i, hH.eigenvalues i = 0 := by simp
     have : (0 : ℝ) = 1 := hsum_zero.symm.trans hsum
     norm_num at this
@@ -302,7 +301,7 @@ theorem vonNeumann_le_log_card (ρ : State a) :
   have hxlog2_mul (x : ℝ) (hx : 0 ≤ x) : xlog2 x * Real.log 2 = x * Real.log x := by
     by_cases h : x = 0
     · simp [xlog2, h]
-    · simp only [xlog2, if_neg h, log2]
+    · simp only [xlog2, ite_eq_right h, log2]
       field_simp [ne_of_gt hlog2_pos]
   -- Suffices: vonNeumann ρ * Real.log 2 ≤ Real.log n
   -- Because: vonNeumann ≤ log2 n = Real.log n / Real.log 2
@@ -429,8 +428,8 @@ theorem trace_mul_psdLog_eq_sum_eigenvalues_mul_log
   let D : CMatrix a := Matrix.diagonal fun i => ((hρ.1.eigenvalues i : ℝ) : ℂ)
   let L : CMatrix a := Matrix.diagonal fun i => ((Real.log (hρ.1.eigenvalues i) : ℝ) : ℂ)
   have hmat : ρ.matrix = (U : CMatrix a) * D * star (U : CMatrix a) := by
-    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hρ.1.spectral_theorem
+    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply,
+      Function.comp_def] using hρ.1.spectral_theorem
   have hlog : psdLog ρ.matrix hρ = (U : CMatrix a) * L * star (U : CMatrix a) := by
     rw [psdLog, hρ.1.cfc_eq]
     simp [U, L, Matrix.IsHermitian.cfc, Unitary.conjStarAlgAut_apply, Function.comp_def]

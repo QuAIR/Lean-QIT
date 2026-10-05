@@ -81,7 +81,7 @@ def classicalCopyProjector (I : Type u) [Fintype I] [DecidableEq I] :
 namespace ProjectiveMeasurementLift
 
 open scoped ComplexOrder MatrixOrder
-open Matrix
+open _root_.Matrix
 
 local postfix:1024 "†" => Matrix.conjTranspose
 
@@ -251,7 +251,7 @@ theorem matrix_le_identity_kronecker_of_diagonal_blocks_le_posDef
       X (Matrix.kronecker (1 : CMatrix I) Q) hQglobal
       (c := 1) zero_lt_one).1 hcomplement'
   norm_num at hresult
-  simpa only [hXGram] using hresult
+  simpa only [hXGram, Matrix.kronecker] using hresult
 
 /-- Positive-semidefinite version of
 `matrix_le_identity_kronecker_of_diagonal_blocks_le_posDef`.  A small identity
@@ -268,18 +268,16 @@ theorem matrix_le_identity_kronecker_of_diagonal_blocks_le
   have hDherm : D.IsHermitian :=
     ((Matrix.PosSemidef.one.kronecker hQ).isHermitian).sub hT.isHermitian
   have hreg : ∀ epsilon : Real, 0 < epsilon →
-      (D + (epsilon : Complex) • (1 : CMatrix (Prod I B))).PosSemidef := by
+      (D + epsilon • (1 : CMatrix (Prod I B))).PosSemidef := by
     intro epsilon hepsilon
-    let Qepsilon : CMatrix B := Q + (epsilon : Complex) • (1 : CMatrix B)
+    let Qepsilon : CMatrix B := Q + epsilon • (1 : CMatrix B)
     have hQepsilon : Qepsilon.PosDef := by
       simpa only [Qepsilon] using
         State.cMatrix_posSemidef_add_pos_smul_one_posDef hQ hepsilon
     have hQle : Q ≤ Qepsilon := by
       rw [Matrix.le_iff]
-      have hepsilonComplex : (0 : Complex) ≤ (epsilon : Complex) := by
-        exact_mod_cast hepsilon.le
       simpa [Qepsilon, sub_eq_add_neg, add_assoc] using
-        (Matrix.PosSemidef.one.smul hepsilonComplex)
+        (Matrix.PosSemidef.one.smul hepsilon.le)
     have hblockEpsilon : ∀ i,
         Classical.block T i i ≤ (weights i : Complex) • Qepsilon := by
       intro i
@@ -295,9 +293,16 @@ theorem matrix_le_identity_kronecker_of_diagonal_blocks_le
       T hT Qepsilon hQepsilon weights hweights_nonneg hweights_sum hblockEpsilon
     have hglobalPsd := Matrix.le_iff.mp hglobal
     simpa [D, Qepsilon, Matrix.kronecker_add, Matrix.kronecker_smul,
-      sub_eq_add_neg, add_assoc, add_comm, add_left_comm] using hglobalPsd
+      RCLike.real_smul_eq_coe_smul, sub_eq_add_neg, add_assoc, add_comm,
+      add_left_comm] using hglobalPsd
   rw [Matrix.le_iff]
-  exact Matrix.posSemidef_of_add_pos_smul_one_posSemidef D hDherm hreg
+  refine Matrix.posSemidef_of_add_pos_smul_one_posSemidef D hDherm fun epsilon hepsilon => ?_
+  have h := hreg epsilon hepsilon
+  have hmul : (D + (epsilon : Complex) • (1 : CMatrix (Prod I B))) =
+      D + epsilon • (1 : CMatrix (Prod I B)) := by
+    congr 1
+  rw [hmul]
+  exact h
 
 /-- Normalize a positive matrix of nonzero trace to a state. -/
 def stateOfPsdTracePos (A : CMatrix B) (hA : A.PosSemidef)
@@ -386,7 +391,7 @@ theorem alignPhase_mul (z : Complex) :
   by_cases hz : z = 0
   · simp [alignPhase, hz]
   · have hn : ‖z‖ ≠ 0 := norm_ne_zero_iff.mpr hz
-    rw [alignPhase, if_neg hz]
+    rw [alignPhase, ite_eq_right hz]
     calc
       star z / (‖z‖ : Complex) * z =
           (star z * z) / (‖z‖ : Complex) := by ring
@@ -686,7 +691,7 @@ end ProjectiveMeasurementLift
 namespace SubnormalizedState
 
 open scoped ComplexOrder MatrixOrder
-open Matrix ProjectiveMeasurementLift
+open _root_.Matrix ProjectiveMeasurementLift
 
 local postfix:1024 "†" => Matrix.conjTranspose
 
@@ -704,9 +709,9 @@ theorem exists_projectiveMeasurementPreimage_of_purifiedBall
       rho.toSubnormalized.purifiedBall epsilon tau /\
         tau.sourceCoordinatePinch = sigma := by
   classical
-  letI : Nonempty (Prod I B) := rho.nonempty
-  letI : Nonempty I := ⟨rho.nonempty.some.1⟩
-  letI : Nonempty B := ⟨rho.nonempty.some.2⟩
+  let : Nonempty (Prod I B) := rho.nonempty
+  let : Nonempty I := ⟨rho.nonempty.some.1⟩
+  let : Nonempty B := ⟨rho.nonempty.some.2⟩
   let psi : PureVector (Prod (Prod I B) (Prod I B)) := rho.canonicalPurification
   let X : Matrix (Prod I B) (Prod I B) Complex := psi.amplitudeMatrix
   let A : I → CMatrix B := fun i => Classical.block rho.matrix i i
@@ -744,7 +749,11 @@ theorem exists_projectiveMeasurementPreimage_of_purifiedBall
   have hYBlock : ∀ i, Classical.block (Y * Y†) i i = S i := by
     intro i
     rw [← blockAmplitude_gram_eq_block Y i]
-    simpa only [Y, blockAmplitude] using hYiGram i
+    have hYi : blockAmplitude Y i = Yi i := by
+      ext b e
+      simp [blockAmplitude, Y]
+    rw [hYi]
+    exact hYiGram i
   have htrace : (Y * Y†).trace = sigma.matrix.trace := by
     calc
       (Y * Y†).trace =
@@ -1326,8 +1335,8 @@ theorem coherentProjectiveSourceReferenceState_block
       star (if r' = s then M.refinedKraus i a'' x else 0) =
         if r' = s then star (M.refinedKraus i a'' x) else 0 := by
     by_cases h : r' = s
-    · rw [if_pos h, if_pos h]
-    · rw [if_neg h, if_neg h]
+    · rw [ite_eq_left h, ite_eq_left h]
+    · rw [ite_eq_right h, ite_eq_right h]
       exact map_zero (starRingEnd Complex)
   simp only [ReferenceIsometry.targetBlock, refinedStinespringIsometry_matrix_apply,
     Matrix.mul_apply, Matrix.conjTranspose_apply, Matrix.kronecker,

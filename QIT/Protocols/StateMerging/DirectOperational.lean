@@ -28,6 +28,21 @@ universe u v w x y p u₁ v₁
 
 noncomputable section
 
+/-- Indexed entry form of `MatrixMap.kron`.  On Lean 4.34 unfolding the
+whole-map definition leaves a coe-stuck structure literal that `rw`/`simp`
+cannot pattern-match at applied positions; rewriting entries directly keeps
+the quadruple sum syntactically available. -/
+private theorem fqswKron_apply
+    {a : Type x} {b : Type y} {c : Type v} {d : Type w}
+    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+    [Fintype c] [DecidableEq c] [Fintype d] [DecidableEq d]
+    (Phi : MatrixMap a b) (Psi : MatrixMap c d)
+    (X : CMatrix (Prod a c)) (bd : Prod b d) (bd' : Prod b d) :
+    (MatrixMap.kron Phi Psi) X bd bd' =
+      ∑ j : c, ∑ j' : c, ∑ i : a, ∑ i' : a,
+        X (i, j) (i', j') * Phi (Matrix.single i i' (1 : Complex)) bd.1 bd'.1 *
+          Psi (Matrix.single j j' (1 : Complex)) bd.2 bd'.2 := rfl
+
 private def fqswTeleportationCoreInputEquiv (q : Type x) (e : Type y) (s : Type v) (r : Type w) :
     Prod (Prod (Prod q e) (Prod s r)) (Prod q q) ≃
       Prod (Prod (Prod (Prod q q) e) (Prod s q)) r where
@@ -65,7 +80,7 @@ private theorem fqswReindexChannel_map
     (Channel.reindex e).map X = X.submatrix e.symm e.symm := by
   ext i j
   simp [Channel.reindex, MatrixMap.ofReferenceIsometry_apply,
-    ReferenceIsometry.ofEquiv, Matrix.mul_apply]
+    ReferenceIsometry.ofEquiv_matrix_apply, Matrix.mul_apply]
   rw [Finset.sum_eq_single (e.symm j)]
   · rw [Finset.sum_eq_single (e.symm i)]
     · simp
@@ -317,7 +332,7 @@ private theorem fqswTeleportation_liftedResource_preserves
       rcases j with ⟨rj, qj⟩
       simp only [Matrix.submatrix_apply, fqswTeleportationResourceInputEquiv,
         fqswTeleportationResourceOutputEquiv, loccReferenceRegroupEquiv]
-      simp only [Channel.prod, MatrixMap.kron, LinearMap.comp_apply,
+      simp only [Channel.prod, fqswKron_apply, LinearMap.comp_apply,
         Channel.idChannel_map_eq_linearMap_id, LinearMap.id_apply]
       simp_rw [teleportationAppendResourceChannel_map]
       simp_rw [fqswReindexChannel_map]
@@ -394,7 +409,8 @@ private theorem fqswTeleportation_liftedResource_preserves
             intro m' _
             apply congrArg
               (fun z : Complex => rho.matrix (ri, m) (rj, m') * z)
-            simpa only [LinearMap.sum_apply] using hPhi m m'
+            simpa only [LinearMap.sum_apply, Matrix.sum_apply, fqswKron_apply,
+              teleportationEntanglementResource_state, PureVector.state_matrix] using hPhi m m'
         _ = _ := by
           simp_rw [hInput]
           simp only [Finset.mul_sum, mul_ite, ite_mul, mul_zero, zero_mul]

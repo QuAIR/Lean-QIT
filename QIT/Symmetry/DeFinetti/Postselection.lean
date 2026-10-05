@@ -27,83 +27,6 @@ local instance deFinettiPostselectionCMatrixContinuousENorm
     ContinuousENorm (CMatrix α) :=
   SeminormedAddGroup.toContinuousENorm
 
-private theorem idChannel_map_eq_self
-    {α : Type u} [Fintype α] [DecidableEq α] (X : CMatrix α) :
-    (Channel.idChannel α).map X = X := by
-  simp [Channel.idChannel, MatrixMap.ofKraus]
-
-private theorem traceEffectToUnit_single_apply
-    {α : Type u} [Fintype α] [DecidableEq α]
-    {E : CMatrix α} (hE : E.PosSemidef) (p q : α) :
-    MatrixMap.traceEffectToUnit E (Matrix.single p q (1 : ℂ))
-        PUnit.unit PUnit.unit = E q p := by
-  have h := MatrixMap.traceEffectToUnit_apply_of_posSemidef (a := α)
-    (E := E) (X := Matrix.single p q (1 : ℂ)) hE
-  have happ := congrFun (congrFun h PUnit.unit) PUnit.unit
-  calc
-    MatrixMap.traceEffectToUnit E (Matrix.single p q (1 : ℂ))
-        PUnit.unit PUnit.unit =
-        ((Matrix.single p q (1 : ℂ) * E).trace) := happ
-    _ = E q p := by
-          rw [Matrix.trace]
-          change
-            (∑ x : α, (Matrix.single p q (1 : ℂ) * E) x x) = E q p
-          rw [Finset.sum_eq_single p]
-          · simp [Matrix.mul_apply, Matrix.single]
-          · intro r _ hr
-            have hpr : p ≠ r := by exact hr.symm
-            simp [Matrix.mul_apply, Matrix.single, hpr]
-          · intro hp
-            simp at hp
-
-private theorem kron_id_traceEffectToUnit_raw_sum
-    {α β : Type u} [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
-    {E : CMatrix β} (hE : E.PosSemidef)
-    (X : CMatrix (Prod α β)) (x y : α) :
-    (∑ p : β, ∑ q : β, ∑ i : α, ∑ i' : α,
-        X (i, p) (i', q) * Matrix.single i i' (1 : ℂ) x y *
-          MatrixMap.traceEffectToUnit E (Matrix.single p q (1 : ℂ))
-            PUnit.unit PUnit.unit) =
-      ∑ p : β, ∑ q : β, X (x, p) (y, q) * E q p := by
-  classical
-  have hT :
-      ∀ p q : β,
-        MatrixMap.traceEffectToUnit E (Matrix.single p q (1 : ℂ))
-            PUnit.unit PUnit.unit = E q p := by
-    intro p q
-    exact traceEffectToUnit_single_apply (E := E) hE p q
-  calc
-    (∑ p : β, ∑ q : β, ∑ i : α, ∑ i' : α,
-        X (i, p) (i', q) * Matrix.single i i' (1 : ℂ) x y *
-          MatrixMap.traceEffectToUnit E (Matrix.single p q (1 : ℂ))
-            PUnit.unit PUnit.unit) =
-        ∑ p : β, ∑ q : β,
-          X (x, p) (y, q) *
-            MatrixMap.traceEffectToUnit E (Matrix.single p q (1 : ℂ))
-              PUnit.unit PUnit.unit := by
-          refine Finset.sum_congr rfl fun p _ => ?_
-          refine Finset.sum_congr rfl fun q _ => ?_
-          rw [Finset.sum_eq_single x]
-          · rw [Finset.sum_eq_single y]
-            · rw [Matrix.single_apply_same]
-              ring
-            · intro y' _ hy'
-              rw [Matrix.single_apply_of_col_ne x x hy' (1 : ℂ)]
-              ring
-            · intro hnot_mem
-              simp at hnot_mem
-          · intro x' _ hx'
-            apply Finset.sum_eq_zero
-            intro y' _
-            rw [Matrix.single_apply_of_row_ne hx' y' y (1 : ℂ)]
-            ring
-          · intro hnot_mem
-            simp at hnot_mem
-    _ = ∑ p : β, ∑ q : β, X (x, p) (y, q) * E q p := by
-          refine Finset.sum_congr rfl fun p _ => ?_
-          refine Finset.sum_congr rfl fun q _ => ?_
-          rw [hT p q]
-
 private theorem dropRightUnitMatrix_kron_id_traceEffectToUnit_apply
     {α β : Type u} [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
     {E : CMatrix β} (hE : E.PosSemidef)
@@ -113,8 +36,13 @@ private theorem dropRightUnitMatrix_kron_id_traceEffectToUnit_apply
         x y =
       ∑ p : β, ∑ q : β, X (x, p) (y, q) * E q p := by
   classical
-  simpa only [dropRightUnitMatrix, MatrixMap.kron, idChannel_map_eq_self] using
-    kron_id_traceEffectToUnit_raw_sum (E := E) hE X x y
+  simp only [dropRightUnitMatrix, MatrixMap.kron_idChannel_left_apply_slice]
+  have happ := congrFun (congrFun
+    (MatrixMap.traceEffectToUnit_apply_of_posSemidef (E := E)
+      (X := fun j j' => X (x, j) (y, j')) hE) PUnit.unit) PUnit.unit
+  rw [happ]
+  simp only [Matrix.trace]
+  rfl
 
 private theorem matrixMap_trace_weight_commute
     {α : Type u} {β : Type v} {γ : Type w}
@@ -201,9 +129,26 @@ private theorem dropRightUnitMatrix_action_traceEffectToUnit_commute
             (ckrPurifiedReferenceState (a := a) n).matrix)).submatrix
         (tensorPowerProdEquiv a a n).symm (tensorPowerProdEquiv a a n).symm) := by
   ext br br'
-  simp [assocRightMatrix, dropRightUnitMatrix, MatrixMap.kron_idChannel_apply_slice,
-    MatrixMap.kron_idChannel_left_apply_slice,
-    MatrixMap.traceEffectToUnit_apply_of_posSemidef hE]
+  simp only [dropRightUnitMatrix, assocRightMatrix, Matrix.submatrix_apply,
+    Equiv.prodAssoc_apply, MatrixMap.kron_idChannel_left_apply_slice,
+    MatrixMap.kron_idChannel_apply_slice]
+  rw [MatrixMap.traceEffectToUnit_apply_of_posSemidef (E := E) hE
+    (X := fun j j' =>
+      Δ (fun i i' => (ckrPostSelectionPurifiedReferenceState (a := a) n).matrix (i, br.2, j) (i', br'.2, j')) br.1 br'.1)]
+  simp only []
+  conv_rhs =>
+    enter [2]
+    intro i i'
+    rw [MatrixMap.traceEffectToUnit_apply_of_posSemidef (E := E) hE
+      (X := fun j j' =>
+        (ckrPurifiedReferenceState (a := a) n).matrix
+          ((tensorPowerProdEquiv a a n).symm (i, br.2), j)
+          ((tensorPowerProdEquiv a a n).symm (i', br'.2), j'))]
+    simp only []
+  simp only [ckrPostSelectionPurifiedReferenceState,
+    ckrPostSelectionPurifiedReferenceStatePair, ckrPurifiedReferenceState_matrix,
+    State.reindex_matrix, Matrix.submatrix_apply, Equiv.prodAssoc_symm_apply,
+    Equiv.prodCongr_apply, Equiv.prodCongr_symm, rankOneMatrix_apply]
   exact matrixMap_trace_weight_commute Δ
     (fun j j' => fun i i' =>
       (ckrPurifiedReferenceVector (a := a) n).amp
@@ -291,7 +236,7 @@ private theorem classical_block_posSemidef {ι : Type w} {β : Type x}
     [Fintype ι] [DecidableEq ι] [Fintype β] [DecidableEq β]
     {M : CMatrix (Prod ι β)} (hM : M.PosSemidef) (i : ι) :
     (Classical.block M i i).PosSemidef := by
-  simpa [Classical.block] using hM.submatrix (fun x : β => (i, x))
+  exact hM.submatrix (fun x : β => (i, x))
 
 private theorem classical_block_le_one {ι : Type w} {β : Type x}
     [Fintype ι] [DecidableEq ι] [Fintype β] [DecidableEq β]
@@ -1280,7 +1225,10 @@ theorem postSelectionCovariant_kron_permutation_eq
         Δ (fun i i' => X (i, br.2) (i', br'.2)) := by
     ext i i'
     rw [MatrixMap.kron_idChannel_apply_slice]
-  rw [hslice_perm, hKπ, hslice_delta]
+  rw [hslice_perm]
+  exact congrFun (congrFun
+    (Eq.trans (hKπ (fun i i' => X (i, br.2) (i', br'.2)))
+      (congrArg (Kπ.map) hslice_delta.symm)) br.1) br'.1
 
 end MatrixMap
 
@@ -1483,6 +1431,10 @@ private theorem inputReferenceAction_le_canonicalExtension
       State.extensionPurificationInputEquiv, State.extensionPurificationOutputEquiv,
       PureVector.reindex_state, State.reindex,
       MatrixMap.kron_idChannel_apply_slice, MatrixMap.kron_idChannel_left_apply_slice]
+    exact (MatrixMap.kron_idChannel_apply_slice Δ
+      (fun j j' => ω.canonicalPurification.amp (x.2.2, j) *
+        (starRingEnd ℂ) (ω.canonicalPurification.amp (y.2.2, j')))
+      (x.1, x.2.1) (y.1, y.2.1)).symm
   have htraceY : traceNorm Y = traceNorm Z := by
     rw [hreindex]
     symm
@@ -1829,7 +1781,7 @@ theorem postSelection_inputReferenceAction_le_profile_count
         (MatrixMap.channelDifference Φ Ψ).ancillaNormalizedTraceAction
           (ckrPostSelectionPurifiedReferenceState (a := a) n) := by
   classical
-  letI : Nonempty (QIT.TensorPower a n) := QIT.TensorPower.nonempty (a := a) n
+  let nonemptyTP : Nonempty (QIT.TensorPower a n) := QIT.TensorPower.nonempty (a := a) n
   exact postSelection_labelExtensionAction_le_profile_count
     (a := a) (n := n) (b := b)
     (r := QIT.TensorPower a n) Φ Ψ hcov ω
@@ -1964,8 +1916,7 @@ private theorem matrix_le_one (ρ : State a) :
   let U : Matrix.unitaryGroup a ℂ := ρ.pos.1.eigenvectorUnitary
   let D : CMatrix a := Matrix.diagonal fun i => ((ρ.pos.1.eigenvalues i : ℝ) : ℂ)
   have hdiag : ρ.matrix = (U : CMatrix a) * D * star (U : CMatrix a) := by
-    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using ρ.pos.1.spectral_theorem
+    exact Matrix.IsHermitian.spectral_theorem ρ.pos.1
   have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 := by
     simp [U]
   have heig_sum : ∑ i, ρ.pos.1.eigenvalues i = 1 := by

@@ -199,6 +199,66 @@ theorem blockExtensionState_purifiedBall
   rw [blockExtensionState_purifiedDistance]
   exact hball
 
+/-- Entrywise characterization of right-summand padding on left-summand
+rows: the `sumInr` isometry annihilates them.  (Keeps `sumInr` folded: in
+4.34, `simp` refuses goals whose matrix operations are applied to unfolded
+raw lambdas.) -/
+private theorem sumInr_sum_mul_inl_entry
+    {extra : Type w} {a : Type u} {b : Type v}
+    [Fintype extra] [DecidableEq extra] [Fintype a] [DecidableEq a]
+    [Fintype b] [DecidableEq b]
+    {X : CMatrix (Prod a b)} (v : extra) (y : Prod a b) (ib : b) :
+    ∑ k : a, (ReferenceIsometry.sumInr extra a).matrix (Sum.inl v) k * X (k, ib) y = 0 := by
+  show (∑ k : a, (0 : ℂ) * X (k, ib) y) = 0
+  simp
+
+/-- Entrywise characterization of right-summand padding on right-summand
+rows: the `sumInr` isometry selects the diagonal. -/
+private theorem sumInr_sum_mul_inr_entry
+    {extra : Type w} {a : Type u} {b : Type v}
+    [Fintype extra] [DecidableEq extra] [Fintype a] [DecidableEq a]
+    [Fintype b] [DecidableEq b]
+    {X : CMatrix (Prod a b)} (i : a) (y : Prod a b) (ib : b) :
+    ∑ k : a, (ReferenceIsometry.sumInr extra a).matrix (Sum.inr i) k * X (k, ib) y =
+      X (i, ib) y := by
+  show (∑ k : a, (if i = k then (1 : ℂ) else 0) * X (k, ib) y) = X (i, ib) y
+  simp [Finset.sum_ite_eq]
+
+private theorem star_sumInr_apply_inl
+    {extra : Type w} {a : Type u}
+    [Fintype extra] [DecidableEq extra] [Fintype a] [DecidableEq a]
+    (j : a) (v : extra) :
+    (starRingEnd ℂ) ((ReferenceIsometry.sumInr extra a).matrix (Sum.inl v) j) = 0 := by
+  show (starRingEnd ℂ) (0 : ℂ) = 0
+  simp
+
+private theorem star_sumInr_apply_inr
+    {extra : Type w} {a : Type u}
+    [Fintype extra] [DecidableEq extra] [Fintype a] [DecidableEq a]
+    (i j : a) :
+    (starRingEnd ℂ) ((ReferenceIsometry.sumInr extra a).matrix (Sum.inr i) j) =
+      if i = j then (1 : ℂ) else 0 := by
+  show (starRingEnd ℂ) (if i = j then (1 : ℂ) else 0) = if i = j then (1 : ℂ) else 0
+  by_cases h : i = j <;> simp [h]
+
+/-- Concrete block form of right-summand source padding. -/
+theorem sourceIsometryApply_sumInr_matrix
+    {extra : Type w} {a : Type u} {b : Type v}
+    [Fintype extra] [DecidableEq extra] [Fintype a] [DecidableEq a]
+    [Fintype b] [DecidableEq b]
+    (ρ : SubnormalizedState (Prod a b)) :
+    (ρ.sourceIsometryApply (ReferenceIsometry.sumInr extra a)).matrix =
+      (Matrix.fromBlocks (0 : CMatrix (Prod extra b)) 0 0 ρ.matrix).submatrix
+        (sourceSumEquiv extra a b).symm (sourceSumEquiv extra a b).symm := by
+  ext i j
+  rcases i with ⟨i, ib⟩
+  rcases j with ⟨j, jb⟩
+  cases i <;> cases j <;>
+    simp [SubnormalizedState.sourceIsometryApply_matrix, sourceSumEquiv,
+      ReferenceIsometry.applyMatrix, ReferenceIsometry.targetBlock,
+      Matrix.mul_apply, sumInr_sum_mul_inl_entry, sumInr_sum_mul_inr_entry,
+      star_sumInr_apply_inl, star_sumInr_apply_inr]
+
 /-- For a normalized center, the direct-sum extension is exactly the existing
 right-summand source isometry, viewed in the subnormalized state space. -/
 theorem blockExtensionState_toSubnormalized_center
@@ -210,14 +270,10 @@ theorem blockExtensionState_toSubnormalized_center
       ρ.toSubnormalized.sourceIsometryApply
         (ReferenceIsometry.sumInr extra a) := by
   apply SubnormalizedState.ext
-  ext i j
-  rcases i with ⟨i, ib⟩
-  rcases j with ⟨j, jb⟩
-  cases i <;> cases j <;>
-    simp [blockExtensionState_matrix, sourceSumEquiv,
-      SubnormalizedState.sourceIsometryApply_matrix,
-      ReferenceIsometry.applyMatrix, ReferenceIsometry.targetBlock,
-      ReferenceIsometry.sumInr, Matrix.mul_apply, ρ.trace_re_eq_one]
+  rw [State.toSubnormalized_matrix, blockExtensionState_matrix,
+    sourceIsometryApply_sumInr_matrix, State.toSubnormalized_matrix,
+    ρ.trace_re_eq_one]
+  simp
 
 /-- If the extra source dimension dilutes the missing trace below the optimal
 conditional-min scale, the direct-sum extension is feasible for the same side
@@ -416,23 +472,6 @@ theorem exists_normalizedExtension_smoothConditionalMinEntropy
   · rw [State.smoothConditionalMinEntropy_eq_toSubnormalized]
     rw [hsmooth_eq]
     exact le_antisymm hmin_upper hmin_lower
-
-/-- Concrete block form of right-summand source padding. -/
-theorem sourceIsometryApply_sumInr_matrix
-    {extra : Type w} {a : Type u} {b : Type v}
-    [Fintype extra] [DecidableEq extra] [Fintype a] [DecidableEq a]
-    [Fintype b] [DecidableEq b]
-    (ρ : SubnormalizedState (Prod a b)) :
-    (ρ.sourceIsometryApply (ReferenceIsometry.sumInr extra a)).matrix =
-      (Matrix.fromBlocks (0 : CMatrix (Prod extra b)) 0 0 ρ.matrix).submatrix
-        (sourceSumEquiv extra a b).symm (sourceSumEquiv extra a b).symm := by
-  ext i j
-  rcases i with ⟨i, ib⟩
-  rcases j with ⟨j, jb⟩
-  cases i <;> cases j <;>
-    simp [SubnormalizedState.sourceIsometryApply_matrix, sourceSumEquiv,
-      ReferenceIsometry.applyMatrix, ReferenceIsometry.targetBlock,
-      ReferenceIsometry.sumInr, Matrix.mul_apply]
 
 /-- The source identity tensor is block diagonal under the direct-sum/product
 equivalence. -/

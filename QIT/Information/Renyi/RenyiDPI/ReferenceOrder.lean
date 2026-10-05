@@ -319,7 +319,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_antitone_reference
   filter_upwards [self_mem_nhdsWithin] with epsilon hepsilon
   have hepsilon_pos : 0 < epsilon := hepsilon
   unfold sandwichedRenyiPSDReferenceHighAlphaFiniteRegularizedInputCurve
-  rw [dif_pos hepsilon_pos, dif_pos hepsilon_pos]
+  rw [dite_eq_left hepsilon_pos, dite_eq_left hepsilon_pos]
   apply sandwichedRenyiPSDReferenceHighAlphaFinite_antitone_reference_of_posDef
   · exact sandwichedRenyiReferenceRegularization_posDef hsigma hepsilon_pos
   · exact sandwichedRenyiReferenceRegularization_posDef htau hepsilon_pos
@@ -365,7 +365,7 @@ theorem relativeEntropyPSDReferenceTraceLogE_antitone_reference
         rho htau hSupportTau,
       relativeEntropyPSDReferenceTraceLogE_eq_coe_of_supports
         rho hsigma hSupportSigma]
-    letI : Filter.NeBot relativeEntropyHighAlphaRightToOne :=
+    let : Filter.NeBot relativeEntropyHighAlphaRightToOne :=
       relativeEntropyHighAlphaRightToOne_neBot
     apply le_of_tendsto_of_tendsto
       (sandwichedRenyiPSDReferenceHighAlphaCurve_tendsto_traceLogFinite_of_supports

@@ -10,7 +10,7 @@ public import QIT.Information.Entropy.Entropy
 public import QIT.Information.Entropy.EntropyTensorPower
 public import QIT.Information.Renyi.Renyi
 public import Mathlib.Analysis.Complex.Order
-public import Mathlib.Data.Real.Basic
+public import Mathlib.Basic.Real.Basic
 
 /-!
 # Typical-subspace projector and Schumacher compression
@@ -256,9 +256,9 @@ theorem spectralPredicateProjector_compress_le
   rw [Matrix.posSemidef_diagonal_iff]
   intro i
   by_cases hi : p i
-  · simp only [hi, if_true]
+  · simp only [hi, ite_true]
     exact_mod_cast sub_nonneg.mpr (hp i hi)
-  · simp only [hi, if_false]
+  · simp only [hi, ite_false]
     exact le_refl _
 
 /-- The Schumacher compression rate equals the von Neumann entropy.
@@ -1215,13 +1215,13 @@ theorem typicalSubspaceDimension_le_two_pow (ρ : State a) (n : ℕ) (δ : ℝ) 
         apply Finset.sum_le_sum
         intro i _
         by_cases hi : typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
-        · simp only [hi, if_true]
+        · simp only [hi, ite_true]
           have hlower : 2 ^ (-((n : ℝ) * ρ.vonNeumann + (n : ℝ) * δ))
               ≤ (ρ.tensorPower n).pos.isHermitian.eigenvalues i :=
             ρ.typicalEigenvalue_ge_eigenvalueLowerBound n δ _ hi
           rw [h1eq]
           exact mul_le_mul_of_nonneg_right hlower hfactor_pos.le
-        · simp only [hi, if_false, le_refl]
+        · simp only [hi, ite_false, le_refl]
     _ = 2 ^ ((n : ℝ) * (ρ.vonNeumann + δ)) *
         ∑ i : TensorPower a n,
           (if typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
@@ -1230,8 +1230,8 @@ theorem typicalSubspaceDimension_le_two_pow (ρ : State a) (n : ℕ) (δ : ℝ) 
         apply Finset.sum_congr rfl
         intro i _
         by_cases hi : typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
-        · simp only [hi, if_true]; ring
-        · simp only [hi, if_false]; ring
+        · simp only [hi, ite_true]; ring
+        · simp only [hi, ite_false]; ring
     _ ≤ 2 ^ ((n : ℝ) * (ρ.vonNeumann + δ)) * 1 := by
         gcongr
         exact ρ.typicalSubspaceSpectralWeight_le_one n δ
@@ -1260,9 +1260,9 @@ theorem typicalSubspaceSpectralWeight_le_dimension_mul_eigenvalueUpperBound
         intro i _
         by_cases hi : typicalEigenvalue ρ n δ
             ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
-        · simp only [hi, if_true]
+        · simp only [hi, ite_true]
           exact ρ.typicalEigenvalue_le_eigenvalueUpperBound n δ _ hi
-        · simp only [hi, if_false, le_refl]
+        · simp only [hi, ite_false, le_refl]
     _ = (∑ i : TensorPower a n,
           if typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
           then (1 : ℝ) else 0) * upper := by
@@ -1271,8 +1271,8 @@ theorem typicalSubspaceSpectralWeight_le_dimension_mul_eigenvalueUpperBound
         intro i _
         by_cases hi : typicalEigenvalue ρ n δ
             ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
-        · simp only [hi, if_true, one_mul]
-        · simp only [hi, if_false, zero_mul]
+        · simp only [hi, ite_true, one_mul]
+        · simp only [hi, ite_false, zero_mul]
     _ = (∑ i : TensorPower a n,
           if typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues i)
           then (1 : ℝ) else 0) *

@@ -10,7 +10,7 @@ public import QIT.Init
 public import Mathlib.Analysis.Matrix.Order
 public import Mathlib.LinearAlgebra.Matrix.Kronecker
 public import Mathlib.LinearAlgebra.Matrix.Trace
-public import Mathlib.Data.Complex.Basic
+public import Mathlib.Basic.Complex.Basic
 
 /-!
 # Matrix utilities
@@ -179,6 +179,23 @@ theorem partialTraceB_trace [Fintype a] [Fintype b] (X : CMatrix (Prod a b)) :
   rw [Matrix.trace, Matrix.trace]
   simp [partialTraceB, Matrix.diag]
   rw [Fintype.sum_prod_type]
+
+/-- Trace pairing against a right identity Kronecker factor reduces to the
+partial trace over the right subsystem. -/
+theorem trace_mul_kronecker_one_right_eq_partialTraceB
+    [Fintype a] [Fintype b] [DecidableEq b]
+    (X : CMatrix (Prod a b)) (U : CMatrix a) :
+    (X * Matrix.kronecker U (1 : CMatrix b)).trace =
+      (partialTraceB (a := a) (b := b) X * U).trace := by
+  have h1 :
+      partialTraceB (a := a) (b := b) (X * Matrix.kronecker U (1 : CMatrix b)) =
+        partialTraceB (a := a) (b := b) X * U := by
+    ext i i'
+    simp [partialTraceB, Matrix.mul_apply, Matrix.kronecker,
+      Matrix.kroneckerMap_apply, Matrix.one_apply, Fintype.sum_prod_type,
+      Finset.sum_mul]
+    rw [Finset.sum_comm]
+  rw [← h1, partialTraceB_trace]
 
 /-- Partial transpose on the first subsystem is involutive. -/
 @[simp]
@@ -353,6 +370,18 @@ theorem partialTraceB_posSemidef [Fintype a] [Fintype b]
   ext i i'
   simp [partialTraceB, block, Matrix.sum_apply]
 
+/-- Tracing out the first system preserves Loewner order. -/
+theorem partialTraceA_mono [Fintype a] [Fintype b]
+    {X Y : CMatrix (a × b)} (h : X ≤ Y) : partialTraceA X ≤ partialTraceA Y := by
+  rw [Matrix.le_iff, ← partialTraceA_sub]
+  exact partialTraceA_posSemidef (Matrix.le_iff.mp h)
+
+/-- Tracing out the second system preserves Loewner order. -/
+theorem partialTraceB_mono [Fintype a] [Fintype b]
+    {X Y : CMatrix (a × b)} (h : X ≤ Y) : partialTraceB X ≤ partialTraceB Y := by
+  rw [Matrix.le_iff, ← partialTraceB_sub]
+  exact partialTraceB_posSemidef (Matrix.le_iff.mp h)
+
 /-- `matrixScale 1` is the identity. -/
 theorem matrixScale_one (M : CMatrix a) : matrixScale 1 M = M := by
   ext i j'; simp [matrixScale]
@@ -362,7 +391,7 @@ theorem posSemidef_single [Fintype a] [DecidableEq a] (x : a) :
     Matrix.PosSemidef (Matrix.single x x (1 : ℂ)) := by
   rw [← Matrix.diagonal_single x (1 : ℂ)]
   exact Matrix.PosSemidef.diagonal fun y => by
-    by_cases h : y = x <;> simp [Pi.single_apply, h]
+    by_cases h : y = x <;> simp [h]
 
 /-- Taking `Tr_A` of a Kronecker product leaves the second factor scaled by
 the trace of the first factor [Wilde2011Qst, qit-notes.tex:7754-7762]. -/

@@ -113,7 +113,15 @@ theorem exists_eq_mul_transpose_of_mul_conjTranspose_eq
       _ = A.toEuclideanLin.comp (Matrix.conjTranspose M).toEuclideanLin := by rw [hMadj]
       _ = (A * Matrix.conjTranspose M).toEuclideanLin := by
         rw [Matrix.toLpLin_mul]
-  simpa [V, Matrix.conjTranspose, Matrix.transpose] using htarget
+  -- 4.34: with `Matrix.of`/`Matrix.map` no longer definitionally exposed, the
+  -- closing match of the original simpa fails on the un-fused
+  -- `(Matrix.of f).map star` normal form. Fuse `map` over `of` explicitly
+  -- (proved entrywise) so the two endpoints meet syntactically.
+  have hfuse : (Matrix.of fun x y => M y x).map (starRingEnd ℂ) =
+      Matrix.of fun x y => (starRingEnd ℂ) (M y x) := by
+    ext i j
+    simp [Matrix.map_apply]
+  simpa [V, Matrix.conjTranspose, Matrix.transpose, hfuse] using htarget
 
 end ReferenceIsometry
 

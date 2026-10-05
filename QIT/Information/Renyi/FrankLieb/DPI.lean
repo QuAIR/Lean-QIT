@@ -206,8 +206,8 @@ theorem sandwichedRenyiQ_dataProcessing_channel_reference_of_half_lt_lt_one
     exact Φ.tracePreserving
   let ρL := stinespringLiftState K hTP ρ
   let σL : CMatrix (Prod b (a × b)) := stinespringLiftMatrix K hTP σ
-  letI : Nonempty a := ρ.nonempty
-  letI : Nonempty b := (Φ.applyState ρ).nonempty
+  let : Nonempty a := ρ.nonempty
+  let : Nonempty b := (Φ.applyState ρ).nonempty
   have hσL : σL.PosSemidef := by
     simpa [σL] using stinespringLiftMatrix_posSemidef K hTP hσ
   have hPT :
@@ -292,8 +292,7 @@ theorem matrixMap_ofKraus_supports
       ∀ k : κ, Matrix.mulVec M (Matrix.mulVec (Matrix.conjTranspose (K k)) y) = 0 := by
     intro k
     exact hSupport (Matrix.mulVec (Matrix.conjTranspose (K k)) y)
-      ((hN.dotProduct_mulVec_zero_iff
-        (Matrix.mulVec (Matrix.conjTranspose (K k)) y)).mp (hq_zero k))
+      (hN.dotProduct_mulVec_zero_iff.mp (hq_zero k))
   have hterm :
       ∀ k : κ, Matrix.mulVec (K k * M * Matrix.conjTranspose (K k)) y = 0 := by
     intro k
@@ -1141,7 +1140,7 @@ theorem sandwichedRenyiPSDReferenceLowAlphaRegularizedInputCurve_tendsto
         l
         (nhds (log2 (sandwichedRenyiQ ρ.matrix σ ρ.pos hσ α))) := by
     have hraw := Filter.Tendsto.log hQ_tend (ne_of_gt hQpos)
-    simpa [log2] using
+    simpa [log2, Pi.div_def] using
       hraw.div tendsto_const_nhds (ne_of_gt (Real.log_pos one_lt_two))
   have hdiv_tend :
       Filter.Tendsto
@@ -1232,7 +1231,7 @@ theorem sandwichedRenyiPSDReferenceLowAlphaRegularizedOutputCurve_tendsto
           (sandwichedRenyiQ (Φ.applyState ρ).matrix (Φ.map σ)
             (Φ.applyState ρ).pos (Φ.mapsPositive σ hσ) α))) := by
     have hraw := Filter.Tendsto.log hQ_tend (ne_of_gt hQpos)
-    simpa [log2] using
+    simpa [log2, Pi.div_def] using
       hraw.div tendsto_const_nhds (ne_of_gt (Real.log_pos one_lt_two))
   have hdiv_tend :
       Filter.Tendsto
@@ -1364,8 +1363,8 @@ theorem sandwichedRenyi_dataProcessing_channel_statement_of_half_lt_lt_one_chann
     exact Φ.tracePreserving
   let ρL := stinespringLiftState K hTP ρ
   let σL := stinespringLiftState K hTP σ
-  letI : Nonempty a := ρ.nonempty
-  letI : Nonempty b := (Φ.applyState ρ).nonempty
+  let : Nonempty a := ρ.nonempty
+  let : Nonempty b := (Φ.applyState ρ).nonempty
   have hPT :
       sandwichedRenyiQ ρL.matrix σL.matrix ρL.pos σL.pos α ≤
         sandwichedRenyiQ (partialTraceB ρL.matrix) (partialTraceB σL.matrix)
@@ -2121,7 +2120,7 @@ theorem sandwichedRenyiQ_dataProcessing_channel_reference_half_of_trace_pos
       sandwichedRenyiQ (Φ.applyState ρ).matrix (Φ.map σ)
         (Φ.applyState ρ).pos (Φ.mapsPositive σ hσ) (1 / 2 : ℝ) := by
   classical
-  letI : Nonempty a := ρ.nonempty
+  let : Nonempty a := ρ.nonempty
   let lambda : ℝ := (σ.trace.re)⁻¹
   have hlambda_pos : 0 < lambda := inv_pos.mpr htr
   let σ₀ : State a := stateOfPSDReference σ hσ htr
@@ -2560,7 +2559,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFiniteRegularizedInputCurve_tendsto_
         (nhds
           (log2 (((CFC.rpow (sandwichedRenyiReferenceInner ρ σ α) α).trace).re))) := by
     have hrawLog := Filter.Tendsto.log htrace (ne_of_gt htarget_pos)
-    simpa [log2] using
+    simpa [log2, Pi.div_def] using
       hrawLog.div tendsto_const_nhds (ne_of_gt (Real.log_pos one_lt_two))
   have hraw :
       Filter.Tendsto
@@ -2741,7 +2740,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFiniteRegularizedOutputCurve_tendsto
               (sandwichedRenyiReferenceInner (Φ.applyState ρ) (Φ.map σ) α)
               α).trace).re))) := by
     have hrawLog := Filter.Tendsto.log htrace (ne_of_gt htarget_pos)
-    simpa [log2] using
+    simpa [log2, Pi.div_def] using
       hrawLog.div tendsto_const_nhds (ne_of_gt (Real.log_pos one_lt_two))
   have hraw :
       Filter.Tendsto
@@ -3446,7 +3445,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_dataProcessing_channel_suppor
         (psdSupportCompress σ hσ σ)
         (psdSupportCompressedState_reference_posDef hσ).posSemidef α := by
   classical
-  letI : Nonempty (psdSupportIndex σ hσ) :=
+  let : Nonempty (psdSupportIndex σ hσ) :=
     psdSupportCompressedState_support_nonempty ρ hσ hSupport
   let ρc : State (psdSupportIndex σ hσ) :=
     psdSupportCompressedState ρ hσ hSupport
@@ -3479,7 +3478,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_supportCompress_eq
         (psdSupportCompress σ hσ σ)
         (psdSupportCompressedState_reference_posDef hσ).posSemidef α := by
   classical
-  letI : Nonempty (psdSupportIndex σ hσ) :=
+  let : Nonempty (psdSupportIndex σ hσ) :=
     psdSupportCompressedState_support_nonempty ρ hσ hSupport
   let V : Matrix a (psdSupportIndex σ hσ) ℂ := psdSupportIsometry σ hσ
   let ρc : State (psdSupportIndex σ hσ) :=

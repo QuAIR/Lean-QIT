@@ -56,7 +56,7 @@ private theorem exists_fidelityBlock_trace_re_eq
     have hG : G.PosSemidef := by
       simpa [G] using cMatrix_fromBlocks_unitary_posSemidef U
     have hconj : (S * G * star S).PosSemidef := by
-      simpa [Matrix.mul_assoc] using hG.mul_mul_conjTranspose_same S
+      simpa [Matrix.mul_assoc, Matrix.star_eq_conjTranspose] using hG.mul_mul_conjTranspose_same S
     have hEq :
         S * G * star S =
           (Matrix.fromBlocks omega.matrix X0 (star X0) tau.matrix :

@@ -180,7 +180,9 @@ def krausStinespringIsometry (K : κ → Matrix b a ℂ)
     have hentry := congrFun (congrFun hone i) j
     simp only [krausAdjoint, Matrix.sum_apply, Matrix.mul_apply,
       Matrix.conjTranspose_apply, Matrix.one_apply] at hentry
-    simp only [Matrix.mul_apply, Matrix.conjTranspose_apply, Matrix.one_apply]
+    simp only [Matrix.one_apply]
+    show (∑ yx : Prod b κ, (starRingEnd ℂ) (K yx.2 yx.1 i) * K yx.2 yx.1 j) =
+      if i = j then 1 else 0
     rw [Fintype.sum_prod_type]
     rw [Finset.sum_comm]
     simpa [mul_comm] using hentry
@@ -192,9 +194,11 @@ theorem partialTraceB_krausStinespringIsometry
       ((krausStinespringIsometry K hTP).matrix * X *
         Matrix.conjTranspose (krausStinespringIsometry K hTP).matrix) =
       ofKraus K X := by
+  have hmat : ∀ (yx : Prod b κ) (x : a),
+      (krausStinespringIsometry K hTP).matrix yx x = K yx.2 yx.1 x := fun _ _ => rfl
   ext y y'
-  simp [partialTraceB, ofKraus, krausStinespringIsometry, Matrix.sum_apply,
-    Matrix.mul_apply, Matrix.conjTranspose_apply, Finset.sum_mul, mul_assoc]
+  simp [partialTraceB, ofKraus, Matrix.sum_apply,
+    Matrix.mul_apply, Matrix.conjTranspose_apply, Finset.sum_mul, mul_assoc, hmat]
 
 /-- The output marginal of the Stinespring lift is the original Kraus-map
 output. -/
@@ -613,8 +617,7 @@ theorem exists_purification_with_overlapSq_eq_squaredFidelity
     State.exists_referenceUnitary_canonicalPurification_overlapSq_eq_squaredFidelity ρ σ
   let Θ : PureVector (Prod a a) := U.applyPureVector σ.canonicalPurification
   have hΘ : Θ.Purifies σ := by
-    simpa [Θ] using
-      U.toReferenceIsometry.applyPureVector_purifies σ.canonicalPurification_purifies
+    exact U.toReferenceIsometry.applyPureVector_purifies σ.canonicalPurification_purifies
   obtain ⟨V, hV⟩ :=
     exists_referenceIsometry_applyPureVector_eq_of_purifies_same_state
       ρ.canonicalPurification_purifies hΨ hcard
@@ -661,7 +664,8 @@ theorem exists_purification_on_reference_of_card_le
     matrix := fun x i => if x = emb i then 1 else 0
     isometry := by
       ext i j
-      simp only [Matrix.mul_apply, Matrix.conjTranspose_apply, Matrix.one_apply]
+      show (∑ x : r, (starRingEnd ℂ) (if x = emb i then (1 : ℂ) else 0) *
+          (if x = emb j then (1 : ℂ) else 0)) = if i = j then 1 else 0
       by_cases hij : i = j
       · subst hij
         rw [Finset.sum_eq_single (emb i)]
@@ -723,8 +727,7 @@ theorem squaredFidelity_le_marginalA_squaredFidelity [Nonempty b]
   have hΨ : Ψ.Purifies ρ := by
     simpa [Ψ] using ρ.canonicalPurification_purifies
   have hΦ : Φ.Purifies σ := by
-    simpa [Φ] using
-      U.toReferenceIsometry.applyPureVector_purifies σ.canonicalPurification_purifies
+    exact U.toReferenceIsometry.applyPureVector_purifies σ.canonicalPurification_purifies
   have hΨA : (Ψ.reindex e).Purifies ρ.marginalA := by
     simpa [e] using
       PureVector.reindex_marginalAReferenceEquiv_purifies_marginalA hΨ
@@ -754,8 +757,7 @@ theorem squaredFidelity_le_marginalB_squaredFidelity [Nonempty a]
   have hΨ : Ψ.Purifies ρ := by
     simpa [Ψ] using ρ.canonicalPurification_purifies
   have hΦ : Φ.Purifies σ := by
-    simpa [Φ] using
-      U.toReferenceIsometry.applyPureVector_purifies σ.canonicalPurification_purifies
+    exact U.toReferenceIsometry.applyPureVector_purifies σ.canonicalPurification_purifies
   have hΨB : (Ψ.reindex e).Purifies ρ.marginalB := by
     simpa [e] using
       PureVector.reindex_marginalBReferenceEquiv_purifies_marginalB hΨ
@@ -793,8 +795,7 @@ theorem squaredFidelity_le_applyState_squaredFidelity
   have hΨpur : Ψ.Purifies ρ := by
     simpa [Ψ] using ρ.canonicalPurification_purifies
   have hΘpur : Θ.Purifies σ := by
-    simpa [Θ] using
-      U.toReferenceIsometry.applyPureVector_purifies σ.canonicalPurification_purifies
+    exact U.toReferenceIsometry.applyPureVector_purifies σ.canonicalPurification_purifies
   have hΨoutpur : Ψout.Purifies τρ := by
     simp [Ψout, τρ]
   have hΘoutpur : Θout.Purifies τσ := by
@@ -803,7 +804,7 @@ theorem squaredFidelity_le_applyState_squaredFidelity
     PureVector.overlapSq_le_squaredFidelity_of_purifies hΨoutpur hΘoutpur
   have hoverlap_pres : Ψout.overlapSq Θout = Ψ.overlapSq Θ := by
     simpa [Ψout, Θout, V] using V.overlapSq_applyPureVectorRight Ψ Θ
-  haveI : Nonempty (a × b) :=
+  have : Nonempty (a × b) :=
     ⟨(Classical.choice ρ.nonempty, Classical.choice (Φ.applyState ρ).nonempty)⟩
   have htrace_env : τρ.squaredFidelity τσ ≤
       τρ.marginalA.squaredFidelity τσ.marginalA :=

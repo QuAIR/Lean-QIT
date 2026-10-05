@@ -149,10 +149,8 @@ private theorem kron_idChannel_apply_applyMatrix
         ∑ y : r₁, ∑ x : r₁,
           (V.matrix ra.1 x * star (V.matrix ra'.1 y)) •
             Φ (fun i i' => X (x, i) (y, i')) := by
-    rw [map_sum]
-    refine Finset.sum_congr rfl fun y _ => ?_
-    rw [map_sum]
-    refine Finset.sum_congr rfl fun x _ => ?_
+    refine (map_sum Φ _ _).trans (Finset.sum_congr rfl fun y _ => ?_)
+    refine (map_sum Φ _ _).trans (Finset.sum_congr rfl fun x _ => ?_)
     exact LinearMap.map_smul Φ (V.matrix ra.1 x * star (V.matrix ra'.1 y))
       (fun i i' => X (x, i) (y, i'))
   have hmapEntry := congrFun (congrFun hmap ra.2) ra'.2
@@ -319,8 +317,8 @@ theorem schumacher_direct_achievable_of_typicalCompressionWitness
   refine ⟨N, ?_⟩
   intro n hn
   obtain ⟨W, hWfin, hWdec, ⟨witness⟩⟩ := hN n hn
-  letI : Fintype W := hWfin
-  letI : DecidableEq W := hWdec
+  let : Fintype W := hWfin
+  let : DecidableEq W := hWdec
   exact ⟨W, inferInstance, inferInstance, witness.code, witness.rate_le,
     witness.jointError_le⟩
 

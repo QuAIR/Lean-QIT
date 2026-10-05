@@ -231,8 +231,11 @@ private theorem hermitian_trace_mul_eq_sum_eigenbasis_diag {a : Type u}
   let U : Matrix.unitaryGroup a ℂ := hH.eigenvectorUnitary
   let D : CMatrix a := Matrix.diagonal (fun i => ((hH.eigenvalues i : ℝ) : ℂ))
   have hHdiag : H = (U : CMatrix a) * D * star (U : CMatrix a) := by
+    have hspec := hH.spectral_theorem
+    rw [show (RCLike.ofReal ∘ hH.eigenvalues) =
+      (fun i => ((hH.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hH.spectral_theorem
+      using hspec
   have htrace :
       (H * E).trace = (D * eigenbasisConjugate hH E).trace := by
     calc

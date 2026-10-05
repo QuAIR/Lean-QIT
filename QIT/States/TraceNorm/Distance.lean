@@ -151,7 +151,11 @@ private theorem decouplingTraceNorm_continuous [Fintype a] [DecidableEq a] :
     exact hsqrtOn.comp_continuous hgram hnonneg
   have htrace : Continuous (fun M : CMatrix a => (CFC.sqrt (star M * M)).trace) :=
     Continuous.matrix_trace hsqrt
-  simpa [traceNorm, psdSqrt] using Complex.continuous_re.comp htrace
+  -- Lean 4.34 no longer unfolds `traceNorm`/`psdSqrt` far enough inside `simpa`
+  -- to meet the composed term; bridge by definitional equality instead.
+  show Continuous
+    (fun M : CMatrix a => ((CFC.sqrt (star M * M) : CMatrix a)).trace.re)
+  exact Complex.continuous_re.comp htrace
 
 omit [Fintype a] [DecidableEq a] in
 /-- The trace norm is continuous on finite-dimensional complex matrices. -/

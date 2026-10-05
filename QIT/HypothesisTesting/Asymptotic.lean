@@ -447,7 +447,7 @@ private theorem half_nussbaumSzkolaModel_equalPriorError_le_projection_error
           2 * (Complex.normSq (rejectAmp xy) + Complex.normSq (acceptAmp xy)) := by
       have h := complex_normSq_add_le_two_sum (rejectAmp xy) (acceptAmp xy)
       rw [hentry_sum xy] at h
-      simpa [nussbaumSzkolaOverlap] using h
+      exact h
     exact half_min_weight_normSq_add_le_weighted_normSq
       (by positivity) (by positivity)
       (Complex.normSq_nonneg _) (Complex.normSq_nonneg _)
@@ -772,7 +772,7 @@ theorem classicalMethodOfTypes_limsup_le_of_finiteExponentBound
           (rho.chernoffDistance sigma, (0 : EReal)) :=
       EReal.continuousAt_add (p := (rho.chernoffDistance sigma, (0 : EReal)))
         (Or.inr (by simp)) (Or.inr (by simp))
-    simpa using hadd.tendsto.comp hpair
+    simpa [Function.comp_def] using hadd.tendsto.comp hpair
   have hlimsup_le :=
     Filter.limsup_le_limsup hfinite (β := EReal)
       (u := fun n : Nat => normalizedNegLog n (classicalError (n + 1)))
@@ -856,14 +856,14 @@ theorem limsup_errorExponent_le_chernoffDistance_nussbaumSzkolaProduct
   have hsum :
       Filter.limsup (fun n : Nat => classicalSeq n + priorPenalty n) atTop ≤
         Filter.limsup classicalSeq atTop + Filter.limsup priorPenalty atTop := by
-    simpa only [Pi.add_apply] using
+    simpa only [Pi.add_def] using
       EReal.limsup_add_le
         (u := classicalSeq) (v := priorPenalty) (f := atTop)
         (Or.inr (by rw [hprior_limsup]; simp))
         (Or.inr (by rw [hprior_limsup]; simp))
   have hclassical :
       Filter.limsup classicalSeq atTop ≤ rho.chernoffDistance sigma := by
-    simpa [classicalSeq] using
+    simpa [HasClassicalMethodOfTypesChernoffConverse, classicalSeq] using
       hasClassicalMethodOfTypesChernoffConverse_nussbaumSzkolaProductClassicalError
         rho sigma
   have hbridge :=

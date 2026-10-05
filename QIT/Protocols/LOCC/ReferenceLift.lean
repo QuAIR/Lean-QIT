@@ -44,7 +44,18 @@ private theorem kron_add_left
   apply LinearMap.ext
   intro X
   ext i j
-  simp [kron, mul_add, add_mul, Finset.sum_add_distrib]
+  simp only [kron]
+  show (∑ jc : C, ∑ jc' : C, ∑ ia : A, ∑ ia' : A,
+      X (ia, jc) (ia', jc') * (Phi (Matrix.single ia ia' 1) i.1 j.1 +
+        Gamma (Matrix.single ia ia' 1) i.1 j.1) *
+        Psi (Matrix.single jc jc' 1) i.2 j.2) =
+    ((∑ jc : C, ∑ jc' : C, ∑ ia : A, ∑ ia' : A,
+        X (ia, jc) (ia', jc') * Phi (Matrix.single ia ia' 1) i.1 j.1 *
+          Psi (Matrix.single jc jc' 1) i.2 j.2) +
+    (∑ jc : C, ∑ jc' : C, ∑ ia : A, ∑ ia' : A,
+        X (ia, jc) (ia', jc') * Gamma (Matrix.single ia ia' 1) i.1 j.1 *
+          Psi (Matrix.single jc jc' 1) i.2 j.2))
+  simp only [mul_add, add_mul, Finset.sum_add_distrib]
 
 private theorem kron_sum_left
     {A : Type u} {A' : Type v} {C : Type w} {C' : Type x} {I : Type y}
@@ -62,6 +73,7 @@ private theorem kron_sum_left
         intro X
         ext i j
         simp [kron]
+        rfl
     | @insert i s hi ih =>
         simp only [Finset.sum_insert hi]
         rw [kron_add_left, ih]
@@ -79,6 +91,10 @@ private theorem reindex_map
   ext i j
   simp [reindex, MatrixMap.ofReferenceIsometry_apply,
     ReferenceIsometry.ofEquiv, Matrix.mul_apply]
+  show ∑ j_1 : A,
+      (∑ k : A, (if i = e k then (1 : Complex) else 0) * X k j_1) *
+        star (if j = e j_1 then (1 : Complex) else 0) =
+    X (e.symm i) (e.symm j)
   rw [Finset.sum_eq_single (e.symm j)]
   · rw [Finset.sum_eq_single (e.symm i)]
     · simp

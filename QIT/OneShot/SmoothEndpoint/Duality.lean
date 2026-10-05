@@ -40,8 +40,8 @@ change its unsmoothed conditional min-entropy. -/
 theorem toSubnormalized_conditionalMinEntropy_eq
     (ρ : State (Prod a b)) :
     ρ.toSubnormalized.conditionalMinEntropy = (ρ.conditionalMinEntropy : EReal) := by
-  letI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
-  letI : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
+  let : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
+  let : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
   have hstate :
       SubnormalizedState.ofStateScale ρ 1 (by norm_num) (by norm_num) =
         ρ.toSubnormalized := by
@@ -60,8 +60,8 @@ theorem toSubnormalized_conditionalMinEntropyFinite_eq
     (ρ : State (Prod a b)) :
     ρ.toSubnormalized.conditionalMinEntropyFinite ρ.toSubnormalized_matrix_ne_zero =
       ρ.conditionalMinEntropy := by
-  letI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
-  letI : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
+  let : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
+  let : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
   have hstate :
       SubnormalizedState.ofStateScale ρ 1 (by norm_num) (by norm_num) =
         ρ.toSubnormalized := by
@@ -85,8 +85,8 @@ change its unsmoothed conditional max-entropy. -/
 theorem toSubnormalized_conditionalMaxEntropy_eq
     (ρ : State (Prod a b)) :
     ρ.toSubnormalized.conditionalMaxEntropy = (ρ.conditionalMaxEntropy : EReal) := by
-  letI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
-  letI : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
+  let : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
+  let : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
   have hstate :
       SubnormalizedState.ofStateScale ρ 1 (by norm_num) (by norm_num) =
         ρ.toSubnormalized := by
@@ -105,8 +105,8 @@ theorem toSubnormalized_conditionalMaxEntropyFinite_eq
     (ρ : State (Prod a b)) :
     ρ.toSubnormalized.conditionalMaxEntropyFinite ρ.toSubnormalized_matrix_ne_zero =
       ρ.conditionalMaxEntropy := by
-  letI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
-  letI : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
+  let : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
+  let : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
   have hstate :
       SubnormalizedState.ofStateScale ρ 1 (by norm_num) (by norm_num) =
         ρ.toSubnormalized := by
@@ -289,10 +289,17 @@ theorem dualEffectLinkOutputABA_apply
   classical
   rcases ab with ⟨j, b0⟩
   rcases ab' with ⟨j', b1⟩
-  simp [dualEffectLinkOutputABA, MatrixMap.kron, MatrixMap.ofChoiMatrix_apply,
+  have hcoe : ∀ (bd bd' : (a × b) × a),
+      dualEffectLinkOutputABA (a := a) (b := b) (c := c) ψ M bd bd' =
+        ∑ z : c, ∑ z' : c, ∑ p : a × b, ∑ p' : a × b,
+          ψ.state.matrix (p, z) (p', z') * (Matrix.single p p' (1 : ℂ)) bd.1 bd'.1 *
+            (State.conditionalMinEntropyDualEffectMatrixMap (a := a) (b := c) M)
+              (Matrix.single z z' (1 : ℂ)) bd.2 bd'.2 :=
+    fun _ _ => rfl
+  simp [hcoe, MatrixMap.ofChoiMatrix_apply,
     State.conditionalMinEntropyDualEffectMatrixMap,
-    State.conditionalMinEntropyDualEffectChoiMatrix, PureVector.state_matrix,
-    rankOneMatrix_apply, Matrix.single, Fintype.sum_prod_type,
+    State.conditionalMinEntropyDualEffectChoiMatrix,
+    Matrix.single, Fintype.sum_prod_type,
     sum_pair_delta_rev, sum_abab_delta, and_assoc, and_left_comm]
 
 @[simp]
@@ -305,7 +312,14 @@ theorem dualEffectLinkOutputABAStarInput_apply
   classical
   rcases ab with ⟨j, b0⟩
   rcases ab' with ⟨j', b1⟩
-  simp [dualEffectLinkOutputABAStarInput, MatrixMap.kron, MatrixMap.ofChoiMatrix_apply,
+  have hcoe : ∀ (bd bd' : (a × b) × a),
+      dualEffectLinkOutputABAStarInput (a := a) (b := b) (c := c) ψ M bd bd' =
+        ∑ z : c, ∑ z' : c, ∑ p : a × b, ∑ p' : a × b,
+          (star ψ.state.matrix) (p, z) (p', z') * (Matrix.single p p' (1 : ℂ)) bd.1 bd'.1 *
+            (State.conditionalMinEntropyDualEffectMatrixMap (a := a) (b := c) M)
+              (Matrix.single z z' (1 : ℂ)) bd.2 bd'.2 :=
+    fun _ _ => rfl
+  simp [hcoe, MatrixMap.ofChoiMatrix_apply,
     State.conditionalMinEntropyDualEffectMatrixMap,
     State.conditionalMinEntropyDualEffectChoiMatrix, PureVector.state_matrix,
     rankOneMatrix_apply, Matrix.single, Fintype.sum_prod_type,
@@ -321,11 +335,18 @@ theorem dualEffectTransposeLinkOutputABA_apply
   classical
   rcases ab with ⟨j, b0⟩
   rcases ab' with ⟨j', b1⟩
-  simp [dualEffectTransposeLinkOutputABA, MatrixMap.kron, MatrixMap.ofChoiMatrix_apply,
+  have hcoe : ∀ (bd bd' : (a × b) × a),
+      dualEffectTransposeLinkOutputABA (a := a) (b := b) (c := c) ψ M bd bd' =
+        ∑ z : c, ∑ z' : c, ∑ p : a × b, ∑ p' : a × b,
+          ψ.state.matrix (p, z) (p', z') * (Matrix.single p p' (1 : ℂ)) bd.1 bd'.1 *
+            (State.conditionalMinEntropyDualEffectTransposeMatrixMap (a := a) (b := c) M)
+              (Matrix.single z z' (1 : ℂ)) bd.2 bd'.2 :=
+    fun _ _ => rfl
+  simp [hcoe, MatrixMap.ofChoiMatrix_apply,
     State.conditionalMinEntropyDualEffectTransposeMatrixMap,
     State.conditionalMinEntropyDualEffectTransposeChoiMatrix,
-    State.conditionalMinEntropyDualEffectChoiMatrix, PureVector.state_matrix,
-    rankOneMatrix_apply, Matrix.single, Fintype.sum_prod_type,
+    State.conditionalMinEntropyDualEffectChoiMatrix,
+    Matrix.single, Fintype.sum_prod_type,
     sum_pair_delta_rev, sum_abab_delta, and_assoc, and_left_comm, Matrix.transpose]
 
 private theorem sum_a_a_b_c_c_k_reorder {α : Type*} {β : Type*} {γ : Type*} {δ : Type*}
@@ -525,7 +546,14 @@ private def contractionDilationReferenceIsometry {r₁ : Type*} {r₂ : Type*}
     have hSsq : psdSqrt S * psdSqrt S = S :=
       psdSqrt_mul_self_of_posSemidef hSpos
     ext i j
-    simp only [Matrix.mul_apply, Matrix.conjTranspose_apply, Matrix.one_apply]
+    show Finset.univ.sum (fun x : Sum r₁ r₂ =>
+        star ((fun x y => match x with
+          | Sum.inl u => psdSqrt ((1 : CMatrix r₁) - Matrix.conjTranspose K * K) u y
+          | Sum.inr w => K w y) x i) *
+        (fun x y => match x with
+          | Sum.inl u => psdSqrt ((1 : CMatrix r₁) - Matrix.conjTranspose K * K) u y
+          | Sum.inr w => K w y) x j) =
+      if i = j then 1 else 0
     rw [Fintype.sum_sum_type]
     have hleft :
         (∑ x : r₁,
@@ -594,12 +622,95 @@ theorem dualEffectObjective_eq_card_mul_trace_transposeLink
           State.maximallyEntangledProjectorWithMiddle (a := a) b).trace)) := by
   classical
   rw [State.trace_mul_maximallyEntangledProjectorWithMiddle]
-  simpa [dualEffectTransposeLinkOutputABA_apply, State.marginalAC, Matrix.trace,
-    Matrix.mul_apply, Fintype.sum_prod_type, Finset.mul_sum, Finset.sum_mul,
-    mul_assoc] using
-      sum_a_c_a_c_b_reorder (α := a) (β := b) (γ := c)
-        (fun x j k y l =>
-          ψ.amp ((x, j), k) * ((starRingEnd ℂ) (ψ.amp ((y, j), l)) * M (y, l) (x, k)))
+  have hLHS :
+      Finset.univ.sum (fun x : a => Finset.univ.sum fun k : c =>
+        (Finset.univ.sum fun z : Prod a c =>
+          (Finset.univ.sum fun j : b =>
+            ψ.amp ((x, j), k) * (starRingEnd ℂ) (ψ.amp ((z.1, j), z.2))) *
+          M z (x, k))) =
+        Finset.univ.sum (fun x : a => Finset.univ.sum fun y : a =>
+          Finset.univ.sum fun j : b => Finset.univ.sum fun k : c =>
+            Finset.univ.sum fun l : c =>
+              ψ.amp ((x, j), k) * ((starRingEnd ℂ) (ψ.amp ((y, j), l)) * M (y, l) (x, k))) := by
+    have hrw : ∀ (x : a) (k : c),
+        (Finset.univ.sum fun z : Prod a c =>
+          (Finset.univ.sum fun j : b =>
+            ψ.amp ((x, j), k) * (starRingEnd ℂ) (ψ.amp ((z.1, j), z.2))) *
+          M z (x, k)) =
+          Finset.univ.sum fun z : Prod a c => Finset.univ.sum fun j : b =>
+            ψ.amp ((x, j), k) * ((starRingEnd ℂ) (ψ.amp ((z.1, j), z.2)) * M z (x, k)) := by
+      intro x k
+      refine Finset.sum_congr rfl fun z _ => ?_
+      calc (Finset.univ.sum (fun j : b =>
+                ψ.amp ((x, j), k) * (starRingEnd ℂ) (ψ.amp ((z.1, j), z.2)))) *
+              M z (x, k)
+          = Finset.univ.sum fun j : b =>
+              (ψ.amp ((x, j), k) * (starRingEnd ℂ) (ψ.amp ((z.1, j), z.2))) *
+                M z (x, k) :=
+            Finset.sum_mul _ _ _
+        _ = Finset.univ.sum fun j : b =>
+              ψ.amp ((x, j), k) * ((starRingEnd ℂ) (ψ.amp ((z.1, j), z.2)) * M z (x, k)) :=
+            Finset.sum_congr rfl fun j _ => mul_assoc _ _ _
+    rw [Finset.sum_congr rfl fun x _ => Finset.sum_congr rfl fun k _ => hrw x k]
+    simp_rw [Fintype.sum_prod_type]
+    exact sum_a_c_a_c_b_reorder (α := a) (β := b) (γ := c) fun x j k y l =>
+      ψ.amp ((x, j), k) * ((starRingEnd ℂ) (ψ.amp ((y, j), l)) * M (y, l) (x, k))
+  have hdiag : ∀ (x : a) (k : c),
+      (ψ.state.marginalAC.matrix * M) (x, k) (x, k) =
+        Finset.univ.sum fun z : Prod a c =>
+          (Finset.univ.sum fun j : b =>
+            ψ.amp ((x, j), k) * (starRingEnd ℂ) (ψ.amp ((z.1, j), z.2))) *
+          M z (x, k) := by
+    intro x k
+    show Finset.univ.sum (fun z : Prod a c =>
+        (Finset.univ.sum fun j : b =>
+          ψ.amp ((x, j), k) * (starRingEnd ℂ) (ψ.amp ((z.1, j), z.2))) *
+        M z (x, k)) = _
+    refine Finset.sum_congr rfl fun z _ => ?_
+    rw [Finset.sum_mul]
+  have hT : ∀ (i i' : a) (j : b),
+      dualEffectTransposeLinkOutputABA (a := a) (b := b) (c := c) ψ M ((i, j), i) ((i', j), i') =
+        ∑ k : c, ∑ k' : c,
+          ψ.amp ((i, j), k) * (star (ψ.amp ((i', j), k')) * M (i', k') (i, k)) := by
+    intro i i' j
+    rw [dualEffectTransposeLinkOutputABA_apply]
+    refine Finset.sum_congr rfl fun k _ => Finset.sum_congr rfl fun k' _ => ?_
+    rw [PureVector.state_matrix_apply, mul_assoc]
+  have hfac : (Fintype.card a : ℂ) * (((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ) = 1 := by
+    rw [show (((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ) = (Fintype.card a : ℂ)⁻¹ from by simp]
+    exact mul_inv_cancel₀ (Nat.cast_ne_zero.mpr (Fintype.card_ne_zero (α := a)))
+  calc ((ψ.state.marginalAC.matrix * M).trace)
+      = Finset.univ.sum fun i : Prod a c =>
+          Finset.univ.sum fun z : Prod a c =>
+            (Finset.univ.sum fun j : b =>
+              ψ.amp ((i.1, j), i.2) * (starRingEnd ℂ) (ψ.amp ((z.1, j), z.2))) *
+            M z i := by
+        rw [Matrix.trace]
+        refine Finset.sum_congr rfl fun i _ => ?_
+        exact hdiag i.1 i.2
+    _ = Finset.univ.sum fun x : a => Finset.univ.sum fun k : c =>
+          Finset.univ.sum fun z : Prod a c =>
+            (Finset.univ.sum fun j : b =>
+              ψ.amp ((x, j), k) * (starRingEnd ℂ) (ψ.amp ((z.1, j), z.2))) *
+            M z (x, k) := by
+        rw [Fintype.sum_prod_type]
+    _ = _ := by
+        rw [hLHS]
+        rw [show (∑ i : a, ∑ i' : a, ∑ j : b,
+              dualEffectTransposeLinkOutputABA (a := a) (b := b) (c := c) ψ M
+                ((i, j), i) ((i', j), i')) =
+            ∑ x : a, ∑ y : a, ∑ j : b, ∑ k : c, ∑ l : c,
+              ψ.amp ((x, j), k) * ((starRingEnd ℂ) (ψ.amp ((y, j), l)) * M (y, l) (x, k))
+          from Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun i' _ =>
+            Finset.sum_congr rfl fun j _ => hT i i' j]
+        rw [show (Fintype.card a : ℂ) * ((((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ) *
+            ∑ x : a, ∑ y : a, ∑ j : b, ∑ k : c, ∑ l : c,
+              ψ.amp ((x, j), k) * ((starRingEnd ℂ) (ψ.amp ((y, j), l)) * M (y, l) (x, k))) =
+          ((Fintype.card a : ℂ) * (((Fintype.card a : ℝ)⁻¹ : ℝ) : ℂ)) *
+            ∑ x : a, ∑ y : a, ∑ j : b, ∑ k : c, ∑ l : c,
+              ψ.amp ((x, j), k) * ((starRingEnd ℂ) (ψ.amp ((y, j), l)) * M (y, l) (x, k))
+          from (mul_assoc _ _ _).symm]
+        rw [hfac, one_mul]
 
 theorem dualEffectTransposeLinkOutputABA_posSemidef
     (ψ : PureVector (Prod (Prod a b) c)) {M : CMatrix (Prod a c)}
@@ -1753,9 +1864,17 @@ theorem conditionalMinMaxEntropyDualOn_complementaryPureMarginals
     Ψ.reindex (Equiv.prodComm c (Prod a b))
   have hAB : Ω.state.marginalAB = ρAB := by
     apply State.ext
-    simpa [Ω, State.marginalAB_eq_marginalA, PureVector.reindex_state, State.reindex,
-      State.marginalA, State.marginalB, partialTraceA, partialTraceB,
-      PureVector.state_matrix, rankOneMatrix_apply] using hpur
+    have hswap : ∀ X : CMatrix (Prod c (Prod a b)),
+        partialTraceB (X.submatrix Prod.swap Prod.swap) = partialTraceA X := by
+      intro X
+      ext ab ab'
+      simp [partialTraceA, partialTraceB, Matrix.submatrix_apply, Prod.swap_prod_mk]
+    rw [show Ω.state.marginalAB.matrix =
+        partialTraceB ((rankOneMatrix Ψ.amp).submatrix Prod.swap Prod.swap) from by
+      simp [Ω, State.marginalAB_eq_marginalA, PureVector.reindex_state, State.reindex,
+        State.marginalA, PureVector.state_matrix]]
+    rw [hswap]
+    simpa [PureVector.state_matrix] using hpur
   have hAC' : Ω.state.marginalAC = ρAC := by
     subst hAC
     apply State.ext
@@ -1779,9 +1898,17 @@ theorem neg_log2_card_left_le_conditionalMaxEntropy
     Ψ.reindex (Equiv.prodComm (Prod a b) (Prod a b))
   have hAB : Ω.state.marginalAB = ρ := by
     apply State.ext
-    simpa [Ω, State.marginalAB_eq_marginalA, PureVector.reindex_state, State.reindex,
-      State.marginalA, State.marginalB, partialTraceA, partialTraceB,
-      PureVector.state_matrix, rankOneMatrix_apply] using hΨ
+    have hswap : ∀ X : CMatrix (Prod (Prod a b) (Prod a b)),
+        partialTraceB (X.submatrix Prod.swap Prod.swap) = partialTraceA X := by
+      intro X
+      ext ab ab'
+      simp [partialTraceA, partialTraceB, Matrix.submatrix_apply, Prod.swap_prod_mk]
+    rw [show Ω.state.marginalAB.matrix =
+        partialTraceB ((rankOneMatrix Ψ.amp).submatrix Prod.swap Prod.swap) from by
+      simp [Ω, State.marginalAB_eq_marginalA, PureVector.reindex_state, State.reindex,
+        State.marginalA, PureVector.state_matrix]]
+    rw [hswap]
+    simpa [PureVector.state_matrix] using hΨ
   have hdual :
       Ω.state.marginalAB.conditionalMaxEntropy =
         -Ω.state.marginalAC.conditionalMinEntropy :=
@@ -1832,7 +1959,7 @@ theorem SmoothConditionalMinEntropyCandidate_bddAbove
       let ⟨_, hτ⟩ := hlam
       conditionalMinEntropyFeasible_le_log2_card_left (a := a) hτ
   · rw [Set.not_nonempty_iff_eq_empty.mp hne, Real.sSup_empty]
-    haveI : Nonempty a := ⟨(Classical.choice ρ'.nonempty).1⟩
+    have : Nonempty a := ⟨(Classical.choice ρ'.nonempty).1⟩
     have hcard_one : 1 ≤ (Fintype.card a : ℝ) := by
       exact_mod_cast (Nat.succ_le_of_lt (Fintype.card_pos_iff.mpr inferInstance))
     exact div_nonneg (Real.log_nonneg hcard_one)

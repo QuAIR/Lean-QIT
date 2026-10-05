@@ -53,8 +53,7 @@ theorem matrix_le_one (ρ : State a) :
   let U : Matrix.unitaryGroup a ℂ := ρ.pos.1.eigenvectorUnitary
   let D : CMatrix a := Matrix.diagonal fun i => ((ρ.pos.1.eigenvalues i : ℝ) : ℂ)
   have hdiag : ρ.matrix = (U : CMatrix a) * D * star (U : CMatrix a) := by
-    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using ρ.pos.1.spectral_theorem
+    exact ρ.pos.1.spectral_theorem
   have heig_sum : ∑ i, ρ.pos.1.eigenvalues i = 1 := by
     have hc : (∑ i, ((ρ.pos.1.eigenvalues i : ℝ) : ℂ)) = 1 := by
       exact ρ.pos.1.trace_eq_sum_eigenvalues.symm.trans ρ.trace_eq_one
@@ -950,8 +949,8 @@ theorem ConditionalMaxFidelityBlockFeasible.of_unitary_sqrt [Nonempty a]
     Matrix.fromBlocks ρ.sqrtMatrix 0 0 τ.sqrtMatrix
   have hH : H.PosSemidef := by
     simpa [H] using cMatrix_fromBlocks_unitary_posSemidef U
-  have hconj : (S * H * star S).PosSemidef := by
-    simpa [Matrix.mul_assoc] using hH.mul_mul_conjTranspose_same S
+  have hconj : (S * H * star S).PosSemidef :=
+    hH.mul_mul_conjTranspose_same S
   have hEq :
       S * H * star S =
         (Matrix.fromBlocks ρ.matrix
@@ -1506,8 +1505,30 @@ theorem ConditionalMinEntropyScaleFeasible.compress_sumInr
     convert hsub using 1
     ext x y
     simp [Matrix.kronecker, Matrix.sumBlock22, conditioningIsometryApply_matrix,
-      ReferenceIsometry.applyMatrixRight, ReferenceIsometry.rightBlock,
-      ReferenceIsometry.sumInr, Matrix.mul_apply]
+      ReferenceIsometry.applyMatrixRight, ReferenceIsometry.sumInr, Matrix.mul_apply]
+    -- Lean 4.34 bridge: the entrywise `Matrix.mul_apply` simp layer no longer
+    -- fires on the raw-lambda `sumInr` matrix; pre-digest the entrywise layer
+    -- with `show` (defeq only), then collapse the orthonormal-column sums.
+    show ρ.matrix x y =
+      ∑ j : b, (∑ k : b,
+          (if x.2 = k then (1 : ℂ) else 0) * ρ.matrix (x.1, k) (y.1, j)) *
+        star (if y.2 = j then (1 : ℂ) else 0)
+    rw [Finset.sum_eq_single y.2]
+    · have hinnerY :
+          (∑ k : b, (if x.2 = k then (1 : ℂ) else 0) * ρ.matrix (x.1, k) (y.1, y.2)) =
+            ρ.matrix (x.1, x.2) (y.1, y.2) := by
+        rw [Finset.sum_eq_single x.2]
+        · simp
+        · intro k _ hk
+          simp [Ne.symm hk]
+        · intro hnot
+          exact absurd (Finset.mem_univ x.2) hnot
+      rw [hinnerY]
+      simp
+    · intro j _ hj
+      simp [Ne.symm hj]
+    · intro hnot
+      exact absurd (Finset.mem_univ y.2) hnot
 
 /-- The raw endpoint scale
 `inf {Tr T_B | T_B ≥ 0, ρ_AB ≤ I_A ⊗ T_B}`. -/
@@ -1578,8 +1599,7 @@ omit [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b] in
 theorem conditionalMinEntropyDualEffectChoiMatrix_posSemidef
     {M : CMatrix (Prod a b)} (hM : M.PosSemidef) :
     (conditionalMinEntropyDualEffectChoiMatrix (a := a) (b := b) M).PosSemidef := by
-  simpa [conditionalMinEntropyDualEffectChoiMatrix] using
-    hM.submatrix (fun x : Prod b a => (x.2, x.1))
+  exact hM.submatrix (fun x : Prod b a => (x.2, x.1))
 
 omit [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b] in
 theorem conditionalMinEntropyDualEffectTransposeChoiMatrix_posSemidef
@@ -1762,8 +1782,7 @@ theorem conditionalMinEntropyDualEffectOfKraus_posSemidef
       (conditionalMinEntropyDualEffectChoiMatrix (a := a) (b := b)
         (conditionalMinEntropyDualEffectOfKraus (a := a) (b := b) K)).PosSemidef := by
     simpa [conditionalMinEntropyDualEffectTransposeChoiMatrix] using hCP.transpose
-  simpa [conditionalMinEntropyDualEffectChoiMatrix] using
-    hchoi.submatrix (fun x : Prod a b => (x.2, x.1))
+  exact hchoi.submatrix (fun x : Prod a b => (x.2, x.1))
 
 omit [DecidableEq a] [Fintype b] [DecidableEq b] in
 theorem partialTraceA_conditionalMinEntropyDualEffectOfKraus
@@ -2582,7 +2601,7 @@ theorem conditionalMinEntropyFeasible_le_log2_card_left
     (h : ConditionalMinEntropyFeasible (a := a) ρ σ lam) :
     lam ≤ log2 (Fintype.card a : ℝ) := by
   classical
-  haveI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
+  have : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
   have hscale := conditionalMinEntropyFeasible_scale_lower_bound (a := a) h
   have hcard_pos : 0 < (Fintype.card a : ℝ) := by
     exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
@@ -2924,7 +2943,7 @@ theorem conditionalMinEntropy_maximallyMixed_prod
     ((State.maximallyMixed a).prod σ).conditionalMinEntropy =
       log2 (Fintype.card a : ℝ) := by
   classical
-  letI : Nonempty b := σ.nonempty
+  let : Nonempty b := σ.nonempty
   have hle :
       ((State.maximallyMixed a).prod σ).conditionalMinEntropy ≤
         log2 (Fintype.card a : ℝ) :=

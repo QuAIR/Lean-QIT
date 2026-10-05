@@ -240,8 +240,8 @@ def extractorOutputState (E : Ensemble Z e) : State (S × (F × e)) where
                 (E.states z).matrix).trace =
                 (Matrix.single f f (1 : ℂ)).trace * (E.states z).matrix.trace :=
             Matrix.trace_kronecker _ _
-          rw [houter, hinner, trace_single_one, if_pos rfl,
-            trace_single_one, if_pos rfl, (E.states z).trace_eq_one]
+          rw [houter, hinner, trace_single_one, ite_eq_left rfl,
+            trace_single_one, ite_eq_left rfl, (E.states z).trace_eq_one]
           norm_num
         rw [htrace]
         exact (Algebra.algebraMap_eq_smul_one _).symm

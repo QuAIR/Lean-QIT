@@ -94,7 +94,7 @@ theorem psdInvSqrt_mul_psdSqrt {M : CMatrix a} (hM : M.PosSemidef) :
       simp only [Matrix.diagonal_mul_diagonal, Matrix.diagonal_apply,
         Dinv, Dsqrt, reduceIte]
       exact mul_comm _ _
-    · simp only [Matrix.diagonal_mul_diagonal, Matrix.diagonal_apply, Dinv, Dsqrt, hij, if_false]
+    · simp only [Matrix.diagonal_mul_diagonal, Matrix.diagonal_apply, Dinv, Dsqrt, hij, ite_false]
   rw [hdiag_comm', hdiag_comm'', hDD]
 
 /-- Core lemma (integer `c = 1`): for positive semidefinite `T` and any square
@@ -205,9 +205,9 @@ private lemma PosSemidef.zero_diag_zero_row_col
     A i j = 0 ∧ A j i = 0 := by
   -- The `i`-th standard basis vector `eᵢ = Pi.single i 1`.
   set e : n → ℂ := Pi.single i 1 with he
-  have hei : e i = (1:ℂ) := by rw [he, Pi.single_apply, if_pos rfl]
+  have hei : e i = (1:ℂ) := by rw [he, Pi.single_apply, ite_eq_left rfl]
   have hek : ∀ k, k ≠ i → e k = 0 := fun k hk => by
-    rw [he, Pi.single_apply, if_neg hk]
+    rw [he, Pi.single_apply, ite_eq_right hk]
   -- `A *ᵥ eᵢ` is the `i`-th column of `A`.
   have hmulVec : Matrix.mulVec A e = fun k => A k i := by
     ext k
@@ -222,7 +222,13 @@ private lemma PosSemidef.zero_diag_zero_row_col
     · intro k _ hk; simp [hek k hk]
     · simp [hei]
   have hcol : Matrix.mulVec A e = 0 :=
-    (hA.dotProduct_mulVec_zero_iff e).mp (by rw [hform, hii])
+    -- 4.34: `dotProduct_mulVec_zero_iff`'s vector argument is now implicit, so
+    -- the old `(hA.… e).mp` applies an `Iff` as a function ("Function
+    -- expected"). The `show` pins the vector to `e` so the implicit is
+    -- assigned by unification; the `rw` pair replays unchanged. Spelled-out
+    -- `Matrix.mulVec`: the `*ᵥ` notation's 4.34 elaborator is not on this
+    -- module's transitive import chain ("subscriptTerm not implemented").
+    (hA.dotProduct_mulVec_zero_iff).mp (show dotProduct (star e) (Matrix.mulVec A e) = 0 by rw [hform, hii])
   -- Column `i` is zero: `A j i` is the `j`-th entry of `A *ᵥ eᵢ`.
   have hji : A j i = 0 := by
     have h1 : (fun k => A k i) j = 0 := by rw [← hmulVec, hcol]; simp
@@ -303,21 +309,21 @@ private lemma support_proj_fixes_of_le {M X : CMatrix a}
       rw [Matrix.diagonal_apply]
       by_cases hik : i = k
       · -- `i = k`: all three `if i = k` reduce to their `then`-branch.
-        rw [if_pos hik, if_pos hik, if_pos hik]
+        rw [ite_eq_left hik, ite_eq_left hik, ite_eq_left hik]
         split_ifs <;> ring
       · -- `i ≠ k`: all three `if i = k` reduce to `0`.
-        rw [if_neg hik, if_neg hik, if_neg hik]; ring
+        rw [ite_eq_right hik, ite_eq_right hik, ite_eq_right hik]; ring
     rw [Finset.sum_eq_single i]
-    · rw [hentry i, if_pos rfl]
+    · rw [hentry i, ite_eq_left rfl]
       simp only [Matrix.zero_apply]
       by_cases hpos : 0 < hM.isHermitian.eigenvalues i
-      · rw [if_pos hpos]; ring
+      · rw [ite_eq_left hpos]; ring
       · have hpos0 : hM.isHermitian.eigenvalues i = 0 := by
           have nn : 0 ≤ hM.isHermitian.eigenvalues i := hM.eigenvalues_nonneg i
           exact le_antisymm (not_lt.mp hpos) nn
-        rw [if_neg hpos, one_mul]
+        rw [ite_eq_right hpos, one_mul]
         exact hX'row_zero i hpos0 j
-    · intro k _ hk; rw [hentry k, if_neg (ne_comm.mp hk), zero_mul]
+    · intro k _ hk; rw [hentry k, ite_eq_right (ne_comm.mp hk), zero_mul]
     · intro h; exact absurd (Finset.mem_univ i) h
   -- Therefore `(1 - Pi) * X = 0`, hence `Pi * X = X`.
   have hXspec : X = U * X' * star U := by

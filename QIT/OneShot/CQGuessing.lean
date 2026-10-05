@@ -316,7 +316,7 @@ omit [DecidableEq ι] in
 /-- A normalized finite ensemble has at least one classical label. -/
 theorem index_nonempty (E : Ensemble ι b) : Nonempty ι := by
   by_contra hne
-  haveI : IsEmpty ι := not_nonempty_iff.mp hne
+  have : IsEmpty ι := not_nonempty_iff.mp hne
   have hsum : (∑ i, E.probs i) = 0 := by simp
   have hzero : (0 : ℝ≥0) = 1 := by
     simpa [hsum] using E.weights_sum
@@ -359,8 +359,7 @@ def sourceCoordinatePinchEnsemble (ρ : State (Prod ι b)) : Ensemble ι b where
         ∀ x, 0 ≤ (Classical.block ρ.matrix x x).trace.re := by
       intro x
       have htrace_nonneg : 0 ≤ (Classical.block ρ.matrix x x).trace :=
-        Matrix.PosSemidef.trace_nonneg
-          (by simpa [Classical.block] using ρ.pos.submatrix (fun i : b => (x, i)))
+        Matrix.PosSemidef.trace_nonneg (ρ.pos.submatrix (fun i : b => (x, i)))
       exact htrace_nonneg.1
     have hsum :=
       congrArg Complex.re (Classical.sum_block_trace (ι := ι) (a := b) ρ.matrix)
@@ -376,7 +375,7 @@ def sourceCoordinatePinchEnsemble (ρ : State (Prod ι b)) : Ensemble ι b where
       State.maximallyMixed b
     else
       State.normalizePSD (Classical.block ρ.matrix x x)
-        (by simpa [Classical.block] using ρ.pos.submatrix (fun i : b => (x, i))) hx
+        (ρ.pos.submatrix (fun i : b => (x, i))) hx
 
 private theorem sourceCoordinatePinchEnsemble_weightedBlock
     (ρ : State (Prod ι b)) (x : ι) :
@@ -385,8 +384,7 @@ private theorem sourceCoordinatePinchEnsemble_weightedBlock
       Classical.block ρ.matrix x x := by
     classical
     let B : CMatrix b := Classical.block ρ.matrix x x
-    have hBpos : B.PosSemidef := by
-      simpa [B, Classical.block] using ρ.pos.submatrix (fun i : b => (x, i))
+    have hBpos : B.PosSemidef := ρ.pos.submatrix (fun i : b => (x, i))
     have hBtrace_nonneg : 0 ≤ B.trace :=
       Matrix.PosSemidef.trace_nonneg hBpos
     have hBtr_nonneg : 0 ≤ B.trace.re :=
@@ -408,8 +406,7 @@ private theorem sourceCoordinatePinchEnsemble_weightedBlock
         exact_mod_cast hreal
       have hblock_ne : (Classical.block ρ.matrix x x).trace.re ≠ 0 := by
         simpa [B] using hzero
-      simp only [State.sourceCoordinatePinchEnsemble, hblock_ne, dite_false,
-        State.normalizePSD_matrix]
+      simp only [State.sourceCoordinatePinchEnsemble, hblock_ne, dite_false]
       change ((Real.toNNReal B.trace.re : ℝ≥0) : ℂ) • (((B.trace.re)⁻¹ : ℝ) • B) = B
       rw [hprob]
       ext i j
@@ -479,9 +476,9 @@ theorem CqSmoothConditionalMinEntropyCandidate_of_smoothConditionalMinEntropyNor
     E.CqSmoothConditionalMinEntropyCandidate ε
       (E.cqState.smoothConditionalMinEntropyNormalizedCandidates ε) := by
   classical
-  haveI : Nonempty ι := E.index_nonempty
+  have : Nonempty ι := E.index_nonempty
   have hprod : Nonempty (Prod ι b) := E.cqState.nonempty
-  haveI : Nonempty b := ⟨(Classical.choice hprod).2⟩
+  have : Nonempty b := ⟨(Classical.choice hprod).2⟩
   rcases E.cqState.smoothConditionalMinEntropyNormalizedCandidates_exists_optimizer
       (a := ι) (b := b) hε_nonneg with
     ⟨ρmin, hρmin_ball, hsmooth, _hopt⟩
@@ -750,7 +747,7 @@ private noncomputable def hermitianInclusionNormed : HermitianMatrix b →L[ℝ]
 private theorem isClosed_setOf_zero_le_complex' : IsClosed ({z : ℂ | 0 ≤ z} : Set ℂ) := by
   have h : ({z : ℂ | 0 ≤ z} : Set ℂ) = {z | 0 ≤ z.re} ∩ {z | z.im = 0} := by
     ext z
-    simp only [Set.mem_inter_iff, Set.mem_setOf_eq]
+    simp only [Set.mem_inter_iff, Set.mem_ofPred_eq]
     constructor
     · intro hz
       simp [Complex.le_def] at hz ⊢
@@ -798,8 +795,8 @@ private theorem cMatrix_norm_le_norm_of_posSemidef_le {A B : CMatrix b}
     ‖A‖ ≤ ‖B‖ := by
   have hA0 : (0 : CMatrix b) ≤ A := by
     simpa [Matrix.le_iff] using hA
-  exact CStarAlgebra.norm_le_norm_of_nonneg_of_le
-    (A := CMatrix b) (a := A) (b := B) hA0 hAB
+  exact CStarAlgebra.norm_le_norm_of_le_of_nonneg
+    (A := CMatrix b) (a := A) (b := B) hAB hA0
 
 /-- The product PSD cone for finite cq effect families. -/
 def cqEffectFamilySubmodule : Submodule NNReal (CQEffectFamily ι b) where
@@ -1198,16 +1195,14 @@ theorem cqPrimalProgram_dualFeasible_single_le
 theorem cqPrimalProgram_dualValueSet_subset_cqDualValueSet (E : Ensemble ι b) :
     (cqPrimalProgram E).dualValueSet ⊆ E.cqDualValueSet := by
   classical
-  letI : Nonempty ι := E.index_nonempty
+  let : Nonempty ι := E.index_nonempty
   rintro value ⟨y, hy, rfl⟩
   let yH : HermitianDual b :=
     y.comp (hermitianInclusionNormed (b := b))
   rcases exists_hermitian_tracePairing_representation (n := b) yH with ⟨T, hTrep⟩
   have hrep_psd (A : CMatrix b) (hA : A.PosSemidef) :
-      y A = ((T.val * A).trace).re := by
-    let X : HermitianMatrix b := ⟨A, hA.1⟩
-    have h := hTrep X
-    simpa [yH, X, tracePairing] using h
+      y A = ((T.val * A).trace).re :=
+    hTrep ⟨A, hA.1⟩
   refine ⟨T.val, ?_, ?_⟩
   · constructor
     · refine (cMatrix_posSemidef_iff_trace_mul_posSemidef_re_nonneg T.isHermitian).2 ?_
@@ -1232,9 +1227,10 @@ theorem cqPrimalProgram_dualValueSet_subset_cqDualValueSet (E : Ensemble ι b) :
         simp [Matrix.sub_mul, Matrix.trace_sub]
       linarith
   · have hrep_one : y (1 : CMatrix b) = E.cqDualValue T.val := by
-      let X : HermitianMatrix b := ⟨1, Matrix.PosSemidef.one.1⟩
-      have h := hTrep X
-      simpa [yH, X, tracePairing, cqDualValue] using h
+      have h1 : y (1 : CMatrix b) = ((T.val * (1 : CMatrix b)).trace).re :=
+        hTrep ⟨1, Matrix.PosSemidef.one.1⟩
+      rw [Matrix.mul_one] at h1
+      exact h1
     simp [QIT.SDP.ContinuousConeProgram.dualValue, cqPrimalProgram, hrep_one]
 
 /-- The conic and matrix-order cq dual value sets coincide. -/
@@ -1546,8 +1542,8 @@ theorem cqGuessingProbability_eq_conditionalMinEntropyScale (E : Ensemble ι b) 
 `2⁻ᴴᵐⁱⁿ⁽ˣ|ᴮ⁾ = p_guess(X|B)`. -/
 theorem rpow_neg_conditionalMinEntropy_eq_cqGuessingProbability (E : Ensemble ι b) :
     Real.rpow 2 (-E.cqState.conditionalMinEntropy) = E.cqGuessingProbability := by
-  letI : Nonempty ι := E.index_nonempty
-  letI : Nonempty b :=
+  let : Nonempty ι := E.index_nonempty
+  let : Nonempty b :=
     (E.states (Classical.choice (inferInstance : Nonempty ι))).nonempty
   have hscale : 0 < E.cqState.conditionalMinEntropyScale (a := ι) := by
     rw [E.cqState.conditionalMinEntropyScale_eq_normalizedScale (a := ι)]

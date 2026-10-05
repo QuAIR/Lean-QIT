@@ -154,6 +154,7 @@ private theorem marginalBC_reindex_abcToAcbEquiv
   apply State.ext
   ext cb cb'
   simp [State.marginalBC, State.reindex, abcToAcbEquiv, Equiv.prodComm]
+  rfl
 
 private theorem marginalBOfABC_reindex_abcToAcbEquiv
     (ρ : State (Prod (Prod a b) c)) :

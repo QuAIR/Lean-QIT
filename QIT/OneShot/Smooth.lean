@@ -19,7 +19,8 @@ public import QIT.States.Geometry.PurifiedDistance
 public import QIT.States.Subnormalized
 public import QIT.States.TraceNorm.PositivePart
 public import QIT.States.Purification.Conditioning
-public import Mathlib.Data.Real.Archimedean
+public import Mathlib.Algebra.Order.AbsoluteValue.Basic
+public import Mathlib.Data.Rat.Floor
 
 /-!
 # Smooth min/max entropy
@@ -423,7 +424,8 @@ private theorem punit_psdSqrt_const (r : ℝ) (hr : 0 ≤ r) :
     ext i j
     cases i
     cases j
-    simp [S, A, Matrix.mul_apply, hsqrt_sq]
+    rw [Matrix.mul_apply', dotProduct_pUnit]
+    exact hsqrt_sq
   have hSpos : S.PosSemidef := by
     have hdiag :
         S = Matrix.diagonal (fun _ : PUnit.{u + 1} => ((Real.sqrt r : ℝ) : ℂ)) := by
@@ -441,6 +443,10 @@ private theorem traceNorm_punit_const_of_nonneg (r : ℝ) (hr : 0 ≤ r) :
     traceNorm (fun _ _ : PUnit.{u + 1} => ((r : ℝ) : ℂ) :
       CMatrix PUnit.{u + 1}) = r := by
   let A : CMatrix PUnit.{u + 1} := fun _ _ => ((r : ℝ) : ℂ)
+  have htrA : Matrix.trace A = ((r : ℝ) : ℂ) := by
+    show ∑ i : PUnit.{u + 1}, Matrix.diag A i = ((r : ℝ) : ℂ)
+    rw [Fintype.sum_subsingleton _ PUnit.unit]
+    rfl
   have hgram :
       Aᴴ * A =
         (fun _ _ : PUnit.{u + 1} => ((r * r : ℝ) : ℂ) :
@@ -448,7 +454,9 @@ private theorem traceNorm_punit_const_of_nonneg (r : ℝ) (hr : 0 ≤ r) :
     ext i j
     cases i
     cases j
-    simp [A, Matrix.mul_apply, ← Complex.ofReal_mul]
+    rw [Matrix.mul_apply', dotProduct_pUnit, Matrix.conjTranspose_apply]
+    show (starRingEnd ℂ) ((r : ℝ) : ℂ) * ((r : ℝ) : ℂ) = ((r * r : ℝ) : ℂ)
+    rw [Complex.conj_ofReal, ← Complex.ofReal_mul]
   have hsqrt : psdSqrt (Aᴴ * A) = A := by
     rw [hgram]
     rw [punit_psdSqrt_const (r * r) (mul_self_nonneg r)]
@@ -456,8 +464,9 @@ private theorem traceNorm_punit_const_of_nonneg (r : ℝ) (hr : 0 ≤ r) :
     cases i
     cases j
     simp [A, Real.sqrt_mul_self hr]
-  rw [traceNorm, hsqrt]
-  simp [A, Matrix.trace]
+  show (psdSqrt (Aᴴ * A)).trace.re = r
+  rw [hsqrt, htrA]
+  rfl
 
 private theorem punit_subnormalized_matrix_eq_trace
     (ρ : SubnormalizedState PUnit.{u + 1}) :
@@ -503,6 +512,19 @@ private theorem punit_generalizedFidelity_eq
           (1 -
             (Matrix.trace
               (fun _ _ : PUnit.{u + 1} => ((σ.matrix.trace.re : ℝ) : ℂ))).re))) ^ 2
+  have htr :
+      ∀ M : CMatrix PUnit.{u + 1}, Matrix.trace M = M PUnit.unit PUnit.unit := by
+    intro M
+    show ∑ i : PUnit.{u + 1}, Matrix.diag M i = M PUnit.unit PUnit.unit
+    rw [Fintype.sum_subsingleton _ PUnit.unit]
+    rfl
+  have htrc : ∀ t : ℂ,
+      Matrix.trace (fun _ _ : PUnit.{u + 1} => t : CMatrix PUnit.{u + 1}) = t := by
+    intro t
+    show ∑ i : PUnit.{u + 1},
+      Matrix.diag (fun _ _ : PUnit.{u + 1} => t : CMatrix PUnit.{u + 1}) i = t
+    rw [Fintype.sum_subsingleton _ PUnit.unit]
+    rfl
   have hprod :
       R * S =
         (fun _ _ : PUnit.{u + 1} =>
@@ -510,7 +532,8 @@ private theorem punit_generalizedFidelity_eq
     ext i j
     cases i
     cases j
-    simp [R, S, Matrix.mul_apply, ← Complex.ofReal_mul]
+    rw [Matrix.mul_apply', dotProduct_pUnit]
+    rw [← Complex.ofReal_mul]
   rw [hprod]
   rw [traceNorm_punit_const_of_nonneg
     (Real.sqrt ρ.matrix.trace.re * Real.sqrt σ.matrix.trace.re)
@@ -519,13 +542,13 @@ private theorem punit_generalizedFidelity_eq
       Real.sqrt (ρ.matrix.trace.re * σ.matrix.trace.re) =
         Real.sqrt ρ.matrix.trace.re * Real.sqrt σ.matrix.trace.re := by
     exact Real.sqrt_mul ρ.trace_nonneg _
-  simp [Matrix.trace]
+  simp only [htr, htrc, Complex.ofReal_re]
   have hentry_sqrt :
       Real.sqrt ((ρ.matrix PUnit.unit PUnit.unit).re *
           (σ.matrix PUnit.unit PUnit.unit).re) =
         Real.sqrt (ρ.matrix PUnit.unit PUnit.unit).re *
           Real.sqrt (σ.matrix PUnit.unit PUnit.unit).re := by
-    exact Real.sqrt_mul (by simpa [Matrix.trace] using ρ.trace_nonneg) _
+    exact Real.sqrt_mul (by simpa only [htr] using ρ.trace_nonneg) _
   rw [hentry_sqrt]
 
 private theorem scalar_sqrt_trace_sub_le_binary_purified
@@ -625,7 +648,12 @@ private theorem traceEffectToUnit_one_apply_trace
         ρ.matrix.trace.re := by
   rw [SubnormalizedState.applyTraceNonincreasingCP_matrix]
   rw [MatrixMap.traceEffectToUnit_apply_of_posSemidef Matrix.PosSemidef.one]
-  simp [Matrix.trace]
+  simp only [Matrix.mul_one]
+  rw [show Matrix.trace (fun _ _ : PUnit => Matrix.trace ρ.matrix) =
+      Matrix.trace ρ.matrix from by
+    show ∑ i : PUnit, Matrix.diag (fun _ _ : PUnit => Matrix.trace ρ.matrix) i = _
+    rw [Fintype.sum_subsingleton _ PUnit.unit]
+    rfl]
 
 /-- A subnormalized purified-distance ball with radius below `sqrt (Tr ρ)`
 has a uniform trace floor. -/
@@ -1189,8 +1217,12 @@ theorem sumInrCompressedSide_referenceIsometryApply_sumInr_matrix
   change (MatrixMap.sumInrBlockCompression (extra := extra) (α := b)
       (MatrixMap.ofReferenceIsometry (ReferenceIsometry.sumInr extra b) σ.matrix)) x y =
     σ.matrix x y
-  simp [MatrixMap.sumInrBlockCompression, MatrixMap.ofReferenceIsometry_apply,
-    ReferenceIsometry.sumInr, Matrix.mul_apply]
+  rw [MatrixMap.sumInrBlockCompression_apply, MatrixMap.ofReferenceIsometry_apply]
+  show (∑ j : b, (∑ k : b,
+          (if x = k then (1 : ℂ) else 0) * σ.matrix k j) *
+        star (if y = j then (1 : ℂ) else 0)) =
+    σ.matrix x y
+  simp
 
 @[simp]
 theorem sumInrCompressedSide_referenceIsometryApply_sumInr
@@ -1228,9 +1260,11 @@ theorem conditioningSumInrCompressed_conditioningIsometryApply_sumInr_matrix
   ext x y
   rw [conditioningSumInrCompressed_matrix, conditioningIsometryApply_matrix]
   rw [MatrixMap.kron_idChannel_left_apply_slice]
-  simp [MatrixMap.sumInrBlockCompression,
-    ReferenceIsometry.applyMatrixRight, ReferenceIsometry.rightBlock,
-    ReferenceIsometry.sumInr, Matrix.mul_apply]
+  show (∑ j : b, (∑ k : b,
+          (if x.2 = k then (1 : ℂ) else 0) * ρ.matrix (x.1, k) (y.1, j)) *
+        star (if y.2 = j then (1 : ℂ) else 0)) =
+    ρ.matrix x y
+  simp
 
 @[simp]
 theorem conditioningSumInrCompressed_conditioningIsometryApply_sumInr
@@ -1686,9 +1720,10 @@ private theorem abHatSuccessRestrictedAmp_trace_re
     (rankOneMatrix (fun x : Prod (Prod a b) R => Φ.amp (x.2, Sum.inr x.1))).trace.re =
       (Φ.state.marginalB.successBlockOfHatState.matrix.trace).re := by
   classical
-  simp [State.successBlockOfHatState, State.marginalB, partialTraceA,
-    MatrixMap.sumInrCompression_apply, State.toSubnormalized_matrix,
-    PureVector.state_matrix, rankOneMatrix_apply, Matrix.trace, Fintype.sum_prod_type]
+  simp only [State.successBlockOfHatState, State.marginalB,
+    PureVector.state_matrix, Matrix.trace, Fintype.sum_prod_type]
+  simp only [Matrix.diag_apply]
+  simp [partialTraceA]
 
 private def pureVectorNormalize {α : Type*} [Fintype α] [DecidableEq α]
     (v : α → ℂ) (hpos : 0 < (rankOneMatrix v).trace.re) : PureVector α where
@@ -1781,7 +1816,7 @@ private theorem abHatSuccessRestrictedPureVector_ab_marginal
     Complex.real_smul, Finset.mul_sum]
   apply Finset.sum_congr rfl
   intro r _hr
-  simpa [t, c, hvtrace] using
+  simpa [t, c, hvtrace, partialTraceA, rankOneMatrix_apply] using
     (hscale (Φ.amp (r, Sum.inr x)) (Φ.amp (r, Sum.inr y))).symm
 
 private theorem abHatSuccessRestrictedPureVector_ac_marginal
@@ -1826,11 +1861,26 @@ private theorem abHatSuccessRestrictedPureVector_ac_marginal
   simp [SubnormalizedState.applyTraceNonincreasingCP_matrix,
     MatrixMap.sumInrTraceDiscard_apply, State.toSubnormalized_matrix,
     acMarginalFromScaledTripartitePure, ofStateScale, State.marginalAC_matrix,
-    PureVector.state_matrix, rankOneMatrix_apply, abHatSuccessRestrictedPureVector,
-    Complex.real_smul, Finset.mul_sum]
+    PureVector.state_matrix, rankOneMatrix_apply, abHatSuccessRestrictedPureVector]
+  have hentry : ∀ (r : ℝ) (A : Matrix (Prod a R) (Prod a R) ℂ) (p q : Prod a R),
+      (r • A) p q = (r : ℂ) * A p q := by
+    intro r A p q
+    rw [Matrix.smul_apply, Complex.real_smul]
+  refine Eq.trans ?_ (hentry
+    (Matrix.trace (fun x y : Prod a b =>
+      partialTraceA (rankOneMatrix Φ.amp) (Sum.inr x) (Sum.inr y))).re
+    (fun ac ac' : Prod a R => ∑ x,
+      ((Complex.ofReal (Real.sqrt (((fun x : Prod (Prod a b) R => Φ.amp (x.2, Sum.inr x.1)) ⬝ᵥ
+        fun i => (starRingEnd ℂ) (Φ.amp (i.2, Sum.inr i.1))).re)))⁻¹ *
+          Φ.amp (ac.2, Sum.inr (ac.1, x))) *
+        ((Complex.ofReal (Real.sqrt (((fun x : Prod (Prod a b) R => Φ.amp (x.2, Sum.inr x.1)) ⬝ᵥ
+          fun i => (starRingEnd ℂ) (Φ.amp (i.2, Sum.inr i.1))).re)))⁻¹ *
+            (starRingEnd ℂ) (Φ.amp (ac'.2, Sum.inr (ac'.1, x)))))
+    (xA, xR) (yA, yR)).symm
+  simp only [Finset.mul_sum]
   apply Finset.sum_congr rfl
   intro b' _hb'
-  simpa [t, c, hvtrace] using
+  simpa [t, c, hvtrace, partialTraceA, rankOneMatrix_apply] using
     (hscale (Φ.amp (xR, Sum.inr (xA, b'))) (Φ.amp (yR, Sum.inr (yA, b')))).symm
 
 /-- A hatted pure vector with positive success mass gives complementary
@@ -1874,9 +1924,10 @@ private theorem acHatSuccessRestrictedAmp_trace_re
     (rankOneMatrix (fun x : Prod (Prod a R) c => Φ.amp (x.1.2, Sum.inr (x.1.1, x.2)))).trace.re =
       (Φ.state.marginalB.successBlockOfHatState.matrix.trace).re := by
   classical
-  simp [State.successBlockOfHatState, State.marginalB, partialTraceA,
-    MatrixMap.sumInrCompression_apply, State.toSubnormalized_matrix,
-    PureVector.state_matrix, rankOneMatrix_apply, Matrix.trace, Fintype.sum_prod_type]
+  simp only [State.successBlockOfHatState, State.marginalB,
+    PureVector.state_matrix, Matrix.trace, Fintype.sum_prod_type]
+  simp only [Matrix.diag_apply]
+  simp [partialTraceA]
   apply Finset.sum_congr rfl
   intro x _hx
   rw [Finset.sum_comm]
@@ -1929,11 +1980,26 @@ private theorem acHatSuccessRestrictedPureVector_ac_marginal
   simp [State.successBlockOfHatState, acMarginalFromScaledTripartitePure, ofStateScale,
     State.marginalB, State.marginalAC_matrix, partialTraceA,
     MatrixMap.sumInrCompression_apply, State.toSubnormalized_matrix,
-    PureVector.state_matrix, rankOneMatrix_apply, acHatSuccessRestrictedPureVector,
-    Complex.real_smul, Finset.mul_sum]
+    PureVector.state_matrix, rankOneMatrix_apply, acHatSuccessRestrictedPureVector]
+  have hentry : ∀ (r : ℝ) (A : Matrix (Prod a c) (Prod a c) ℂ) (p q : Prod a c),
+      (r • A) p q = (r : ℂ) * A p q := by
+    intro r A p q
+    rw [Matrix.smul_apply, Complex.real_smul]
+  refine Eq.trans ?_ (hentry
+    (Matrix.trace (fun x y : Prod a c =>
+      ∑ x_1, Φ.amp (x_1, Sum.inr x) * (starRingEnd ℂ) (Φ.amp (x_1, Sum.inr y)))).re
+    (fun ac ac' : Prod a c => ∑ x,
+      ((Complex.ofReal (Real.sqrt (((fun x : Prod (Prod a R) c => Φ.amp (x.1.2, Sum.inr (x.1.1, x.2))) ⬝ᵥ
+        fun i => (starRingEnd ℂ) (Φ.amp (i.1.2, Sum.inr (i.1.1, i.2)))).re)))⁻¹ *
+          Φ.amp (x, Sum.inr ac)) *
+        ((Complex.ofReal (Real.sqrt (((fun x : Prod (Prod a R) c => Φ.amp (x.1.2, Sum.inr (x.1.1, x.2))) ⬝ᵥ
+          fun i => (starRingEnd ℂ) (Φ.amp (i.1.2, Sum.inr (i.1.1, i.2)))).re)))⁻¹ *
+            (starRingEnd ℂ) (Φ.amp (x, Sum.inr ac'))))
+    (xA, xC) (yA, yC)).symm
+  simp only [Finset.mul_sum]
   apply Finset.sum_congr rfl
   intro r _hr
-  simpa [t, k, hvtrace] using
+  simpa [t, k, hvtrace, partialTraceA, rankOneMatrix_apply] using
     (hscale (Φ.amp (r, Sum.inr (xA, xC))) (Φ.amp (r, Sum.inr (yA, yC)))).symm
 
 private theorem acHatSuccessRestrictedPureVector_ab_marginal
@@ -2128,13 +2194,33 @@ private theorem abHatCanonicalScaledPure_sumInrTraceDiscard_matrix
   rcases y with ⟨yA, yR⟩
   cases xR with
   | inl xHat =>
-      cases yR <;>
-        simp [SubnormalizedState.applyTraceNonincreasingCP_matrix,
-          MatrixMap.sumInrTraceDiscard_apply, State.toSubnormalized_matrix,
-          PureVector.state_matrix, rankOneMatrix_apply, abHatCanonicalScaledPure,
-          abHatCanonicalScaledPureAmp, SubnormalizedState.conditioningIsometryApply_matrix,
-          acMarginalFromScaledTripartitePure, ReferenceIsometry.applyMatrixRight,
-          ReferenceIsometry.rightBlock, ReferenceIsometry.sumInr, Matrix.mul_apply]
+      cases yR with
+      | inl yHat =>
+          simp [SubnormalizedState.applyTraceNonincreasingCP_matrix,
+            MatrixMap.sumInrTraceDiscard_apply, State.toSubnormalized_matrix,
+            PureVector.state_matrix, rankOneMatrix_apply, abHatCanonicalScaledPure,
+            abHatCanonicalScaledPureAmp, SubnormalizedState.conditioningIsometryApply_matrix,
+            acMarginalFromScaledTripartitePure, ReferenceIsometry.applyMatrixRight,
+            ReferenceIsometry.sumInr, Matrix.mul_apply]
+          symm
+          apply Finset.sum_eq_zero
+          intro j _j
+          refine mul_eq_zero.mpr (Or.inl ?_)
+          exact Eq.trans (Matrix.mul_apply ..)
+            (Finset.sum_eq_zero fun k _ => by simp)
+      | inr yC =>
+          simp [SubnormalizedState.applyTraceNonincreasingCP_matrix,
+            MatrixMap.sumInrTraceDiscard_apply, State.toSubnormalized_matrix,
+            PureVector.state_matrix, rankOneMatrix_apply, abHatCanonicalScaledPure,
+            abHatCanonicalScaledPureAmp, SubnormalizedState.conditioningIsometryApply_matrix,
+            acMarginalFromScaledTripartitePure, ReferenceIsometry.applyMatrixRight,
+            ReferenceIsometry.sumInr, Matrix.mul_apply]
+          symm
+          apply Finset.sum_eq_zero
+          intro j _j
+          refine mul_eq_zero.mpr (Or.inl ?_)
+          exact Eq.trans (Matrix.mul_apply ..)
+            (Finset.sum_eq_zero fun k _ => by simp)
   | inr xC =>
       cases yR with
       | inl yHat =>
@@ -2143,29 +2229,44 @@ private theorem abHatCanonicalScaledPure_sumInrTraceDiscard_matrix
             PureVector.state_matrix, rankOneMatrix_apply, abHatCanonicalScaledPure,
             abHatCanonicalScaledPureAmp, SubnormalizedState.conditioningIsometryApply_matrix,
             acMarginalFromScaledTripartitePure, ReferenceIsometry.applyMatrixRight,
-            ReferenceIsometry.rightBlock, ReferenceIsometry.sumInr, Matrix.mul_apply]
+            ReferenceIsometry.sumInr, Matrix.mul_apply]
+          symm
+          apply Finset.sum_eq_zero
+          intro j _j
+          refine mul_eq_zero.mpr (Or.inr ?_)
+          exact Eq.trans (Matrix.conjTranspose_apply ..) (by simp)
       | inr yC =>
           simp [SubnormalizedState.applyTraceNonincreasingCP_matrix,
             MatrixMap.sumInrTraceDiscard_apply, State.toSubnormalized_matrix,
             PureVector.state_matrix, rankOneMatrix_apply, abHatCanonicalScaledPure,
             abHatCanonicalScaledPureAmp, SubnormalizedState.conditioningIsometryApply_matrix,
-            acMarginalFromScaledTripartitePure, State.marginalAC_matrix,
-            ReferenceIsometry.applyMatrixRight, ReferenceIsometry.rightBlock,
-            ReferenceIsometry.sumInr, Matrix.mul_apply, Complex.real_smul]
-          rw [Finset.mul_sum]
-          apply Finset.sum_congr rfl
-          intro z hz
-          calc
-            ((Real.sqrt t : ℂ) * ψ.amp ((xA, z), xC) *
-                ((Real.sqrt t : ℂ) * star (ψ.amp ((yA, z), yC)))) =
-                ((Real.sqrt t : ℂ) * (Real.sqrt t : ℂ)) *
-                  (ψ.amp ((xA, z), xC) * star (ψ.amp ((yA, z), yC))) := by
-              ring
-            _ = (t : ℂ) *
-                  (ψ.amp ((xA, z), xC) * star (ψ.amp ((yA, z), yC))) := by
+            acMarginalFromScaledTripartitePure, ReferenceIsometry.applyMatrixRight,
+            ReferenceIsometry.sumInr, Matrix.mul_apply]
+          symm
+          refine Eq.trans (Finset.sum_eq_single yC (fun b _ hb => ?_)
+            (fun hc => absurd (Finset.mem_univ yC) hc)) ?_
+          · refine mul_eq_zero.mpr (Or.inr ?_)
+            refine Eq.trans (Matrix.conjTranspose_apply ..) ?_
+            simp [Ne.symm hb]
+          · show (∑ k : c, (if xC = k then (1 : ℂ) else 0) *
+                ((t : ℂ) * ∑ x, ψ.amp ((xA, x), k) *
+                  (starRingEnd ℂ) (ψ.amp ((yA, x), yC)))) *
+              star (if yC = yC then (1 : ℂ) else 0) =
+              ∑ x, (Real.sqrt t : ℂ) * ψ.amp ((xA, x), xC) *
+                ((Real.sqrt t : ℂ) * (starRingEnd ℂ) (ψ.amp ((yA, x), yC)))
+            rw [ite_eq_left rfl, star_one, mul_one]
+            have hst : (Real.sqrt t : ℂ) * (Real.sqrt t : ℂ) = (t : ℂ) := by
               rw [← Complex.ofReal_mul]
               congr 1
-              rw [← sq, Real.sq_sqrt ht0]
+              exact Real.mul_self_sqrt ht0
+            refine Eq.trans (Finset.sum_eq_single xC (fun b _ hb => ?_)
+              (fun hc => absurd (Finset.mem_univ xC) hc)) ?_
+            · simp [Ne.symm hb]
+            · rw [ite_eq_left rfl, one_mul, Finset.mul_sum]
+              apply Finset.sum_congr rfl
+              intro x _
+              rw [← hst]
+              ring
 
 /-- The canonical hatted `AB` purification has exactly the scaled `AC` marginal
 embedded in the right summand of the enlarged reference after discarding the
@@ -2236,11 +2337,11 @@ private theorem acHatCanonicalScaledPureAmp_partialTraceA
         trace (partialTraceB (a := Prod a c) (b := b) (rankOneMatrix φ)) = 1 := by
       rw [hACmatrix]
       exact ψ.state.marginalAC.trace_eq_one
-    simpa using congrArg Complex.re hACtraceC
+    exact congrArg Complex.re hACtraceC
   have hACtrace_expanded :
       (trace (fun ac ac' : Prod a c =>
         ∑ z : b, ψ.amp ((ac.1, z), ac.2) * star (ψ.amp ((ac'.1, z), ac'.2)))).re = 1 := by
-    simpa [φ, partialTraceB, rankOneMatrix_apply] using hACtrace
+    exact hACtrace
   have hACtrace_expanded_starRing :
       (trace (fun ac ac' : Prod a c =>
         ∑ z : b, ψ.amp ((ac.1, z), ac.2) *
@@ -2255,9 +2356,15 @@ private theorem acHatCanonicalScaledPureAmp_partialTraceA
           simp only [partialTraceA, rankOneMatrix_apply, acHatCanonicalScaledPureAmp]
           rw [SubnormalizedState.hatExtensionMatrix_fail_fail]
           simp [SubnormalizedState.hatFailureMass, acMarginalFromScaledTripartitePure]
-          rw [hACtrace_expanded_starRing]
-          rw [← Complex.ofReal_mul, ← sq, Real.sq_sqrt (sub_nonneg.mpr ht1)]
-          norm_num
+          have hbranch : ∀ M : CMatrix (Prod a c), (Matrix.trace M).re = 1 →
+              Complex.ofReal (Real.sqrt (1 - t)) * Complex.ofReal (Real.sqrt (1 - t)) =
+                1 - Complex.ofReal ((Matrix.trace (t • M)).re) := by
+            intro M hM
+            rw [Matrix.trace_smul, Complex.real_smul, Complex.mul_re, hM]
+            rw [← Complex.ofReal_mul, Real.mul_self_sqrt (sub_nonneg.mpr ht1)]
+            simp
+          exact hbranch (fun (ac ac' : Prod a c) => ∑ x, ψ.amp ((ac.1, x), ac.2) *
+            (starRingEnd ℂ) (ψ.amp ((ac'.1, x), ac.2))) hACtrace_expanded_starRing
       | inr ysuccess =>
           rcases ysuccess with ⟨yA, yC⟩
           simp [partialTraceA, rankOneMatrix_apply, acHatCanonicalScaledPureAmp,
@@ -2272,7 +2379,11 @@ private theorem acHatCanonicalScaledPureAmp_partialTraceA
           rcases ysuccess with ⟨yA, yC⟩
           simp [partialTraceA, rankOneMatrix_apply, acHatCanonicalScaledPureAmp,
             SubnormalizedState.hatExtensionMatrix, acMarginalFromScaledTripartitePure,
-            State.marginalAC_matrix, Complex.real_smul]
+            State.marginalAC_matrix]
+          show ∑ x, (Real.sqrt t : ℂ) * ψ.amp ((xA, x), xC) *
+              ((Real.sqrt t : ℂ) * (starRingEnd ℂ) (ψ.amp ((yA, x), yC))) =
+            ((t : ℂ) * ∑ x, ψ.amp ((xA, x), xC) *
+                (starRingEnd ℂ) (ψ.amp ((yA, x), yC)))
           rw [Finset.mul_sum]
           apply Finset.sum_congr rfl
           intro yB hy
@@ -2328,13 +2439,33 @@ private theorem acHatCanonicalScaledPure_sumInrTraceDiscard_matrix
   rcases y with ⟨yA, yR⟩
   cases xR with
   | inl xHat =>
-      cases yR <;>
-        simp [SubnormalizedState.applyTraceNonincreasingCP_matrix,
-          MatrixMap.sumInrTraceDiscard_apply, State.toSubnormalized_matrix,
-          PureVector.state_matrix, rankOneMatrix_apply, acHatCanonicalScaledPure,
-          acHatCanonicalScaledPureAmp, SubnormalizedState.conditioningIsometryApply_matrix,
-          abMarginalFromScaledTripartitePure, ReferenceIsometry.applyMatrixRight,
-          ReferenceIsometry.rightBlock, ReferenceIsometry.sumInr, Matrix.mul_apply]
+      cases yR with
+      | inl yHat =>
+          simp [SubnormalizedState.applyTraceNonincreasingCP_matrix,
+            MatrixMap.sumInrTraceDiscard_apply, State.toSubnormalized_matrix,
+            PureVector.state_matrix, rankOneMatrix_apply, acHatCanonicalScaledPure,
+            acHatCanonicalScaledPureAmp, SubnormalizedState.conditioningIsometryApply_matrix,
+            abMarginalFromScaledTripartitePure, ReferenceIsometry.applyMatrixRight,
+            ReferenceIsometry.sumInr, Matrix.mul_apply]
+          symm
+          apply Finset.sum_eq_zero
+          intro j _j
+          refine mul_eq_zero.mpr (Or.inl ?_)
+          exact Eq.trans (Matrix.mul_apply ..)
+            (Finset.sum_eq_zero fun k _ => by simp)
+      | inr yB =>
+          simp [SubnormalizedState.applyTraceNonincreasingCP_matrix,
+            MatrixMap.sumInrTraceDiscard_apply, State.toSubnormalized_matrix,
+            PureVector.state_matrix, rankOneMatrix_apply, acHatCanonicalScaledPure,
+            acHatCanonicalScaledPureAmp, SubnormalizedState.conditioningIsometryApply_matrix,
+            abMarginalFromScaledTripartitePure, ReferenceIsometry.applyMatrixRight,
+            ReferenceIsometry.sumInr, Matrix.mul_apply]
+          symm
+          apply Finset.sum_eq_zero
+          intro j _j
+          refine mul_eq_zero.mpr (Or.inl ?_)
+          exact Eq.trans (Matrix.mul_apply ..)
+            (Finset.sum_eq_zero fun k _ => by simp)
   | inr xB =>
       cases yR with
       | inl yHat =>
@@ -2343,28 +2474,44 @@ private theorem acHatCanonicalScaledPure_sumInrTraceDiscard_matrix
             PureVector.state_matrix, rankOneMatrix_apply, acHatCanonicalScaledPure,
             acHatCanonicalScaledPureAmp, SubnormalizedState.conditioningIsometryApply_matrix,
             abMarginalFromScaledTripartitePure, ReferenceIsometry.applyMatrixRight,
-            ReferenceIsometry.rightBlock, ReferenceIsometry.sumInr, Matrix.mul_apply]
+            ReferenceIsometry.sumInr, Matrix.mul_apply]
+          symm
+          apply Finset.sum_eq_zero
+          intro j _j
+          refine mul_eq_zero.mpr (Or.inr ?_)
+          exact Eq.trans (Matrix.conjTranspose_apply ..) (by simp)
       | inr yB =>
           simp [SubnormalizedState.applyTraceNonincreasingCP_matrix,
             MatrixMap.sumInrTraceDiscard_apply, State.toSubnormalized_matrix,
             PureVector.state_matrix, rankOneMatrix_apply, acHatCanonicalScaledPure,
             acHatCanonicalScaledPureAmp, SubnormalizedState.conditioningIsometryApply_matrix,
-            abMarginalFromScaledTripartitePure, State.marginalAB, State.marginalA,
-            partialTraceB, ReferenceIsometry.applyMatrixRight, ReferenceIsometry.rightBlock,
-            ReferenceIsometry.sumInr, Matrix.mul_apply, Complex.real_smul]
-          rw [Finset.mul_sum]
-          apply Finset.sum_congr rfl
-          intro z hz
-          calc
-            ((Real.sqrt t : ℂ) * ψ.amp ((xA, xB), z) *
-                ((Real.sqrt t : ℂ) * star (ψ.amp ((yA, yB), z)))) =
-                ((Real.sqrt t : ℂ) * (Real.sqrt t : ℂ)) *
-                  (ψ.amp ((xA, xB), z) * star (ψ.amp ((yA, yB), z))) := by
-              ring
-            _ = (t : ℂ) * (ψ.amp ((xA, xB), z) * star (ψ.amp ((yA, yB), z))) := by
+            abMarginalFromScaledTripartitePure, ReferenceIsometry.applyMatrixRight,
+            ReferenceIsometry.sumInr, Matrix.mul_apply]
+          symm
+          refine Eq.trans (Finset.sum_eq_single yB (fun b _ hb => ?_)
+            (fun hc => absurd (Finset.mem_univ yB) hc)) ?_
+          · refine mul_eq_zero.mpr (Or.inr ?_)
+            refine Eq.trans (Matrix.conjTranspose_apply ..) ?_
+            simp [Ne.symm hb]
+          · show (∑ k : b, (if xB = k then (1 : ℂ) else 0) *
+                ((t : ℂ) * ∑ x, ψ.amp ((xA, k), x) *
+                  (starRingEnd ℂ) (ψ.amp ((yA, yB), x)))) *
+              star (if yB = yB then (1 : ℂ) else 0) =
+              ∑ x, (Real.sqrt t : ℂ) * ψ.amp ((xA, xB), x) *
+                ((Real.sqrt t : ℂ) * (starRingEnd ℂ) (ψ.amp ((yA, yB), x)))
+            rw [ite_eq_left rfl, star_one, mul_one]
+            have hst : (Real.sqrt t : ℂ) * (Real.sqrt t : ℂ) = (t : ℂ) := by
               rw [← Complex.ofReal_mul]
               congr 1
-              rw [← sq, Real.sq_sqrt ht0]
+              exact Real.mul_self_sqrt ht0
+            refine Eq.trans (Finset.sum_eq_single xB (fun b _ hb => ?_)
+              (fun hc => absurd (Finset.mem_univ xB) hc)) ?_
+            · simp [Ne.symm hb]
+            · rw [ite_eq_left rfl, one_mul, Finset.mul_sum]
+              apply Finset.sum_congr rfl
+              intro x _
+              rw [← hst]
+              ring
 
 /-- The canonical hatted `AC` purification has exactly the scaled `AB` marginal
 embedded in the right summand of the enlarged reference after discarding the
@@ -2908,7 +3055,7 @@ theorem smoothConditionalMaxEntropyRaw_eq_neg_smoothConditionalMinEntropyRaw_of_
     {h : ℝ | SmoothConditionalMinEntropyCandidateRaw (a := a) ρAC ε h}
   have hset : maxSet = -minSet := by
     ext h
-    simp only [maxSet, minSet, Set.mem_setOf_eq, Set.mem_neg]
+    simp only [maxSet, minSet, Set.mem_ofPred_eq, Set.mem_neg]
     exact hdual h
   calc
     ρAB.smoothConditionalMaxEntropyRaw ε = sInf maxSet := rfl
@@ -3235,7 +3382,7 @@ theorem smoothConditionalMaxEntropyNormalizedCandidates_eq_neg_smoothConditional
   let minSet : Set ℝ := {h : ℝ | SmoothConditionalMinEntropyCandidate (a := a) ρAC ε h}
   have hset : maxSet = -minSet := by
     ext h
-    simp only [maxSet, minSet, Set.mem_setOf_eq, Set.mem_neg]
+    simp only [maxSet, minSet, Set.mem_ofPred_eq, Set.mem_neg]
     exact hdual h
   calc
     ρAB.smoothConditionalMaxEntropyNormalizedCandidates ε = sInf maxSet := rfl

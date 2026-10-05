@@ -246,7 +246,7 @@ theorem fromBlocks_posSemidef_schurComplement22 [Fintype α] [Fintype β] [Decid
     letI : Invertible D := hD.isUnit.invertible
     (A - B * D⁻¹ * Bᴴ).PosSemidef := by
   classical
-  letI : Invertible D := hD.isUnit.invertible
+  let : Invertible D := hD.isUnit.invertible
   exact (Matrix.PosDef.fromBlocks₂₂ A B (D := D) hD).mp hM
 
 /-- Parallel sum in the asymmetric Schur-complement form used by the
@@ -265,7 +265,7 @@ theorem le_parallelSum_iff_fromBlocks_posSemidef [Fintype α] [DecidableEq α]
     Z ≤ parallelSum X Y ↔
       (Matrix.fromBlocks (X - Z) X X (X + Y) : QIT.CMatrix (Sum α α)).PosSemidef := by
   classical
-  letI : Invertible (X + Y) := hXY.isUnit.invertible
+  let : Invertible (X + Y) := hXY.isUnit.invertible
   rw [Matrix.le_iff]
   have hschur :
       (Matrix.fromBlocks (X - Z) X X (X + Y) : QIT.CMatrix (Sum α α)).PosSemidef ↔

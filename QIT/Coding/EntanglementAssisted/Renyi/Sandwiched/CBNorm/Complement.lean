@@ -187,7 +187,11 @@ theorem krausComplement_krausProduct_eq_kron
     MatrixMap.krausComplement (MatrixMap.krausProduct K₁ K₂) =
       MatrixMap.kron (MatrixMap.krausComplement K₁) (MatrixMap.krausComplement K₂) := by
   unfold MatrixMap.krausComplement
-  rw [kron_ofKraus_eq_ofKraus_krausProduct]
+  -- 4.34: `rw` cannot match `(ofKraus ?K₁).kron (ofKraus ?K₂)` against the
+  -- unfolded goal (not type-correct under implicit transparency); instantiate
+  -- the reindexed families explicitly and bridge in term mode instead.
+  refine Eq.trans ?_ (kron_ofKraus_eq_ofKraus_krausProduct
+    (fun y k i => K₁ k y i) (fun y k i => K₂ k y i)).symm
   rfl
 
 /-- The raw Stinespring extension of any finite Kraus family is completely
@@ -255,6 +259,12 @@ theorem partialTraceA_krausStinespringMatrix
   simp [partialTraceA, MatrixMap.krausComplement, MatrixMap.ofKraus,
     MatrixMap.krausStinespringMatrix, Matrix.sum_apply, Matrix.mul_apply,
     Matrix.conjTranspose_apply, Finset.sum_mul, mul_assoc]
+  -- 4.34: the entrywise lemmas stall on the raw reindexing lambdas of
+  -- `krausComplement`; pre-digest that layer with `show` (defeq only, sums
+  -- stay in place), then reassociate.
+  show (∑ i, ∑ j, ∑ x, K k i x * (X x j * (starRingEnd ℂ) (K k' i j))) =
+      (∑ c, ∑ j, (∑ x, K k c x * X x j) * (starRingEnd ℂ) (K k' c j))
+  simp [Finset.sum_mul, mul_assoc]
 
 omit [DecidableEq a] [DecidableEq b] in
 /-- Positive inputs remain positive after the raw Stinespring sandwich

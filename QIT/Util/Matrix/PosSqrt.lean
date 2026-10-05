@@ -56,26 +56,12 @@ theorem psdSqrt_real_smul_one {a : Type u} [Fintype a] [DecidableEq a]
     {r : ℝ} (hr : 0 ≤ r) :
     psdSqrt (((r : ℂ) • (1 : CMatrix a))) =
       ((Real.sqrt r : ℝ) : ℂ) • (1 : CMatrix a) := by
-  let rr : NNReal := ⟨r, hr⟩
-  have hscalar : ((r : ℂ) • (1 : CMatrix a)) = algebraMap NNReal (CMatrix a) rr := by
-    ext i j
-    by_cases hij : i = j
-    · subst hij
-      simp [Matrix.algebraMap_matrix_apply, rr]
-      rfl
-    · simp [Matrix.algebraMap_matrix_apply, rr, hij]
-  have hsqrt := (CFC.sqrt_algebraMap (A := CMatrix a) (r := rr))
-  rw [hscalar]
-  rw [show ((Real.sqrt r : ℝ) : ℂ) • (1 : CMatrix a) =
-      algebraMap NNReal (CMatrix a) (NNReal.sqrt rr) by
-    ext i j
-    by_cases hij : i = j
-    · subst hij
-      simp [Matrix.algebraMap_matrix_apply, rr]
-      rw [Real.sqrt, Real.toNNReal_of_nonneg hr]
-      rfl
-    · simp [Matrix.algebraMap_matrix_apply, hij]]
-  simp [psdSqrt] at hsqrt ⊢
+  apply CFC.sqrt_unique
+  · simp only [Matrix.mul_smul, smul_smul, Matrix.mul_one,
+      ← Complex.ofReal_mul, Real.mul_self_sqrt hr]
+  · apply Matrix.PosSemidef.nonneg
+    apply Matrix.PosSemidef.smul Matrix.PosSemidef.one
+    exact_mod_cast Real.sqrt_nonneg r
 
 theorem psdSqrt_real_smul {a : Type u} [Fintype a] [DecidableEq a]
     {r : ℝ} (hr : 0 ≤ r) {M : CMatrix a} (hM : M.PosSemidef) :

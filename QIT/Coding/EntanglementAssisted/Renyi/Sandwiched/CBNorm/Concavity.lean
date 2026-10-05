@@ -183,11 +183,15 @@ theorem rectangular_kraus_lieb_trace_concave
   have hY0powT :
       CFC.rpow Y0.transpose (1 - (pNN : ℝ)) =
         (CFC.rpow Y0 (1 - p)).transpose := by
-    simpa [pNN] using cMatrix_rpow_transpose_nonneg (A := Y0) hY0 h1p_nonneg
+    have h2 := cMatrix_rpow_transpose_nonneg (A := Y0) hY0 h1p_nonneg
+    simp only [pNN] at h2 ⊢
+    exact h2
   have hY1powT :
       CFC.rpow Y1.transpose (1 - (pNN : ℝ)) =
         (CFC.rpow Y1 (1 - p)).transpose := by
-    simpa [pNN] using cMatrix_rpow_transpose_nonneg (A := Y1) hY1 h1p_nonneg
+    have h2 := cMatrix_rpow_transpose_nonneg (A := Y1) hY1 h1p_nonneg
+    simp only [pNN] at h2 ⊢
+    exact h2
   have hYmix : (lambda • Y0 + (1 - lambda) • Y1).PosSemidef :=
     Matrix.PosSemidef.add
       (Matrix.PosSemidef.smul hY0 hlambda0)
@@ -202,9 +206,11 @@ theorem rectangular_kraus_lieb_trace_concave
           (1 - (pNN : ℝ)) =
         (CFC.rpow (lambda • Y0 + (1 - lambda) • Y1) (1 - p)).transpose := by
     rw [hYmixT]
-    simpa [pNN] using
+    have h2 :=
       cMatrix_rpow_transpose_nonneg
         (A := lambda • Y0 + (1 - lambda) • Y1) hYmix h1p_nonneg
+    simp only [pNN] at h2 ⊢
+    exact h2
   have htrace0 :=
     rectangular_kraus_trace_tensor_trace_transpose_re K
       (CFC.rpow X0 p) (CFC.rpow Y0 (1 - p))
@@ -531,7 +537,7 @@ theorem permutationReferenceUnitary_conj_apply
         X * star (localReferenceUnitary (a := a) (permutationUnitary π) :
           CMatrix (Prod r a))) (i, j) (i', j')) =
       X (π i, j) (π i', j') := by
-  simp only [localReferenceUnitary_coe, permutationUnitary_coe,
+  simp only [localReferenceUnitary_coe, permutationUnitary_apply,
     Matrix.star_eq_conjTranspose, Matrix.conjTranspose_kronecker,
     Matrix.conjTranspose_one, Matrix.mul_apply, Matrix.kronecker,
     Matrix.kroneckerMap_apply, Matrix.one_apply, Matrix.conjTranspose_apply]

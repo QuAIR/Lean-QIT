@@ -91,6 +91,9 @@ theorem tripartiteBracket_liftACToABC_eq_trace_marginalAC
     (ψ : PureVector (Prod (Prod a b) c)) (MAC : CMatrix (Prod a c)) :
     ψ.tripartiteBracket (State.liftACToABC (b := b) MAC) =
       (MAC * ψ.state.marginalAC.matrix).trace := by
+  have hRHS : (MAC * ψ.state.marginalAC.matrix).trace =
+      ∑ i : Prod a c, ∑ j : Prod a c, MAC i j * ψ.state.marginalAC.matrix j i := rfl
+  rw [hRHS]
   simp [tripartiteBracket, State.liftACToABC, State.marginalAC, Matrix.trace,
     Matrix.mul_apply, Fintype.sum_prod_type]
   simp_rw [Finset.mul_sum]

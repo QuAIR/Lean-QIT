@@ -100,9 +100,9 @@ private theorem sum_subtype_val_eq_indicator {α : Type u} {β : Type v}
     (fun k => (if p k then f k else 0))]
   have h1 : (∑ a : { x // p x }, (if p a.val then f a.val else 0)) =
       ∑ a : { x // p x }, f a.val :=
-    Finset.sum_congr rfl (fun a _ => if_pos a.prop)
+    Finset.sum_congr rfl (fun a _ => ite_eq_left a.prop)
   have h2 : (∑ a : { x // ¬ p x }, (if p a.val then f a.val else 0)) = 0 :=
-    Finset.sum_eq_zero (fun a _ => if_neg a.prop)
+    Finset.sum_eq_zero (fun a _ => ite_eq_right a.prop)
   rw [h1, h2, add_zero]
 
 /-- The cardinality of the typical register equals the trace-count dimension. -/
@@ -129,7 +129,8 @@ theorem typicalIsometry_conjTranspose_mul_self (ρ : State a) (n : ℕ) (δ : �
     Unitary.coe_star_mul_self _
   have hVdV : Matrix.conjTranspose (typicalIsometry ρ n δ) * typicalIsometry ρ n δ =
       (Matrix.conjTranspose U * U).submatrix Subtype.val Subtype.val := by
-    rw [typicalIsometry, Matrix.conjTranspose_submatrix]
+    refine (congrArg (fun W => W * typicalIsometry ρ n δ)
+      (Matrix.conjTranspose_submatrix U id Subtype.val)).trans ?_
     exact (Matrix.submatrix_mul (Matrix.conjTranspose U) U Subtype.val
       (fun x => x) Subtype.val Function.bijective_id).symm
   rw [hVdV, hUstarU]
@@ -167,9 +168,9 @@ private theorem matrix_mul_diagonal_mul_conjTranspose_apply
   have hinner : ∑ j : α, A i j * (if j = k then d j else 0) = A i k * d k := by
     have heq : ∑ j : α, A i j * (if j = k then d j else 0) =
         A i k * (if k = k then d k else 0) :=
-      Finset.sum_eq_single k (fun j _ hjk => by simp only [if_neg hjk, mul_zero])
+      Finset.sum_eq_single k (fun j _ hjk => by simp only [ite_eq_right hjk, mul_zero])
         fun h => (h (Finset.mem_univ k)).elim
-    rw [heq, if_pos rfl]
+    rw [heq, ite_eq_left rfl]
   rw [hinner]
   ring
 
@@ -181,8 +182,7 @@ theorem typicalIsometry_mul_conjTranspose (ρ : State a) (n : ℕ) (δ : ℝ) :
   rw [typicalSubspaceProjector_eq]
   ext i i'
   rw [matrix_mul_diagonal_mul_conjTranspose_apply]
-  simp only [Matrix.mul_apply, typicalIsometry, Matrix.conjTranspose_submatrix,
-    Matrix.submatrix_apply]
+  simp only [Matrix.mul_apply, typicalIsometry]
   have hconv : (∑ x : TypicalSubspaceIndex ρ n δ,
       tensorPowerEigenvectorUnitary ρ n i x.val *
       Matrix.conjTranspose (tensorPowerEigenvectorUnitary ρ n) x.val i') =
@@ -195,13 +195,13 @@ theorem typicalIsometry_mul_conjTranspose (ρ : State a) (n : ℕ) (δ : ℝ) :
         ((ρ.tensorPower n).pos.isHermitian.eigenvalues j))
       (fun j => tensorPowerEigenvectorUnitary ρ n i j *
         Matrix.conjTranspose (tensorPowerEigenvectorUnitary ρ n) j i')
-  rw [hconv]
+  refine hconv.trans ?_
   simp only [typicalEigenvalueMask]
   apply Finset.sum_congr rfl
   intro k _
   by_cases hk : typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues k)
-  · simp only [hk, if_true, one_mul]
-  · simp only [hk, if_false, zero_mul]
+  · simp only [hk, ite_true, one_mul]
+  · simp only [hk, ite_false, zero_mul]
 
 /-- The encoder's atypical-correction Kraus operator `K_l = |i₀⟩⟨φ_l|`, where
 `|φ_l⟩` is the `l`-th atypical eigenvector of `ρ^{⊗ n}`. -/
@@ -236,9 +236,9 @@ theorem typicalEncoderKraus_krausAdjoint_one (ρ : State a) (n : ℕ) (δ : ℝ)
     apply Finset.sum_congr rfl
     intro k _
     by_cases hk : typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues k)
-    · simp only [hk, typicalEigenvalueMask, if_true, one_mul]
+    · simp only [hk, typicalEigenvalueMask, ite_true, one_mul]
       rfl
-    · simp only [hk, typicalEigenvalueMask, if_false, zero_mul]
+    · simp only [hk, typicalEigenvalueMask, ite_false, zero_mul]
   have hAtyp : ∀ i i',
       ∑ l : AtypicalSubspaceIndex ρ n δ,
         ((Matrix.conjTranspose (atypicalEncoderKraus ρ n δ i0 l) *
@@ -255,11 +255,11 @@ theorem typicalEncoderKraus_krausAdjoint_one (ρ : State a) (n : ℕ) (δ : ℝ)
       apply Finset.sum_congr rfl
       intro l _
       rw [Matrix.mul_apply, Finset.sum_eq_single i0]
-      · simp only [atypicalEncoderKraus, Matrix.conjTranspose_apply, if_true,
+      · simp only [atypicalEncoderKraus, Matrix.conjTranspose_apply, ite_true,
           star_star]
         rfl
       · intro w _ hw
-        simp only [atypicalEncoderKraus, Matrix.conjTranspose_apply, if_neg hw, star_zero,
+        simp only [atypicalEncoderKraus, Matrix.conjTranspose_apply, ite_eq_right hw, star_zero,
           mul_zero]
       · intro h
         exact (h (Finset.mem_univ _)).elim
@@ -281,8 +281,8 @@ theorem typicalEncoderKraus_krausAdjoint_one (ρ : State a) (n : ℕ) (δ : ℝ)
   by_cases hk : typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues k)
   · have hnk : ¬ ¬ typicalEigenvalue ρ n δ ((ρ.tensorPower n).pos.isHermitian.eigenvalues k) :=
       fun h => h hk
-    simp only [if_pos hk, if_neg hnk, add_zero]
-  · simp only [if_neg hk, if_pos hk, zero_add]
+    simp only [ite_eq_left hk, ite_eq_right hnk, add_zero]
+  · simp only [ite_eq_right hk, ite_eq_left hk, zero_add]
 
 /-- The decoder: isometry channel with single Kraus `V`. -/
 def typicalDecoder (ρ : State a) (n : ℕ) (δ : ℝ) :
@@ -322,12 +322,14 @@ private theorem atypicalEncoderKraus_mul_typicalIsometry
   by_cases hw : w = i0
   · subst w
     simp only [Matrix.mul_apply, atypicalEncoderKraus, typicalIsometry,
-      Matrix.submatrix_apply, if_pos, Matrix.zero_apply]
+      ite_eq_left, Matrix.zero_apply]
     have hentry := congrArg (fun M : CMatrix (TensorPower a n) => M l.val j.val) hUstarU
     have hne : l.val ≠ j.val := by
       intro h
       exact l.prop (h ▸ j.prop)
-    simpa [Matrix.mul_apply, Matrix.conjTranspose_apply, Matrix.one_apply, hne] using hentry
+    simp only [Matrix.mul_apply, Matrix.conjTranspose_apply, Matrix.one_apply,
+      ite_eq_right hne] at hentry
+    exact hentry
   · simp [Matrix.mul_apply, atypicalEncoderKraus, hw]
 
 /-- Schumacher compression is lossless on the typical register: decoding into
@@ -396,7 +398,7 @@ private theorem kron_one_mul_conjTranspose_entry (A : CMatrix β)
     · intro x_2 _ hx2
       apply Finset.sum_eq_zero
       intro x_3 _
-      exact if_neg hx2.symm
+      exact ite_eq_right hx2.symm
     · intro h
       exact (h (Finset.mem_univ i)).elim
   simp only [h1, ↓reduceIte]
@@ -415,7 +417,7 @@ private theorem kron_one_mul_conjTranspose_entry (A : CMatrix β)
       intro x_1 _
       apply Finset.sum_eq_zero
       intro x_3 _
-      rw [if_neg hx.symm]
+      rw [ite_eq_right hx.symm]
       simp
     · intro h
       exact (h (Finset.mem_univ i')).elim
@@ -435,6 +437,7 @@ private theorem kron_idChannel_ofKraus_apply_entry
   rw [MatrixMap.kron_idChannel_left_apply_slice]
   simp only [MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk,
     Matrix.sum_apply, Matrix.mul_apply, Matrix.conjTranspose_apply]
+  rfl
 
 omit [DecidableEq κ] in
 /-- The matrix form: `kron id (ofKraus M)` is the sum of `(I⊗M_k) X (I⊗M_k)ᴴ`
@@ -677,7 +680,7 @@ public theorem typicalCompressionCode_rate_le (ρ : State a) (n : ℕ) (δ : ℝ
       Fintype.card_pos_iff.mpr ⟨i0⟩
     exact_mod_cast this
   show schumacherRegisterRate (TypicalSubspaceIndex ρ n δ) n ≤ ρ.schumacherRate + δ
-  rw [schumacherRegisterRate, if_neg hn_ne, card_typicalSubspaceIndex,
+  rw [schumacherRegisterRate, ite_eq_right hn_ne, card_typicalSubspaceIndex,
     div_le_iff₀ hnR_pos]
   have hdim_pos : 0 < ρ.typicalSubspaceDimension n δ := by
     rw [← card_typicalSubspaceIndex]; exact hcard_pos

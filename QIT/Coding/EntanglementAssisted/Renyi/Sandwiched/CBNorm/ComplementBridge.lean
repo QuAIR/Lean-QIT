@@ -33,7 +33,7 @@ open Matrix
 
 namespace QIT
 
-universe u v w
+universe u v w x
 
 noncomputable section
 
@@ -42,6 +42,30 @@ variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
 variable [Fintype κ] [DecidableEq κ]
 
 namespace MatrixMap
+
+/-- Entry form of the Kronecker map in 4.34: keeps `MatrixMap.kron` folded so
+the linear-map structure literal never appears in goals. -/
+private theorem kron_apply_entry {a : Type u} {b : Type v} {c : Type w} {dd : Type x}
+    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+    [Fintype c] [DecidableEq c] [Fintype dd] [DecidableEq dd]
+    (Phi : MatrixMap a b) (Psi : MatrixMap c dd)
+    (X : CMatrix (Prod a c)) (bd bd' : Prod b dd) :
+    MatrixMap.kron Phi Psi X bd bd' =
+      ∑ j : c, ∑ j' : c, ∑ i : a, ∑ i' : a,
+        X (i, j) (i', j') * Phi (Matrix.single i i' (1 : ℂ)) bd.1 bd'.1 *
+          Psi (Matrix.single j j' (1 : ℂ)) bd.2 bd'.2 := rfl
+
+/-- Fully expanded entry form of `MatrixMap.ofKraus` in 4.34. -/
+private theorem ofKraus_apply_entry {a : Type u} {b : Type v} {κ : Type w}
+    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+    [Fintype κ] [DecidableEq κ]
+    (K : κ → Matrix b a ℂ) (X : CMatrix a) (i j : b) :
+    MatrixMap.ofKraus K X i j =
+      ∑ c : κ, (∑ x2 : a, (∑ x : a, K c i x * X x x2) * star (K c j x2)) := by
+  simp only [MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk, Matrix.sum_apply]
+  refine Finset.sum_congr rfl ?_
+  intro c _
+  simp only [Matrix.mul_apply, Matrix.conjTranspose_apply]
 
 /-- Reference/Stinespring vector whose rank-one matrix has the two marginals
 used in the source's Schmidt-spectrum step. -/
@@ -127,9 +151,9 @@ theorem referenceLift_ofKraus_rankOne_eq_partialTraceB
         K k bout x *
           (Matrix.single s s' (1 : ℂ) r r' *
             (psi (s, x) * (star (K k bout' x') * star (psi (s', x'))))) := by
-          simp [referenceLift, MatrixMap.kron, rankOneMatrix_apply,
+          simp [referenceLift, kron_apply_entry, rankOneMatrix_apply,
             ofKraus_single_apply, Channel.idChannel_map,
-            Finset.mul_sum, mul_assoc, mul_left_comm, mul_comm]
+            Finset.mul_sum, mul_left_comm, mul_comm]
     _ =
       ∑ x : a, ∑ x' : a, ∑ k : κ,
         K k bout x * (psi (r, x) * (star (K k bout' x') * star (psi (r', x')))) := by
@@ -267,9 +291,21 @@ theorem partialTraceA_rankOne_stinespringReference_eq_krausComplement_partialTra
     _ =
       MatrixMap.krausComplement K
         (partialTraceA (a := a) (b := a) (rankOneMatrix psi)) k k' := by
-          simp [MatrixMap.krausComplement, MatrixMap.ofKraus,
-            Matrix.sum_apply, Matrix.mul_apply,
-            Matrix.conjTranspose_apply, Finset.sum_mul, mul_assoc]
+          have hcomp :
+              (MatrixMap.krausComplement K) ((partialTraceA a a) (rankOneMatrix psi)) k k' =
+                ∑ c : b, (∑ x2 : a,
+                  (∑ x : a, K k c x * (partialTraceA a a) (rankOneMatrix psi) x x2) *
+                    star (K k' c x2)) :=
+            ofKraus_apply_entry (fun y : b => fun k i => K k y i)
+              ((partialTraceA a a) (rankOneMatrix psi)) k k'
+          have hgoal :
+              ∑ bout, ∑ y, ∑ x, K k bout x *
+                  ((partialTraceA a a) (rankOneMatrix psi) x y * star (K k' bout y)) =
+                ∑ c : b, (∑ x2 : a,
+                  (∑ x : a, K k c x * (partialTraceA a a) (rankOneMatrix psi) x x2) *
+                    star (K k' c x2)) := by
+            simp only [Finset.mul_sum, mul_left_comm, mul_comm]
+          exact hgoal.trans hcomp.symm
 
 /-- The source weighted Choi input is rank one. -/
 theorem cbOneToAlphaOriginalInput_eq_rankOne_rpow

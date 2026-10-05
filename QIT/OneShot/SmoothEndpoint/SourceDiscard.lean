@@ -59,28 +59,34 @@ theorem sourceAssocReindex_matrix (rho : SubnormalizedState (Prod (Prod k a) b))
       rho.matrix.submatrix (Equiv.prodAssoc k a b).symm
         (Equiv.prodAssoc k a b).symm := by
   ext i j
-  simp [sourceAssocReindex, Channel.reindex, MatrixMap.ofReferenceIsometry_apply,
-    ReferenceIsometry.ofEquiv, Matrix.mul_apply]
+  have hmap : rho.sourceAssocReindex.matrix i j =
+      ((ReferenceIsometry.ofEquiv (Equiv.prodAssoc k a b)).matrix * rho.matrix *
+        Matrix.conjTranspose (ReferenceIsometry.ofEquiv (Equiv.prodAssoc k a b)).matrix) i j :=
+    congrFun (congrFun (MatrixMap.ofReferenceIsometry_apply
+      (ReferenceIsometry.ofEquiv (Equiv.prodAssoc k a b)) rho.matrix) i) j
+  refine hmap.trans ?_
+  show (∑ y : (k × a) × b, (∑ x : (k × a) × b,
+        (if i = Equiv.prodAssoc k a b x then (1 : ℂ) else 0) * rho.matrix x y) *
+      (starRingEnd ℂ) (if j = Equiv.prodAssoc k a b y then 1 else 0)) =
+    rho.matrix ((Equiv.prodAssoc k a b).symm i) ((Equiv.prodAssoc k a b).symm j)
   rw [Finset.sum_eq_single ((Equiv.prodAssoc k a b).symm j)]
   · rw [Finset.sum_eq_single ((Equiv.prodAssoc k a b).symm i)]
     · simp
     · intro x _ hx
-      have hne : i ≠ (Equiv.prodAssoc k a b) x := by
+      have hne : i ≠ (x.1.1, x.1.2, x.2) := by
         intro hi
         apply hx
-        simp [hi]
-      rw [if_neg]
-      intro hi
-      exact hne (by simpa [Equiv.prodAssoc] using hi)
+        rw [hi]
+        exact (Equiv.symm_apply_apply (Equiv.prodAssoc k a b) x).symm
+      simp [hne]
     · simp
   · intro x _ hx
-    have hne : j ≠ (Equiv.prodAssoc k a b) x := by
+    have hne : j ≠ (x.1.1, x.1.2, x.2) := by
       intro hj
       apply hx
-      simp [hj]
-    rw [if_neg]
-    intro hj
-    exact hne (by simpa [Equiv.prodAssoc] using hj)
+      rw [hj]
+      exact (Equiv.symm_apply_apply (Equiv.prodAssoc k a b) x).symm
+    simp [hne]
   · simp
 
 @[simp]

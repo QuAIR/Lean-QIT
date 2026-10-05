@@ -191,7 +191,7 @@ theorem conditionalSandwichedRenyiUpExtendedOrder_duality
   have hbeta :=
     RenyiOrder.eq_conjugateOrder_of_recip_add_recip_eq_two hconj
   subst beta
-  letI : Nonempty a :=
+  let : Nonempty a :=
     ⟨(Classical.choice psi.state.marginalAB.nonempty).1⟩
   cases hval : alpha.val with
   | top =>

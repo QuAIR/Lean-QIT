@@ -8,7 +8,7 @@ module
 
 public import QIT.Init
 public import Mathlib.Data.List.Sort
-public import Mathlib.Data.Real.Basic
+public import Mathlib.Basic.Real.Basic
 
 /-!
 # Finite majorization

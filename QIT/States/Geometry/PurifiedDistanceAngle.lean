@@ -33,7 +33,7 @@ private def unitPhase (z : ℂ) : ℂ :=
 private theorem unitPhase_normSq (z : ℂ) : Complex.normSq (unitPhase z) = 1 := by
   by_cases hz : z = 0
   · simp [unitPhase, hz]
-  · rw [unitPhase, if_neg hz, Complex.normSq_div,
+  · rw [unitPhase, ite_eq_right hz, Complex.normSq_div,
       Complex.normSq_eq_norm_sq, Complex.normSq_ofReal]
     have hn : ‖z‖ ≠ 0 := norm_ne_zero_iff.mpr hz
     field_simp [hn]
@@ -42,7 +42,7 @@ private theorem star_unitPhase_mul_self (z : ℂ) :
     star (unitPhase z) * z = (‖z‖ : ℂ) := by
   by_cases hz : z = 0
   · simp [unitPhase, hz]
-  · rw [unitPhase, if_neg hz, star_div₀]
+  · rw [unitPhase, ite_eq_right hz, star_div₀]
     have hn : (‖z‖ : ℂ) ≠ 0 := by exact_mod_cast norm_ne_zero_iff.mpr hz
     field_simp [hn]
     change (starRingEnd ℂ) z * z =
@@ -167,7 +167,7 @@ theorem projectiveAngle_triangle {a : Type u} [Fintype a] [DecidableEq a]
   let x : EuclideanSpace ℂ a := ampVector Ψ'
   let y : EuclideanSpace ℂ a := ampVector Φ
   let z : EuclideanSpace ℂ a := ampVector Ω'
-  letI : InnerProductSpace ℝ (EuclideanSpace ℂ a) :=
+  let : InnerProductSpace ℝ (EuclideanSpace ℂ a) :=
     InnerProductSpace.rclikeToReal ℂ (EuclideanSpace ℂ a)
   have hx : ‖x‖ = 1 := norm_ampVector Ψ'
   have hy : ‖y‖ = 1 := norm_ampVector Φ

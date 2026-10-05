@@ -731,8 +731,6 @@ theorem hypothesisTestingMutualInformation_dataProcessing_left
         (fun x x' => ∑ j : b, ρ.matrix (x, j) (x', j)) =
           ∑ j : b, S j := by
       ext x x'
-      change (∑ j : b, ρ.matrix (x, j) (x', j)) =
-        (∑ j : b, S j) x x'
       simp only [Matrix.sum_apply]
       rfl
     change (∑ j : b,

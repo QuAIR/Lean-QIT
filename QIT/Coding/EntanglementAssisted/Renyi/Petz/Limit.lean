@@ -120,8 +120,8 @@ private theorem relativeEntropySummandReal_productMarginalNussbaumSzkolaModel
       exact Real.log_div hlam_pos.ne' hmu_pos.ne'
     rw [relativeEntropySummandReal]
     simp only [ClassicalBinaryModel.pDistribution, ClassicalBinaryModel.qDistribution]
-    rw [if_neg (by simpa [M] using hp)]
     simp [productMarginalNussbaumSzkolaModel, NNReal.coe_mul, hlog]
+    exact fun h => Or.inl h
 
 
 /-- Product-marginal Nussbaum--Szkola classical relative entropy is the
@@ -290,8 +290,9 @@ theorem productMarginalNussbaumSzkolaModel_petzChernoffCoefficient_eq
             (fun x : Prod a b =>
               (((((stateSpectralWeight rhoAB x : NNReal) : ℝ) ^ s : ℝ) : ℂ))) *
           star (Urho : CMatrix (Prod a b)) := by
-    simpa [Urho, stateSpectralWeight] using
-      cMatrix_rpow_eq_eigenbasis_diagonal rhoAB.pos s
+    have hspec := cMatrix_rpow_eq_eigenbasis_diagonal rhoAB.pos s
+    simp only [Urho, stateSpectralWeight] at hspec ⊢
+    exact hspec
   have hw_nonneg :
       ∀ y : Prod a b, 0 ≤ ((productMarginalSpectralWeight rhoAB y : NNReal) : ℝ) := by
     intro y
@@ -324,14 +325,15 @@ theorem productMarginalNussbaumSzkolaModel_petzChernoffCoefficient_eq
               ((productMarginalNussbaumSzkolaOverlap rhoAB x y : NNReal) : ℝ)) := by
     change ((CFC.rpow rhoAB.matrix s * CFC.rpow sigma.matrix (1 - s)).trace).re = _
     rw [hrho, hsigma]
-    simpa [Urho, Uprod, productMarginalNussbaumSzkolaOverlap,
-      productMarginalNussbaumSzkolaTransitionUnitary, Matrix.star_eq_conjTranspose,
-      mul_assoc, mul_left_comm, mul_comm] using
-      trace_mul_two_unitary_conj_diagonal_ofReal_re
+    have hdiag := trace_mul_two_unitary_conj_diagonal_ofReal_re
         Urho Uprod
         (fun x : Prod a b => (((stateSpectralWeight rhoAB x : NNReal) : ℝ) ^ s : ℝ))
         (fun y : Prod a b =>
           (((productMarginalSpectralWeight rhoAB y : NNReal) : ℝ) ^ (1 - s) : ℝ))
+    simp only [Urho, Uprod, productMarginalNussbaumSzkolaOverlap,
+      productMarginalNussbaumSzkolaTransitionUnitary, Matrix.star_eq_conjTranspose,
+      mul_assoc, mul_left_comm, mul_comm] at hdiag ⊢
+    exact hdiag
   apply NNReal.eq
   calc
     ((productMarginalNussbaumSzkolaModel rhoAB).petzChernoffCoefficient s : ℝ) =
@@ -686,7 +688,7 @@ theorem barPetzRenyiMutualInformationPSD_eq_coe_finite
       (N.barPetzRenyiMutualInformationPSDFinite
         alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) : EReal) := by
   classical
-  letI : Nonempty (PureVector (Prod a a)) := ⟨PureVector.basisPureVector⟩
+  let : Nonempty (PureVector (Prod a a)) := ⟨PureVector.basisPureVector⟩
   let f : PureVector (Prod a a) → ℝ := fun psi =>
     N.inputBarPetzRenyiMutualInformationPSDFinite
       psi alpha.1 alpha.2.1 (ne_of_lt alpha.2.2)
@@ -694,7 +696,7 @@ theorem barPetzRenyiMutualInformationPSD_eq_coe_finite
       N.barPetzRenyiMutualInformationPSDFiniteValueSet
           alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) = Set.range f := by
     ext value
-    simp only [barPetzRenyiMutualInformationPSDFiniteValueSet, Set.mem_setOf_eq,
+    simp only [barPetzRenyiMutualInformationPSDFiniteValueSet, Set.mem_ofPred_eq,
       Set.mem_range, f]
     constructor <;> rintro ⟨psi, rfl⟩ <;> exact ⟨psi, rfl⟩
   have hcanonicalSet :
@@ -702,7 +704,7 @@ theorem barPetzRenyiMutualInformationPSD_eq_coe_finite
           alpha.1 alpha.2.1 alpha.2.2 =
         Set.range fun psi => (f psi : EReal) := by
     ext value
-    simp only [barPetzRenyiMutualInformationPSDValueSet, Set.mem_setOf_eq,
+    simp only [barPetzRenyiMutualInformationPSDValueSet, Set.mem_ofPred_eq,
       Set.mem_range]
     constructor
     · rintro ⟨psi, rfl⟩

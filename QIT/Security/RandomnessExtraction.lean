@@ -130,7 +130,7 @@ end HashFamily
 theorem finFullFunctionHashFamily_outputLength
     {Z : Type uZ} [Fintype Z] [DecidableEq Z] {ell : Nat} (hell : 0 < ell) :
     (FinFullFunctionHashFamily (Z := Z) ell hell).outputLength = ell := by
-  letI : Nonempty (Fin ell) := ⟨⟨0, hell⟩⟩
+  let : Nonempty (Fin ell) := ⟨⟨0, hell⟩⟩
   simp [HashFamily.outputLength]
 
 /--
@@ -185,9 +185,9 @@ theorem extractorOutputLengthAchievable_pos
     0 < ell := by
   rcases hach with
     ⟨S', instS, decS, nonS, hcard, F', instF, decF, nonF, H, hsecret⟩
-  letI : Fintype S' := instS
-  letI : DecidableEq S' := decS
-  letI : Nonempty S' := nonS
+  let : Fintype S' := instS
+  let : DecidableEq S' := decS
+  let : Nonempty S' := nonS
   have hcard_pos : 0 < Fintype.card S' := Fintype.card_pos
   simpa [hcard] using hcard_pos
 
@@ -212,7 +212,6 @@ theorem outputLengthAchievable
   refine ⟨S, inferInstance, inferInstance, inferInstance, ?_⟩
   dsimp
   refine ⟨rfl, F, inferInstance, inferInstance, inferInstance, ?_⟩
-  dsimp
   exact ⟨H, hsecret⟩
 
 omit [DecidableEq Z] in
@@ -412,7 +411,6 @@ theorem extractorOutputLengthAchievable_one_of_nonneg
   refine ⟨PUnit, inferInstance, inferInstance, inferInstance, ?_⟩
   dsimp
   refine ⟨by simp, PUnit, inferInstance, inferInstance, inferInstance, ?_⟩
-  dsimp
   exact ⟨trivialHashFamily Z, trivialHashFamily_isEpsilonSecretExtractor E hε⟩
 
 omit [DecidableEq Z] in

@@ -487,7 +487,7 @@ private theorem isClosed_setOf_zero_le_complex_frankLieb :
     IsClosed ({z : ℂ | 0 ≤ z} : Set ℂ) := by
   have h : ({z : ℂ | 0 ≤ z} : Set ℂ) = {z | 0 ≤ z.re} ∩ {z | z.im = 0} := by
     ext z
-    simp only [Set.mem_inter_iff, Set.mem_setOf_eq]
+    simp only [Set.mem_inter_iff, Set.mem_ofPred_eq]
     constructor
     · intro hz
       simp [Complex.le_def] at hz ⊢
@@ -1091,10 +1091,14 @@ public theorem cMatrix_kronecker_trace_re_tendsto_right
     intro M
     have htrace : ContinuousAt (fun M : CMatrix b =>
         (Matrix.kronecker K M).trace) M := by
-      simpa [Matrix.trace_kronecker] using
-        ((continuous_const.mul
-          (Continuous.matrix_trace continuous_id)).continuousAt : ContinuousAt
-          (fun M : CMatrix b => K.trace * M.trace) M)
+      have hfun :
+          (fun M : CMatrix b => (Matrix.kronecker K M).trace) =
+            fun M : CMatrix b => K.trace * M.trace := by
+        funext M
+        exact Matrix.trace_kronecker K M
+      rw [hfun]
+      exact (continuous_const.mul
+        (Continuous.matrix_trace continuous_id)).continuousAt
     exact Complex.continuous_re.continuousAt.comp htrace
   exact (hcont.tendsto B).comp hF
 
@@ -1133,9 +1137,8 @@ public theorem cMatrix_kronecker_tendsto_right
     intro i j
     rcases i with ⟨ia, ib⟩
     rcases j with ⟨ja, jb⟩
-    simpa [Matrix.kronecker, Matrix.kroneckerMap_apply] using
-      (continuous_const.mul (continuous_apply_apply ib jb) :
-        Continuous fun M : CMatrix b => K ia ja * M ib jb)
+    show Continuous fun M : CMatrix b => K ia ja * M ib jb
+    exact continuous_const.mul (continuous_apply_apply ib jb)
   exact (hcont.tendsto B).comp hF
 
 /-- Tensor-power continuity in the right tensor factor along PSD-constrained

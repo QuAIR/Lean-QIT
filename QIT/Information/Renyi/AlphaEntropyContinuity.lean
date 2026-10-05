@@ -334,9 +334,11 @@ private theorem logRatio_convexOn_Icc_zero_one :
     have hraw := ((((hasDerivAt_id x).const_add 2).div
       (((hasDerivAt_const x 2).sub (hasDerivAt_id x))) hden).log hdiv)
     convert hraw using 1
-    dsimp [f']
+    show 1 / (2 + x) + 1 / (2 - x) =
+      (1 * (2 - x) - (2 + x) * (0 - 1)) / (2 - x) ^ 2 / ((2 + x) / (2 - x))
     field_simp [hnum, hden]
     ring_nf
+    rfl
   have hcont : ContinuousOn f D := by
     intro x hx
     exact ((hf'At x hx).continuousAt).continuousWithinAt
@@ -736,11 +738,12 @@ private theorem posSemidef_eigenvalue_mul_sum_eq_support_sum
   have hsub :
       (∑ i : psdSupportIndex M hM, d i.1 * f i.1) =
         ∑ i ∈ (Finset.univ : Finset n) with 0 < d i, g i := by
-    simpa [d, g] using
-      (Finset.sum_subtype_eq_sum_filter
-        (s := (Finset.univ : Finset n))
-        (p := fun i => 0 < d i)
-        (f := g))
+    show (∑ i : {i : n // 0 < d i}, g i.1) =
+      ∑ i ∈ (Finset.univ : Finset n) with 0 < d i, g i
+    rw [show (Finset.univ : Finset {i : n // 0 < d i}) =
+        Finset.univ.subtype (fun i => 0 < d i) from (Finset.subtype_univ _).symm]
+    exact Finset.sum_subtype_eq_sum_filter (s := (Finset.univ : Finset n))
+      (p := fun i => 0 < d i) (f := g)
   have hfilter :
       (∑ i ∈ (Finset.univ : Finset n) with 0 < d i, g i) =
         ∑ i, g i := by
@@ -1051,7 +1054,7 @@ theorem conditionalEntropyRelative_to_conditionalEntropy
 theorem marginalB_posDef_of_posDef
     (ρ : State (Prod a b)) (hρ : ρ.matrix.PosDef) :
     ρ.marginalB.matrix.PosDef := by
-  letI : Nonempty a := by
+  let : Nonempty a := by
     rcases ρ.nonempty with ⟨x⟩
     exact ⟨x.1⟩
   simpa [State.marginalB_matrix] using
@@ -1073,13 +1076,14 @@ theorem relativeEntropy_nonneg_of_posDef
     convert hlim using 1
     rw [relativeEntropyPosDefFinite, vonNeumann_eq_neg_trace_mul_psdLog_div_log_two ρ hρ]
     ring_nf
-  haveI : Filter.NeBot relativeEntropyHighAlphaRightToOne :=
+  have : Filter.NeBot relativeEntropyHighAlphaRightToOne :=
     relativeEntropyHighAlphaRightToOne_neBot
   exact ge_of_tendsto hlimRel (Filter.Eventually.of_forall fun alpha => by
     have hnonneg :=
       sandwichedRenyi_nonneg_of_one_lt ρ σ hρ hσ alpha.1 alpha.2
     simpa [sandwichedRenyiPSDReferenceHighAlphaFinite,
-      sandwichedRenyi_eq_log2_psdTracePower_inner] using hnonneg)
+      sandwichedRenyi_eq_log2_psdTracePower_inner,
+      sandwichedRenyiInner, sandwichedRenyiReferenceInner] using hnonneg)
 
 /-- Fixed-reference conditional entropy is bounded above by the canonical
 conditional von Neumann entropy.
@@ -1629,11 +1633,12 @@ theorem conditionalPetzRenyiTraceTerm_half_eq_support_inv_sqrt_sum
             Complex.normSq ((star (Uρ : CMatrix (Prod a b)) *
               (Uτ : CMatrix (Prod a b))) j.1 i)) =
           ∑ j ∈ (Finset.univ : Finset (Prod a b)) with 0 < d j, g j := by
-      simpa [d, g] using
-        (Finset.sum_subtype_eq_sum_filter
-          (s := (Finset.univ : Finset (Prod a b)))
-          (p := fun j => 0 < d j)
-          (f := g))
+      show (∑ j : {j : Prod a b // 0 < d j}, g j.1) =
+        ∑ j ∈ (Finset.univ : Finset (Prod a b)) with 0 < d j, g j
+      rw [show (Finset.univ : Finset {j : Prod a b // 0 < d j}) =
+          Finset.univ.subtype (fun j => 0 < d j) from (Finset.subtype_univ _).symm]
+      exact Finset.sum_subtype_eq_sum_filter (s := (Finset.univ : Finset (Prod a b)))
+        (p := fun j => 0 < d j) (f := g)
     have hfilter :
         (∑ j ∈ (Finset.univ : Finset (Prod a b)) with 0 < d j, g j) =
           ∑ j, g j := by
@@ -2458,7 +2463,7 @@ private theorem cMatrix_mul_inv_mul_self_le_smul_of_posSemidef_le_posDef
   have hblock :
       (Matrix.fromBlocks A A A C : CMatrix (Sum n n)).PosSemidef :=
     cMatrix_fromBlocks_self_le_posSemidef hA hCminusA
-  letI : Invertible C := hC.isUnit.invertible
+  let : Invertible C := hC.isUnit.invertible
   have hblock' :
       (Matrix.fromBlocks A A A.conjTranspose C : CMatrix (Sum n n)).PosSemidef := by
     simpa [hA.isHermitian.eq] using hblock
@@ -2471,7 +2476,7 @@ private theorem cMatrix_mul_inv_mul_self_le_smul_of_posSemidef_le_posDef
     simpa [hA.isHermitian.eq] using hschur
   have hcne : (c : ℂ) ≠ 0 := by
     exact_mod_cast hc.ne'
-  letI : Invertible (c : ℂ) := invertibleOfNonzero hcne
+  let : Invertible (c : ℂ) := invertibleOfNonzero hcne
   have hσdet : IsUnit σ.det := (Matrix.isUnit_iff_isUnit_det σ).mp hσ.isUnit
   have hCinv : C⁻¹ = ((c : ℂ)⁻¹) • σ⁻¹ := by
     calc
@@ -2516,8 +2521,11 @@ private theorem posSemidef_eigenbasis_conj_eq_diagonal
   let D : CMatrix n :=
     Matrix.diagonal fun j => ((hM.isHermitian.eigenvalues j : ℝ) : ℂ)
   have hMdiag : M = (U : CMatrix n) * D * star (U : CMatrix n) := by
+    have hspec := hM.isHermitian.spectral_theorem
+    rw [show (RCLike.ofReal ∘ hM.isHermitian.eigenvalues) =
+          (fun j => ((hM.isHermitian.eigenvalues j : ℝ) : ℂ)) from rfl] at hspec
     simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hM.isHermitian.spectral_theorem
+      using hspec
   change star (U : CMatrix n) * M * (U : CMatrix n) = D
   rw [hMdiag]
   have hUU : star (U : CMatrix n) * (U : CMatrix n) = 1 :=
@@ -3267,7 +3275,7 @@ theorem conditionalPetzRenyiTraceTerm_pos_of_posDef
     (σ : State b) (hσ : σ.matrix.PosDef) (α : ℝ) :
     0 < ρ.conditionalPetzRenyiTraceTerm σ α := by
   dsimp [conditionalPetzRenyiTraceTerm]
-  haveI : Nonempty (Prod a b) := ρ.nonempty
+  have : Nonempty (Prod a b) := ρ.nonempty
   exact trace_mul_posDef_re_pos
     (ρ.rpowMatrix_posDef_of_posDef hρ α)
     (cMatrix_rpow_posDef_of_posDef
@@ -3403,9 +3411,7 @@ theorem tensorPowerBipartite_succ_grouped_forAlphaContinuity
   ext x y
   rcases x with ⟨⟨xA, xsA⟩, ⟨xB, xsB⟩⟩
   rcases y with ⟨⟨yA, ysA⟩, ⟨yB, ysB⟩⟩
-  simp [State.tensorPowerBipartite, State.tensorPower_succ,
-    conditionalPetzRenyiProductGroupingEquiv, tensorPowerProdEquiv,
-    State.prod, State.reindex, Matrix.kronecker, Matrix.kroneckerMap_apply]
+  rfl
 
 /-- The side marginal of the successor grouping is the product of the one-copy
 side marginal and the `n`-copy side marginal. -/
@@ -3451,9 +3457,17 @@ theorem tensorPowerBipartite_conditionalPetzRenyiTraceTerm_zero
         (ρ.tensorPowerBipartite 0).matrix PUnit.unit PUnit.unit =
       (1 : CMatrix (TensorPower b 0)) PUnit.unit PUnit.unit
     rw [hmat]
-    simp [partialTraceA, TensorPower]
-    change (1 : ℂ) = 1
-    norm_num
+    show (∑ i : TensorPower a 0,
+        (1 : CMatrix (Prod (TensorPower a 0) (TensorPower b 0))) (i, PUnit.unit) (i, PUnit.unit)) =
+      (1 : CMatrix (TensorPower b 0)) PUnit.unit PUnit.unit
+    have hsum : (∑ i : TensorPower a 0,
+        (1 : CMatrix (Prod (TensorPower a 0) (TensorPower b 0))) (i, PUnit.unit) (i, PUnit.unit)) =
+        (1 : ℂ) :=
+      Finset.sum_eq_single (PUnit.unit : TensorPower a 0)
+        (fun y _ hyu => by cases y; exact absurd rfl hyu)
+        (fun hnu => absurd (Finset.mem_univ (PUnit.unit : TensorPower a 0)) hnu)
+    rw [hsum]
+    rfl
   have href :
       identityTensorStateMatrix (a := TensorPower a 0)
           (ρ.tensorPowerBipartite 0).marginalB =
@@ -3472,7 +3486,7 @@ theorem tensorPowerBipartite_conditionalPetzRenyiTraceTerm_zero
         (1 : CMatrix (Prod (TensorPower a 0) (TensorPower b 0)))
           (PUnit.unit, PUnit.unit) (PUnit.unit, PUnit.unit)
     rw [hBmat]
-    simp [TensorPower, Matrix.kronecker, Matrix.kroneckerMap_apply]
+    simp [TensorPower, Matrix.kronecker]
     change (1 : ℂ) * 1 = 1
     norm_num
   unfold conditionalPetzRenyiTraceTerm
@@ -3537,21 +3551,15 @@ theorem tensorPowerBipartite_conditionalPetzRenyiTraceTerm_succ_fullReference
     have hτB_matrix :
         (ρ.tensorPowerBipartite (n + 1)).marginalB.matrix =
           (ρ.marginalB.prod (ρ.tensorPowerBipartite n).marginalB).matrix := by
-      simpa [← hτ] using congrArg State.matrix hτB
+      exact congrArg State.matrix hτB
     have hτB_ref :
         identityTensorStateMatrix (a := TensorPower a (n + 1))
             (ρ.tensorPowerBipartite (n + 1)).marginalB =
           identityTensorStateMatrix (a := Prod a (TensorPower a n))
             (ρ.marginalB.prod (ρ.tensorPowerBipartite n).marginalB) := by
       ext i j
-      by_cases hij : i.1 = j.1
-      · simp [identityTensorStateMatrix, Matrix.kronecker, Matrix.kroneckerMap_apply,
-          Matrix.one_apply, hij]
-        exact congrFun (congrFun hτB_matrix i.2) j.2
-      · simp [identityTensorStateMatrix, Matrix.kronecker, Matrix.kroneckerMap_apply,
-          Matrix.one_apply, hij]
-        intro h
-        exact False.elim (hij h)
+      exact congrFun (congrFun (congrArg
+        (Matrix.kronecker (1 : CMatrix (TensorPower a (n + 1)))) hτB_matrix) i) j
     dsimp [conditionalPetzRenyiTraceTerm]
     rw [hτ_matrix', hτB_ref, hτ_matrix_def]
     rfl
@@ -5010,8 +5018,6 @@ theorem conditionalPetzRenyiEntropyCandidateFullReference_alpha_bound
           (lt_trans zero_lt_one hα_gt) ((ne_of_lt hα_gt).symm) =
         -(1 / β) * log2 (ρ.conditionalPetzRenyiTraceTerm σ α) := by
     dsimp [conditionalPetzRenyiEntropyCandidateFullReference]
-    change (1 / (1 - α)) * log2 (ρ.conditionalPetzRenyiTraceTerm σ α) =
-      -(1 / β) * log2 (ρ.conditionalPetzRenyiTraceTerm σ α)
     have hone : 1 - α = -β := by
       dsimp [β]
       ring

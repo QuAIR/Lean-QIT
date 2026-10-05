@@ -544,8 +544,20 @@ theorem ConditionalMinEntropyScaleFeasible.compress_sumInr
     convert hsub using 1
     ext x y
     simp [Matrix.kronecker, Matrix.sumBlock22, conditioningIsometryApply_matrix,
-      ReferenceIsometry.applyMatrixRight, ReferenceIsometry.rightBlock,
-      ReferenceIsometry.sumInr, Matrix.mul_apply]
+      ReferenceIsometry.applyMatrixRight, ReferenceIsometry.sumInr, Matrix.mul_apply]
+    show ρ.matrix x y = ∑ j : b,
+        ((∑ k : b,
+            ((fun (s : Sum extra b) (i : b) =>
+                  match s with
+                  | Sum.inl val => (0 : ℂ)
+                  | Sum.inr j => if j = i then (1 : ℂ) else 0) (Sum.inr x.2) k) *
+              ReferenceIsometry.rightBlock ρ.matrix x.1 y.1 k j) *
+          star (if y.2 = j then (1 : ℂ) else 0))
+    rw [Finset.sum_eq_single y.2]
+    · simp [ReferenceIsometry.rightBlock, Finset.sum_ite_eq]
+    · intro j _ hj
+      simp [Ne.symm hj]
+    · simp
 
 /-- Compressing an arbitrary concrete right-summand conditioning register
 preserves raw subnormalized conditional-min feasibility. -/
@@ -1143,7 +1155,16 @@ noncomputable def sourceDeterministicPostprocessMap
     rcases yj with ⟨y', j⟩
     by_cases hyy : y = y'
     · subst y'
-      simp only [if_true, Matrix.add_apply]
+      show (if (y, i).1 = (y, j).1 then
+            ∑ x : a, if g x = (y, i).1 then (X + Y) (x, (y, i).2) (x, (y, j).2) else 0
+            else 0)
+          = (if (y, i).1 = (y, j).1 then
+              ∑ x : a, if g x = (y, i).1 then X (x, (y, i).2) (x, (y, j).2) else 0
+              else 0)
+            + (if (y, i).1 = (y, j).1 then
+              ∑ x : a, if g x = (y, i).1 then Y (x, (y, i).2) (x, (y, j).2) else 0
+              else 0)
+      simp only [ite_true, Matrix.add_apply]
       calc
         (∑ x : a, if g x = y then X (x, i) (x, j) + Y (x, i) (x, j) else 0)
             =
@@ -1156,7 +1177,16 @@ noncomputable def sourceDeterministicPostprocessMap
             (∑ x : a, if g x = y then X (x, i) (x, j) else 0) +
               ∑ x : a, if g x = y then Y (x, i) (x, j) else 0 := by
               rw [Finset.sum_add_distrib]
-    · simp [hyy]
+    · show (if (y, i).1 = (y', j).1 then
+            ∑ x : a, if g x = (y, i).1 then (X + Y) (x, (y, i).2) (x, (y', j).2) else 0
+            else 0)
+          = (if (y, i).1 = (y', j).1 then
+              ∑ x : a, if g x = (y, i).1 then X (x, (y, i).2) (x, (y', j).2) else 0
+              else 0)
+            + (if (y, i).1 = (y', j).1 then
+              ∑ x : a, if g x = (y, i).1 then Y (x, (y, i).2) (x, (y', j).2) else 0
+              else 0)
+      simp [hyy]
   map_smul' := by
     intro z X
     ext yi yj
@@ -1164,7 +1194,13 @@ noncomputable def sourceDeterministicPostprocessMap
     rcases yj with ⟨y', j⟩
     by_cases hyy : y = y'
     · subst y'
-      simp only [if_true, Matrix.smul_apply]
+      show (if (y, i).1 = (y, j).1 then
+            ∑ x : a, if g x = (y, i).1 then (z • X) (x, (y, i).2) (x, (y, j).2) else 0
+            else 0)
+          = z * (if (y, i).1 = (y, j).1 then
+              ∑ x : a, if g x = (y, i).1 then X (x, (y, i).2) (x, (y, j).2) else 0
+              else 0)
+      simp only [ite_true, Matrix.smul_apply, smul_eq_mul]
       calc
         (∑ x : a, if g x = y then z * X (x, i) (x, j) else 0)
             =
@@ -1174,7 +1210,13 @@ noncomputable def sourceDeterministicPostprocessMap
         _ =
             z * ∑ x : a, if g x = y then X (x, i) (x, j) else 0 := by
               rw [Finset.mul_sum]
-    · simp [hyy]
+    · show (if (y, i).1 = (y', j).1 then
+            ∑ x : a, if g x = (y, i).1 then (z • X) (x, (y, i).2) (x, (y', j).2) else 0
+            else 0)
+          = z * (if (y, i).1 = (y', j).1 then
+              ∑ x : a, if g x = (y, i).1 then X (x, (y, i).2) (x, (y', j).2) else 0
+              else 0)
+      simp [hyy]
 
 private theorem sourceDeterministicPostprocessMap_eq_ofKraus
     {c : Type*} [Fintype c] [DecidableEq c]
@@ -1193,7 +1235,12 @@ private theorem sourceDeterministicPostprocessMap_eq_ofKraus
   simp only [Prod.mk.injEq, ite_mul, zero_mul, one_mul]
   by_cases hyy : y = y'
   · subst y'
-    rw [if_pos rfl]
+    show (∑ x : a, ∑ x_1 : Prod a b,
+          (∑ x_2 : Prod a b,
+              if x_2.1 = x ∧ y = g x ∧ i = x_2.2 then X x_2 x_1 else 0) *
+        star (if x_1.1 = x ∧ y = g x ∧ j = x_1.2 then (1 : ℂ) else 0))
+      = (if y = y then ∑ x : a, if g x = y then X (x, i) (x, j) else 0 else 0)
+    rw [ite_eq_left rfl]
     refine Finset.sum_congr rfl fun x _ => ?_
     by_cases hg : g x = y
     · rw [Finset.sum_eq_single ((x, j) : Prod a b)]
@@ -1225,7 +1272,13 @@ private theorem sourceDeterministicPostprocessMap_eq_ofKraus
             · simp [hright]
         _ = (if g x = y then X (x, i) (x, j) else 0) := by
             simp [hg]
-  · rw [if_neg hyy]
+  · show (∑ x : a, ∑ x_1 : Prod a b,
+          (∑ x_2 : Prod a b,
+              if x_2.1 = x ∧ y = g x ∧ i = x_2.2 then X x_2 x_1 else 0) *
+        star (if x_1.1 = x ∧ y' = g x ∧ j = x_1.2 then (1 : ℂ) else 0))
+      = (if y = y' then ∑ x : a, if g x = y then X (x, i) (x, j) else 0
+          else 0)
+    rw [ite_eq_right hyy]
     apply Finset.sum_eq_zero
     intro x _
     apply Finset.sum_eq_zero
@@ -1272,19 +1325,27 @@ theorem sourceDeterministicPostprocessMap_apply_eq_blockDiagonal
     calc
       (sourceDeterministicPostprocessMap (a := a) (b := b) g X) (y, i) (y, j) =
           (∑ x : a, if g x = y then Classical.block X x x else 0) i j := by
-          simp only [sourceDeterministicPostprocessMap, LinearMap.coe_mk, AddHom.coe_mk,
-            Matrix.sum_apply]
+          show (if y = y then ∑ x : a, if g x = y then X (x, i) (x, j) else 0 else 0)
+            = (∑ x : a, if g x = y then Classical.block X x x else 0) i j
+          simp only [ite_true, Matrix.sum_apply]
           refine Finset.sum_congr rfl fun x _ => ?_
           by_cases hx : g x = y <;> simp [hx, Classical.block]
       _ = Classical.blockDiagonal
             (fun y : c => ∑ x : a, if g x = y then Classical.block X x x else 0)
             (y, i) (y, j) := hblock.symm
-  · have hblock :=
-      congrFun (congrFun
-        (Classical.blockDiagonal_block_ne
+  · show (if (y, i).1 = (y', j).1 then
+        ∑ x : a, if g x = (y, i).1 then X (x, (y, i).2) (x, (y', j).2) else 0
+        else 0)
+      = Classical.blockDiagonal
           (fun y : c => ∑ x : a, if g x = y then Classical.block X x x else 0)
-          hyy) i) j
-    simpa [sourceDeterministicPostprocessMap, Classical.block, hyy] using hblock.symm
+          (y, i) (y', j)
+    have hblock : Classical.blockDiagonal
+        (fun y : c => ∑ x : a, if g x = y then Classical.block X x x else 0)
+        (y, i) (y', j) = 0 :=
+      congrFun (congrFun (Classical.blockDiagonal_block_ne
+        (fun y : c => ∑ x : a, if g x = y then Classical.block X x x else 0) hyy) i) j
+    rw [hblock]
+    simp [hyy]
 
 theorem sourceDeterministicPostprocessMap_tracePreserving
     {c : Type*} [Fintype c] [DecidableEq c]
@@ -1309,7 +1370,7 @@ theorem sourceDeterministicPostprocessMap_tracePreserving
         rw [Finset.sum_eq_single (g x)]
         · simp
         · intro y _ hy
-          rw [if_neg (fun h => hy h.symm)]
+          rw [ite_eq_right (fun h => hy h.symm)]
           simp
         · simp
     _ = X.trace := Classical.sum_block_trace X
@@ -1335,8 +1396,8 @@ def sourceDeterministicPostprocess
       intro y
       exact Matrix.posSemidef_sum Finset.univ fun x _ => by
         by_cases hx : g x = y
-        · exact by
-            simpa [hx] using ρ.pos.submatrix (fun i : b => (x, i))
+        · rw [ite_eq_left hx]
+          exact ρ.pos.submatrix (fun i : b => (x, i))
         · simpa [hx] using (Matrix.PosSemidef.zero : (0 : CMatrix b).PosSemidef))
     (by
       have htrace :
@@ -1360,7 +1421,7 @@ def sourceDeterministicPostprocess
                 rw [Finset.sum_eq_single (g x)]
                 · simp
                 · intro y _ hy
-                  rw [if_neg (fun h => hy h.symm)]
+                  rw [ite_eq_right (fun h => hy h.symm)]
                   simp
                 · simp
       rw [htrace, Classical.sum_block_trace]
@@ -1414,7 +1475,7 @@ theorem sourceDeterministicPostprocess_trace
         rw [Finset.sum_eq_single (g x)]
         · simp
         · intro y _ hy
-          rw [if_neg (fun h => hy h.symm)]
+          rw [ite_eq_right (fun h => hy h.symm)]
           simp
         · simp
     _ = ρ.matrix.trace := Classical.sum_block_trace ρ.matrix
@@ -1436,15 +1497,17 @@ theorem sourceBlock_le_sourceDeterministicPostprocess_block
   classical
   rw [sourceDeterministicPostprocess_block]
   have hxmem : x ∈ (Finset.univ : Finset a) := Finset.mem_univ x
-  rw [Finset.sum_eq_add_sum_diff_singleton_of_mem hxmem]
-  simp only [if_true]
+  rw [← Finset.add_sum_erase (Finset.univ : Finset a)
+    (fun x' => if g x' = g x then Classical.block ρ.matrix x' x' else 0) hxmem,
+    ite_eq_left rfl]
   exact le_add_of_nonneg_right (by
     have hrest_psd :
         (∑ x' ∈ (Finset.univ : Finset a).erase x,
           if g x' = g x then Classical.block ρ.matrix x' x' else 0).PosSemidef := by
       exact Matrix.posSemidef_sum ((Finset.univ : Finset a).erase x) fun x' _ => by
         by_cases hx' : g x' = g x
-        · simpa [hx'] using ρ.pos.submatrix (fun i : b => (x', i))
+        · rw [ite_eq_left hx']
+          exact ρ.pos.submatrix (fun i : b => (x', i))
         · simpa [hx'] using (Matrix.PosSemidef.zero : (0 : CMatrix b).PosSemidef)
     simpa [Matrix.le_iff] using hrest_psd)
 
@@ -1460,16 +1523,36 @@ def sourceBlockFilterMap (p : a → Prop) [DecidablePred p] :
     rcases xj with ⟨y, j⟩
     by_cases hxy : x = y
     · subst y
+      show (if (x, i).1 = (x, j).1 ∧ p (x, i).1 then
+            (X + Y) ((x, i).1, (x, i).2) ((x, i).1, (x, j).2) else 0)
+          = (if (x, i).1 = (x, j).1 ∧ p (x, i).1 then
+              X ((x, i).1, (x, i).2) ((x, i).1, (x, j).2) else 0)
+            + (if (x, i).1 = (x, j).1 ∧ p (x, i).1 then
+              Y ((x, i).1, (x, i).2) ((x, i).1, (x, j).2) else 0)
       by_cases hp : p x <;> simp [hp]
-    · simp [hxy]
+    · show (if (x, i).1 = (y, j).1 ∧ p (x, i).1 then
+            (X + Y) ((x, i).1, (x, i).2) ((x, i).1, (y, j).2) else 0)
+          = (if (x, i).1 = (y, j).1 ∧ p (x, i).1 then
+              X ((x, i).1, (x, i).2) ((x, i).1, (y, j).2) else 0)
+            + (if (x, i).1 = (y, j).1 ∧ p (x, i).1 then
+              Y ((x, i).1, (x, i).2) ((x, i).1, (y, j).2) else 0)
+      simp [hxy]
   map_smul' c X := by
     ext xi xj
     rcases xi with ⟨x, i⟩
     rcases xj with ⟨y, j⟩
     by_cases hxy : x = y
     · subst y
+      show (if (x, i).1 = (x, j).1 ∧ p (x, i).1 then
+            (c • X) ((x, i).1, (x, i).2) ((x, i).1, (x, j).2) else 0)
+          = c * (if (x, i).1 = (x, j).1 ∧ p (x, i).1 then
+              X ((x, i).1, (x, i).2) ((x, i).1, (x, j).2) else 0)
       by_cases hp : p x <;> simp [hp]
-    · simp [hxy]
+    · show (if (x, i).1 = (y, j).1 ∧ p (x, i).1 then
+            (c • X) ((x, i).1, (x, i).2) ((x, i).1, (y, j).2) else 0)
+          = c * (if (x, i).1 = (y, j).1 ∧ p (x, i).1 then
+              X ((x, i).1, (x, i).2) ((x, i).1, (y, j).2) else 0)
+      simp [hxy]
 
 private def sourceBlockFilterKraus (p : a → Prop) [DecidablePred p] (x : a) :
     Matrix (Prod a b) (Prod a b) ℂ :=
@@ -1492,7 +1575,13 @@ private theorem sourceBlockFilterMap_eq_ofKraus
   · subst y
     by_cases hp : p x
     · rw [Finset.sum_eq_single x]
-      · simp [hp]
+      · show (∑ x_1 : Prod a b,
+            (∑ x_2 : Prod a b,
+                if p x ∧ (x, i) = x_2 ∧ x = x then X x_2 x_1 else 0) *
+              star (if p x ∧ (x, j) = x_1 ∧ x = x then (1 : ℂ) else 0))
+          = (if (x, i).1 = (x, j).1 ∧ p (x, i).1 then
+              X ((x, i).1, (x, i).2) ((x, i).1, (x, j).2) else 0)
+        simp [hp]
       · intro z _ hz
         have hxz : ¬ x = z := fun h => hz h.symm
         simp [hxz]
@@ -1545,19 +1634,39 @@ theorem sourceBlockFilterMap_apply_eq_blockDiagonal
   rcases xj with ⟨y, j⟩
   by_cases hxy : x = y
   · subst y
-    have hblock :=
-      congrFun (congrFun
-        (Classical.blockDiagonal_block_self
-          (fun x : a => if p x then Classical.block X x x else 0) x) i) j
     by_cases hp : p x
-    · simpa [sourceBlockFilterMap, Classical.block, hp] using hblock.symm
-    · simpa [sourceBlockFilterMap, Classical.block, hp] using hblock.symm
-  · have hblock :=
-      congrFun (congrFun
-        (Classical.blockDiagonal_block_ne
-          (fun x : a => if p x then Classical.block X x x else 0)
-          hxy) i) j
-    simpa [sourceBlockFilterMap, Classical.block, hxy] using hblock.symm
+    · show (if (x, i).1 = (x, j).1 ∧ p (x, i).1 then
+            X ((x, i).1, (x, i).2) ((x, i).1, (x, j).2) else 0)
+          = Classical.blockDiagonal
+              (fun x : a => if p x then Classical.block X x x else 0) (x, i) (x, j)
+      have hblock : Classical.blockDiagonal
+          (fun x : a => if p x then Classical.block X x x else 0) (x, i) (x, j) =
+          (if p x then Classical.block X x x else 0) i j :=
+        congrFun (congrFun (Classical.blockDiagonal_block_self
+          (fun x : a => if p x then Classical.block X x x else 0) x) i) j
+      rw [hblock]
+      simp [Classical.block, hp]
+    · show (if (x, i).1 = (x, j).1 ∧ p (x, i).1 then
+            X ((x, i).1, (x, i).2) ((x, i).1, (x, j).2) else 0)
+          = Classical.blockDiagonal
+              (fun x : a => if p x then Classical.block X x x else 0) (x, i) (x, j)
+      have hblock : Classical.blockDiagonal
+          (fun x : a => if p x then Classical.block X x x else 0) (x, i) (x, j) =
+          (if p x then Classical.block X x x else 0) i j :=
+        congrFun (congrFun (Classical.blockDiagonal_block_self
+          (fun x : a => if p x then Classical.block X x x else 0) x) i) j
+      rw [hblock]
+      simp [hp]
+  · show (if (x, i).1 = (y, j).1 ∧ p (x, i).1 then
+        X ((x, i).1, (x, i).2) ((x, i).1, (y, j).2) else 0)
+      = Classical.blockDiagonal
+          (fun x : a => if p x then Classical.block X x x else 0) (x, i) (y, j)
+    have hblock : Classical.blockDiagonal
+        (fun x : a => if p x then Classical.block X x x else 0) (x, i) (y, j) = 0 :=
+      congrFun (congrFun (Classical.blockDiagonal_block_ne
+        (fun x : a => if p x then Classical.block X x x else 0) hxy) i) j
+    rw [hblock]
+    simp [hxy]
 
 private theorem sourceBlockFilterMap_trace_re_le
     (p : a → Prop) [DecidablePred p] {X : CMatrix (Prod a b)}
@@ -1745,7 +1854,7 @@ private theorem coordinateMeasure_map_single (x : a) :
           Matrix.single x x (1 : ℂ) := by
       rw [POVM.coordinate_effects, Matrix.single_mul_single_same]
       simp
-    rw [hmul, trace_single_one, if_pos rfl]
+    rw [hmul, trace_single_one, ite_eq_left rfl]
     simp
   · intro y _ hy
     have hmul :
@@ -1772,7 +1881,7 @@ private theorem coordinateMeasure_map_apply (X : CMatrix a) (x x' : a) :
   simp only [Matrix.sum_apply, Matrix.smul_apply, POVM.coordinate_effects]
   by_cases hxx' : x = x'
   · subst x'
-    rw [if_pos rfl]
+    rw [ite_eq_left rfl]
     rw [Finset.sum_eq_single x]
     · rw [Matrix.trace_mul_single]
       simp
@@ -1781,7 +1890,7 @@ private theorem coordinateMeasure_map_apply (X : CMatrix a) (x x' : a) :
       simp [hyx]
     · intro hx
       simp at hx
-  · rw [if_neg hxx']
+  · rw [ite_eq_right hxx']
     refine Finset.sum_eq_zero fun y _ => ?_
     have hnot : ¬ (y = x ∧ y = x') := by
       intro hy
@@ -1849,7 +1958,7 @@ theorem sourceCoordinatePinch_matrix_eq_blockDiagonal
       (Channel.idChannel b).map ρ.matrix (x, i) (x', j) =
     Classical.blockDiagonal (fun x => Classical.block ρ.matrix x x) (x, i) (x', j)
   rw [MatrixMap.kron_idChannel_apply_slice]
-  rw [coordinateMeasure_map_apply]
+  refine (coordinateMeasure_map_apply _ (x, i).1 (x', j).1).trans ?_
   by_cases hxx' : x = x'
   · subst x'
     have hblock :=
@@ -2046,7 +2155,7 @@ theorem conditionalMinEntropy_sourceDeterministicPostprocess_le_sourceCoordinate
     (hρ : 0 < ρ.matrix.trace.re) :
     (ρ.sourceDeterministicPostprocess g).conditionalMinEntropyRaw ≤
       ρ.sourceCoordinatePinch.conditionalMinEntropyRaw := by
-  letI : Nonempty c := ⟨g (Classical.choice (inferInstance : Nonempty a))⟩
+  let : Nonempty c := ⟨g (Classical.choice (inferInstance : Nonempty a))⟩
   have hpost : 0 < (ρ.sourceDeterministicPostprocess g).matrix.trace.re := by
     rw [sourceDeterministicPostprocess_trace_re]
     exact hρ
@@ -2476,6 +2585,7 @@ theorem identityTensorStateMatrix_sumInrCompressedSide
   rw [MatrixMap.kron_idChannel_left_apply_slice]
   simp [identityTensorStateMatrix, sumInrCompressedSide, MatrixMap.sumInrBlockCompression,
     Matrix.kronecker, Matrix.kroneckerMap_apply]
+  rfl
 
 omit [Fintype a] in
 private theorem sumBlock22_identityTensorStateMatrix_submatrix_prodSumRightEquiv
@@ -2489,6 +2599,7 @@ private theorem sumBlock22_identityTensorStateMatrix_submatrix_prodSumRightEquiv
   simp [Matrix.sumBlock22, ReferenceIsometry.prodSumRightEquiv,
     identityTensorStateMatrix, sumInrCompressedSide, MatrixMap.sumInrBlockCompression,
     Matrix.kronecker, Matrix.kroneckerMap_apply]
+  exact Or.inl rfl
 
 private theorem sumBlock22_conditioning_matrix_submatrix_prodSumRightEquiv
     {extra : Type*} [Fintype extra] [DecidableEq extra]
@@ -2502,6 +2613,7 @@ private theorem sumBlock22_conditioning_matrix_submatrix_prodSumRightEquiv
   rw [MatrixMap.kron_idChannel_left_apply_slice]
   simp [Matrix.sumBlock22, ReferenceIsometry.prodSumRightEquiv,
     MatrixMap.sumInrBlockCompression]
+  rfl
 
 /-- The raw trace-norm factor in subnormalized max entropy is unchanged when
 the joint state is padded by `sumInr` and an arbitrary padded side candidate is
@@ -3642,8 +3754,11 @@ theorem ConditionalMinEntropyScaleFeasible.ofStateScale
       (B := Matrix.kronecker (1 : CMatrix a) T) ht0 hT.2
     convert hscaled using 1
     ext i j
-    simp [Matrix.kronecker, Matrix.kroneckerMap_apply, Complex.real_smul]
-    ring
+    simp only [Matrix.smul_apply, Complex.real_smul,
+      SubnormalizedState.ofStateScale_matrix]
+    ext i j
+    simp [Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.smul_apply,
+      Complex.real_smul, Matrix.one_apply]
 
 theorem ConditionalMinEntropyScaleFeasible.toStateScale
     {ρ : State (Prod a b)} {T : CMatrix b} {t : ℝ}

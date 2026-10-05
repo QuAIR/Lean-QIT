@@ -102,9 +102,12 @@ def conditionedAliceKeySideInfoState
       classical
       refine Matrix.posSemidef_sum Finset.univ fun bob _ => ?_
       exact ρ.pos.submatrix (fun ae : KeyOutput κ × e => ((ae.1, bob), ae.2))
-    convert hsum using 1
-    ext ae ae'
-    simp [block, Matrix.sum_apply]
+    have hmatrix : (∑ bob : KeyOutput κ, block bob) =
+        fun ae ae' => ∑ bob : KeyOutput κ,
+          ρ.matrix ((ae.1, bob), ae.2) ((ae'.1, bob), ae'.2) := by
+      ext ae ae'
+      simp [block, Matrix.sum_apply]
+    exact hmatrix ▸ hsum
   trace_eq_one := by
     rw [← ρ.trace_eq_one]
     rw [Matrix.trace]
@@ -217,9 +220,12 @@ def successfulAliceKeySideInfoState
       classical
       refine Matrix.posSemidef_sum Finset.univ fun bob _ => ?_
       exact ρ.pos.submatrix (fun ae : κ × e => ((ae.1, bob), ae.2))
-    convert hsum using 1
-    ext ae ae'
-    simp [block, Matrix.sum_apply]
+    have hmatrix : (∑ bob : κ, block bob) =
+        fun ae ae' => ∑ bob : κ,
+          ρ.matrix ((ae.1, bob), ae.2) ((ae'.1, bob), ae'.2) := by
+      ext ae ae'
+      simp [block, Matrix.sum_apply]
+    exact hmatrix ▸ hsum
   trace_le_one := by
     have htrace :
         (∑ ae : κ × e, ∑ bob : κ,

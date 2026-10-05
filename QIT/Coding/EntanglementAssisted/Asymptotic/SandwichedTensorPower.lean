@@ -43,7 +43,7 @@ private theorem punit_state_matrix_eq_one
   rcases i with ⟨⟩
   rcases j with ⟨⟩
   show ρ.matrix PUnit.unit PUnit.unit = (1 : CMatrix PUnit.{u + 1}) PUnit.unit PUnit.unit
-  rw [Matrix.one_apply, if_pos rfl]
+  rw [Matrix.one_apply, ite_eq_left rfl]
   -- Use that the trace equals the single matrix entry for a 1-dim system.
   have htrace : ∑ k : PUnit.{u + 1}, ρ.matrix k k = 1 := ρ.trace_eq_one
   simpa using htrace
@@ -58,7 +58,7 @@ private theorem punit_punit_state_matrix_eq_one
   show ρ.matrix (PUnit.unit, PUnit.unit) (PUnit.unit, PUnit.unit) =
       (1 : CMatrix (Prod PUnit.{u + 1} PUnit.{v + 1})) (PUnit.unit, PUnit.unit) (PUnit.unit,
         PUnit.unit)
-  rw [Matrix.one_apply, if_pos rfl]
+  rw [Matrix.one_apply, ite_eq_left rfl]
   have htrace :
       ∑ k : Prod PUnit.{u + 1} PUnit.{v + 1}, ρ.matrix k k = 1 := ρ.trace_eq_one
   have hsum :
@@ -133,7 +133,7 @@ private theorem sandwichedRenyiMutualInformationE_punit_punit_eq_zero
     rw [State.sandwichedRenyiMutualInformationE_eq_sInf]
     have hnonempty :
         (ρ.sandwichedRenyiMutualInformationEValueSet alpha).Nonempty := by
-      haveI : Nonempty PUnit.{v + 1} := ⟨PUnit.unit⟩
+      have : Nonempty PUnit.{v + 1} := ⟨PUnit.unit⟩
       exact State.sandwichedRenyiMutualInformationEValueSet_nonempty ρ alpha
     refine le_csInf hnonempty ?_
     intro _ ⟨σB, hσB⟩
@@ -157,7 +157,7 @@ private theorem sandwichedRenyiMutualInformationE_unit
     rw [Channel.inputSandwichedRenyiMutualInformationE_eq]
     exact sandwichedRenyiMutualInformationE_punit_punit_eq_zero _ halpha
   have hnonempty : (unitChan.sandwichedRenyiMutualInformationEValueSet alpha).Nonempty := by
-    haveI : Nonempty PUnit.{u + 1} := ⟨PUnit.unit⟩
+    have : Nonempty PUnit.{u + 1} := ⟨PUnit.unit⟩
     exact unitChan.sandwichedRenyiMutualInformationEValueSet_nonempty alpha
   have hbddAbove :
       BddAbove (unitChan.sandwichedRenyiMutualInformationEValueSet alpha) := by
@@ -195,9 +195,9 @@ theorem sandwichedRenyiMutualInformationE_tensorPower_eq_n_mul
       · exact sandwichedRenyiMutualInformationE_unit halpha
       · simp
   | succ n ih =>
-      haveI : Nonempty (QIT.TensorPower a n) :=
+      have : Nonempty (QIT.TensorPower a n) :=
         tensorPower_nonempty_of_nonempty (α := a) n
-      haveI : Nonempty (QIT.TensorPower b n) :=
+      have : Nonempty (QIT.TensorPower b n) :=
         tensorPower_nonempty_of_nonempty (α := b) n
       have hsplit : N.tensorPower (n + 1) = N.prod (N.tensorPower n) := by
         rw [Channel.tensorPower_succ]

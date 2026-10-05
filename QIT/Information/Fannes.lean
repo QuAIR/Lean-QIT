@@ -45,7 +45,7 @@ def howFannesEta (t : ℝ) : ℝ :=
 @[simp]
 theorem howFannesEta_zero : howFannesEta 0 = 0 := by
   have h : (0 : ℝ) ≤ 1 / Real.exp 1 := by positivity
-  rw [howFannesEta, if_pos h]
+  rw [howFannesEta, ite_eq_left h]
   simp [log2]
 
 private theorem inv_exp_one_le_one : 1 / Real.exp 1 ≤ (1 : ℝ) := by
@@ -301,11 +301,11 @@ private theorem mul_correction_div_le (n t : ℝ) (hn : 1 ≤ n) (ht : 0 ≤ t) 
   have hnpos : 0 < n := lt_of_lt_of_le zero_lt_one hn
   have hdiv0 : 0 ≤ t / n := div_nonneg ht hnpos.le
   by_cases havg : t / n ≤ 1 / Real.exp 1
-  · rw [howFannesCorrection, if_pos havg]
+  · rw [howFannesCorrection, ite_eq_left havg]
     by_cases ht0 : t = 0
     · subst t
       have hcorr0 : howFannesCorrection 0 = 0 := by
-        rw [howFannesCorrection, if_pos (show (0 : ℝ) ≤ 1 / Real.exp 1 by positivity)]
+        rw [howFannesCorrection, ite_eq_left (show (0 : ℝ) ≤ 1 / Real.exp 1 by positivity)]
         simp [log2]
       simp only [zero_div, neg_zero, zero_mul, mul_zero, hcorr0, zero_add, le_refl]
     have htpos : 0 < t := lt_of_le_of_ne ht (Ne.symm ht0)
@@ -323,8 +323,8 @@ private theorem mul_correction_div_le (n t : ℝ) (hn : 1 ≤ n) (ht : 0 ≤ t) 
         1 / Real.exp 1 ≤ n * (1 / Real.exp 1) := by
           nlinarith [show (0 : ℝ) < 1 / Real.exp 1 by positivity]
         _ < t := by simpa [mul_comm] using hcnlt
-    rw [howFannesCorrection, if_neg havg, howFannesCorrection,
-      if_neg (not_le.mpr htlarge)]
+    rw [howFannesCorrection, ite_eq_right havg, howFannesCorrection,
+      ite_eq_right (not_le.mpr htlarge)]
     have hlogn0 : 0 ≤ Real.log n := Real.log_nonneg hn
     have hcardLog : n - 1 ≤ n * Real.log n := Real.self_sub_one_le_mul_log hnpos.le
     have hnc : n * (1 / Real.exp 1) ≤ t := by
@@ -371,8 +371,8 @@ private theorem concaveOn_howFannesCorrection :
   · by_cases hysmall : y ≤ 1 / Real.exp 1
     · have hzsmall : a * x + b * y ≤ 1 / Real.exp 1 := by
         nlinarith
-      rw [howFannesCorrection, if_pos hxsmall, howFannesCorrection, if_pos hysmall,
-        howFannesCorrection, if_pos hzsmall]
+      rw [howFannesCorrection, ite_eq_left hxsmall, howFannesCorrection, ite_eq_left hysmall,
+        howFannesCorrection, ite_eq_left hzsmall]
       simpa only [smul_eq_mul] using
         concaveOn_neg_mul_log2.2 hx hy ha hb hab
     · have hylarge : 1 / Real.exp 1 < y := lt_of_not_ge hysmall
@@ -393,8 +393,8 @@ private theorem concaveOn_howFannesCorrection :
         have hconc := concaveOn_neg_mul_log2.2 hx hc_mem ha hb hab
         have hmono := monotoneOn_neg_mul_log2_Icc_inv_exp
           ⟨hz0_nonneg, hz0_small⟩ ⟨hz_nonneg, hzsmall⟩ hz0_le
-        rw [howFannesCorrection, if_pos hxsmall, howFannesCorrection, if_neg hysmall,
-          howFannesCorrection, if_pos hzsmall]
+        rw [howFannesCorrection, ite_eq_left hxsmall, howFannesCorrection, ite_eq_right hysmall,
+          howFannesCorrection, ite_eq_left hzsmall]
         calc
           a * (-x * log2 x) +
                 b * ((1 / Real.exp 1) * log2 (Real.exp 1)) =
@@ -412,8 +412,8 @@ private theorem concaveOn_howFannesCorrection :
             -x * log2 x ≤ (1 / Real.exp 1) * log2 (Real.exp 1) := by
           rw [← howFannesCorrection_boundary]
           exact hleft
-        rw [howFannesCorrection, if_pos hxsmall, howFannesCorrection, if_neg hysmall,
-          howFannesCorrection, if_neg (not_le.mpr hzlarge)]
+        rw [howFannesCorrection, ite_eq_left hxsmall, howFannesCorrection, ite_eq_right hysmall,
+          howFannesCorrection, ite_eq_right (not_le.mpr hzlarge)]
         calc
           a * (-x * log2 x) +
                 b * ((1 / Real.exp 1) * log2 (Real.exp 1)) ≤
@@ -441,8 +441,8 @@ private theorem concaveOn_howFannesCorrection :
         have hconc := concaveOn_neg_mul_log2.2 hc_mem hy ha hb hab
         have hmono := monotoneOn_neg_mul_log2_Icc_inv_exp
           ⟨hz0_nonneg, hz0_small⟩ ⟨hz_nonneg, hzsmall⟩ hz0_le
-        rw [howFannesCorrection, if_neg hxsmall, howFannesCorrection, if_pos hysmall,
-          howFannesCorrection, if_pos hzsmall]
+        rw [howFannesCorrection, ite_eq_right hxsmall, howFannesCorrection, ite_eq_left hysmall,
+          howFannesCorrection, ite_eq_left hzsmall]
         calc
           a * ((1 / Real.exp 1) * log2 (Real.exp 1)) +
                 b * (-y * log2 y) =
@@ -460,8 +460,8 @@ private theorem concaveOn_howFannesCorrection :
             -y * log2 y ≤ (1 / Real.exp 1) * log2 (Real.exp 1) := by
           rw [← howFannesCorrection_boundary]
           exact hright
-        rw [howFannesCorrection, if_neg hxsmall, howFannesCorrection, if_pos hysmall,
-          howFannesCorrection, if_neg (not_le.mpr hzlarge)]
+        rw [howFannesCorrection, ite_eq_right hxsmall, howFannesCorrection, ite_eq_left hysmall,
+          howFannesCorrection, ite_eq_right (not_le.mpr hzlarge)]
         calc
           a * ((1 / Real.exp 1) * log2 (Real.exp 1)) + b * (-y * log2 y) ≤
               a * ((1 / Real.exp 1) * log2 (Real.exp 1)) +
@@ -479,11 +479,11 @@ private theorem concaveOn_howFannesCorrection :
               (mul_le_mul_of_nonneg_left hylarge.le hb)
       by_cases hzsmall : a * x + b * y ≤ 1 / Real.exp 1
       · have hzeq : a * x + b * y = 1 / Real.exp 1 := le_antisymm hzsmall hzge
-        rw [howFannesCorrection, if_neg hxsmall, howFannesCorrection, if_neg hysmall,
-          howFannesCorrection, if_pos hzsmall, hzeq, howFannesCorrection_boundary]
+        rw [howFannesCorrection, ite_eq_right hxsmall, howFannesCorrection, ite_eq_right hysmall,
+          howFannesCorrection, ite_eq_left hzsmall, hzeq, howFannesCorrection_boundary]
         rw [← add_mul, hab, one_mul]
-      · rw [howFannesCorrection, if_neg hxsmall, howFannesCorrection, if_neg hysmall,
-          howFannesCorrection, if_neg hzsmall]
+      · rw [howFannesCorrection, ite_eq_right hxsmall, howFannesCorrection, ite_eq_right hysmall,
+          howFannesCorrection, ite_eq_right hzsmall]
         rw [← add_mul, hab, one_mul]
 
 /-- The exact HOW modulus is concave on the nonnegative half-line. -/
@@ -501,14 +501,14 @@ private theorem monotoneOn_howFannesCorrection :
   have hc0 : (0 : ℝ) ≤ 1 / Real.exp 1 := by positivity
   by_cases hysmall : y ≤ 1 / Real.exp 1
   · have hxsmall : x ≤ 1 / Real.exp 1 := hxy.trans hysmall
-    rw [howFannesCorrection, if_pos hxsmall, howFannesCorrection, if_pos hysmall]
+    rw [howFannesCorrection, ite_eq_left hxsmall, howFannesCorrection, ite_eq_left hysmall]
     exact monotoneOn_neg_mul_log2_Icc_inv_exp ⟨hx, hxsmall⟩ ⟨hy, hysmall⟩ hxy
   · by_cases hxsmall : x ≤ 1 / Real.exp 1
-    · rw [howFannesCorrection, if_pos hxsmall, howFannesCorrection, if_neg hysmall]
+    · rw [howFannesCorrection, ite_eq_left hxsmall, howFannesCorrection, ite_eq_right hysmall]
       rw [← howFannesCorrection_boundary]
       exact monotoneOn_neg_mul_log2_Icc_inv_exp
         ⟨hx, hxsmall⟩ ⟨hc0, le_rfl⟩ hxsmall
-    · rw [howFannesCorrection, if_neg hxsmall, howFannesCorrection, if_neg hysmall]
+    · rw [howFannesCorrection, ite_eq_right hxsmall, howFannesCorrection, ite_eq_right hysmall]
 
 /-- The HOW modulus is monotone on the nonnegative half-line. -/
 theorem howFannesEta_mono {s t : ℝ} (hs : 0 ≤ s) (hst : s ≤ t) :
@@ -813,7 +813,7 @@ private theorem vonNeumann_sub_le_howFannes
     rho.vonNeumann - sigma.vonNeumann ≤
       log2 (Fintype.card a : ℝ) * howFannesEta (rho.traceNormDistance sigma) := by
   classical
-  letI : Nonempty a := rho.nonempty
+  let : Nonempty a := rho.nonempty
   let U : Matrix.unitaryGroup a ℂ := sigma.pos.isHermitian.eigenvectorUnitary
   let p : a → ℝ := fun i =>
     (ProjectiveMeasurement.eigenbasisDiagonalProb rho sigma i : ℝ)
@@ -886,8 +886,7 @@ private theorem vonNeumann_sub_le_howFannes
         rfl
   have hrhoEntropy :
       rho.vonNeumann ≤ ∑ i, -p i * log2 (p i) := by
-    simpa [p, U, ProjectiveMeasurement.eigenbasisDiagonalProb] using
-      State.vonNeumann_le_eigenbasisDiagonalEntropy rho U
+    exact State.vonNeumann_le_eigenbasisDiagonalEntropy rho U
   have hsigmaEntropy :
       sigma.vonNeumann = ∑ i, -q i * log2 (q i) := by
     rw [State.vonNeumann]
@@ -927,7 +926,7 @@ theorem vonNeumann_dist_le_howFannes (rho sigma : State a) :
     |rho.vonNeumann - sigma.vonNeumann| ≤
       log2 (Fintype.card a : ℝ) * howFannesEta (rho.traceNormDistance sigma) := by
   classical
-  letI : Nonempty a := rho.nonempty
+  let : Nonempty a := rho.nonempty
   have hcardPos : 0 < Fintype.card a := Fintype.card_pos
   by_cases hcardOne : Fintype.card a = 1
   · have hrho : rho.vonNeumann = 0 :=
@@ -966,7 +965,7 @@ theorem tendsto_howFannesEta_nhdsWithin_zero_right :
       (Iio_mem_nhds (show (0 : ℝ) < 1 / Real.exp 1 by positivity))]
     with t ht
   change t < 1 / Real.exp 1 at ht
-  rw [howFannesEta, if_pos ht.le]
+  rw [howFannesEta, ite_eq_left ht.le]
 
 end
 

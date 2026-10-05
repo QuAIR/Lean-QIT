@@ -1214,7 +1214,8 @@ theorem conditionalPetzRenyiTraceTerm_marginalAC_eq_acbProjectorTrace
   have hB : phi.state.marginalBOfABC = psi.state.marginalAC.marginalB := by
     simpa [phi, e] using
       conditionalPetzRenyiABCToACB_marginalBOfABC (a := a) (b := b) (c := c) psi
-  simpa [phi, hAB, hB] using hsource
+  rw [hAB, hB] at hsource
+  exact hsource
 
 /-- AC-side projector trace rewrite with the source dual parameter
 `alpha + beta = 2` already substituted.
@@ -1443,7 +1444,7 @@ theorem conditionalPetzRenyiDownExtended_of_ne_one
       rho.conditionalPetzRenyiDownGeneralE alpha halpha_pos halpha_ne_one := by
   classical
   unfold conditionalPetzRenyiDownExtended
-  rw [dif_neg halpha_ne_one]
+  rw [dite_eq_right halpha_ne_one]
 
 end State
 
@@ -1480,7 +1481,7 @@ theorem conditionalPetzRenyiDownExtended_duality
     -- `H(A|B) = -H(A|C)` is already `conditionalEntropy_marginalAB_eq_neg_marginalAC`.
     have hbeta_eq_one : beta = 1 := by linarith
     unfold State.conditionalPetzRenyiDownExtended
-    rw [dif_pos ha, dif_pos hbeta_eq_one]
+    rw [dite_eq_left ha, dite_eq_left hbeta_eq_one]
     have hdual_ent : psi.state.marginalAB.conditionalEntropy =
         -psi.state.marginalAC.conditionalEntropy :=
       State.PureVector.conditionalEntropy_marginalAB_eq_neg_marginalAC psi
@@ -1543,7 +1544,7 @@ theorem conditionalPetzRenyiDownClosed_of_zero
       (rho.conditionalPetzRenyiDownZero : EReal) := by
   classical
   unfold conditionalPetzRenyiDownClosed
-  rw [dif_pos rfl]
+  rw [dite_eq_left rfl]
 
 /-- Reduction of the closed-interval wrapper at the boundary `alpha = 2`. -/
 theorem conditionalPetzRenyiDownClosed_of_two
@@ -1552,7 +1553,7 @@ theorem conditionalPetzRenyiDownClosed_of_two
       rho.conditionalPetzRenyiDownGeneralE 2 (by norm_num) (by norm_num) := by
   classical
   unfold conditionalPetzRenyiDownClosed
-  rw [dif_neg (by norm_num : (2 : Real) ≠ 0), dif_pos rfl]
+  rw [dite_eq_right (by norm_num : (2 : Real) ≠ 0), dite_eq_left rfl]
 
 /-- Reduction of the closed-interval wrapper to the open-interval wrapper
 away from the two boundary points. -/
@@ -1564,7 +1565,7 @@ theorem conditionalPetzRenyiDownClosed_of_ne_zero_ne_two
         (lt_of_le_of_ne h0 (Ne.symm h00)) (lt_of_le_of_ne h2 h02) := by
   classical
   unfold conditionalPetzRenyiDownClosed
-  rw [dif_neg h00, dif_neg h02]
+  rw [dite_eq_right h00, dite_eq_right h02]
 
 end State
 

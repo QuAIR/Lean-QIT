@@ -165,7 +165,7 @@ theorem cbOneToAlphaPureRankOneValue_le_cbOneToAlphaNorm
         partialTraceA (a := Prod a b) (b := a × b) (rankOneMatrix chi) =
           MatrixMap.cpComplement Phi hPhi
             (partialTraceA (a := a) (b := a) (rankOneMatrix psi)) := by
-      simpa [chi, K] using
+      simpa [chi, K, MatrixMap.cpComplement] using
         MatrixMap.partialTraceA_rankOne_stinespringReference_eq_krausComplement_partialTraceA_rankOne
           K psi
     calc
@@ -226,9 +226,8 @@ theorem cbOneToAlphaPureRankOneValue_le_cbOneToAlphaNorm
       cbOneToAlphaNorm Phi hPhi alpha =
         alphaToAlphaNorm (MatrixMap.cpComplement Phi hPhi)
           (MatrixMap.cpComplement_isCompletelyPositive Phi hPhi) alpha := by
-    simpa [SchattenOrder.ofOneLt] using
-      (MatrixMap.cbOneToAlphaNorm_eq_cpComplement_alphaToAlphaNorm
-        Phi hPhi halpha)
+    exact MatrixMap.cbOneToAlphaNorm_eq_cpComplement_alphaToAlphaNorm
+      Phi hPhi halpha
   rw [hbridge]
   exact MatrixMap.alphaToAlphaPositiveValue_le_alphaToAlphaNorm_of_one_lt
     (MatrixMap.cpComplement Phi hPhi)
@@ -236,7 +235,7 @@ theorem cbOneToAlphaPureRankOneValue_le_cbOneToAlphaNorm
     halpha Z
 
 private def krausStinespringReferenceVectorWithRef
-    {r : Type w} {κ : Type x} [Fintype a]
+    {r : Type w} {κ : Type x}
     (K : κ → Matrix b a ℂ) (psi : Prod r a → ℂ) :
     Prod (Prod r b) κ → ℂ :=
   fun rbk => ∑ x : a, K rbk.2 rbk.1.2 x * psi (rbk.1.1, x)
@@ -322,9 +321,15 @@ private theorem referenceLift_ofKraus_rankOne_eq_partialTraceB_withRef
         K k bout x *
           (Matrix.single s s' (1 : ℂ) r₀ r₁ *
             (psi (s, x) * (star (K k bout' x') * star (psi (s', x'))))) := by
-          simp [MatrixMap.kron, rankOneMatrix_apply,
-            ofKraus_single_apply_local, Channel.idChannel_map,
-            Finset.mul_sum, mul_assoc, mul_left_comm, mul_comm]
+          show (∑ j : a, ∑ j' : a, ∑ i : r, ∑ i' : r,
+              rankOneMatrix psi (i, j) (i', j') *
+                (Channel.idChannel r).map (Matrix.single i i' (1 : ℂ)) r₀ r₁ *
+                (MatrixMap.ofKraus K) (Matrix.single j j' (1 : ℂ)) bout bout') =
+            (∑ x : a, ∑ x' : a, ∑ s : r, ∑ s' : r, ∑ k : κ,
+              K k bout x * (Matrix.single s s' (1 : ℂ) r₀ r₁ *
+                (psi (s, x) * (star (K k bout' x') * star (psi (s', x'))))))
+          simp [rankOneMatrix_apply, ofKraus_single_apply_local,
+            Channel.idChannel_map, Finset.mul_sum, mul_left_comm, mul_comm]
     _ =
       ∑ x : a, ∑ x' : a, ∑ k : κ,
         K k bout x * (psi (r₀, x) * (star (K k bout' x') * star (psi (r₁, x')))) := by
@@ -463,9 +468,22 @@ private theorem partialTraceA_rankOne_stinespringReference_eq_krausComplement_pa
     _ =
       MatrixMap.krausComplement K
         (partialTraceA (a := r) (b := a) (rankOneMatrix psi)) k k' := by
-          simp [MatrixMap.krausComplement, MatrixMap.ofKraus,
-            Matrix.sum_apply, Matrix.mul_apply,
-            Matrix.conjTranspose_apply, Finset.sum_mul, mul_assoc]
+          have hmul : ∀ (M : Matrix κ a ℂ) (j : a),
+              (M * partialTraceA (a := r) (b := a) (rankOneMatrix psi)) k j =
+                ∑ p : a, M k p *
+                  partialTraceA (a := r) (b := a) (rankOneMatrix psi) p j :=
+            fun M j => by simp [Matrix.mul_apply]
+          have hconj : ∀ (M : Matrix κ a ℂ) (j : a),
+              M.conjTranspose j k' = star (M k' j) :=
+            fun M j => by simp [Matrix.conjTranspose_apply]
+          simp only [MatrixMap.krausComplement, MatrixMap.ofKraus,
+            LinearMap.coe_mk, AddHom.coe_mk, Matrix.sum_apply, Matrix.mul_apply]
+          apply Finset.sum_congr rfl
+          intro c _
+          apply Finset.sum_congr rfl
+          intro j _
+          rw [hmul (fun k i => K k c i) j, hconj (fun k i => K k c i) j]
+          simp only [Finset.sum_mul, mul_assoc]
 
 private theorem cbOneToAlphaPureRankOneValueWithRef_le_cbOneToAlphaNorm
     {r : Type w} [Fintype r] [DecidableEq r]
@@ -540,7 +558,7 @@ private theorem cbOneToAlphaPureRankOneValueWithRef_le_cbOneToAlphaNorm
         partialTraceA (a := Prod r b) (b := a × b) (rankOneMatrix chi) =
           MatrixMap.cpComplement Phi hPhi
             (partialTraceA (a := r) (b := a) (rankOneMatrix psi)) := by
-      simpa [chi, K] using
+      simpa [chi, K, MatrixMap.cpComplement] using
         partialTraceA_rankOne_stinespringReference_eq_krausComplement_partialTraceA_rankOne_withRef
           K psi
     calc
@@ -611,9 +629,8 @@ private theorem cbOneToAlphaPureRankOneValueWithRef_le_cbOneToAlphaNorm
       cbOneToAlphaNorm Phi hPhi alpha =
         alphaToAlphaNorm (MatrixMap.cpComplement Phi hPhi)
           (MatrixMap.cpComplement_isCompletelyPositive Phi hPhi) alpha := by
-    simpa [SchattenOrder.ofOneLt] using
-      (MatrixMap.cbOneToAlphaNorm_eq_cpComplement_alphaToAlphaNorm
-        Phi hPhi halpha)
+    exact MatrixMap.cbOneToAlphaNorm_eq_cpComplement_alphaToAlphaNorm
+      Phi hPhi halpha
   rw [hbridge]
   exact MatrixMap.alphaToAlphaPositiveValue_le_alphaToAlphaNorm_of_one_lt
     (MatrixMap.cpComplement Phi hPhi)
@@ -902,9 +919,8 @@ theorem cbOneToAlphaNorm_traceEffectToUnit_one
           (MatrixMap.krausComplement_isCompletelyPositive K)
           alpha :=
           by
-            simpa [SchattenOrder.ofOneLt] using
-              (MatrixMap.cbOneToAlphaNorm_eq_krausComplement_alphaToAlphaNorm
-                K halpha)
+            exact MatrixMap.cbOneToAlphaNorm_eq_krausComplement_alphaToAlphaNorm
+              K halpha
       _ =
         alphaToAlphaNorm
           (Channel.idChannel a).map
@@ -1140,7 +1156,13 @@ private theorem kron_traceEffectToUnit_one_apply
       ∑ j : s, ∑ i : a, ∑ i' : a,
         X (i, j) (i', j) *
           Phi (Matrix.single i i' (1 : ℂ)) bout bout' := by
-          simp [MatrixMap.kron, traceEffectToUnit_one_single_apply]
+          show (∑ j : s, ∑ j' : s, ∑ i : a, ∑ i' : a,
+              X (i, j) (i', j') * Phi (Matrix.single i i' (1 : ℂ)) bout bout' *
+                (MatrixMap.traceEffectToUnit (1 : CMatrix s))
+                  (Matrix.single j j' (1 : ℂ)) PUnit.unit PUnit.unit) =
+            (∑ j : s, ∑ i : a, ∑ i' : a,
+              X (i, j) (i', j) * Phi (Matrix.single i i' (1 : ℂ)) bout bout')
+          simp [traceEffectToUnit_one_single_apply]
     _ =
       ∑ i : a, ∑ j : s, ∑ i' : a,
         X (i, j) (i', j) *
@@ -1224,7 +1246,9 @@ private theorem kron_id_kron_trace_purification_eq_pad_referenceLift
           (fun j j' : Prod a (Prod a a) =>
             rankOneMatrix (cbOneToAlphaPurificationAmp Y) (r, j) (r', j')))
         bout bout' := by
-          rw [kron_traceEffectToUnit_one_apply]
+          exact kron_traceEffectToUnit_one_apply Phi
+            (fun j j' => rankOneMatrix (cbOneToAlphaPurificationAmp Y) (r, j) (r', j'))
+            bout bout'
     _ = Phi (fun i i' => Y (r, i) (r', i')) bout bout' := by
           rw [partialTraceB_cbOneToAlphaPurificationAmp_slice hY r r']
     _ = Phi.referenceLift Y (r, bout) (r', bout') := by
@@ -1361,8 +1385,7 @@ theorem cbOneToAlphaAlternateValue_le_cbOneToAlphaNorm
       cbOneToAlphaNorm Theta hTheta alpha =
         cbOneToAlphaNorm Phi hPhi alpha *
           cbOneToAlphaNorm TrS hTrS alpha := by
-    simpa [SchattenOrder.ofOneLt] using
-      (cbOneToAlphaNorm_kron_eq_mul Phi hPhi TrS hTrS halpha)
+    exact cbOneToAlphaNorm_kron_eq_mul Phi hPhi TrS hTrS halpha
   have hTrNorm :
       cbOneToAlphaNorm TrS hTrS alpha = 1 := by
     simpa [TrS, hTrS, s] using

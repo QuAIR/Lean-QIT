@@ -434,8 +434,8 @@ theorem aliceSideMatrix_mulVec_apply
     (φ : HA → ℂ) (ha : HA) (k : Fin (Fintype.card ι)) :
     (data.aliceSideMatrix B).mulVec φ (ha, k) =
       (data.aliceBranchOperator B k).mulVec φ ha := by
-  haveI : Nonempty ι := ⟨data.target.base⟩
-  haveI : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
+  have : Nonempty ι := ⟨data.target.base⟩
+  have : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
   have hzero :
       data.target.baseIndex =
         (⟨0, NeZero.pos (Fintype.card ι)⟩ : Fin (Fintype.card ι)) := by
@@ -624,8 +624,8 @@ theorem bobSideMatrix_mulVec_apply
     (φ : HB → ℂ) (hb : HB) (k : Fin (Fintype.card ι)) :
     (W.bobSideMatrix B).mulVec φ (hb, k) =
       (W.bobBranchOperator B k).mulVec φ hb := by
-  haveI : Nonempty ι := ⟨data.target.base⟩
-  haveI : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
+  have : Nonempty ι := ⟨data.target.base⟩
+  have : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
   have hzero :
       data.target.baseIndex =
         (⟨0, NeZero.pos (Fintype.card ι)⟩ : Fin (Fintype.card ι)) := by
@@ -664,8 +664,8 @@ theorem bobBranchOperator_base
       (data.bobUnitary data.target.base : CMatrix HB) *
         ((W.bobLocal data.target.base).matrix +
           (1 - ∑ l : Fin (Fintype.card ι), (W.bobLocal (B.toEquiv.symm l)).matrix)) := by
-  haveI : Nonempty ι := ⟨data.target.base⟩
-  haveI : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
+  have : Nonempty ι := ⟨data.target.base⟩
+  have : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
   have hbase_symm : B.toEquiv.symm data.target.baseIndex = data.target.base := by
     apply B.toEquiv.injective
     simp [B.toEquiv_base]
@@ -676,7 +676,7 @@ theorem bobBranchOperator_base
     simp [SchmidtTarget.baseIndex]
   rw [bobBranchOperator, fourierProjectionBranch]
   rw [hbase_symm]
-  rw [if_pos hzero]
+  rw [ite_eq_left hzero]
 
 @[simp]
 theorem bobBranchOperator_ne_base
@@ -685,8 +685,8 @@ theorem bobBranchOperator_ne_base
     W.bobBranchOperator B k =
       (data.bobUnitary (B.toEquiv.symm k) : CMatrix HB) *
         (W.bobLocal (B.toEquiv.symm k)).matrix := by
-  haveI : Nonempty ι := ⟨data.target.base⟩
-  haveI : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
+  have : Nonempty ι := ⟨data.target.base⟩
+  have : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
   have hzero :
       (⟨0, NeZero.pos (Fintype.card ι)⟩ : Fin (Fintype.card ι)) =
         data.target.baseIndex := by

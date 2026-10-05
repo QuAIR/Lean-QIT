@@ -147,7 +147,7 @@ private theorem rightZeroExtension_supports_fromBlocks
   have hright : sigma.mulVec (fun i => v (Sum.inr i)) = 0 := by
     ext i
     have hi := congrFun hv (Sum.inr i)
-    simpa using hi
+    simpa [Function.comp_def] using hi
   have hrho := hSupport _ hright
   rw [rightZeroExtension_matrix, Matrix.fromBlocks_mulVec]
   ext i
@@ -155,7 +155,7 @@ private theorem rightZeroExtension_supports_fromBlocks
   | inl i => cases i; simp
   | inr i =>
       have hi := congrFun hrho i
-      simpa using hi
+      simpa [Function.comp_def] using hi
 
 private theorem supports_of_rightZeroExtension_supports_fromBlocks
     (rho : State a) {failure : CMatrix PUnit.{1}} {sigma : CMatrix a}
@@ -174,7 +174,8 @@ private theorem supports_of_rightZeroExtension_supports_fromBlocks
         have hi := congrFun hv i
         simpa [w] using hi
   have hrho := hSupport w href
-  have hi := funext fun i => congrFun hrho (Sum.inr i)
+  funext i
+  have hi := congrFun hrho (Sum.inr i)
   simpa [rightZeroExtension, Matrix.fromBlocks_mulVec, w] using hi
 
 private theorem relativeEntropyPSDReferenceTraceLogE_rightZeroExtension_of_supports
@@ -293,7 +294,7 @@ private theorem compressionCompletion_apply_imageState (V : ReferenceIsometry a 
     Matrix.fromBlocks 0 0 0 rho.matrix
   rw [hComp.hatCompletion_apply_fromBlocks (0 : CMatrix PUnit.{1}) image.matrix]
   ext i j
-  cases i <;> cases j <;> simp [hcompression, hloss]
+  cases i <;> cases j <;> simp [hcompression, hloss] <;> rfl
 
 /-- The positive failure-reference block produced by compression completion. -/
 private def compressionFailureReference (V : ReferenceIsometry a b)
@@ -338,7 +339,9 @@ private theorem compressionCompletion_map_reference (V : ReferenceIsometry a b)
   let hComp := V.compressionMap_traceNonincreasingCP
   change hComp.hatCompletion.map
       (Matrix.fromBlocks (1 : CMatrix PUnit.{1}) 0 0 sigma) = _
-  simpa [compressionFailureReference, V.compressionMap_apply] using
+  rw [show V.compressionFailureReference sigma =
+      (fun _ _ => 1 + (sigma * hComp.lossEffect).trace : CMatrix PUnit.{1}) from rfl]
+  simpa [V.compressionMap_apply] using
     hComp.hatCompletion_apply_fromBlocks (1 : CMatrix PUnit.{1}) sigma
 
 end ReferenceIsometry

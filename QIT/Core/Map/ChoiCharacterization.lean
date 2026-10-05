@@ -274,7 +274,9 @@ theorem kron_id_apply (Phi : MatrixMap a b) (X : CMatrix (Prod a r))
     kron Phi LinearMap.id X (j, r0) (l, s0) =
       ∑ i : a, ∑ i' : a, X (i, r0) (i', s0) *
         (Phi (Matrix.single i i' (1 : Complex))) j l := by
-  simp only [kron, LinearMap.coe_mk, AddHom.coe_mk, LinearMap.id_coe, id_eq]
+  change (∑ s : r, ∑ s' : r, ∑ i : a, ∑ i' : a,
+    X (i, s) (i', s') * Phi (Matrix.single i i' 1) j l *
+      Matrix.single s s' (1 : ℂ) r0 s0) = _
   rw [Finset.sum_eq_single r0]
   · rw [Finset.sum_eq_single s0]
     · simp [Matrix.single]

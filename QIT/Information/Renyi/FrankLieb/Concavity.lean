@@ -415,7 +415,7 @@ theorem frankLieb_sigmaTerm_inner_posSemidef
     (K * CFC.rpow σ c * K).PosSemidef := by
   let K : CMatrix a := CFC.rpow H (-(1 / 2 : ℝ))
   have hKstar : star K = K := by
-    simpa [K] using (frankLieb_weight_isHermitian (a := a) hH).eq
+    simpa [K] using (frankLieb_weight_isHermitian (a := a) hH).star_eq
   have hinner : (star K * CFC.rpow σ c * K).PosSemidef :=
     epsteinTraceTerm_inner_posSemidef K hσ c
   rw [hKstar] at hinner
@@ -987,7 +987,7 @@ theorem frankLieb_sigmaTerm_eq_epsteinTraceTerm
       epsteinTraceTerm K σ c := by
   let K : CMatrix a := CFC.rpow H (-(1 / 2 : ℝ))
   have hKstar : star K = K := by
-    simpa [K] using (frankLieb_weight_isHermitian (a := a) hH).eq
+    simpa [K] using (frankLieb_weight_isHermitian (a := a) hH).star_eq
   have hKstar' : star (CFC.rpow H (-(1 / 2 : ℝ))) =
       CFC.rpow H (-(1 / 2 : ℝ)) := by
     simpa [K] using hKstar
@@ -2595,7 +2595,8 @@ theorem sandwichedRenyiQ_mem_fixedWeightValueSet_posDef
         Real.rpow Q (1 / α) := by
     have hnorm :
         psdSchattenPNorm M hM ⟨α, hα_pos⟩ = Real.rpow Q (1 / α) := by
-      rw [psdSchattenPNorm, Internal.psdSchattenExpression, ← hQ_eq_power]
+      rw [show psdSchattenPNorm M hM ⟨α, hα_pos⟩ =
+          Real.rpow (psdTracePower M hM α) (1 / α) from rfl, ← hQ_eq_power]
     exact hattain.symm.trans hnorm
   have hexp : -c = 1 - 1 / α := by
     dsimp [c]
@@ -4540,62 +4541,37 @@ theorem localRightSignTwirl_apply {b : Type v} [Fintype b] [DecidableEq b]
 def permutationUnitary {b : Type v} [Fintype b] [DecidableEq b]
     (π : Equiv.Perm b) : Matrix.unitaryGroup b ℂ :=
   ⟨fun j k => if π j = k then 1 else 0, by
-    constructor
-    · ext j j'
+    have key : ∀ M : Matrix b b ℂ,
+        M = (fun j k => if π j = k then 1 else 0) → M ∈ Matrix.unitaryGroup b ℂ := by
+      intro M hM
+      rw [Matrix.mem_unitaryGroup_iff']
+      have hMjk : ∀ j k, M j k = if π j = k then 1 else 0 := fun j k => by rw [hM]
+      ext j j'
       simp only [Matrix.star_eq_conjTranspose, Matrix.mul_apply, Matrix.conjTranspose_apply,
-        Matrix.one_apply]
-      by_cases hjj' : j = j'
-      · subst j'
-        refine (Finset.sum_eq_single (π.symm j) ?_ ?_).trans ?_
-        · intro k _ hk
-          by_cases hkj : k = π.symm j
-          · exact False.elim (hk hkj)
-          · have hne : π k ≠ j := by
-              intro h
-              apply hkj
-              simpa using congrArg π.symm h
-            simp [hne]
-        · intro hnot
-          exact False.elim (hnot (Finset.mem_univ _))
-        · simp
-      · rw [if_neg hjj']
-        refine Finset.sum_eq_zero ?_
-        intro k _
-        by_cases hkj : k = π.symm j
-        · subst k
-          simp [hjj']
-        · have hne : π k ≠ j := by
-            intro h
-            apply hkj
-            simpa using congrArg π.symm h
-          simp [hne]
-    · ext j j'
-      simp only [Matrix.star_eq_conjTranspose, Matrix.mul_apply, Matrix.conjTranspose_apply,
-        Matrix.one_apply]
-      by_cases hjj' : j = j'
-      · subst j'
-        refine (Finset.sum_eq_single (π j) ?_ ?_).trans ?_
-        · intro k _ hk
-          by_cases hkj : k = π j
-          · exact False.elim (hk hkj)
-          · have hne : π j ≠ k := fun h => hkj h.symm
-            simp [hne]
-        · intro hnot
-          exact False.elim (hnot (Finset.mem_univ _))
-        · simp
-      · rw [if_neg hjj']
-        refine Finset.sum_eq_zero ?_
-        intro k _
-        by_cases hkj : k = π j
-        · subst k
-          have hne : ¬π j' = π j := fun h => hjj' (π.injective h.symm)
-          simp [hne]
-        · have hne : π j ≠ k := fun h => hkj h.symm
-          simp [hne]⟩
+        Matrix.one_apply, hMjk]
+      refine (Finset.sum_eq_single (π.symm j) ?_ ?_).trans ?_
+      · intro k _ hk
+        have hne : π k ≠ j := by
+          intro h
+          apply hk
+          simpa using congrArg (Equiv.symm π) h
+        simp [hne]
+      · intro hnot
+        exact False.elim (hnot (Finset.mem_univ _))
+      · simp
+    exact key _ rfl⟩
 
 @[simp] theorem permutationUnitary_coe {b : Type v} [Fintype b] [DecidableEq b]
     (π : Equiv.Perm b) :
     (permutationUnitary π : CMatrix b) = fun j k => if π j = k then 1 else 0 := rfl
+
+/-- Indexed entry form of `permutationUnitary`.  On Lean 4.34 the whole-matrix
+coe rewrite leaves a bare lambda inside `Matrix.kroneckerMap` applications,
+which fails the implicit-transparency type check and stalls `simp`; rewriting
+at applied positions keeps the matrix well-formed. -/
+theorem permutationUnitary_apply {b : Type v} [Fintype b] [DecidableEq b]
+    (π : Equiv.Perm b) (j k : b) :
+    (permutationUnitary π : CMatrix b) j k = if π j = k then (1 : ℂ) else 0 := rfl
 
 theorem permutationUnitary_conj_apply
     {b : Type v} [Fintype b] [DecidableEq b]
@@ -4604,7 +4580,9 @@ theorem permutationUnitary_conj_apply
         X * star (localRightUnitary (a := a) (permutationUnitary π) :
           CMatrix (Prod a b))) (i, j) (i', j')) =
       X (i, π j) (i', π j') := by
-  simp only [localRightUnitary_coe, permutationUnitary_coe, Matrix.star_eq_conjTranspose,
+  have hU : ∀ j k : b, (permutationUnitary π : CMatrix b) j k = if π j = k then 1 else 0 :=
+    fun _ _ => rfl
+  simp only [localRightUnitary_coe, hU, Matrix.star_eq_conjTranspose,
     Matrix.conjTranspose_kronecker, Matrix.conjTranspose_one, Matrix.mul_apply,
     Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.one_apply,
     Matrix.conjTranspose_apply]
@@ -4700,7 +4678,7 @@ theorem perm_orbit_average_eq_uniform {b : Type v} [Fintype b] [DecidableEq b]
         (∑ π : Equiv.Perm b, f (π j)) =
       (Fintype.card b : ℂ)⁻¹ * ∑ k : b, f k := by
   classical
-  haveI : Nonempty b := ⟨j⟩
+  have : Nonempty b := ⟨j⟩
   let cB : ℂ := Fintype.card b
   let cP : ℂ := Fintype.card (Equiv.Perm b)
   let A : ℂ := ∑ π : Equiv.Perm b, f (π j)

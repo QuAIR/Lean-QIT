@@ -140,8 +140,10 @@ private theorem trace_weighted_kronecker_right_continuous
       Continuous fun T : CMatrix c => Matrix.kronecker K T := by
     unfold Matrix.kronecker
     exact _root_.continuous_matrix fun x y => by
-      simpa [Matrix.kroneckerMap_apply] using
-        continuous_const.mul (continuous_id.matrix_elem x.2 y.2)
+      simp only [Matrix.kroneckerMap_apply]
+      have h : Continuous fun T : CMatrix c => K x.1 y.1 * T x.2 y.2 :=
+        Continuous.mul continuous_const (continuous_id.matrix_elem x.2 y.2)
+      exact h
   exact Complex.continuous_re.comp
     (Continuous.matrix_trace (hkr.matrix_mul continuous_const))
 
@@ -155,14 +157,19 @@ private theorem trace_weighted_kronecker_middle_continuous
       Continuous fun T : CMatrix b => Matrix.kronecker A T := by
     unfold Matrix.kronecker
     exact _root_.continuous_matrix fun x y => by
-      simpa [Matrix.kroneckerMap_apply] using
-        continuous_const.mul (continuous_id.matrix_elem x.2 y.2)
+      simp only [Matrix.kroneckerMap_apply]
+      have h : Continuous fun T : CMatrix b => A x.1 y.1 * T x.2 y.2 :=
+        Continuous.mul continuous_const (continuous_id.matrix_elem x.2 y.2)
+      exact h
   have hkr :
       Continuous fun T : CMatrix b => Matrix.kronecker (Matrix.kronecker A T) K := by
     unfold Matrix.kronecker
     exact _root_.continuous_matrix fun x y => by
-      simpa [Matrix.kroneckerMap_apply] using
-        ((hinner.matrix_elem x.1 y.1).mul continuous_const)
+      simp only [Matrix.kroneckerMap_apply]
+      have h : Continuous fun T : CMatrix b =>
+          (A x.1.1 y.1.1 * T x.1.2 y.1.2) * K x.2 y.2 :=
+        (hinner.matrix_elem x.1 y.1).mul continuous_const
+      exact h
   exact Complex.continuous_re.comp
     (Continuous.matrix_trace (hkr.matrix_mul continuous_const))
 
@@ -497,29 +504,29 @@ theorem fullRankDensityMatrixSet_sion_abcWeightedSidePowerTraceRe_EReal
     {R : CMatrix (Prod (Prod a b) c)} (hR : R.PosSemidef)
     (hp0 : 0 < p) (hp1 : p ≤ 1) :
     (⨅ sigma : CMatrix b,
-      ⨅ _hSigma : (fullRankDensityMatrixSet b) sigma,
+      ⨅ _hSigma : sigma ∈ fullRankDensityMatrixSet b,
         ⨆ tau : CMatrix c,
-          ⨆ _hTau : (densityMatrixSet c) tau,
+          ⨆ _hTau : tau ∈ densityMatrixSet c,
             (abcWeightedSidePowerTraceRe (a := a) A R sigma tau p : EReal)) =
       ⨆ tau : CMatrix c,
-        ⨆ _hTau : (densityMatrixSet c) tau,
+        ⨆ _hTau : tau ∈ densityMatrixSet c,
           ⨅ sigma : CMatrix b,
-            ⨅ _hSigma : (fullRankDensityMatrixSet b) sigma,
+            ⨅ _hSigma : sigma ∈ fullRankDensityMatrixSet b,
               (abcWeightedSidePowerTraceRe (a := a) A R sigma tau p : EReal) := by
-  let F : {sigma : CMatrix b // (fullRankDensityMatrixSet b) sigma} →
-      {tau : CMatrix c // (densityMatrixSet c) tau} → EReal :=
+  let F : {sigma : CMatrix b // sigma ∈ fullRankDensityMatrixSet b} →
+      {tau : CMatrix c // tau ∈ densityMatrixSet c} → EReal :=
     fun sigma tau =>
       (abcWeightedSidePowerTraceRe (a := a) A R sigma.1 tau.1 p : EReal)
   have hnegMem :
       (⨅ tau : CMatrix c,
-        ⨅ _hTau : (densityMatrixSet c) tau,
+        ⨅ _hTau : tau ∈ densityMatrixSet c,
           ⨆ sigma : CMatrix b,
-            ⨆ _hSigma : (fullRankDensityMatrixSet b) sigma,
+            ⨆ _hSigma : sigma ∈ fullRankDensityMatrixSet b,
               -((abcWeightedSidePowerTraceRe (a := a) A R sigma tau p : EReal))) =
         ⨆ sigma : CMatrix b,
-          ⨆ _hSigma : (fullRankDensityMatrixSet b) sigma,
+          ⨆ _hSigma : sigma ∈ fullRankDensityMatrixSet b,
             ⨅ tau : CMatrix c,
-              ⨅ _hTau : (densityMatrixSet c) tau,
+              ⨅ _hTau : tau ∈ densityMatrixSet c,
                 -((abcWeightedSidePowerTraceRe (a := a) A R sigma tau p : EReal)) := by
     exact State.sion_iInf_iSup_eq_iSup_iInf
       (densityMatrixSet_nonempty (a := c))
@@ -571,11 +578,11 @@ theorem fullRankDensityMatrixSet_sion_abcWeightedSidePowerTraceRe_EReal
             (fullRankDensityMatrixSet_convex (a := b))).antitone_comp
               antitone_ereal_neg_coe)
   have hnegSub :
-      (⨅ tau : {tau : CMatrix c // (densityMatrixSet c) tau},
-        ⨆ sigma : {sigma : CMatrix b // (fullRankDensityMatrixSet b) sigma},
+      (⨅ tau : {tau : CMatrix c // tau ∈ densityMatrixSet c},
+        ⨆ sigma : {sigma : CMatrix b // sigma ∈ fullRankDensityMatrixSet b},
           -F sigma tau) =
-        ⨆ sigma : {sigma : CMatrix b // (fullRankDensityMatrixSet b) sigma},
-          ⨅ tau : {tau : CMatrix c // (densityMatrixSet c) tau},
+        ⨆ sigma : {sigma : CMatrix b // sigma ∈ fullRankDensityMatrixSet b},
+          ⨅ tau : {tau : CMatrix c // tau ∈ densityMatrixSet c},
             -F sigma tau := by
     simpa [F, iInf_subtype', iSup_subtype'] using hnegMem
   have hsub := ereal_sion_from_neg F hnegSub

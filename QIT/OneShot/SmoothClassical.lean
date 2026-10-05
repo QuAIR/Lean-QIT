@@ -161,7 +161,7 @@ private theorem classicalPinch_matrix_apply
         exact Prod.ext (hcoord.1.trans h.1).symm (hcoord.2.trans h.2).symm
       simp [hnot]
     · simp
-  · rw [if_neg hcoord]
+  · rw [ite_eq_right hcoord]
     apply Finset.sum_eq_zero
     intro k _
     by_cases hj : j.1.2 = k.1 ∧ j.2.1 = k.2
@@ -222,7 +222,7 @@ private theorem classicalCoordinateMeasure_map_apply (X : CMatrix y) (i j : y) :
   simp only [Matrix.sum_apply, Matrix.smul_apply, POVM.coordinate_effects]
   by_cases hij : i = j
   · subst j
-    rw [if_pos rfl]
+    rw [ite_eq_left rfl]
     rw [Finset.sum_eq_single i]
     · rw [Matrix.trace_mul_single]
       simp
@@ -230,7 +230,7 @@ private theorem classicalCoordinateMeasure_map_apply (X : CMatrix y) (i j : y) :
       simp [hki]
     · intro hi
       simp at hi
-  · rw [if_neg hij]
+  · rw [ite_eq_right hij]
     refine Finset.sum_eq_zero fun k _ => ?_
     have hnot : ¬ (k = i ∧ k = j) := by
       intro h
@@ -244,7 +244,7 @@ private theorem sourceCoordinatePinchChannel_map_apply
   change MatrixMap.kron (Channel.measure (POVM.coordinate y)).map
       (Channel.idChannel b).map T i j = _
   rw [MatrixMap.kron_idChannel_apply_slice]
-  rw [classicalCoordinateMeasure_map_apply]
+  exact classicalCoordinateMeasure_map_apply _ i.1 j.1
 
 private theorem classicalPinching_map_apply
     (M : CMatrix ((a × x) × (y × b))) (i j) :
@@ -266,7 +266,7 @@ private theorem classicalPinching_map_apply
         exact Prod.ext (hcoord.1.trans h.1).symm (hcoord.2.trans h.2).symm
       simp [hnot]
     · simp
-  · rw [if_neg hcoord]
+  · rw [ite_eq_right hcoord]
     apply Finset.sum_eq_zero
     intro k _
     by_cases hj : j.1.2 = k.1 ∧ j.2.1 = k.2
@@ -318,7 +318,7 @@ private theorem nonempty_of_trace_pos
     (M : CMatrix c) (hM : 0 < M.trace.re) : Nonempty c := by
   classical
   by_contra hne
-  haveI : IsEmpty c := not_nonempty_iff.mp hne
+  have : IsEmpty c := not_nonempty_iff.mp hne
   simp at hM
 
 private theorem classicalPinch_trace_re
@@ -355,10 +355,10 @@ private theorem conditionalMinEntropyRaw_le_classicalPinch_of_trace_pos
     rho.conditionalMinEntropyRaw ≤ (classicalPinch rho).conditionalMinEntropyRaw := by
   have hfull : Nonempty ((a × x) × (y × b)) :=
     nonempty_of_trace_pos rho.matrix hρ
-  letI : Nonempty (a × x) := by
+  let : Nonempty (a × x) := by
     rcases hfull with ⟨i⟩
     exact ⟨i.1⟩
-  letI : Nonempty (y × b) := by
+  let : Nonempty (y × b) := by
     rcases hfull with ⟨i⟩
     exact ⟨i.2⟩
   have hpinched : 0 < (classicalPinch rho).matrix.trace.re := by
@@ -398,10 +398,10 @@ private theorem conditionalMaxEntropyRaw_le_classicalPinch_of_trace_pos
     exact hρ
   have hfull : Nonempty ((a × x) × (y × b)) :=
     nonempty_of_trace_pos rho.matrix hρ
-  letI : Nonempty (a × x) := by
+  let : Nonempty (a × x) := by
     rcases hfull with ⟨i⟩
     exact ⟨i.1⟩
-  letI : Nonempty (y × b) := by
+  let : Nonempty (y × b) := by
     rcases hfull with ⟨i⟩
     exact ⟨i.2⟩
   have hne := rho.conditionalMaxEntropyPositiveExponentValueSet_nonempty_of_trace_pos
@@ -589,10 +589,10 @@ theorem smoothConditionalMinEntropy_exists_classical_optimizer
     Real.sqrt_pos.mp (lt_of_le_of_lt hε0 hε)
   have hfull : Nonempty ((a × x) × (y × b)) :=
     nonempty_of_trace_pos rho.matrix hρ
-  letI : Nonempty (a × x) := by
+  let : Nonempty (a × x) := by
     rcases hfull with ⟨i⟩
     exact ⟨i.1⟩
-  letI : Nonempty (y × b) := by
+  let : Nonempty (y × b) := by
     rcases hfull with ⟨i⟩
     exact ⟨i.2⟩
   rcases smoothConditionalMinEntropy_exists_optimizer
@@ -770,7 +770,7 @@ private theorem classicalCoherentMap_traceNonincreasing
     simpa only [Matrix.mul_one] using hnonneg
   exact sub_nonneg.mp hnonneg'
 
-private def classicalCoherentMapTraceNonincreasingCP
+private theorem classicalCoherentMapTraceNonincreasingCP
     {c : Type*} [Fintype c] [DecidableEq c]
     {y' : Type*} [Fintype y'] [DecidableEq y'] :
     MatrixMap.TraceNonincreasingCP
@@ -823,7 +823,7 @@ private theorem classicalCoherentMap_apply
         exact (hcoord.2.2.trans h.2).symm
       simp [hnot]
     · simp
-  · rw [if_neg hcoord]
+  · rw [ite_eq_right hcoord]
     apply Finset.sum_eq_zero
     intro k _
     by_cases hj : j.1.2 = j.2.2.1 ∧ j.2.2.2 = k
@@ -872,121 +872,6 @@ private theorem sourceCoherentProjector_conjTranspose
   · simp [sourceCoherentProjector, Matrix.conjTranspose_apply,
        hij, Ne.symm hij]
 
-private theorem sourceCoherentProjector_idempotent
-    {c : Type*} [Fintype c] [DecidableEq c]
-    {y' : Type*} [Fintype y'] [DecidableEq y'] (p : x) (k : y') :
-    sourceCoherentProjector (a := a) (x := x) (c := c) p k *
-        sourceCoherentProjector (a := a) (x := x) (c := c) p k =
-      sourceCoherentProjector (a := a) (x := x) (c := c) p k := by
-  rw [sourceCoherentProjector, Matrix.diagonal_mul_diagonal]
-  ext i j
-  by_cases hij : i = j
-  · subst j
-    by_cases h : i.1.2 = p ∧ i.2.2.1 = p ∧ i.2.2.2 = k <;> simp [h]
-  · simp [hij]
-
-private theorem sourceCoherentKrausAdjoint_sum_le_one
-    {c : Type*} [Fintype c] [DecidableEq c]
-    {y' : Type*} [Fintype y'] [DecidableEq y'] :
-    MatrixMap.krausAdjoint (fun pk : x × y' =>
-        sourceCoherentProjector (a := a) (x := x) (c := c) pk.1 pk.2)
-      (1 : CMatrix ((a × x) × (c × x × y'))) ≤ 1 := by
-  have hK : MatrixMap.krausAdjoint (fun pk : x × y' =>
-      sourceCoherentProjector (a := a) (x := x) (c := c) pk.1 pk.2)
-      (1 : CMatrix ((a × x) × (c × x × y'))) =
-      Matrix.diagonal (fun i =>
-        if i.1.2 = i.2.2.1 then (1 : ℂ) else 0) := by
-    ext i j
-    rw [MatrixMap.krausAdjoint]
-    simp only [sourceCoherentProjector_conjTranspose
-      (a := a) (x := x) (c := c), Matrix.mul_one]
-    simp_rw [sourceCoherentProjector_idempotent
-      (a := a) (x := x) (c := c)]
-    rw [show (∑ pk : x × y', sourceCoherentProjector
-        (a := a) (x := x) (c := c) pk.1 pk.2) i j =
-        if i = j ∧ i.1.2 = i.2.2.1 then (1 : ℂ) else 0 by
-      simp only [Matrix.sum_apply, sourceCoherentProjector,
-        Matrix.diagonal_apply]
-      by_cases hij : i = j
-      · subst j
-        by_cases hcopy : i.1.2 = i.2.2.1
-        · rw [Finset.sum_eq_single (i.1.2, i.2.2.2)]
-          · simp [hcopy]
-          · intro pk _ hpk
-            have hnot : ¬ (i.2.2.1 = pk.1 ∧ i.2.2.2 = pk.2) := by
-              intro h
-              apply hpk
-              exact Prod.ext (hcopy.trans h.1).symm h.2.symm
-            simp [hcopy, hnot]
-          · simp
-        · have hcopy' : i.2.2.1 ≠ i.1.2 := Ne.symm hcopy
-          simp [hcopy, hcopy']
-      · simp [hij]]
-    by_cases hij : i = j
-    · subst j
-      simp
-    · simp [ hij]
-  rw [hK, Matrix.le_iff]
-  have hsub :
-      (1 : CMatrix ((a × x) × (c × x × y'))) -
-          Matrix.diagonal (fun i =>
-            if i.1.2 = i.2.2.1 then (1 : ℂ) else 0) =
-        Matrix.diagonal (fun i =>
-          if i.1.2 = i.2.2.1 then (0 : ℂ) else 1) := by
-    ext i j
-    by_cases hij : i = j
-    · subst j
-      by_cases hcopy : i.1.2 = i.2.2.1 <;> simp [hcopy]
-    · simp [hij]
-  rw [hsub, Matrix.posSemidef_diagonal_iff]
-  intro i
-  by_cases hcopy : i.1.2 = i.2.2.1 <;> simp [hcopy]
-
-private theorem sourceCoherentMap_completelyPositive
-    {c : Type*} [Fintype c] [DecidableEq c]
-    {y' : Type*} [Fintype y'] [DecidableEq y'] :
-    MatrixMap.IsCompletelyPositive
-      (sourceCoherentMap (a := a) (x := x) (c := c) (y' := y')) := by
-  exact MatrixMap.ofKraus_isCompletelyPositive _
-
-private theorem sourceCoherentMap_traceNonincreasing
-    {c : Type*} [Fintype c] [DecidableEq c]
-    {y' : Type*} [Fintype y'] [DecidableEq y'] :
-    MatrixMap.IsTraceNonincreasing
-      (sourceCoherentMap (a := a) (x := x) (c := c) (y' := y')) := by
-  intro M hM
-  have hdual := MatrixMap.ofKraus_trace_duality
-    (fun pk : x × y' => sourceCoherentProjector
-      (a := a) (x := x) (c := c) pk.1 pk.2) M
-      (1 : CMatrix ((a × x) × (c × x × y')))
-  rw [Matrix.mul_one] at hdual
-  change ((MatrixMap.ofKraus (fun pk : x × y' => sourceCoherentProjector
-      (a := a) (x := x) (c := c) pk.1 pk.2) M).trace).re ≤ M.trace.re
-  rw [hdual]
-  have hcomp : (1 - MatrixMap.krausAdjoint (fun pk : x × y' =>
-      sourceCoherentProjector (a := a) (x := x) (c := c) pk.1 pk.2)
-      (1 : CMatrix ((a × x) × (c × x × y')))).PosSemidef := by
-    exact Matrix.le_iff.mp (sourceCoherentKrausAdjoint_sum_le_one
-      (a := a) (x := x) (c := c) (y' := y'))
-  have hnonneg := cMatrix_trace_mul_posSemidef_re_nonneg_schatten hM hcomp
-  rw [Matrix.mul_sub, Matrix.trace_sub, Complex.sub_re] at hnonneg
-  have hnonneg' : 0 ≤ (trace M).re -
-      (M * MatrixMap.krausAdjoint (fun pk : x × y' =>
-        sourceCoherentProjector (a := a) (x := x) (c := c) pk.1 pk.2)
-        (1 : CMatrix ((a × x) × (c × x × y')))).trace.re := by
-    simpa only [Matrix.mul_one] using hnonneg
-  exact sub_nonneg.mp hnonneg'
-
-private def sourceCoherentMapTraceNonincreasingCP
-    {c : Type*} [Fintype c] [DecidableEq c]
-    {y' : Type*} [Fintype y'] [DecidableEq y'] :
-    MatrixMap.TraceNonincreasingCP
-      (sourceCoherentMap (a := a) (x := x) (c := c) (y' := y')) :=
-  ⟨sourceCoherentMap_completelyPositive (a := a) (x := x) (c := c)
-      (y' := y'),
-    sourceCoherentMap_traceNonincreasing (a := a) (x := x) (c := c)
-      (y' := y')⟩
-
 private theorem sourceCoherentMap_apply
     {c : Type*} [Fintype c] [DecidableEq c]
     {y' : Type*} [Fintype y'] [DecidableEq y']
@@ -1032,7 +917,7 @@ private theorem sourceCoherentMap_apply
         exact Prod.ext hi1.symm hiy.symm
       simp [hnot]
     · simp
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     apply Finset.sum_eq_zero
     intro pk _
     by_cases hk : i.1.2 = pk.1 ∧ i.2.2.1 = pk.1 ∧ i.2.2.2 = pk.2 ∧
@@ -1400,8 +1285,12 @@ private theorem coherentLift_row_zero_of_not_copy
     simpa [Matrix.mul_apply, Matrix.conjTranspose_apply, Complex.mul_re] using this
   have hterm := (Finset.sum_eq_zero_iff_of_nonneg
       (fun r₂ _ => by
-        simpa [Complex.mul_re] using
-          (Complex.normSq_nonneg (Psi.amplitudeMatrix i r₂)))).mp
+        have hre : (Psi.amplitudeMatrix i r₂ *
+            star (Psi.amplitudeMatrix i r₂)).re =
+            Complex.normSq (Psi.amplitudeMatrix i r₂) := by
+          simp [Complex.normSq]
+        rw [hre]
+        exact Complex.normSq_nonneg _)).mp
       hsum r₁ (Finset.mem_univ r₁)
   have hzprod :
       Psi.amplitudeMatrix i r₁ * star (Psi.amplitudeMatrix i r₁) = 0 := by
@@ -1518,9 +1407,9 @@ private theorem coherentMaxPure_amp_X
   by_cases hi : i.1.2 = k.2.1 ∧ k.2.2 = i.2.1
   · by_cases hj : j.1.2 = k.2.1 ∧ k.2.2 = j.2.1
     · exact (hij (hi.1.trans hj.1.symm)).elim
-    · rw [if_pos hi, if_neg hj]
+    · rw [ite_eq_left hi, ite_eq_right hj]
       simp
-  · rw [if_neg hi]
+  · rw [ite_eq_right hi]
 
 private theorem coherentMaxPure_amp_Y
     {c : Type*} [Fintype c] [DecidableEq c]
@@ -1543,9 +1432,9 @@ private theorem coherentMaxPure_amp_Y
   by_cases hi : i.1.2 = k.2.1 ∧ k.2.2 = i.2.1
   · by_cases hj : j.1.2 = k.2.1 ∧ k.2.2 = j.2.1
     · exact (hij (hi.2.symm.trans hj.2)).elim
-    · rw [if_pos hi, if_neg hj]
+    · rw [ite_eq_left hi, ite_eq_right hj]
       simp
-  · rw [if_neg hi]
+  · rw [ite_eq_right hi]
 
 private theorem coherentMaxPure_acMarginal
     {c : Type*} [Fintype c] [DecidableEq c]
@@ -1768,17 +1657,17 @@ private theorem classicalCoherentMap_fixed
     · by_cases hy : i.2.2.2 = j.2.2.2
       · simp [hcopyi, hcopyj, hy]
       · have hz := hclassical i j (Or.inr (Or.inr hy))
-        rw [if_neg]
+        rw [ite_eq_right]
         · exact hz.symm
         · intro hall
           exact hy hall.2.2
     · have hz := hclassical i j (Or.inr (Or.inl hcopyj))
-      rw [if_neg]
+      rw [ite_eq_right]
       · exact hz.symm
       · intro hall
         exact hcopyj hall.2.1
   · have hz := hclassical i j (Or.inl hcopyi)
-    rw [if_neg]
+    rw [ite_eq_right]
     · exact hz.symm
     · intro hall
       exact hcopyi hall.1
@@ -1992,12 +1881,12 @@ private theorem classicalCoherentMap_reference_residual
   simp only [Matrix.one_apply, Matrix.kroneckerMap_apply]
   by_cases houter : i.1 = j.1
   · have houterx : i.1.2 = j.1.2 := congrArg Prod.snd houter
-    simp only [if_pos houter, one_mul]
+    simp only [ite_eq_left houter, one_mul]
     by_cases htx : i.2.2.1 = j.2.2.1
     · by_cases hy : i.2.2.2 = j.2.2.2
       · have hcoord : i.2.2.1 = j.2.2.1 ∧
             i.2.2.2 = j.2.2.2 := ⟨htx, hy⟩
-        rw [if_pos hcoord]
+        rw [ite_eq_left hcoord]
         have hcoh :
             (i.1.2 = i.2.2.1 ∧ j.1.2 = j.2.2.1 ∧
               i.2.2.2 = j.2.2.2) ↔ i.1.2 = i.2.2.1 := by
@@ -2006,7 +1895,7 @@ private theorem classicalCoherentMap_reference_residual
           · intro h
             exact ⟨h, houterx.symm.trans h |>.trans htx, hy⟩
         by_cases hcopy : i.1.2 = i.2.2.1
-        · rw [if_pos (hcoh.mpr hcopy)]
+        · rw [ite_eq_left (hcoh.mpr hcopy)]
           rw [sub_self]
           symm
           apply Finset.sum_eq_zero
@@ -2021,8 +1910,8 @@ private theorem classicalCoherentMap_reference_residual
               j.2.2.2 = k) := by
             intro h
             exact hqp (h.2.1.symm.trans (hcopy.symm.trans h.1))
-          rw [if_neg hzero]
-        · rw [if_neg (fun h => hcopy (hcoh.mp h))]
+          rw [ite_eq_right hzero]
+        · rw [ite_eq_right (fun h => hcopy (hcoh.mp h))]
           rw [Finset.sum_eq_single i.1.2]
           · rw [Finset.sum_eq_single i.2.2.1]
             · rw [Finset.sum_eq_single i.2.2.2]
@@ -2035,7 +1924,7 @@ private theorem classicalCoherentMap_reference_residual
                     j.2.2.2 = k) := by
                   intro h
                   exact hki h.2.2.1.symm
-                rw [if_neg hzero]
+                rw [ite_eq_right hzero]
               · intro hnot
                 exact (hnot (Finset.mem_univ _)).elim
             · intro q hq hqi
@@ -2051,7 +1940,7 @@ private theorem classicalCoherentMap_reference_residual
             i.2.2.2 = j.2.2.2) := fun h => hy h.2
         have hcoh : ¬ (i.1.2 = i.2.2.1 ∧ j.1.2 = j.2.2.1 ∧
             i.2.2.2 = j.2.2.2) := fun h => hy h.2.2
-        rw [if_neg hcoord, if_neg hcoh]
+        rw [ite_eq_right hcoord, ite_eq_right hcoh]
         simp only [sub_zero]
         symm
         apply Finset.sum_eq_zero
@@ -2066,14 +1955,14 @@ private theorem classicalCoherentMap_reference_residual
           intro h
           rcases h with ⟨_, _, hik, _, _, hjk⟩
           exact hy (hik.trans hjk.symm)
-        rw [if_neg hzero]
+        rw [ite_eq_right hzero]
     · have hcoord : ¬ (i.2.2.1 = j.2.2.1 ∧
           i.2.2.2 = j.2.2.2) := fun h => htx h.1
       have hcoh : ¬ (i.1.2 = i.2.2.1 ∧ j.1.2 = j.2.2.1 ∧
           i.2.2.2 = j.2.2.2) := by
         intro h
         exact htx (h.1.symm.trans (houterx.trans h.2.1))
-      rw [if_neg hcoord, if_neg hcoh]
+      rw [ite_eq_right hcoord, ite_eq_right hcoh]
       simp only [sub_zero]
       symm
       apply Finset.sum_eq_zero
@@ -2088,7 +1977,7 @@ private theorem classicalCoherentMap_reference_residual
         intro h
         rcases h with ⟨_, hitx, _, _, hjtx, _⟩
         exact htx (hitx.trans hjtx.symm)
-      rw [if_neg hzero]
+      rw [ite_eq_right hzero]
   · simp [houter]
 
 private theorem classicalCoherentMap_reference_le
@@ -2446,19 +2335,21 @@ private theorem State.reindex_toSubnormalized_eq_sourceIsometryApply
   rcases j with ⟨j1, j2⟩
   simp only [State.toSubnormalized_matrix, State.reindex_matrix,
     SubnormalizedState.sourceIsometryApply_matrix,
-    ReferenceIsometry.applyMatrix, ReferenceIsometry.ofEquiv,
-    Matrix.mul_apply, Matrix.conjTranspose_apply]
+    ReferenceIsometry.applyMatrix, ReferenceIsometry.ofEquiv]
+  change _ = ∑ z : s, (∑ c : s,
+      (if i1 = e c then (1 : ℂ) else 0) * rho.matrix (c, i2) (z, j2)) *
+    (starRingEnd ℂ) (if j1 = e z then (1 : ℂ) else 0)
   rw [Finset.sum_eq_single (e.symm j1)]
   · rw [Finset.sum_eq_single (e.symm i1)]
-    · simp [ReferenceIsometry.targetBlock]
-    · intro x _ hxe
-      by_cases h : i1 = e x
-      · exact (hxe (by simpa using (congrArg e.symm h).symm)).elim
+    · simp [Matrix.submatrix_apply]
+    · intro c _ hc
+      by_cases h : i1 = e c
+      · exact (hc (by simpa using (congrArg e.symm h).symm)).elim
       · simp [h]
     · simp
-  · intro x _ hxe
-    by_cases h : j1 = e x
-    · exact (hxe (by simpa using (congrArg e.symm h).symm)).elim
+  · intro z _ hz
+    by_cases h : j1 = e z
+    · exact (hz (by simpa using (congrArg e.symm h).symm)).elim
     · simp [h]
   · simp
 
@@ -2991,7 +2882,7 @@ private theorem canonicalXYMaxPurification_purifies
   by_cases hi : i.2.2.2 = yy
   · by_cases hj : j.2.2.2 = yy
     · subst yy
-      rw [if_pos hj]
+      rw [ite_eq_left hj]
       simp
     · have hcopyj : j.2.2 ≠ (j.1.2, yy) := by
         intro h
@@ -4417,7 +4308,7 @@ private theorem maxLiftedCanonicalPurification_center_fast
           exact (hz hvz.symm).elim
         · simp [hEq]
       · simp
-    · rw [if_neg huv]
+    · rw [ite_eq_right huv]
       apply Finset.sum_eq_zero
       intro z _
       by_cases hz : (u, (Sum.inl v : Sum (y × bPlus)
@@ -4508,7 +4399,7 @@ private theorem maxLiftedCanonicalPurification_center_fast
                 congr 1
                 funext xx
                 exact hcollapse q xx
-              simp only [eq_self, if_true]
+              simp only [eq_self, ite_true]
               change
                 (∑ q : a, ∑ xx : bPlus, ∑ u : x, ∑ v : y,
                   (if ix = u ∧ v = iy then
@@ -4543,26 +4434,43 @@ private theorem maxLiftedCanonicalPurification_center_fast
                             (y := y) (bPlus := bPlus)).matrix)
                         (iy, (iy, Sum.inl (iy, ivB)))
                         (iy, (iy, Sum.inl (iy, jvB))) = _
-                    simp only [maxConditioningEmbedding, ReferenceIsometry.rightBlock,
-                      ReferenceIsometry.ofInjective, Matrix.mul_apply,
-                      Matrix.conjTranspose_apply, Fintype.sum_prod_type,
-                      Finset.sum_mul]
-                    rw [Finset.sum_eq_single iy]
-                    · rw [Finset.sum_eq_single jvB]
-                      · rw [Finset.sum_eq_single iy]
-                        · rw [Finset.sum_eq_single ivB]
-                          · simp
-                          · intro z _ hz
-                            simp [ Ne.symm hz]
-                          · simp
-                        · intro z _ hz
-                          simp [ Ne.symm hz]
-                        · simp
+                    simp only [Matrix.mul_apply, Matrix.conjTranspose_apply,
+                      ReferenceIsometry.rightBlock]
+                    rw [Finset.sum_eq_single (iy, jvB)]
+                    · rw [Finset.sum_eq_single (iy, ivB)]
+                      · simp [maxConditioningEmbedding,
+                          ReferenceIsometry.ofInjective]
                       · intro z _ hz
-                        simp [ Ne.symm hz]
+                        have hV0 :
+                            (maxConditioningEmbedding (a := a) (x := x)
+                              (y := y) (bPlus := bPlus)).matrix
+                              (iy, (iy, Sum.inl (iy, ivB))) z = 0 := by
+                          simp only [maxConditioningEmbedding,
+                            ReferenceIsometry.ofInjective]
+                          split
+                          · exfalso
+                            rename_i hc
+                            exact absurd (Sum.inl.inj
+                              (congrArg Prod.snd (congrArg Prod.snd hc))).symm hz
+                          · rfl
+                        rw [hV0]
+                        simp
                       · simp
                     · intro z _ hz
-                      simp [ Ne.symm hz]
+                      have hV0 :
+                          (maxConditioningEmbedding (a := a) (x := x)
+                            (y := y) (bPlus := bPlus)).matrix
+                            (iy, (iy, Sum.inl (iy, jvB))) z = 0 := by
+                        simp only [maxConditioningEmbedding,
+                          ReferenceIsometry.ofInjective]
+                        split
+                        · exfalso
+                          rename_i hc
+                          exact absurd (Sum.inl.inj
+                            (congrArg Prod.snd (congrArg Prod.snd hc))).symm hz
+                        · rfl
+                      rw [hV0]
+                      simp
                     · simp
                   simp
                   change _ =
@@ -4579,138 +4487,168 @@ private theorem maxLiftedCanonicalPurification_center_fast
                 · simp [canonicalXYMaxAmplitude, Ne.symm hjv,
 
                     ReferenceIsometry.applyMatrixRight,
-                    ReferenceIsometry.rightBlock,
+
                      Matrix.mul_apply,
-                    Matrix.conjTranspose_apply, Fintype.sum_prod_type,
-                     Finset.mul_sum,
-                    apply_ite, eq_comm, Prod.ext_iff,
+                     Fintype.sum_prod_type,
+
+                     eq_comm, Prod.ext_iff,
                      mul_comm]
                   apply Eq.symm
                   rw [Finset.sum_eq_zero]
                   intro u _
                   rw [Finset.sum_eq_zero]
                   intro v _
-                  by_cases h : iy = u ∧ jvY = u ∧ jvB = v
-                  · exact (hjv (h.1.trans h.2.1.symm).symm).elim
-                  · simp [h]
+                  refine mul_eq_zero.mpr (Or.inr ?_)
+                  refine (Matrix.conjTranspose_apply ..).trans ?_
+                  dsimp only
+                  split
+                  · exfalso
+                    rename_i hc
+                    exact absurd (hc.2.1.symm.trans hc.1.symm) hjv
+                  · simp
               · simp [canonicalXYMaxAmplitude, Ne.symm hiv,
 
                   ReferenceIsometry.applyMatrixRight,
-                  ReferenceIsometry.rightBlock,
+
                    Matrix.mul_apply,
-                  Matrix.conjTranspose_apply, Fintype.sum_prod_type,
-                   Finset.mul_sum,
-                  apply_ite, eq_comm, Prod.ext_iff,
-                   mul_comm]
+                   Fintype.sum_prod_type,
+
+                  apply_ite, eq_comm, Prod.ext_iff
+                   ]
                 apply Eq.symm
                 rw [Finset.sum_eq_zero]
                 intro u _
                 rw [Finset.sum_eq_zero]
                 intro v _
-                by_cases ho : iy = u ∧ jvY = u ∧ jvB = v
-                · rw [if_pos ho]
-                  rw [Finset.sum_eq_zero]
-                  intro u' _
-                  rw [Finset.sum_eq_zero]
-                  intro v' _
-                  by_cases hi' : iy = u' ∧ ivY = u' ∧ ivB = v'
-                  · exact (hiv (hi'.2.1.trans hi'.1.symm)).elim
-                  · simp [hi']
-                · simp [ho]
+                refine mul_eq_zero.mpr (Or.inl ?_)
+                refine (Matrix.mul_apply ..).trans ?_
+                apply Finset.sum_eq_zero
+                intro z _
+                refine mul_eq_zero.mpr (Or.inl ?_)
+                dsimp only
+                split
+                · exfalso
+                  rename_i hc
+                  exact absurd (hc.2.1.symm.trans hc.1.symm) hiv
+                · simp
             · have hz := hclassical.2
                 ((ia, ix), (iy, iv.2)) ((ja, ix), (jy, jv.2)) hiy
               simp [hi, hj, hix,
 
                 ReferenceIsometry.applyMatrixRight,
-                ReferenceIsometry.rightBlock,
+
                  Matrix.mul_apply,
-                Matrix.conjTranspose_apply, Fintype.sum_prod_type,
-                 Finset.mul_sum,
+                 Fintype.sum_prod_type,
+
                 apply_ite, eq_comm, Prod.ext_iff,
                  mul_comm]
               apply Eq.trans
-              · rw [Finset.sum_eq_zero]
+              · apply Finset.sum_eq_zero
+                intro x_1 _
+                apply Finset.sum_eq_zero
+                intro x_2 _
+                apply Finset.sum_eq_zero
+                intro x_3 _
+                apply Finset.sum_eq_zero
+                intro x_4 _
+                by_cases h4 : jy = x_4
+                · have hinner : ¬(jx = x_3 ∧ iy = x_4) :=
+                    fun hc => hiy (hc.2.trans h4.symm)
+                  rw [ite_eq_right hinner]
+                  simp
+                · have houter : ¬(jx = x_3 ∧ jy = x_4) := fun hc => h4 hc.2
+                  rw [ite_eq_right houter]
+              · symm
+                apply Finset.sum_eq_zero
                 intro u _
-                rw [Finset.sum_eq_zero]
+                apply Finset.sum_eq_zero
                 intro v _
                 by_cases ho : jy = u ∧ u = jv.1 ∧ v = jv.2
-                · rw [if_pos ho]
-                  rw [Finset.sum_eq_zero]
-                  intro u' _
-                  rw [Finset.sum_eq_zero]
-                  intro v' _
-                  by_cases hi' : iy = u' ∧ u' = iv.1 ∧ v' = iv.2
-                  · have hz' := hclassical.2
-                      ((ia, ix), (iy, iv.2)) ((ja, ix), (jy, jv.2)) hiy
-                    simpa [hi'.1, hi'.2.1, hi'.2.2,
-                      ho.1, ho.2.1, ho.2.2, hix] using hz'
-                  · simp [hi']
-                · simp [ho]
-              · symm
-                rw [Finset.sum_eq_zero]
-                intro u _
-                rw [Finset.sum_eq_zero]
-                intro v _
-                rw [Finset.sum_eq_zero]
-                intro u' _
-                rw [Finset.sum_eq_zero]
-                intro v' _
-                by_cases houter : jx = u' ∧ jy = v'
-                · rw [if_pos houter]
-                  by_cases hinner : jx = u' ∧ iy = v'
-                  · exact (hiy (hinner.2.trans houter.2.symm)).elim
-                  · simp [hinner]
-                · simp [houter]
+                · refine mul_eq_zero.mpr (Or.inl ?_)
+                  refine (Matrix.mul_apply ..).trans ?_
+                  apply Finset.sum_eq_zero
+                  intro z _
+                  dsimp only
+                  split
+                  · rename_i hc
+                    simp only [one_mul]
+                    rw [(Sum.inl.inj hc.2.2).symm, show u = jy from ho.1.symm,
+                      show v = jv.2 from ho.2.2, ← hix,
+                      show iv = (iy, iv.2) from
+                        Prod.ext (hc.2.1.symm.trans hc.1.symm) rfl]
+                    exact hz
+                  · simp
+                · refine mul_eq_zero.mpr (Or.inr ?_)
+                  refine (Matrix.conjTranspose_apply ..).trans ?_
+                  dsimp only
+                  split
+                  · exfalso
+                    rename_i hc
+                    exact absurd ⟨hc.1, hc.2.1,
+                      (congrArg Prod.snd (Sum.inl.inj hc.2.2)).symm⟩ ho
+                  · simp
           · have hz := hclassical.1
               ((ia, ix), (iy, iv.2)) ((ja, jx), (jy, jv.2)) hix
             simp [hi, hj,
 
               ReferenceIsometry.applyMatrixRight,
-              ReferenceIsometry.rightBlock,
+
                Matrix.mul_apply,
-              Matrix.conjTranspose_apply, Fintype.sum_prod_type,
-               Finset.mul_sum,
+               Fintype.sum_prod_type,
+
               apply_ite, eq_comm, Prod.ext_iff,
                mul_comm]
             apply Eq.trans
-            · rw [Finset.sum_eq_zero]
+            · apply Finset.sum_eq_zero
+              intro x_1 _
+              apply Finset.sum_eq_zero
+              intro x_2 _
+              apply Finset.sum_eq_zero
+              intro x_3 _
+              apply Finset.sum_eq_zero
+              intro x_4 _
+              by_cases h3 : jx = x_3
+              · have hinner : ¬(ix = x_3 ∧ iy = x_4) :=
+                  fun hc => hix (hc.1.trans h3.symm)
+                rw [ite_eq_right hinner]
+                simp
+              · have houter : ¬(jx = x_3 ∧ jy = x_4) := fun hc => h3 hc.1
+                rw [ite_eq_right houter]
+            · symm
+              apply Finset.sum_eq_zero
               intro u _
-              rw [Finset.sum_eq_zero]
+              apply Finset.sum_eq_zero
               intro v _
               by_cases ho : jy = u ∧ u = jv.1 ∧ v = jv.2
-              · rw [if_pos ho]
-                rw [Finset.sum_eq_zero]
-                intro u' _
-                rw [Finset.sum_eq_zero]
-                intro v' _
-                by_cases hi' : iy = u' ∧ u' = iv.1 ∧ v' = iv.2
-                · have hz' := hclassical.1
-                    ((ia, ix), (iy, iv.2)) ((ja, jx), (jy, jv.2)) hix
-                  simpa [hi'.1, hi'.2.1, hi'.2.2,
-                    ho.1, ho.2.1, ho.2.2] using hz'
-                · simp [hi']
-              · simp [ho]
-            · symm
-              rw [Finset.sum_eq_zero]
-              intro u _
-              rw [Finset.sum_eq_zero]
-              intro v _
-              rw [Finset.sum_eq_zero]
-              intro u' _
-              rw [Finset.sum_eq_zero]
-              intro v' _
-              by_cases houter : jx = u' ∧ jy = v'
-              · rw [if_pos houter]
-                by_cases hinner : ix = u' ∧ iy = v'
-                · exact (hix (hinner.1.trans houter.1.symm)).elim
-                · simp [hinner]
-              · simp [houter]
+              · refine mul_eq_zero.mpr (Or.inl ?_)
+                refine (Matrix.mul_apply ..).trans ?_
+                apply Finset.sum_eq_zero
+                intro z _
+                dsimp only
+                split
+                · rename_i hc
+                  simp only [one_mul]
+                  rw [(Sum.inl.inj hc.2.2).symm, show u = jy from ho.1.symm,
+                    show v = jv.2 from ho.2.2,
+                    show iv = (iy, iv.2) from
+                      Prod.ext (hc.2.1.symm.trans hc.1.symm) rfl]
+                  exact hz
+                · simp
+              · refine mul_eq_zero.mpr (Or.inr ?_)
+                refine (Matrix.conjTranspose_apply ..).trans ?_
+                dsimp only
+                split
+                · exfalso
+                  rename_i hc
+                  exact absurd ⟨hc.1, hc.2.1,
+                    (congrArg Prod.snd (Sum.inl.inj hc.2.2)).symm⟩ ho
+                · simp
         · simp [hi, hj,
             ReferenceIsometry.applyMatrixRight,
-            ReferenceIsometry.rightBlock,
+
              Matrix.mul_apply,
-            Matrix.conjTranspose_apply, Fintype.sum_prod_type,
-             Finset.mul_sum,
+             Fintype.sum_prod_type,
+
             apply_ite, eq_comm, Prod.ext_iff,
              mul_comm]
           apply Eq.symm
@@ -4718,32 +4656,50 @@ private theorem maxLiftedCanonicalPurification_center_fast
           intro u _
           rw [Finset.sum_eq_zero]
           intro v _
-          by_cases h : jy = u ∧ j0 = u ∧ u = jv.1 ∧ v = jv.2
-          · exact (hj (h.2.1.trans h.2.2.1)).elim
-          · simp [h]
+          refine mul_eq_zero.mpr (Or.inr ?_)
+          refine (Matrix.conjTranspose_apply ..).trans ?_
+          dsimp only
+          split
+          · exfalso
+            rename_i hc
+            exact hj (((congrArg Prod.fst (Sum.inl.inj hc.2.2)).trans hc.2.1).symm)
+          · simp
       · simp [hi,
           ReferenceIsometry.applyMatrixRight,
-          ReferenceIsometry.rightBlock,
+
            Matrix.mul_apply,
-          Matrix.conjTranspose_apply, Fintype.sum_prod_type,
-           Finset.mul_sum,
-          apply_ite, eq_comm, Prod.ext_iff,
-           mul_comm]
+           Fintype.sum_prod_type,
+
+          apply_ite, eq_comm, Prod.ext_iff
+           ]
         apply Eq.symm
         rw [Finset.sum_eq_zero]
         intro u _
         rw [Finset.sum_eq_zero]
         intro v _
         by_cases houter : jy = u ∧ j0 = u ∧ u = jv.1 ∧ v = jv.2
-        · rw [if_pos houter]
-          rw [Finset.sum_eq_zero]
-          intro u' _
-          rw [Finset.sum_eq_zero]
-          intro v' _
-          by_cases hinner : iy = u' ∧ i0 = u' ∧ u' = iv.1 ∧ v' = iv.2
-          · exact (hi (hinner.2.1.trans hinner.2.2.1)).elim
-          · simp [hinner]
-        · simp [houter]
+        · refine mul_eq_zero.mpr (Or.inl ?_)
+          refine (Matrix.mul_apply ..).trans ?_
+          apply Finset.sum_eq_zero
+          intro z _
+          refine mul_eq_zero.mpr (Or.inl ?_)
+          dsimp only
+          split
+          · exfalso
+            rename_i hc
+            exact hi (hc.2.1.symm.trans
+              (congrArg Prod.fst (Sum.inl.inj hc.2.2)).symm)
+          · simp
+        · refine mul_eq_zero.mpr (Or.inr ?_)
+          refine (Matrix.conjTranspose_apply ..).trans ?_
+          dsimp only
+          split
+          · exfalso
+            rename_i hc
+            exact absurd ⟨hc.1, hc.2.1.symm,
+              (congrArg Prod.fst (Sum.inl.inj hc.2.2)).symm,
+              (congrArg Prod.snd (Sum.inl.inj hc.2.2)).symm⟩ houter
+          · simp
     | inr je =>
       simp [coherentMaxPure, coherentLiftOfFixed, coherentLiftAmplitude,
         State.acToABReferenceEquiv, coherentMaxSwapEquiv, PureVector.reindex,
@@ -4753,12 +4709,25 @@ private theorem maxLiftedCanonicalPurification_center_fast
         maxLiftedCanonicalPurification, maxReferenceEmbedding,
         maxConditioningEmbedding, canonicalXYMaxPurification,
         ReferenceIsometry.applyPureVector_amp, ReferenceIsometry.applyAmp,
-        ReferenceIsometry.applyMatrixRight, ReferenceIsometry.rightBlock,
+        ReferenceIsometry.applyMatrixRight,
         ReferenceIsometry.ofInjective, Matrix.mul_apply,
-        Matrix.conjTranspose_apply, Matrix.mulVec, dotProduct,
+         Matrix.mulVec, dotProduct,
          Fintype.sum_prod_type,
         Finset.mul_sum, apply_ite, eq_comm,
         Prod.ext_iff, mul_comm]
+      apply Eq.symm
+      rw [Finset.sum_eq_zero]
+      intro x_1 _
+      rw [Finset.sum_eq_zero]
+      intro y_1 _
+      refine mul_eq_zero.mpr (Or.inr ?_)
+      refine (Matrix.conjTranspose_apply ..).trans ?_
+      dsimp only
+      split
+      · exfalso
+        rename_i hc
+        exact Sum.inl_ne_inr hc.2.2.symm
+      · simp
   | inr ie =>
     cases jTag with
     | inl jv =>
@@ -4770,12 +4739,28 @@ private theorem maxLiftedCanonicalPurification_center_fast
         maxLiftedCanonicalPurification, maxReferenceEmbedding,
         maxConditioningEmbedding, canonicalXYMaxPurification,
         ReferenceIsometry.applyPureVector_amp, ReferenceIsometry.applyAmp,
-        ReferenceIsometry.applyMatrixRight, ReferenceIsometry.rightBlock,
+        ReferenceIsometry.applyMatrixRight,
         ReferenceIsometry.ofInjective, Matrix.mul_apply,
-        Matrix.conjTranspose_apply, Matrix.mulVec, dotProduct,
+         Matrix.mulVec, dotProduct,
          Fintype.sum_prod_type,
         Finset.mul_sum, apply_ite, eq_comm,
         Prod.ext_iff]
+      apply Eq.symm
+      rw [Finset.sum_eq_zero]
+      intro x_1 _
+      rw [Finset.sum_eq_zero]
+      intro y_1 _
+      refine mul_eq_zero.mpr (Or.inl ?_)
+      refine (Matrix.mul_apply ..).trans ?_
+      apply Finset.sum_eq_zero
+      intro z _
+      refine mul_eq_zero.mpr (Or.inl ?_)
+      dsimp only
+      split
+      · exfalso
+        rename_i hc
+        exact Sum.inl_ne_inr hc.2.2.symm
+      · simp
     | inr je =>
       simp [coherentMaxPure, coherentLiftOfFixed, coherentLiftAmplitude,
         State.acToABReferenceEquiv, coherentMaxSwapEquiv, PureVector.reindex,
@@ -4785,12 +4770,28 @@ private theorem maxLiftedCanonicalPurification_center_fast
         maxLiftedCanonicalPurification, maxReferenceEmbedding,
         maxConditioningEmbedding, canonicalXYMaxPurification,
         ReferenceIsometry.applyPureVector_amp, ReferenceIsometry.applyAmp,
-        ReferenceIsometry.applyMatrixRight, ReferenceIsometry.rightBlock,
+        ReferenceIsometry.applyMatrixRight,
         ReferenceIsometry.ofInjective, Matrix.mul_apply,
-        Matrix.conjTranspose_apply, Matrix.mulVec, dotProduct,
+         Matrix.mulVec, dotProduct,
          Fintype.sum_prod_type,
          eq_comm,
         Prod.ext_iff]
+      apply Eq.symm
+      rw [Finset.sum_eq_zero]
+      intro x_1 _
+      rw [Finset.sum_eq_zero]
+      intro y_1 _
+      refine mul_eq_zero.mpr (Or.inl ?_)
+      refine (Matrix.mul_apply ..).trans ?_
+      apply Finset.sum_eq_zero
+      intro z _
+      refine mul_eq_zero.mpr (Or.inl ?_)
+      dsimp only
+      split
+      · exfalso
+        rename_i hc
+        exact Sum.inl_ne_inr hc.2.2.symm
+      · simp
 
 private theorem exists_scaled_pure_representation
     [Nonempty a] [Nonempty b]
@@ -5059,10 +5060,10 @@ private theorem exists_classical_max_candidate_on_enlarged_conditioning
     Real.sqrt_pos.mp (lt_of_le_of_lt hε0 hε)
   have hfull : Nonempty ((a × x) × (y × b)) :=
     nonempty_of_trace_pos rho.matrix htrace
-  letI : Nonempty x := by
+  let : Nonempty x := by
     rcases hfull with ⟨i⟩
     exact ⟨i.1.2⟩
-  letI : Nonempty y := by
+  let : Nonempty y := by
     rcases hfull with ⟨i⟩
     exact ⟨i.2.1⟩
   obtain ⟨psi, t, ht, ht1, hrep, hcoherent, hpsiCenterNorm⟩ :=
@@ -5139,7 +5140,7 @@ private theorem exists_classical_max_candidate_on_enlarged_conditioning
       (bPlus := b)).applyPureVector_purifies
       (canonicalXYMaxPurification_purifies
         (a := a) (x := x) (y := y) (b := b) rhoNorm hclassRhoNorm)
-    simpa [psiPlus, etaCenterNorm] using h
+    simpa [psiPlus, etaCenterNorm, maxLiftedCanonicalPurification] using h
   obtain ⟨phi, hphiPurifies, hoverlap⟩ :=
     maxReferenceUhlmann (a := a) (x := x) (y := y) (bPlus := b)
       psiPlus hpsiPurifies
@@ -5465,13 +5466,15 @@ private theorem smoothClassical_conditioningIsometryCompressed_classicalOnXY
         (MatrixMap.ofKraus (fun _ : Unit => Matrix.conjTranspose V.matrix))
         τPlus.matrix i j = 0
     simp [MatrixMap.kron_idChannel_left_apply_slice, MatrixMap.ofKraus,
-       Matrix.mul_apply, Matrix.conjTranspose_apply,
-      Finset.mul_sum, Fintype.sum_prod_type,
-       mul_comm, mul_left_comm]
+      Matrix.mul_apply, Fintype.sum_prod_type, mul_comm]
     apply Finset.sum_eq_zero
     intro x₁ _
     apply Finset.sum_eq_zero
     intro y₁ _
+    change V.matrix (x₁, y₁) j.2 * (∑ z : y × bPlus,
+      (starRingEnd ℂ) (V.matrix z i.2) *
+        τPlus.matrix (i.1, z) (j.1, (x₁, y₁))) = 0
+    rw [Finset.mul_sum, Fintype.sum_prod_type]
     apply Finset.sum_eq_zero
     intro x₂ _
     apply Finset.sum_eq_zero
@@ -5484,13 +5487,15 @@ private theorem smoothClassical_conditioningIsometryCompressed_classicalOnXY
         (MatrixMap.ofKraus (fun _ : Unit => Matrix.conjTranspose V.matrix))
         τPlus.matrix i j = 0
     simp [MatrixMap.kron_idChannel_left_apply_slice, MatrixMap.ofKraus,
-       Matrix.mul_apply, Matrix.conjTranspose_apply,
-      Finset.mul_sum, Fintype.sum_prod_type,
-       mul_comm, mul_left_comm]
+      Matrix.mul_apply, Fintype.sum_prod_type, mul_comm]
     apply Finset.sum_eq_zero
     intro x₁ _
     apply Finset.sum_eq_zero
     intro y₁ _
+    change V.matrix (x₁, y₁) j.2 * (∑ z : y × bPlus,
+      (starRingEnd ℂ) (V.matrix z i.2) *
+        τPlus.matrix (i.1, z) (j.1, (x₁, y₁))) = 0
+    rw [Finset.mul_sum, Fintype.sum_prod_type]
     apply Finset.sum_eq_zero
     intro x₂ _
     apply Finset.sum_eq_zero
@@ -5682,7 +5687,7 @@ private theorem rightBlockDiagonal_supportProjector
       have hdiag := hsub.symm.trans (by
         simpa [rightBlockDiagonal] using hiM)
       have hi' : (Classical.blockDiagonal blocks).mulVec
-          (fun p : k × d => v (p.2, p.1)) (q, i') = 0 := by
+          (fun p : k × d => v p.swap) (q, i') = 0 := by
         simpa [Function.comp_def, Equiv.prodComm_apply] using hdiag
       rw [classicalBlockDiagonal_mulVec_apply] at hi'
       exact hi'
@@ -6365,24 +6370,24 @@ theorem smoothConditionalMaxEntropy_exists_classical_optimizer
     Real.sqrt_pos.mp (lt_of_le_of_lt hε0 hε)
   have hfull : Nonempty ((a × x) × (y × b)) :=
     nonempty_of_trace_pos rho.matrix hρ
-  letI : Nonempty (a × x) := by
+  let : Nonempty (a × x) := by
     rcases hfull with ⟨i⟩
     exact ⟨i.1⟩
-  letI : Nonempty (y × b) := by
+  let : Nonempty (y × b) := by
     rcases hfull with ⟨i⟩
     exact ⟨i.2⟩
   let V : ReferenceIsometry (y × b)
       (y × maxReferenceType (a := a) (x := x) (y := y) (bPlus := b)) :=
     maxConditioningEmbedding (a := a) (x := x) (y := y) (bPlus := b)
   let rhoPlus := rho.conditioningIsometryApply V
-  letI : Nonempty y := by
+  let : Nonempty y := by
     rcases hfull with ⟨i⟩
     exact ⟨i.2.1⟩
   let y0 : y := Classical.choice (inferInstance : Nonempty y)
   let b0 : b := Classical.choice (inferInstance : Nonempty b)
-  letI : Nonempty (maxReferenceType (a := a) (x := x) (y := y) (bPlus := b)) :=
+  let : Nonempty (maxReferenceType (a := a) (x := x) (y := y) (bPlus := b)) :=
     ⟨(y0, Sum.inl (y0, b0))⟩
-  letI : Nonempty (y × maxReferenceType
+  let : Nonempty (y × maxReferenceType
       (a := a) (x := x) (y := y) (bPlus := b)) := inferInstance
   have hV : ∀ q p, q.1 ≠ p.1 → V.matrix q p = 0 := by
     intro q p hqp

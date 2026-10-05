@@ -77,7 +77,7 @@ theorem subnormalizedMatrixSet_isClosed :
     IsClosed (subnormalizedMatrixSet a) := by
   classical
   have hpsd : IsClosed ({M : CMatrix a | M.PosSemidef} : Set (CMatrix a)) := by
-    simpa using (psdCone a).isClosed
+    exact (psdCone a).isClosed
   have htrace :
       IsClosed ({M : CMatrix a | M.trace.re ≤ 1} : Set (CMatrix a)) := by
     exact isClosed_le
@@ -143,7 +143,7 @@ theorem traceNorm_continuous_forTopology :
     exact hsqrtOn.comp_continuous hgram hnonneg
   have htrace : Continuous (fun M : CMatrix a => (CFC.sqrt (star M * M)).trace) :=
     Continuous.matrix_trace hsqrt
-  simpa [traceNorm, psdSqrt] using Complex.continuous_re.comp htrace
+  exact Complex.continuous_re.comp htrace
 
 theorem continuous_psdSqrt_matrix :
     Continuous fun ρ : SubnormalizedState a => psdSqrt ρ.matrix := by
@@ -153,7 +153,7 @@ theorem continuous_psdSqrt_matrix :
   have hnonneg : ∀ ρ : SubnormalizedState a, ρ.matrix ∈ {A : CMatrix a | 0 ≤ A} := by
     intro ρ
     exact Matrix.nonneg_iff_posSemidef.mpr ρ.pos
-  simpa [psdSqrt] using hsqrtOn.comp_continuous continuous_matrix hnonneg
+  exact hsqrtOn.comp_continuous continuous_matrix hnonneg
 
 /-- For fixed left input, generalized fidelity is continuous in the right
 subnormalized state. -/
@@ -173,15 +173,14 @@ theorem continuous_generalizedFidelity_right (ρ : SubnormalizedState a) :
   have hsqrt : Continuous fun σ : SubnormalizedState a =>
       Real.sqrt ((1 - ρ.matrix.trace.re) * (1 - σ.matrix.trace.re)) :=
     Real.continuous_sqrt.comp hslack
-  simpa [generalizedFidelity] using (hnorm.add hsqrt).pow 2
+  exact (hnorm.add hsqrt).pow 2
 
 /-- For fixed left input, purified distance is continuous in the right
 subnormalized state. -/
 theorem continuous_purifiedDistance_right (ρ : SubnormalizedState a) :
     Continuous fun σ : SubnormalizedState a => ρ.purifiedDistance σ := by
   have hfid := continuous_generalizedFidelity_right (a := a) ρ
-  simpa [purifiedDistance] using
-    Real.continuous_sqrt.comp (continuous_const.sub hfid)
+  exact Real.continuous_sqrt.comp (continuous_const.sub hfid)
 
 /-- A closed purified-distance ball in the subnormalized-state topology. -/
 theorem purifiedBall_isClosed (ρ : SubnormalizedState a) (ε : ℝ) :
@@ -228,7 +227,7 @@ theorem psdTraceBoundedMatrixSet_isClosed (R : ℝ) :
     IsClosed (psdTraceBoundedMatrixSet b R) := by
   classical
   have hpsd : IsClosed ({T : CMatrix b | T.PosSemidef} : Set (CMatrix b)) := by
-    simpa using (psdCone b).isClosed
+    exact (psdCone b).isClosed
   have htrace :
       IsClosed ({T : CMatrix b | T.trace.re ≤ R} : Set (CMatrix b)) := by
     exact isClosed_le

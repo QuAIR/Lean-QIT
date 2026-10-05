@@ -71,9 +71,9 @@ theorem hsw_blockChannelAchievable_transport [Nonempty a]
     have hL_le_t : L ≤ t := (Nat.le_succ L).trans hL1_le_t
     have ht_ge_T0 : t ≥ T0 := (Nat.le_max_left T0 1).trans hL_le_t
     obtain ⟨M, hMfin, hMdec, hMnonempty, C, hrateC, herrC⟩ := hT0 t ht_ge_T0
-    letI : Fintype M := hMfin
-    letI : DecidableEq M := hMdec
-    letI : Nonempty M := hMnonempty
+    let : Fintype M := hMfin
+    let : DecidableEq M := hMdec
+    let : Nonempty M := hMnonempty
     let tail : State (QIT.TensorPower a r) := tensorPowerBasisState a r
     let Cpad : HSWClassicalCode N (t * k + r) M := C.flattenBlock.padRight tail
     have hlen : t * k + r = ℓ := by
@@ -107,9 +107,9 @@ theorem hsw_blockChannelAchievable_transport [Nonempty a]
     have hL_le_t : L ≤ t := (Nat.le_succ L).trans hL1_le_t
     have ht_ge_T0 : t ≥ T0 := (Nat.le_max_left T0 (Nat.ceil X)).trans hL_le_t
     obtain ⟨M, hMfin, hMdec, hMnonempty, C, hrateC, herrC⟩ := hT0 t ht_ge_T0
-    letI : Fintype M := hMfin
-    letI : DecidableEq M := hMdec
-    letI : Nonempty M := hMnonempty
+    let : Fintype M := hMfin
+    let : DecidableEq M := hMdec
+    let : Nonempty M := hMnonempty
     let tail : State (QIT.TensorPower a r) := tensorPowerBasisState a r
     let Cpad : HSWClassicalCode N (t * k + r) M := C.flattenBlock.padRight tail
     let A : ℝ := S / (k : ℝ) - δ / 4
@@ -245,8 +245,8 @@ theorem hsw_regularized_direct_of_blockSpectralPackingHypotheses
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact (N.tensorPower k).hsw_directWitnessAssembly_from_spectralPackingHypotheses E₀
     (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -290,8 +290,8 @@ theorem hsw_regularized_direct_of_blockSpectralPackingEstimates
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact (N.tensorPower k).hsw_directWitnessAssembly_from_spectralPackingEstimates E₀
     (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -384,8 +384,8 @@ theorem hsw_regularized_direct_of_blockDiagonalPackingEstimates
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact (N.tensorPower k).hsw_directWitnessAssembly_from_diagonalPackingEstimates E₀
     (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -474,8 +474,8 @@ theorem hsw_regularized_direct_of_blockPrunedDiagonalPackingEstimates
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact (N.tensorPower k).hsw_directWitnessAssembly_from_prunedDiagonalPackingEstimates E₀
     (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -561,8 +561,8 @@ theorem hsw_regularized_direct_of_blockPrunedDiagonalProjectorEstimates
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact (N.tensorPower k).hsw_directWitnessAssembly_from_prunedDiagonalProjectorEstimates E₀
     (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -643,8 +643,8 @@ theorem hsw_regularized_direct_of_blockPrunedDiagonalProjectorEntropyEstimates
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact (N.tensorPower k).hsw_directWitnessAssembly_from_prunedDiagonalProjectorEntropyEstimates
     E₀ (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -723,8 +723,8 @@ theorem hsw_regularized_direct_of_blockPrunedDiagonalProjectorEntropyDimensionEs
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact (N.tensorPower k).hsw_directWitnessAssembly_from_prunedDiagonalProjectorEntropyDimensionEstimates
     E₀ (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -798,8 +798,8 @@ theorem hsw_regularized_direct_of_blockPrunedDiagonalProjectorTypicalityScaleEst
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact (N.tensorPower k).hsw_directWitnessAssembly_from_prunedDiagonalProjectorTypicalityScaleEstimates
     E₀ (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -888,8 +888,8 @@ theorem hsw_regularized_direct_of_blockStrongTypicalCodebookProjectorTypicalityS
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact Channel.hsw_directWitnessAssembly_from_strongTypicalCodebookProjectorTypicalityScaleEstimates
     (N.tensorPower k) E₀ (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -976,8 +976,8 @@ theorem hsw_regularized_direct_of_blockCanonicalStrongTypicalCodebookProjectorTy
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact Channel.hsw_directWitnessAssembly_from_canonicalStrongTypicalCodebookProjectorTypicalityScaleEstimates
     (N.tensorPower k) E₀ (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -1049,8 +1049,8 @@ theorem hsw_regularized_direct_of_blockCanonicalStrongTypicalCodebookProjectorTy
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact Channel.hsw_directWitnessAssembly_from_canonicalStrongTypicalCodebookProjectorTypicalityScaleBounds
     (N.tensorPower k) E₀ (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -1124,8 +1124,8 @@ theorem hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSpectra
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact Channel.hsw_directWitnessAssembly_from_canonicalStrongTypicalActualOutputSpectralEstimates
     (N.tensorPower k) E₀ (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -1189,8 +1189,8 @@ theorem hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceP
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact Channel.hsw_directWitnessAssembly_from_canonicalStrongTypicalActualOutputSourceProjectorBounds
     (N.tensorPower k) E₀ (hblock k hk ι inferInstance inferInstance E₀)
 
@@ -1254,8 +1254,8 @@ theorem hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceP
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact
     Channel.hsw_directWitnessAssembly_from_canonicalStrongTypicalActualOutputSourceProjectorComponentBounds
       (N.tensorPower k) E₀ (hblock k hk ι inferInstance inferInstance E₀)
@@ -1315,8 +1315,8 @@ theorem hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceP
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact
     Channel.hsw_directWitnessAssembly_from_canonicalStrongTypicalActualOutputSourceProjectorFiniteMassBounds
       (N.tensorPower k) E₀ (hblock k hk ι inferInstance inferInstance E₀)
@@ -1384,8 +1384,8 @@ theorem hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceP
       (Channel.IsAchievableClassicalRate.{u, v, uMessage} N) R := by
   refine N.hsw_regularized_direct_of_blockChannelEnsembleWitnesses_transport ?_
   intro k hk ι hιF hιD E₀
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact
     Channel.hsw_directWitnessAssembly_from_canonicalStrongTypicalActualOutputSourceProjectorFiniteMassCardBound
       (N.tensorPower k) E₀ (hblock k hk ι inferInstance inferInstance E₀)
@@ -1447,16 +1447,16 @@ theorem hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceP
     N.hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceProjectorFiniteMassCardBound
       ?_
   intro k hk ι hιF hιD E₀ δ hδ ε hε
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   obtain ⟨N0, hN0⟩ := hblock k hk ι inferInstance inferInstance E₀ δ hδ ε hε
   refine ⟨N0, ?_⟩
   intro n hnN0
   obtain ⟨hn_pos, hn_small, hM⟩ := hN0 n hnN0
   refine ⟨hn_pos, hn_small, ?_⟩
   intro M hMF hMD hMne hrate hcard
-  letI : Fintype M := hMF
-  letI : DecidableEq M := hMD
+  let : Fintype M := hMF
+  let : DecidableEq M := hMD
   obtain ⟨δx, δc, packingε, pruneε, hδx, hδc, hpack_nonneg, hprune_lt,
       hprune_mass, hcardMoment, hmoment, hself, hcross⟩ :=
     hM M inferInstance inferInstance hMne hrate hcard
@@ -1518,16 +1518,16 @@ theorem hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceP
     N.hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceProjectorFiniteMassCardMomentEnvelope
       ?_
   intro k hk ι hιF hιD E₀ δ hδ ε hε
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   obtain ⟨N0, hN0⟩ := hblock k hk ι inferInstance inferInstance E₀ δ hδ ε hε
   refine ⟨N0, ?_⟩
   intro n hnN0
   obtain ⟨hn_pos, hn_small, hM⟩ := hN0 n hnN0
   refine ⟨hn_pos, hn_small, ?_⟩
   intro M hMF hMD hMne hrate hcard
-  letI : Fintype M := hMF
-  letI : DecidableEq M := hMD
+  let : Fintype M := hMF
+  let : DecidableEq M := hMD
   obtain ⟨δx, δc, hδx, hδc, hprune_mass, hcardMoment, hmoment, hcross⟩ :=
     hM M inferInstance inferInstance hMne hrate hcard
   refine ⟨δx, δc, hswSelfPackingEpsilon ε, (1 / 2 : ℝ), hδx, hδc,
@@ -1578,8 +1578,8 @@ theorem hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceP
     N.hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceProjectorFiniteMassCardMomentEnvelopeFixedSelfError
       ?_
   intro k hk ι hιF hιD E₀ δ hδ ε hε
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   obtain ⟨δx, δc, hδx, hδc, Ncross, hcross⟩ :=
     hblock k hk ι inferInstance inferInstance E₀ δ hδ ε hε
   obtain ⟨Nsmall, hNsmall⟩ :=
@@ -1625,8 +1625,8 @@ theorem hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceP
     simpa using h
   refine ⟨hn_pos, hsmall, ?_⟩
   intro M hMF hMD hMne hrate hcard
-  letI : Fintype M := hMF
-  letI : DecidableEq M := hMD
+  let : Fintype M := hMF
+  let : DecidableEq M := hMD
   have hprune : (Fintype.card ι : ℝ) / ((n : ℝ) * δx ^ 2) ≤ (1 / 2 : ℝ) :=
     hNprune n hn_prune_ge
   have hcardMoment :
@@ -1675,8 +1675,8 @@ theorem hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceP
     N.hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceProjectorFixedSlackCrossEstimate
       ?_
   intro k hk ι hιF hιD E₀ δ hδ ε hε
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   obtain ⟨δx, δc, hδx, hδc, hcrossExp⟩ :=
     hblock k hk ι inferInstance inferInstance E₀ δ hδ
   obtain ⟨Ncross, hNcross⟩ :=
@@ -1702,8 +1702,8 @@ theorem hsw_regularizedHolevoInformation_direct
     N.hsw_regularized_direct_of_blockCanonicalStrongTypicalActualOutputSourceProjectorCrossExponentBound
       ?_
   intro k hk ι hιF hιD E₀ δ hδ
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   simpa [Channel.hswHolevoRate] using
     exists_hsw_crossExponentBound_slacks
       (E := ((N.tensorPower k).outputEnsemble E₀)) hδ

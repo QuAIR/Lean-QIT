@@ -147,10 +147,6 @@ theorem matrixDominatedBy_symmetricProjectionReferenceState_of_supported
       (symmetricProjectionReferenceState (a := a) n) := by
   dsimp [MatrixDominatedBy, SupportedOnSymmetricSubspace] at hρ ⊢
   convert hρ using 1
-  change (Fintype.card (TensorPowerProfile a n) : ℂ) •
-      ((Fintype.card (TensorPowerProfile a n) : ℝ)⁻¹ •
-        symmetricProjectionMatrix (a := a) n) =
-    symmetricProjectionMatrix (a := a) n
   ext x y
   simp [Matrix.smul_apply, smul_eq_mul, TensorPowerProfile.card_ne_zero (a := a) n]
 

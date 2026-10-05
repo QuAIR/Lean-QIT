@@ -125,13 +125,14 @@ theorem fullRankDensityMatrixSet_sion_abcSidePowerTraceRe_EReal_boundary
         exact ContinuousOn.lowerSemicontinuousOn
           (continuous_neg.comp_continuousOn hcontE))
       (fun sigma hSigma => by
-        simpa [Function.comp_def] using
-          (Convex.quasiconcaveOn_restrict
-            (abcSidePowerTraceRe_quasiconcaveOn_tau
-              (a := a) hR hSigma.1.posSemidef hp0 hp1)
-            (fun tau hTau => hTau.1)
-            (densityMatrixSet_convex (a := c))).antitone_comp
-              antitone_ereal_neg_coe_boundary)
+        exact QuasiconcaveOn.antitone_comp
+              (g := fun x : Real => -((x : EReal)))
+              antitone_ereal_neg_coe_boundary
+              (Convex.quasiconcaveOn_restrict
+                (abcSidePowerTraceRe_quasiconcaveOn_tau
+                  (a := a) hR hSigma.1.posSemidef hp0 hp1)
+                (fun tau hTau => hTau.1)
+                (densityMatrixSet_convex (a := c))))
       (fullRankDensityMatrixSet_convex (a := b))
       (fun tau hTau => by
         have hcontReal : ContinuousOn
@@ -147,13 +148,14 @@ theorem fullRankDensityMatrixSet_sion_abcSidePowerTraceRe_EReal_boundary
         exact ContinuousOn.upperSemicontinuousOn
           (continuous_neg.comp_continuousOn hcontE))
       (fun tau hTau => by
-        simpa [Function.comp_def] using
-          (Convex.quasiconvexOn_restrict
-            (abcSidePowerTraceRe_quasiconvexOn_sigma_posDef
-              (a := a) hR hTau.1 hp0 hp1)
-            (fun sigma hSigma => hSigma.1)
-            (fullRankDensityMatrixSet_convex (a := b))).antitone_comp
-              antitone_ereal_neg_coe_boundary)
+        exact QuasiconvexOn.antitone_comp
+              (g := fun x : Real => -((x : EReal)))
+              antitone_ereal_neg_coe_boundary
+              (Convex.quasiconvexOn_restrict
+                (abcSidePowerTraceRe_quasiconvexOn_sigma_posDef
+                  (a := a) hR hTau.1 hp0 hp1)
+                (fun sigma hSigma => hSigma.1)
+                (fullRankDensityMatrixSet_convex (a := b))))
   have hnegSub :
       (⨅ tau : {tau : CMatrix c // densityMatrixSet c tau},
         ⨆ sigma : {sigma : CMatrix b // fullRankDensityMatrixSet b sigma},
@@ -161,9 +163,9 @@ theorem fullRankDensityMatrixSet_sion_abcSidePowerTraceRe_EReal_boundary
         ⨆ sigma : {sigma : CMatrix b // fullRankDensityMatrixSet b sigma},
           ⨅ tau : {tau : CMatrix c // densityMatrixSet c tau},
             -F sigma tau := by
-    simpa [F, iInf_subtype', iSup_subtype'] using hnegMem
+    simpa [F, iInf_subtype, iSup_subtype] using hnegMem
   have hsub := ereal_sion_from_neg_boundary F hnegSub
-  simpa [F, iInf_subtype', iSup_subtype'] using hsub
+  simpa [F, iInf_subtype, iSup_subtype] using hsub
 
 /-- Normalized identity regularization of a density state.
 
@@ -683,7 +685,7 @@ theorem abcSidePowerTraceRe_densityIdentityRegularization_tendsto
     have hs := State.densityIdentityRegularization_scale_tendsto sigma
     have hcont : ContinuousAt (fun x : Real => x ^ (-p)) (1 : Real) :=
       Real.continuousAt_rpow_const 1 (-p) (Or.inl one_ne_zero)
-    simpa using hcont.tendsto.comp hs
+    simpa [Function.comp_def] using hcont.tendsto.comp hs
   have hprod :
       Filter.Tendsto
         (fun epsilon : Real =>

@@ -62,14 +62,14 @@ term). -/
 private theorem sum_if_eq_right {α : Type u} [Fintype α] [DecidableEq α]
     (anchor : α) (c : ℂ) :
     ∑ x : α, (if x = anchor then c else 0) = c := by
-  simp only [Finset.sum_ite_eq', if_pos (Finset.mem_univ _)]
+  simp only [Finset.sum_ite_eq', ite_eq_left (Finset.mem_univ _)]
 
 /-- Sum over `x` of `if anchor = x then c else 0` is `c` (the single matching
 term). -/
 private theorem sum_if_eq_left {α : Type u} [Fintype α] [DecidableEq α]
     (anchor : α) (c : ℂ) :
     ∑ x : α, (if anchor = x then c else 0) = c := by
-  simp only [Finset.sum_ite_eq, if_pos (Finset.mem_univ _)]
+  simp only [Finset.sum_ite_eq, ite_eq_left (Finset.mem_univ _)]
 
 /-- The maximally-correlated (randomness-distribution) state on a message pair
 `M × M'`: `Φ̄ = (1/|M|) Σ_m |m,m⟩⟨m,m|`, the diagonal density matrix that is
@@ -122,18 +122,18 @@ theorem maximallyCorrelated_marginalA_matrix (M : Type u) [Fintype M]
       have hentry : ∀ j : M,
           (Matrix.diagonal fun (ij : Prod M M) => if ij.1 = ij.2 then c else 0) (i, j) (i, j) =
             (if i = j then c else 0) := fun j => by
-        rw [Matrix.diagonal_apply, if_pos rfl]
-      rw [Finset.sum_congr rfl (fun j _ => hentry j), sum_if_eq_left, if_pos rfl]
+        rw [Matrix.diagonal_apply, ite_eq_left rfl]
+      rw [Finset.sum_congr rfl (fun j _ => hentry j), sum_if_eq_left, ite_eq_left rfl]
     · have h0 : ∀ j : M,
           (Matrix.diagonal fun (ij : Prod M M) => if ij.1 = ij.2 then c else 0) (i, j) (i', j)
             = 0 := by
         intro j
         rw [Matrix.diagonal_apply]
         by_cases heq : (i, j) = (i', j)
-        · rw [if_pos heq]
+        · rw [ite_eq_left heq]
           exact (h (congrArg Prod.fst heq)).elim
-        · rw [if_neg heq]
-      rw [Finset.sum_congr rfl (fun j _ => h0 j), Finset.sum_const_zero, if_neg h]
+        · rw [ite_eq_right heq]
+      rw [Finset.sum_congr rfl (fun j _ => h0 j), Finset.sum_const_zero, ite_eq_right h]
   rw [hmarg, hsum, Matrix.diagonal_apply]
 
 theorem maximallyCorrelated_marginalB_matrix (M : Type u) [Fintype M]
@@ -154,18 +154,18 @@ theorem maximallyCorrelated_marginalB_matrix (M : Type u) [Fintype M]
       have hentry : ∀ i : M,
           (Matrix.diagonal fun (ij : Prod M M) => if ij.1 = ij.2 then c else 0) (i, j) (i, j) =
             (if i = j then c else 0) := fun i => by
-        rw [Matrix.diagonal_apply, if_pos rfl]
-      rw [Finset.sum_congr rfl (fun i _ => hentry i), sum_if_eq_right, if_pos rfl]
+        rw [Matrix.diagonal_apply, ite_eq_left rfl]
+      rw [Finset.sum_congr rfl (fun i _ => hentry i), sum_if_eq_right, ite_eq_left rfl]
     · have h0 : ∀ i : M,
           (Matrix.diagonal fun (ij : Prod M M) => if ij.1 = ij.2 then c else 0) (i, j) (i, j')
             = 0 := by
         intro i
         rw [Matrix.diagonal_apply]
         by_cases heq : (i, j) = (i, j')
-        · rw [if_pos heq]
+        · rw [ite_eq_left heq]
           exact (h (congrArg Prod.snd heq)).elim
-        · rw [if_neg heq]
-      rw [Finset.sum_congr rfl (fun i _ => h0 i), Finset.sum_const_zero, if_neg h]
+        · rw [ite_eq_right heq]
+      rw [Finset.sum_congr rfl (fun i _ => h0 i), Finset.sum_const_zero, ite_eq_right h]
   rw [hmarg, hsum, Matrix.diagonal_apply]
 
 /-- The first marginal of the classically correlated shared-randomness state is
@@ -211,7 +211,7 @@ private lemma xlog2_mul_log2_self {x : ℝ} (hx : 0 ≤ x) :
   by_cases hzx : x = 0
   · simp [xlog2, hzx, Real.log_zero]
   · have hxp : 0 < x := lt_of_le_of_ne hx (Ne.symm hzx)
-    simp only [xlog2, if_neg hzx, log2]
+    simp only [xlog2, ite_eq_right hzx, log2]
     field_simp
 
 /-- Product rule for `xlog2` on nonnegative real inputs. -/
@@ -222,7 +222,7 @@ private lemma xlog2_mul_of_nonneg {x y : ℝ} (_hx : 0 ≤ x) (_hy : 0 ≤ y) :
   by_cases hy0 : y = 0
   · simp [hy0, xlog2]
   have hxy0 : x * y ≠ 0 := mul_ne_zero hx0 hy0
-  simp only [xlog2, if_neg hx0, if_neg hy0, if_neg hxy0, log2]
+  simp only [xlog2, ite_eq_right hx0, ite_eq_right hy0, ite_eq_right hxy0, log2]
   rw [Real.log_mul hx0 hy0]
   ring
 
@@ -629,7 +629,7 @@ private lemma sum_xlog2_diag_prod (M : Type u) [Fintype M] [DecidableEq M] [None
       ∑ j : M, (if i = j then xlog2 ((Fintype.card M : ℝ)⁻¹) else 0) =
         xlog2 ((Fintype.card M : ℝ)⁻¹) := by
     intro i
-    simp only [Finset.sum_ite_eq, if_pos (Finset.mem_univ _)]
+    simp only [Finset.sum_ite_eq, ite_eq_left (Finset.mem_univ _)]
   simp only [hinner, sum_xlog2_inv_card]
 
 /-- Mutual information of the maximally-correlated state `Φ̄` equals the rate:
@@ -657,9 +657,9 @@ theorem mutualInformation_maximallyCorrelated_statement
         (by ext (a b : Prod M M)
             by_cases hab : a = b
             · subst hab
-              simp only [maximallyCorrelated_matrix, Matrix.diagonal_apply, if_true]
+              simp only [maximallyCorrelated_matrix, Matrix.diagonal_apply, ite_true]
               by_cases hdiag : a.1 = a.2 <;> simp [hdiag]
-            · simp only [hab, maximallyCorrelated_matrix, Matrix.diagonal_apply, if_false]),
+            · simp only [hab, maximallyCorrelated_matrix, Matrix.diagonal_apply, ite_false]),
         sum_xlog2_diag_prod]
     ring
   show State.vonNeumann (maximallyCorrelated M).marginalA +

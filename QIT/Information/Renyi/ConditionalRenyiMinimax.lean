@@ -422,8 +422,7 @@ private theorem trace_kronecker_right_continuous
       Continuous fun T : CMatrix c => Matrix.kronecker K T := by
     unfold Matrix.kronecker
     exact _root_.continuous_matrix fun x y => by
-      simpa [Matrix.kroneckerMap_apply] using
-        continuous_const.mul (continuous_id.matrix_elem x.2 y.2)
+      exact continuous_const.mul (continuous_id.matrix_elem x.2 y.2)
   exact Complex.continuous_re.comp
     (Continuous.matrix_trace (hkr.matrix_mul continuous_const))
 
@@ -436,14 +435,12 @@ private theorem trace_kronecker_middle_continuous
       Continuous fun T : CMatrix b => Matrix.kronecker (1 : CMatrix a) T := by
     unfold Matrix.kronecker
     exact _root_.continuous_matrix fun x y => by
-      simpa [Matrix.kroneckerMap_apply] using
-        continuous_const.mul (continuous_id.matrix_elem x.2 y.2)
+      exact continuous_const.mul (continuous_id.matrix_elem x.2 y.2)
   have hkr :
       Continuous fun T : CMatrix b => Matrix.kronecker (Matrix.kronecker (1 : CMatrix a) T) K := by
     unfold Matrix.kronecker
     exact _root_.continuous_matrix fun x y => by
-      simpa [Matrix.kroneckerMap_apply] using
-        ((hinner.matrix_elem x.1 y.1).mul continuous_const)
+      exact (hinner.matrix_elem x.1 y.1).mul continuous_const
   exact Complex.continuous_re.comp
     (Continuous.matrix_trace (hkr.matrix_mul continuous_const))
 
@@ -733,8 +730,8 @@ theorem cMatrix_rpow_continuousOn_posSemidef_of_pos
   change ContinuousOn (fun M : CMatrix a => M ^ (q : ℝ))
     ({M : CMatrix a | M.PosSemidef} : Set (CMatrix a))
   rw [hset]
-  simpa only [← CFC.nnrpow_eq_rpow hqpos] using
-    (CFC.continuousOn_nnrpow (A := CMatrix a) q)
+  simp only [← CFC.nnrpow_eq_rpow hqpos]
+  exact CFC.continuousOn_nnrpow (A := CMatrix a) q
 
 /-- Trace-pairing form of positive-power continuity on the PSD cone. -/
 theorem cMatrix_trace_mul_rpow_continuousOn_posSemidef_of_pos

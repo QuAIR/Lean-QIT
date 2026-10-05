@@ -94,8 +94,10 @@ private theorem sum_rankOne_localPostAmplitude_eq_kron_ofKraus
   simp only [MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk,
     Matrix.sum_apply, rankOneMatrix_apply]
   refine Finset.sum_congr rfl fun k _ => ?_
-  simp [Matrix.mul_apply, Matrix.conjTranspose_apply, Finset.sum_mul,
-    Finset.mul_sum, mul_assoc, mul_left_comm, mul_comm]
+  show (∑ a : A, K k x.1 a * v (a, x.2)) * star (∑ a : A, K k y.1 a * v (a, y.2)) =
+    ∑ p : A, (∑ q : A, K k x.1 q * (v (q, x.2) * star (v (p, y.2)))) * star (K k y.1 p)
+  simp only [star_sum, Finset.mul_sum, star_mul,
+    mul_assoc, mul_left_comm, mul_comm]
 
 private theorem sum_rankOne_rightPostAmplitude_eq_kron_ofKraus
     {κ : Type y} [Fintype κ] [DecidableEq R]
@@ -111,8 +113,10 @@ private theorem sum_rankOne_rightPostAmplitude_eq_kron_ofKraus
   simp only [MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk,
     Matrix.sum_apply, rankOneMatrix_apply]
   refine Finset.sum_congr rfl fun k _ => ?_
-  simp [Matrix.mul_apply, Matrix.conjTranspose_apply, Finset.sum_mul,
-    Finset.mul_sum, mul_assoc, mul_left_comm, mul_comm]
+  show (∑ r : R, K k x.2 r * v (x.1, r)) * star (∑ r : R, K k z.2 r * v (z.1, r)) =
+    ∑ p : R, (∑ q : R, K k x.2 q * (v (x.1, q) * star (v (z.1, p)))) * star (K k z.2 p)
+  simp only [star_sum, Finset.mul_sum, star_mul,
+    mul_assoc, mul_left_comm, mul_comm]
 
 /-- The product of two finite Kraus refinements expands a bipartite pure
 input into the corresponding sum of unnormalized rank-one branches. -/
@@ -192,9 +196,12 @@ theorem sum_rankOne_postAmplitude_eq_totalAction
     (∑ i : M.refinedBranchIndex, rankOneMatrix (M.postAmplitude ψ i)) =
       MatrixMap.kron M.total.map (Channel.idChannel B).map ψ.state.matrix := by
   rw [← M.ofKraus_refinedKraus_eq_total]
-  simpa [postAmplitude, PureVector.state_matrix] using
-    (sum_rankOne_localPostAmplitude_eq_kron_ofKraus
-      (B := B) M.refinedKraus ψ.amp)
+  show (∑ i : M.refinedBranchIndex,
+      rankOneMatrix (fun x => ∑ a : A, M.refinedKraus i x.1 a * ψ.amp (a, x.2))) =
+    ((MatrixMap.ofKraus M.refinedKraus).kron
+      (Channel.idChannel B).map) (rankOneMatrix ψ.amp)
+  exact sum_rankOne_localPostAmplitude_eq_kron_ofKraus
+    (B := B) M.refinedKraus ψ.amp
 
 /-- Refined branch weights form a probability distribution. -/
 theorem sum_branchWeight_eq_one

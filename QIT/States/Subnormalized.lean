@@ -288,7 +288,8 @@ private theorem punit_psdSqrt_const (r : ℝ) (hr : 0 ≤ r) :
     ext i j
     cases i
     cases j
-    simp [S, A, Matrix.mul_apply, hsqrt_sq]
+    show ∑ k : PUnit, S PUnit.unit k * S k PUnit.unit = A PUnit.unit PUnit.unit
+    simp [S, A, hsqrt_sq]
   have hSpos : S.PosSemidef := by
     have hdiag : S = Matrix.diagonal (fun _ : PUnit => ((Real.sqrt r : ℝ) : ℂ)) := by
       ext i j
@@ -308,7 +309,9 @@ private theorem traceNorm_punit_const_of_nonneg (r : ℝ) (hr : 0 ≤ r) :
     ext i j
     cases i
     cases j
-    simp [A, Matrix.mul_apply, ← Complex.ofReal_mul]
+    show ∑ k : PUnit, star (A k PUnit.unit) * A PUnit.unit k =
+      ((r * r : ℝ) : ℂ)
+    simp [A, ← Complex.ofReal_mul]
   have hsqrt : psdSqrt (Aᴴ * A) = A := by
     rw [hgram]
     rw [punit_psdSqrt_const (r * r) (mul_self_nonneg r)]
@@ -316,9 +319,9 @@ private theorem traceNorm_punit_const_of_nonneg (r : ℝ) (hr : 0 ≤ r) :
     cases i
     cases j
     simp [A, Real.sqrt_mul_self hr]
-  rw [traceNorm]
+  show ((∑ i : PUnit, (psdSqrt (Aᴴ * A)) i i)).re = r
   rw [hsqrt]
-  simp [A, Matrix.trace]
+  simp [A]
 
 /-- The generalized fidelity of subnormalized states is the squared fidelity of
 their normalized hat extensions.  This is Tomamichel's
@@ -339,7 +342,7 @@ theorem generalizedFidelity_eq_squaredFidelity_hatExtension
     rw [Matrix.fromBlocks_diagonal_psdSqrt ρ.hatFailureBlock_pos ρ.pos]
     rw [show psdSqrt ρ.hatFailureBlock =
         (fun _ _ : PUnit => ((Real.sqrt ρ.hatFailureMass : ℝ) : ℂ)) by
-      simpa [hatFailureBlock] using punit_psdSqrt_const ρ.hatFailureMass hρfail]
+      exact punit_psdSqrt_const ρ.hatFailureMass hρfail]
   have hσsqrt :
       σ.hatExtension.sqrtMatrix =
         Matrix.fromBlocks
@@ -349,7 +352,7 @@ theorem generalizedFidelity_eq_squaredFidelity_hatExtension
     rw [Matrix.fromBlocks_diagonal_psdSqrt σ.hatFailureBlock_pos σ.pos]
     rw [show psdSqrt σ.hatFailureBlock =
         (fun _ _ : PUnit => ((Real.sqrt σ.hatFailureMass : ℝ) : ℂ)) by
-      simpa [hatFailureBlock] using punit_psdSqrt_const σ.hatFailureMass hσfail]
+      exact punit_psdSqrt_const σ.hatFailureMass hσfail]
   rw [hρsqrt, hσsqrt]
   have hprod :
       (Matrix.fromBlocks
@@ -364,25 +367,48 @@ theorem generalizedFidelity_eq_squaredFidelity_hatExtension
             (fun _ _ : PUnit => ((Real.sqrt σ.hatFailureMass : ℝ) : ℂ)) :
             CMatrix PUnit)
           0 0 (psdSqrt ρ.matrix * psdSqrt σ.matrix) := by
-    rw [Matrix.fromBlocks_multiply]
-    ext x y
-    cases x with
-    | inl xi =>
-        cases y with
-        | inl yj =>
-            cases xi
-            cases yj
-            simp [Matrix.mul_apply]
-        | inr yj =>
-            simp
-    | inr xi =>
-        cases y with
-        | inl yj =>
-            simp
-        | inr yj =>
-            simp [Matrix.mul_apply]
+    rw [Matrix.fromBlocks_multiply
+      (fun _ _ : PUnit => ((Real.sqrt ρ.hatFailureMass : ℝ) : ℂ))
+      0 0 (psdSqrt ρ.matrix)
+      (fun _ _ : PUnit => ((Real.sqrt σ.hatFailureMass : ℝ) : ℂ))
+      0 0 (psdSqrt σ.matrix)]
+    congr 1
+    · ext i j
+      simp
+      have hAA : ∀ (c d : ℂ) (i j : PUnit),
+          ((let M : Matrix PUnit PUnit ℂ := fun _ _ => c
+            let N : Matrix PUnit PUnit ℂ := fun _ _ => d
+            M * N) i j) = c * d := by
+        intro c d i j
+        show (∑ _k : PUnit, c * d) = c * d
+        simp
+      exact hAA _ _ i j
+    · ext i j
+      simp
+      have hB : ∀ (c : ℂ) (i : PUnit) (j : a),
+          ((let M : Matrix PUnit PUnit ℂ := fun _ _ => c
+            let Z : Matrix PUnit a ℂ := 0
+            M * Z) i j) = 0 := by
+        intro c i j
+        show (∑ _k : PUnit, c * 0) = 0
+        simp
+      exact hB _ _ _
+    · ext i j
+      simp
+      have hC : ∀ (d : ℂ) (i : a) (j : PUnit),
+          ((let Z : Matrix a PUnit ℂ := 0
+            let N : Matrix PUnit PUnit ℂ := fun _ _ => d
+            Z * N) i j) = 0 := by
+        intro d i j
+        show (∑ _k : PUnit, 0 * d) = 0
+        simp
+      exact hC _ _ _
+    · ext i j; simp
   rw [hprod]
-  rw [Matrix.traceNorm_fromBlocks_diagonal]
+  rw [Matrix.traceNorm_fromBlocks_diagonal
+    ((fun _ _ : PUnit => ((Real.sqrt ρ.hatFailureMass : ℝ) : ℂ)) *
+      (fun _ _ : PUnit => ((Real.sqrt σ.hatFailureMass : ℝ) : ℂ)) : CMatrix PUnit)
+    (psdSqrt ρ.matrix * psdSqrt σ.matrix)]
   have hfail_prod_nonneg :
       0 ≤ Real.sqrt ρ.hatFailureMass * Real.sqrt σ.hatFailureMass :=
     mul_nonneg (Real.sqrt_nonneg _) (Real.sqrt_nonneg _)
@@ -507,14 +533,22 @@ theorem hatExtension_applyTraceNonincreasingCP (ρ : SubnormalizedState a)
             Fintype.sum_sum_type, hloss_kraus]
           rfl
       | inr yj =>
-          simp [applyTraceNonincreasingCP_matrix, MatrixMap.TraceNonincreasingCP.hatCompletion,
+          show (0 : ℂ) =
+            (MatrixMap.TraceNonincreasingCP.hatCompletion hΦ).map
+              (Matrix.fromBlocks ρ.hatFailureBlock 0 0 ρ.matrix : CMatrix (Sum PUnit a))
+              (Sum.inl xi) (Sum.inr yj)
+          simp [MatrixMap.TraceNonincreasingCP.hatCompletion,
             MatrixMap.ofKraus, MatrixMap.TraceNonincreasingCP.hatCompletionKraus,
             Matrix.sum_apply, Matrix.mul_apply, Matrix.conjTranspose_apply,
             Fintype.sum_sum_type]
   | inr xi =>
       cases y with
       | inl yj =>
-          simp [applyTraceNonincreasingCP_matrix, MatrixMap.TraceNonincreasingCP.hatCompletion,
+          show (0 : ℂ) =
+            (MatrixMap.TraceNonincreasingCP.hatCompletion hΦ).map
+              (Matrix.fromBlocks ρ.hatFailureBlock 0 0 ρ.matrix : CMatrix (Sum PUnit a))
+              (Sum.inr xi) (Sum.inl yj)
+          simp [MatrixMap.TraceNonincreasingCP.hatCompletion,
             MatrixMap.ofKraus, MatrixMap.TraceNonincreasingCP.hatCompletionKraus,
             Matrix.sum_apply, Matrix.mul_apply, Matrix.conjTranspose_apply,
             Fintype.sum_sum_type]
@@ -584,7 +618,7 @@ theorem dropHatExtension_eq (ρ : SubnormalizedState a) :
     ρ.dropHatExtension = ρ := by
   apply SubnormalizedState.ext
   ext i j
-  simp [dropHatExtension, State.toSubnormalized, MatrixMap.sumInrCompression,
+  simp [dropHatExtension, State.toSubnormalized, MatrixMap.sumInrCompression_apply,
     SubnormalizedState.applyTraceNonincreasingCP]
 
 end SubnormalizedState

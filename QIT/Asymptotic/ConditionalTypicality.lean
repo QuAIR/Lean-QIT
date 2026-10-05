@@ -125,7 +125,9 @@ theorem eigenvalueMultiset_productState :
         have hSum : ∑ i : TensorPower a 0, (hUnit.eigenvalues i : ℂ) = 1 := by
           rw [← hTraceEq, hTraceOne]
         have hSum' : ((hUnit.eigenvalues PUnit.unit : ℝ) : ℂ) = 1 := by
-          simpa [TensorPower] using hSum
+          rw [← hSum, show (∑ i : TensorPower a 0, (hUnit.eigenvalues i : ℂ)) =
+              ∑ i : PUnit, (hUnit.eigenvalues i : ℂ) from rfl]
+          simp
         exact Complex.ofReal_injective hSum'
       show eigenvalueMultiset hUnit = ({1} : Multiset ℝ)
       rw [eigenvalueMultiset]
@@ -351,11 +353,13 @@ theorem productState_vonNeumann_eq_sum :
           have hSum : ∑ i : TensorPower a 0, (hUnitH.eigenvalues i : ℂ) = 1 := by
             rw [← hTraceEq, hTraceOne]
           have hSum' : ((hUnitH.eigenvalues PUnit.unit : ℝ) : ℂ) = 1 := by
-            simpa [TensorPower] using hSum
+            rw [← hSum, show (∑ i : TensorPower a 0, (hUnitH.eigenvalues i : ℂ)) =
+                ∑ i : PUnit, (hUnitH.eigenvalues i : ℂ) from rfl]
+            simp
           exact Complex.ofReal_injective hSum'
         rw [State.vonNeumann]
         simp [hEig, xlog2, log2]
-      simpa [productState_zero states] using hunit
+      exact hunit
   | n + 1, states => by
       rw [productState_succ]
       change State.vonNeumann ((states 0).prod (productState fun x => states x.succ)) =
@@ -674,7 +678,7 @@ theorem conditionallyAtypicalSpectralWeight_mul_sq_le_logDeviationSecondMoment
     have h_lhs : (if ¬ conditionallyTypicalEigenvalue states δ μ then μ else 0)
         * ((n : ℝ) * δ) ^ 2 = 0 := by
       have hnn : ¬ (¬ conditionallyTypicalEigenvalue states δ μ) := fun h => h htyp
-      rw [if_neg hnn, zero_mul]
+      rw [ite_eq_right hnn, zero_mul]
     rw [h_lhs]
     exact h_rhs_nonneg
   · by_cases hμ_pos : 0 < μ
@@ -692,14 +696,14 @@ theorem conditionallyAtypicalSpectralWeight_mul_sq_le_logDeviationSecondMoment
       have hmul := mul_le_mul_of_nonneg_left hsq hμ_nonneg
       have h_lhs : (if ¬ conditionallyTypicalEigenvalue states δ μ then μ else 0)
           * ((n : ℝ) * δ) ^ 2 = μ * ((n : ℝ) * δ) ^ 2 := by
-        rw [if_pos htyp]
+        rw [ite_eq_left htyp]
       rw [h_lhs]
       exact hmul
     · -- μ = 0: both sides 0 (μ * anything = 0)
       have hμ_zero : μ = 0 := le_antisymm (not_lt.mp hμ_pos) hμ_nonneg
       have h_lhs : (if ¬ conditionallyTypicalEigenvalue states δ μ then μ else 0)
           * ((n : ℝ) * δ) ^ 2 = 0 := by
-        rw [if_pos htyp, hμ_zero, zero_mul]
+        rw [ite_eq_left htyp, hμ_zero, zero_mul]
       have h_rhs : μ * d ^ 2 = 0 := by rw [hμ_zero, zero_mul]
       rw [h_lhs, h_rhs]
 
@@ -800,8 +804,8 @@ theorem conditionallyTypicalSubspaceProjector_dim_le {n : ℕ}
         intro i _
         by_cases hi :
           conditionallyTypicalEigenvalue states δ (τ.pos.isHermitian.eigenvalues i)
-        · rw [if_pos hi]; exact hkey i hi
-        · rw [if_neg hi]
+        · rw [ite_eq_left hi]; exact hkey i hi
+        · rw [ite_eq_right hi]
           exact mul_nonneg (τ.pos.eigenvalues_nonneg i) hbase_pos.le
     _ = Real.rpow 2 (S + (n : ℝ) * δ) *
           ∑ i : TensorPower a n, τ.pos.isHermitian.eigenvalues i := by
@@ -1202,12 +1206,12 @@ theorem averageState_typicalProjector_projectedAvgState_le
   -- by `typicalEigenvalue_le_eigenvalueUpperBound`; rejected entries are 0.
   intro i
   by_cases hi : σbar.typicalEigenvalue n δ (hτ.eigenvalues i)
-  · simp only [hi, if_true]
+  · simp only [hi, ite_true]
     -- `eigenvalues_i ≤ c = 2^{-n(S(σ̄) − δ)}`, equivalently `0 ≤ c − eigenvalues_i`.
     have hle := σbar.typicalEigenvalue_le_eigenvalueUpperBound n δ
       (hτ.eigenvalues i) hi
     exact_mod_cast (sub_nonneg.mpr hle)
-  · simp only [hi, if_false]
+  · simp only [hi, ite_false]
     exact le_refl _
 
 end
@@ -1769,6 +1773,8 @@ theorem unitaryTensorPowerMatrix_conj_productState_diag
   | 0, _states, z => by
       cases z
       simp [unitaryTensorPowerMatrix, productState, State.unit]
+      show ((1 : CMatrix PUnit) * (1 : CMatrix PUnit)) PUnit.unit PUnit.unit = 1
+      simp
   | n + 1, states, (z0, zs) => by
       let Un := unitaryTensorPowerMatrix U n
       have hstar :
@@ -1901,6 +1907,9 @@ theorem unitaryTensorPowerMatrix_conj_tensorPower_eq_marginalProductDiagonalStat
       cases y
       simp [unitaryTensorPowerMatrix, State.tensorPower, marginalProductDiagonalState,
         marginalProductMass, State.unit]
+      show ((1 : CMatrix PUnit) * (1 : CMatrix PUnit)) PUnit.unit PUnit.unit =
+        (1 : CMatrix PUnit) PUnit.unit PUnit.unit
+      simp
   | n + 1 => by
       let U := ρ.pos.isHermitian.eigenvectorUnitary
       let Un := unitaryTensorPowerMatrix U n
@@ -1969,6 +1978,13 @@ theorem unitaryTensorPowerMatrix_conj_tensorPower_eq_marginalProductDiagonalStat
         · subst ys
           rw [marginalProductDiagonalState_matrix (stateEigenvalueDistribution ρ) n,
             marginalProductDiagonalState_matrix (stateEigenvalueDistribution ρ) (n + 1)]
+          have hdiag : Matrix.diagonal (fun z : TensorPower a (n + 1) =>
+                ((marginalProductMass (stateEigenvalueDistribution ρ)
+                    ((tensorPowerEquiv (n + 1)) z) : ℝ) : ℂ)) (x0, xs) (x0, xs) =
+              ((marginalProductMass (stateEigenvalueDistribution ρ)
+                  ((tensorPowerEquiv (n + 1)) (x0, xs)) : ℝ) : ℂ) :=
+            Matrix.diagonal_apply_eq _ _
+          rw [hdiag]
           simp [marginalProductMass, Fin.prod_univ_succ]
         · have hpair : (x0, xs) ≠ (x0, ys) := by
             intro h
@@ -1977,9 +1993,11 @@ theorem unitaryTensorPowerMatrix_conj_tensorPower_eq_marginalProductDiagonalStat
             marginalProductDiagonalState_matrix (stateEigenvalueDistribution ρ) (n + 1)]
           by_cases hp : (x0, xs) = (x0, ys)
           · exact False.elim (hpair hp)
-          · simp [Matrix.diagonal_apply, hs]
-            intro h
-            exact False.elim (hp h)
+          · have hdiag : Matrix.diagonal (fun z : TensorPower a (n + 1) =>
+                ((marginalProductMass (stateEigenvalueDistribution ρ)
+                    ((tensorPowerEquiv (n + 1)) z) : ℝ) : ℂ)) (x0, xs) (x0, ys) = 0 :=
+              Matrix.diagonal_apply_ne _ hp
+            rw [Matrix.diagonal_apply_ne _ hs, hdiag, mul_zero]
       · have hpair : (x0, xs) ≠ (y0, ys) := by
           intro h
           exact h0 (Prod.mk.inj h).1
@@ -1987,9 +2005,11 @@ theorem unitaryTensorPowerMatrix_conj_tensorPower_eq_marginalProductDiagonalStat
           marginalProductDiagonalState_matrix (stateEigenvalueDistribution ρ) (n + 1)]
         by_cases hp : (x0, xs) = (y0, ys)
         · exact False.elim (hpair hp)
-        · simp [Matrix.diagonal_apply, h0]
-          intro h
-          exact False.elim (hp h)
+        · have hdiag : Matrix.diagonal (fun z : TensorPower a (n + 1) =>
+              ((marginalProductMass (stateEigenvalueDistribution ρ)
+                  ((tensorPowerEquiv (n + 1)) z) : ℝ) : ℂ)) (x0, xs) (y0, ys) = 0 :=
+            Matrix.diagonal_apply_ne _ hp
+          rw [Matrix.diagonal_apply_ne _ h0, hdiag, zero_mul]
 
 /-- Tensor powers of a one-symbol classical diagonal state are the diagonal
 i.i.d. product states used by the source-shaped HSW strong-typical route. -/
@@ -2198,7 +2218,8 @@ theorem sourceTypicalSubspaceProjector_projectedTensorPower_le_of_mass_bound
         ((D : ℝ)⁻¹) • sourceTypicalSubspaceProjector ρ n δ := by
     dsimp [sourceTypicalSubspaceProjector, U, P]
     rw [Matrix.mul_smul, Matrix.smul_mul]
-  simpa [hleft, hright] using hconj
+  rw [hleft, ← hright]
+  exact hconj
 
 /-- Every finite i.i.d. product mass is bounded by one. -/
 theorem marginalProductMass_le_one {β : Type v} [Fintype β] {n : ℕ}
@@ -2206,7 +2227,7 @@ theorem marginalProductMass_le_one {β : Type v} [Fintype β] {n : ℕ}
     marginalProductMass p zseq ≤ 1 := by
   classical
   unfold marginalProductMass
-  refine Finset.prod_le_one ?_ ?_
+  refine Finset.prod_le_one₀ ?_ ?_
   · intro i _
     positivity
   · intro i _
@@ -2594,7 +2615,7 @@ theorem eigenbasisStochasticKernel_prob_coe_eq_diag
   have hpsd : Y.PosSemidef := by
     simpa [Y, hstar] using (E.states x).pos.mul_mul_conjTranspose_same (star (U : CMatrix β))
   have hreal_fun : (fun i => (((Y i i).re : ℝ) : ℂ)) = fun i => Y i i := by
-    simpa [Matrix.diag] using hpsd.isHermitian.coe_re_diag
+    exact hpsd.isHermitian.coe_re_diag
   change (((ProjectiveMeasurement.eigenbasisDiagonalProb (E.states x) E.averageState z :
       ℝ≥0) : ℝ) : ℂ) = Y z z
   rw [← congrFun hreal_fun z]
@@ -3068,7 +3089,6 @@ the projected-average estimate `h4` are explicit inputs, so no spectral/strong
 projector identification is smuggled in.  In the full HSW direct route these
 inputs are supplied by the conditionally-typical projector estimates and the
 pruned-distribution pack-4 bound. -/
-@[expose]
 noncomputable def hswPackingHypothesesDiagonal_of_pinchedStrongTypical
     {α : Type u} {β : Type v} {𝒳 : Type*}
     [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
@@ -3173,7 +3193,6 @@ instantiate against `E.states x`. The hypothesis `hσbar` identifies the
 instantiates against `E.averageState`. The `h1` argument is the open
 cross-capture hypothesis, passed through unchanged.
 [Wilde2011Qst, qit-notes.tex:33634-33808] -/
-@[expose]
 noncomputable def hswPackingHypothesesSpectral_of_estimates
     {a : Type u} {ι : Type u} {𝒳 : Type*} {n : ℕ}
     [Fintype a] [DecidableEq a] [Fintype ι] [DecidableEq ι]
@@ -3493,7 +3512,13 @@ theorem averageState_eq_tensorPower_of_iid {a ι : Type*} [Fintype a] [Decidable
     rw [← hhead_sum, ← htail_sum]
     -- Push the LHS entry application into the sum, factor via `sum_mul_sum`,
     -- then transport the `(x0,xs)`-product-type sum back to the codeword sum.
-    rw [Matrix.sum_apply]
+    have happ : (∑ x : Fin (n + 1) → ι,
+          (∏ i, probs (x i)) • (productState fun i => symStates (x i)).matrix) (X0, Xs) (Y0, Ys) =
+        ∑ x : Fin (n + 1) → ι,
+          ((∏ i, probs (x i)) • (productState fun i => symStates (x i)).matrix)
+            (X0, Xs) (Y0, Ys) :=
+      Matrix.sum_apply _ _ _ _
+    rw [happ]
     rw [Fintype.sum_mul_sum head tail]
     rw [← Fintype.sum_prod_type (f := fun p : ι × (Fin n → ι) => head p.1 * tail p.2)]
     exact (Fintype.sum_equiv (Fin.consEquiv (fun _ => ι))

@@ -59,7 +59,7 @@ def coordinate (a : Type v) [Fintype a] [DecidableEq a] : POVM a a where
         simp [hy]
       · intro hi
         simp at hi
-    · rw [Matrix.one_apply, if_neg hij]
+    · rw [Matrix.one_apply, ite_eq_right hij]
       refine Finset.sum_eq_zero fun y _ => ?_
       rw [Matrix.single_apply]
       have hnot : ¬ (y = i ∧ y = j) := by

@@ -64,7 +64,7 @@ theorem cMatrix_rpow_submatrix_equiv_posDef
     Matrix.nonneg_iff_posSemidef.mpr hM.posSemidef
   rw [CFC.rpow_eq_cfc_real (a := M.submatrix e e) (y := s) hsub_nonneg]
   rw [CFC.rpow_eq_cfc_real (a := M) (y := s) hM_nonneg]
-  simpa using
+  exact
     (StarAlgHomClass.map_cfc
       (cMatrixReindexStarAlgEquiv e)
       (fun x : ℝ => x ^ s) M
@@ -429,7 +429,7 @@ theorem petzRenyiPSD_eq_coe_petzRenyi_of_posDef
     (α : ℝ) (hα_pos : 0 < α) (hα_lt_one : α < 1) :
     ρ.petzRenyiPSD σ α hα_pos hα_lt_one =
       (ρ.petzRenyi σ hρ hσ α hα_pos (ne_of_lt hα_lt_one) : EReal) := by
-  haveI : Nonempty a := ρ.nonempty
+  have : Nonempty a := ρ.nonempty
   have hcoeff_pos : 0 < ρ.petzRenyiPSDTraceCoeff σ α := by
     exact trace_mul_posDef_re_pos
       (cMatrix_rpow_posDef_of_posDef hρ α)
@@ -1210,7 +1210,7 @@ theorem sandwichedRenyiInner_psdTracePower_pos
       psdTracePower (sandwichedRenyiInner ρ σ α)
         (sandwichedRenyiInner_posSemidef ρ σ α) α := by
   classical
-  haveI : Nonempty a := ρ.nonempty
+  have : Nonempty a := ρ.nonempty
   rw [psdTracePower_eq_sum_eigenvalues_rpow]
   exact Finset.sum_pos' (fun i _ =>
       le_of_lt (Real.rpow_pos_of_pos
@@ -1230,7 +1230,7 @@ theorem sandwichedRenyiReferenceInner_psdTracePower_pos
       psdTracePower (sandwichedRenyiReferenceInner ρ σ α)
         (sandwichedRenyiReferenceInner_posSemidef ρ hσ.posSemidef α) α := by
   classical
-  haveI : Nonempty a := ρ.nonempty
+  have : Nonempty a := ρ.nonempty
   rw [psdTracePower_eq_sum_eigenvalues_rpow]
   exact Finset.sum_pos' (fun i _ =>
       le_of_lt (Real.rpow_pos_of_pos
@@ -1409,7 +1409,7 @@ theorem tensorPower_posDef {ρ : State a}
 private theorem petzRenyi_trace_re_pos (ρ σ : State a)
     (hρ : ρ.matrix.PosDef) (hσ : σ.matrix.PosDef) (α : ℝ) :
     0 < ((CFC.rpow ρ.matrix α * CFC.rpow σ.matrix (1 - α)).trace).re := by
-  haveI : Nonempty a := ρ.nonempty
+  have : Nonempty a := ρ.nonempty
   exact trace_mul_posDef_re_pos
     (ρ.rpowMatrix_posDef_of_posDef hρ α)
     (σ.rpowMatrix_posDef_of_posDef hσ (1 - α))
@@ -1606,12 +1606,12 @@ theorem sandwichedRenyi_prod {b : Type v} [Fintype b] [DecidableEq b]
     ring
   have hxpos : 0 < ((CFC.rpow
       (CFC.rpow σ₁.matrix s * ρ₁.matrix * CFC.rpow σ₁.matrix s) α).trace).re := by
-    haveI : Nonempty a := ρ₁.nonempty
+    have : Nonempty a := ρ₁.nonempty
     exact (Complex.pos_iff.mp (Matrix.PosDef.trace_pos
       (cMatrix_rpow_posDef_of_posDef hinner₁_pos α))).1
   have hypos : 0 < ((CFC.rpow
       (CFC.rpow σ₂.matrix s * ρ₂.matrix * CFC.rpow σ₂.matrix s) α).trace).re := by
-    haveI : Nonempty b := ρ₂.nonempty
+    have : Nonempty b := ρ₂.nonempty
     exact (Complex.pos_iff.mp (Matrix.PosDef.trace_pos
       (cMatrix_rpow_posDef_of_posDef hinner₂_pos α))).1
   change (1 / (α - 1)) *

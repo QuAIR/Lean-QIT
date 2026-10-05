@@ -213,7 +213,7 @@ private theorem collapsePermutationReferenceUnitary_conj_apply
         X * star (collapseLocalReferenceUnitary (a := a) (permutationUnitary π) :
           CMatrix (Prod r a))) (i, j) (i', j')) =
       X (π i, j) (π i', j') := by
-  simp only [collapseLocalReferenceUnitary_coe, permutationUnitary_coe,
+  simp only [collapseLocalReferenceUnitary_coe, permutationUnitary_apply,
     Matrix.star_eq_conjTranspose, Matrix.conjTranspose_kronecker,
     Matrix.conjTranspose_one, Matrix.mul_apply, Matrix.kronecker,
     Matrix.kroneckerMap_apply, Matrix.one_apply, Matrix.conjTranspose_apply]

@@ -418,12 +418,20 @@ theorem adhwFQSWIidCompressedSourceLiftMatrix_eq_typicalSourceLiftMatrix_mul_pad
     let K := Matrix.kronecker padAB.matrix (1 : CMatrix rtyp)
     L = L0 * Matrix.conjTranspose K := by
   intro L L0 padAB K
+  have hpad_one :
+      (ReferenceIsometry.ofEquiv (Equiv.refl btyp)).matrix =
+        (1 : CMatrix btyp) := by
+    ext y x
+    by_cases h : y = x <;> simp [ReferenceIsometry.ofEquiv_matrix_apply, Matrix.one_apply, h]
   have hpad :
       padAB.matrix =
         Matrix.kronecker P.isometry.matrix (1 : CMatrix btyp) := by
-    ext i j
-    simp [padAB, ReferenceIsometry.prod, ReferenceIsometry.ofEquiv,
-      Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.one_apply]
+    calc
+      padAB.matrix =
+          (P.isometry.prod (ReferenceIsometry.ofEquiv (Equiv.refl btyp))).matrix := rfl
+      _ = Matrix.kronecker P.isometry.matrix
+            (ReferenceIsometry.ofEquiv (Equiv.refl btyp)).matrix := rfl
+      _ = Matrix.kronecker P.isometry.matrix (1 : CMatrix btyp) := by rw [hpad_one]
   have hpad_ct :
       Matrix.conjTranspose padAB.matrix =
         Matrix.kronecker (Matrix.conjTranspose P.isometry.matrix)
@@ -1494,10 +1502,19 @@ theorem exists_adhwFQSWIidCompressedSourceWitness
     let padR : ReferenceIsometry (Prod (Prod atyp btyp) rtyp)
         (Prod (Prod (Prod q e) btyp) rtyp) :=
       padAB.prod idR
+    have hpadR_one :
+        (ReferenceIsometry.ofEquiv (Equiv.refl rtyp)).matrix =
+          (1 : CMatrix rtyp) := by
+      ext y x
+      by_cases h : y = x <;> simp [ReferenceIsometry.ofEquiv_matrix_apply, Matrix.one_apply, h]
     have hpadR : padR.matrix = K := by
-      ext i j
-      simp [padR, idR, K, ReferenceIsometry.prod, ReferenceIsometry.ofEquiv,
-        Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.one_apply]
+      calc
+        padR.matrix =
+            (padAB.prod (ReferenceIsometry.ofEquiv (Equiv.refl rtyp))).matrix := rfl
+        _ = Matrix.kronecker padAB.matrix
+              (ReferenceIsometry.ofEquiv (Equiv.refl rtyp)).matrix := rfl
+        _ = Matrix.kronecker padAB.matrix (1 : CMatrix rtyp) := by rw [hpadR_one]
+        _ = K := rfl
     simpa [hpadR] using padR.isometry
   have hL_eq :
       L = L0 * Matrix.conjTranspose K := by
@@ -1992,8 +2009,8 @@ theorem physicalProtocol_traceNormError_le_rounded :
   let W := B.compressedSourceWitness
   let H := B.oneShotBound
   let sourceIndex := Classical.choice W.unpaddedSource.state.nonempty
-  letI : Nonempty atyp := ⟨sourceIndex.1.1⟩
-  letI : Nonempty btyp := ⟨sourceIndex.1.2⟩
+  let : Nonempty atyp := ⟨sourceIndex.1.1⟩
+  let : Nonempty btyp := ⟨sourceIndex.1.2⟩
   change (W.toFQSWBlockProtocol H).traceNormError ≤
     adhwFQSWIidRoundedPostCompressionTraceErrorBound ε n δ
   calc
@@ -2065,8 +2082,8 @@ theorem physicalProtocol_traceNormError_le :
   let W := B.compressedSourceWitness
   let H := B.oneShotBound
   let sourceIndex := Classical.choice W.unpaddedSource.state.nonempty
-  letI : Nonempty atyp := ⟨sourceIndex.1.1⟩
-  letI : Nonempty btyp := ⟨sourceIndex.1.2⟩
+  let : Nonempty atyp := ⟨sourceIndex.1.1⟩
+  let : Nonempty btyp := ⟨sourceIndex.1.2⟩
   change (W.toFQSWBlockProtocol H).traceNormError ≤
     adhwFQSWIidPostCompressionTraceErrorBound ε n δrate
   calc

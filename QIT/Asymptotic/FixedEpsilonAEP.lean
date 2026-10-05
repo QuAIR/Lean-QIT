@@ -97,10 +97,11 @@ private theorem canonicalAEPpurification_marginalAB
     Ω.state.marginalAB = ρ := by
   dsimp
   apply State.ext
+  ext x y
+  have hpur := ρ.canonicalPurification_purifies
   simpa [State.marginalAB_eq_marginalA, PureVector.reindex_state, State.reindex,
-    State.marginalA, State.marginalB, partialTraceA, partialTraceB,
-    PureVector.state_matrix, rankOneMatrix_apply] using
-    ρ.canonicalPurification_purifies
+    State.marginalA, partialTraceA, partialTraceB] using
+      congrFun (congrFun hpur x) y
 
 /-- At every fixed `0 < ε < 1`, the normalized smooth conditional min-entropy
 of the IID tensor power converges to the conditional von Neumann entropy.
@@ -233,10 +234,10 @@ limit form stated by TCR 2008, `thm:qaep`. -/
 theorem fullyQuantumAsymptoticEquipartitionProperty
     (ρ : State (Prod a b)) :
     QIT.asymptoticAEP_statement ρ := by
-  letI : Nonempty a := by
+  let : Nonempty a := by
     rcases ρ.nonempty with ⟨x⟩
     exact ⟨x.1⟩
-  letI : Nonempty b := by
+  let : Nonempty b := by
     rcases ρ.nonempty with ⟨x⟩
     exact ⟨x.2⟩
   exact ρ.asymptoticAEP_statement_of_fixed_epsilon_limits

@@ -111,7 +111,7 @@ private theorem cMatrix_rpow_unitary_conj_posDef
     star (U : CMatrix ι) * (A ^ s) * (U : CMatrix ι)
   have hmap_nonneg : 0 ≤ star (U : CMatrix ι) * A * (U : CMatrix ι) :=
     Matrix.nonneg_iff_posSemidef.mpr (by
-      simpa [Matrix.mul_assoc] using
+      simpa [Matrix.star_eq_conjTranspose, Matrix.mul_assoc] using
         hA.posSemidef.conjTranspose_mul_mul_same (U : CMatrix ι))
   have hA_nonneg : 0 ≤ A := Matrix.nonneg_iff_posSemidef.mpr hA.posSemidef
   rw [CFC.rpow_eq_cfc_real (a := star (U : CMatrix ι) * A * (U : CMatrix ι))
@@ -1172,7 +1172,7 @@ theorem cMatrixPetzPerspectiveIntegralRepresentation_Ioo_one_two
         MeasureTheory.IntegrableOn
           (fun r : ℝ => cfcₙ (Real.rpowIntegrand₁₂ p r) C)
           (Set.Ioi 0) μ := by
-      simpa [pNN] using (hμ C hCnonneg).1
+      exact (hμ C hCnonneg).1
     have hRightInt :
         MeasureTheory.IntegrableOn
           (fun r : ℝ => cfcₙ (Real.rpowIntegrand₁₂ p r) C * Y)
@@ -1206,7 +1206,7 @@ theorem cMatrixPetzPerspectiveIntegralRepresentation_Ioo_one_two
         MeasureTheory.IntegrableOn
           (fun r : ℝ => cfcₙ (Real.rpowIntegrand₁₂ p r) C)
           (Set.Ioi 0) μ := by
-      simpa [pNN] using (hμ C hCnonneg).1
+      exact (hμ C hCnonneg).1
     let F : ℝ → CMatrix (a × b) := fun r =>
       cfcₙ (Real.rpowIntegrand₁₂ p r) C * Y
     let G : ℝ → CMatrix (a × b) := fun r =>
@@ -1222,12 +1222,10 @@ theorem cMatrixPetzPerspectiveIntegralRepresentation_Ioo_one_two
         CFC.rpow C p =
           ∫ r in Set.Ioi 0, cfcₙ (Real.rpowIntegrand₁₂ p r) C ∂μ := by
       calc
-        CFC.rpow C p = C ^ pNN := by
-          exact (by
-            simpa [pNN] using
-              (CFC.nnrpow_eq_rpow (a := C) hpNN_pos).symm)
+        CFC.rpow C p = C ^ pNN :=
+          (CFC.nnrpow_eq_rpow (a := C) hpNN_pos).symm
         _ = ∫ r in Set.Ioi 0, cfcₙ (Real.rpowIntegrand₁₂ p r) C ∂μ := by
-          simpa [pNN] using (hμ C hCnonneg).2
+          exact (hμ C hCnonneg).2
     have hLeft : CFC.rpow C p * Y = ∫ r in Set.Ioi 0, F r ∂μ := by
       calc
         CFC.rpow C p * Y =
@@ -2104,8 +2102,9 @@ private theorem cMatrixPetz_rawTensorUniformJointConvex_Ioo_one_two
             have hksmul : MeasureTheory.Integrable (fun r : ℝ => w • Fk k r)
                 (μ.restrict (Set.Ioi 0)) := hk'.smul w
             simpa [MeasureTheory.IntegrableOn] using hksmul
-          have hadd := hk.add ih
-          simpa [Finset.sum_insert hks, Pi.add_apply] using hadd
+          have hadd : MeasureTheory.IntegrableOn
+              (fun r : ℝ => w • Fk k r + ∑ k ∈ s, w • Fk k r) (Set.Ioi 0) μ := hk.add ih
+          simpa [Finset.sum_insert hks] using hadd
     simpa using hsum (Finset.univ : Finset κ)
   have hmono :
       ∀ r ∈ Set.Ioi (0 : ℝ), Fbar r ≤ ∑ k, w • Fk k r := by
@@ -2262,7 +2261,7 @@ private theorem cMatrixPetz_squarePerspective_uniform_average_le
       (Matrix.fromBlocks (X k * (Y k)⁻¹ * X k) (X k) (X k) (Y k) :
         CMatrix (Sum n n)).PosSemidef := by
     intro k
-    letI : Invertible (Y k) := (hY k).isUnit.invertible
+    let : Invertible (Y k) := (hY k).isUnit.invertible
     have hschur := Matrix.PosDef.fromBlocks₂₂
       (X k * (Y k)⁻¹ * X k) (X k) (D := Y k) (hY k)
     have hblock' := hschur.mpr (by
@@ -2281,7 +2280,7 @@ private theorem cMatrixPetz_squarePerspective_uniform_average_le
       simp [Xbar, Ybar, Matrix.sum_apply, Matrix.smul_apply, Matrix.fromBlocks_smul]
   have hschurAvg :
       ((∑ k, w • (X k * (Y k)⁻¹ * X k)) - Xbar * Ybar⁻¹ * Xbar).PosSemidef := by
-    letI : Invertible Ybar := hYbar.isUnit.invertible
+    let : Invertible Ybar := hYbar.isUnit.invertible
     have hschur := Matrix.PosDef.fromBlocks₂₂
       (∑ k, w • (X k * (Y k)⁻¹ * X k)) Xbar (D := Ybar) hYbar
     have hschur' := hschur.mp (by simpa [hXbar.eq] using hblockAvg)

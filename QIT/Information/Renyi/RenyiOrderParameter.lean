@@ -235,7 +235,7 @@ theorem recip_add_recip_conjugateOrder (α : RenyiOrder) :
       have hhalf : 1/2 < r := lt_of_le_of_ne hle (Ne.symm h0)
       have hconj : 1 / conditionalRenyiConjugateOrder r + 1 / r = 2 :=
         conditionalRenyiConjugateOrder_conjugate hhalf
-      simp only [conjugateOrder, dif_neg h0, dif_neg h1]
+      simp only [conjugateOrder, dite_eq_right h0, dite_eq_right h1]
       have h2 : 1/r + 1/conditionalRenyiConjugateOrder r = 2 := by linarith
       show (↑(1/r + 1/conditionalRenyiConjugateOrder r) : WithTop ℝ) = 2
       rw [h2]

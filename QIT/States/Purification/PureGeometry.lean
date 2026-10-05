@@ -110,9 +110,9 @@ private theorem frobeniusNorm_triangle (ψ φ ω : PureVector a) :
     frobeniusNorm (ψ.state.matrix - ω.state.matrix) ≤
       frobeniusNorm (ψ.state.matrix - φ.state.matrix) +
         frobeniusNorm (φ.state.matrix - ω.state.matrix) := by
-  letI iSemi : SeminormedAddCommGroup (CMatrix a) :=
+  let iSemi : SeminormedAddCommGroup (CMatrix a) :=
     (1 : CMatrix a).toMatrixSeminormedAddCommGroup Matrix.PosSemidef.one
-  letI iInner : InnerProductSpace ℂ (CMatrix a) :=
+  let iInner : InnerProductSpace ℂ (CMatrix a) :=
     (1 : CMatrix a).toMatrixInnerProductSpace Matrix.PosSemidef.one
   have hnorm_eq_frob (X : CMatrix a) :
       @norm (CMatrix a) iSemi.toNorm X = frobeniusNorm X := by

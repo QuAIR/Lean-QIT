@@ -69,7 +69,8 @@ def basisState (x : ι) : State ι where
   matrix := Matrix.single x x (1 : ℂ)
   pos := posSemidef_single x
   trace_eq_one := by
-    rw [trace_single_one, if_pos rfl]
+    -- 4.34: `if_pos` is a deprecated alias of the identical `ite_eq_left`.
+    rw [trace_single_one, ite_eq_left rfl]
 
 @[simp]
 theorem basisState_matrix (x : ι) :
@@ -100,17 +101,19 @@ theorem block_le_block_of_le {X Y : CMatrix (Prod ι a)} (h : X ≤ Y) (x : ι) 
     block X x x ≤ block Y x x := by
   rw [Matrix.le_iff] at h ⊢
   have hblock := h.submatrix (fun i : a => (x, i))
-  convert hblock using 1
+  -- 4.34: close the block/submatrix equation entrywise instead of `convert`.
+  have hbridge : block Y x x - block X x x =
+      (Y - X).submatrix (fun i : a => (x, i)) fun i : a => (x, i) := by
+    ext i j
+    simp [block]
+  rw [hbridge]
+  exact hblock
 
 omit [DecidableEq ι] [DecidableEq a] in
 /-- Partial trace over the left classical register preserves Loewner order. -/
 theorem partialTraceA_mono {X Y : CMatrix (Prod ι a)} (h : X ≤ Y) :
     partialTraceA X ≤ partialTraceA Y := by
-  rw [Matrix.le_iff] at h ⊢
-  have hdiff := partialTraceA_posSemidef (a := ι) (b := a) h
-  convert hdiff using 1
-  ext i j
-  simp [partialTraceA, Matrix.sub_apply, Finset.sum_sub_distrib]
+  exact QIT.partialTraceA_mono h
 
 /-- The classical marginal of a cq-state is the diagonal state of ensemble weights. -/
 theorem partialTraceB_cqState_eq_diagonalState (E : Ensemble ι a) :

@@ -421,6 +421,15 @@ def fqswSumInrRetractionKraus
   | Sum.inl _ => Matrix.conjTranspose (ReferenceIsometry.sumInr extra α).matrix
   | Sum.inr k => Matrix.single i0 (Sum.inl k) 1
 
+private theorem sumInr_matrix_apply {extra : Type*} {r : Type*}
+    [Fintype extra] [DecidableEq extra] [Fintype r] [DecidableEq r]
+    (x : Sum extra r) (i : r) :
+    (ReferenceIsometry.sumInr extra r).matrix x i =
+      match x with
+      | Sum.inl _ => (0 : ℂ)
+      | Sum.inr j => if j = i then 1 else 0 := rfl
+
+
 theorem fqswSumInrRetractionKraus_adjoint_one
     {extra : Type u} {α : Type v}
     [Fintype extra] [DecidableEq extra]
@@ -435,14 +444,14 @@ theorem fqswSumInrRetractionKraus_adjoint_one
       cases y with
       | inl y =>
           simp only [MatrixMap.krausAdjoint, fqswSumInrRetractionKraus,
-            ReferenceIsometry.sumInr, Matrix.sum_apply, Matrix.mul_apply,
+            sumInr_matrix_apply, Matrix.sum_apply, Matrix.mul_apply,
             Matrix.conjTranspose_apply, Matrix.one_apply, Fintype.sum_sum_type,
             Fintype.sum_unique, Matrix.mul_one]
           simp only [Matrix.single, Matrix.of_apply,
             star_zero, zero_mul, Finset.sum_const_zero, zero_add, Sum.inl.injEq]
           by_cases hxy : x = y
           · subst y
-            rw [if_pos rfl, Finset.sum_eq_single x]
+            rw [ite_eq_left rfl, Finset.sum_eq_single x]
             · rw [Finset.sum_eq_single i0]
               · simp
               · intro z _ hz
@@ -451,7 +460,7 @@ theorem fqswSumInrRetractionKraus_adjoint_one
             · intro k _ hk
               simp [hk]
             · simp
-          · rw [if_neg hxy]
+          · rw [ite_eq_right hxy]
             apply Finset.sum_eq_zero
             intro k _
             by_cases hkx : k = x
@@ -460,17 +469,17 @@ theorem fqswSumInrRetractionKraus_adjoint_one
             · simp [hkx]
       | inr y =>
           simp [MatrixMap.krausAdjoint, fqswSumInrRetractionKraus,
-            ReferenceIsometry.sumInr, Matrix.sum_apply, Matrix.mul_apply,
+            sumInr_matrix_apply, Matrix.sum_apply, Matrix.mul_apply,
             Matrix.conjTranspose_apply]
   | inr x =>
       cases y with
       | inl y =>
           simp [MatrixMap.krausAdjoint, fqswSumInrRetractionKraus,
-            ReferenceIsometry.sumInr, Matrix.sum_apply, Matrix.mul_apply,
+            sumInr_matrix_apply, Matrix.sum_apply, Matrix.mul_apply,
             Matrix.conjTranspose_apply]
       | inr y =>
           simp [MatrixMap.krausAdjoint, fqswSumInrRetractionKraus,
-            ReferenceIsometry.sumInr, Matrix.sum_apply, Matrix.mul_apply,
+            sumInr_matrix_apply, Matrix.sum_apply, Matrix.mul_apply,
             Matrix.conjTranspose_apply, Matrix.one_apply]
 
 /-- CPTP retraction of a padded sum register onto its right summand. -/
@@ -497,7 +506,7 @@ theorem fqswSumInrRetractionChannel_comp_inclusion
   ext X i j
   simp [Channel.comp, fqswSumInrRetractionChannel,
     fqswSumInrRetractionKraus, fqswChannelOfReferenceIsometry,
-    MatrixMap.ofReferenceIsometry_apply, ReferenceIsometry.sumInr,
+    MatrixMap.ofReferenceIsometry_apply, sumInr_matrix_apply,
     MatrixMap.ofKraus, Matrix.mul_apply, Channel.idChannel]
 
 theorem fqswChannel_comp_assoc
@@ -549,9 +558,18 @@ theorem fqswChannelOfReferenceIsometry_ofEquiv_refl
       Channel.idChannel α := by
   rw [Channel.mk.injEq]
   ext X i j
-  simp [fqswChannelOfReferenceIsometry, Channel.idChannel,
-    MatrixMap.ofReferenceIsometry_apply, ReferenceIsometry.ofEquiv, MatrixMap.ofKraus,
-    Matrix.mul_apply]
+  simp only [fqswChannelOfReferenceIsometry, Channel.idChannel,
+    MatrixMap.ofReferenceIsometry_apply, ReferenceIsometry.ofEquiv_matrix_apply, MatrixMap.ofKraus,
+    Matrix.mul_apply, Matrix.conjTranspose_apply]
+  rw [Finset.sum_eq_single j]
+  · rw [Finset.sum_eq_single i]
+    · simp
+    · intro k _ hk
+      simp [Ne.symm hk]
+    · simp
+  · intro k _ hk
+    simp [Ne.symm hk]
+  · simp
 
 private theorem fqswChannel_reindex_symm_comp_reindex
     {α : Type u} {β : Type v} [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
@@ -563,12 +581,14 @@ private theorem fqswChannel_reindex_symm_comp_reindex
   have hsymm : (ReferenceIsometry.ofEquiv E.symm).matrix = Matrix.conjTranspose V.matrix := by
     ext x y
     by_cases h : y = E x
-    · simp [V, ReferenceIsometry.ofEquiv, Matrix.conjTranspose, h]
+    · rw [Matrix.conjTranspose_apply]
+      simp [V, ReferenceIsometry.ofEquiv, h]
     · have h' : ¬x = E.symm y := by
         intro h'
         apply h
         simpa using (congrArg E h').symm
-      simp [V, ReferenceIsometry.ofEquiv, Matrix.conjTranspose, h, h']
+      rw [Matrix.conjTranspose_apply]
+      simp [V, ReferenceIsometry.ofEquiv, h, h']
   change
     ((MatrixMap.ofReferenceIsometry (ReferenceIsometry.ofEquiv E.symm)).comp
       (MatrixMap.ofReferenceIsometry (ReferenceIsometry.ofEquiv E))) X i j =
@@ -733,13 +753,13 @@ theorem reindexed_isometry_eq_sumInr
   classical
   cases z with
   | inl z =>
-      simp [ReferenceIsometry.comp, ReferenceIsometry.ofEquiv,
-        isometry, ReferenceIsometry.ofInjective, ReferenceIsometry.sumInr,
-        Matrix.mul_apply]
+      simp only [ReferenceIsometry.comp, Matrix.mul_apply]
+      simp [ReferenceIsometry.ofEquiv, isometry,
+        ReferenceIsometry.ofInjective, ReferenceIsometry.sumInr]
   | inr z =>
-      simp [ReferenceIsometry.comp, ReferenceIsometry.ofEquiv,
-        isometry, ReferenceIsometry.ofInjective, ReferenceIsometry.sumInr,
-        Matrix.mul_apply]
+      simp only [ReferenceIsometry.comp, Matrix.mul_apply]
+      simp [ReferenceIsometry.ofEquiv, isometry,
+        ReferenceIsometry.ofInjective, ReferenceIsometry.sumInr]
 
 /-- Reindexing the padded embedding into complement-plus-support coordinates
 produces the canonical right-summand inclusion channel. -/
@@ -792,10 +812,10 @@ theorem paddingRetraction_comp_isometry
     P.paddingRetraction.comp (fqswChannelOfReferenceIsometry P.isometry) =
       Channel.idChannel atyp := by
   classical
-  letI : Finite P.paddingComplement :=
+  let : Finite P.paddingComplement :=
     Finite.of_injective Subtype.val Subtype.val_injective
-  letI : Fintype P.paddingComplement := Fintype.ofFinite P.paddingComplement
-  letI : DecidableEq P.paddingComplement := Classical.decEq P.paddingComplement
+  let : Fintype P.paddingComplement := Fintype.ofFinite P.paddingComplement
+  let : DecidableEq P.paddingComplement := Classical.decEq P.paddingComplement
   rw [paddingRetraction, fqswChannel_comp_assoc,
     ADHWFQSWPaddedAtypEmbedding.reindex_comp_isometry_eq_sumInrChannel P]
   exact fqswSumInrRetractionChannel_comp_inclusion (Nonempty.some inferInstance)
@@ -844,12 +864,14 @@ theorem physicalEncoder_comp_supportIsometry
           Matrix.conjTranspose V.matrix := by
       ext x y
       by_cases h : y = P.typicalIndexEquiv x
-      · simp [V, ReferenceIsometry.ofEquiv, Matrix.conjTranspose, h]
+      · rw [Matrix.conjTranspose_apply]
+        simp [V, ReferenceIsometry.ofEquiv, h]
       · have h' : ¬x = P.typicalIndexEquiv.symm y := by
           intro h'
           apply h
           simpa using (congrArg P.typicalIndexEquiv h').symm
-        simp [V, ReferenceIsometry.ofEquiv, Matrix.conjTranspose, h, h']
+        rw [Matrix.conjTranspose_apply]
+        simp [V, ReferenceIsometry.ofEquiv, h, h']
     change
       ((MatrixMap.ofReferenceIsometry (ReferenceIsometry.ofEquiv P.typicalIndexEquiv.symm)).comp
         (MatrixMap.ofReferenceIsometry (ReferenceIsometry.ofEquiv P.typicalIndexEquiv))) X i j =
@@ -1214,7 +1236,7 @@ theorem communicationRate_le (R : ADHWFQSWIidRateChoice ψ n δ q e)
     FQSWBlockProtocol.communicationRate C ≤
       ψ.fqswCommunicationRate + (9 / 4 : ℝ) * δ := by
   unfold FQSWBlockProtocol.communicationRate
-  rw [if_neg (Nat.ne_of_gt hn)]
+  rw [ite_eq_right (Nat.ne_of_gt hn)]
   exact R.communicationLogRate_le hn
 
 omit [DecidableEq q] [DecidableEq e] [Nonempty e] in
@@ -1233,7 +1255,7 @@ theorem ebitYieldRate_ge (R : ADHWFQSWIidRateChoice ψ n δ q e)
     (C : FQSWBlockProtocol ψ n q e et) (hn : 0 < n) :
     ψ.fqswEbitYieldRate - 3 * δ ≤ FQSWBlockProtocol.ebitYieldRate C := by
   unfold FQSWBlockProtocol.ebitYieldRate
-  rw [if_neg (Nat.ne_of_gt hn)]
+  rw [ite_eq_right (Nat.ne_of_gt hn)]
   exact R.ebitYieldLogRate_ge hn
 
 end ADHWFQSWIidRateChoice
@@ -1272,8 +1294,8 @@ theorem exists_adhwFQSWIidRateChoice_registers
   set upper := adhwFQSWIidRoundedCommunicationLogUpperTarget ψ n δ
   set qSize : ℕ := Nat.ceil ((2 : ℝ) ^ lower)
   let q : Type x := ULift.{x} (Fin qSize)
-  haveI : Fintype q := inferInstance
-  haveI : DecidableEq q := inferInstance
+  have : Fintype q := inferInstance
+  have : DecidableEq q := inferInstance
   have hqcard : Fintype.card q = qSize := by
     simpa [q] using
       (Fintype.card_congr (Equiv.ulift : ULift.{x} (Fin qSize) ≃ Fin qSize))
@@ -1281,18 +1303,18 @@ theorem exists_adhwFQSWIidRateChoice_registers
     Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) lower
   have hqSize_pos : 0 < qSize := by
     exact Nat.ceil_pos.mpr hpow_lower_pos
-  haveI : Nonempty q := ⟨ULift.up ⟨0, hqSize_pos⟩⟩
+  have : Nonempty q := ⟨ULift.up ⟨0, hqSize_pos⟩⟩
   set eLower := adhwFQSWIidEbitYieldLogLower ψ n δ
   set eSize : ℕ := max 1 (Nat.ceil ((2 : ℝ) ^ eLower))
   let e : Type y := ULift.{y} (Fin eSize)
-  haveI : Fintype e := inferInstance
-  haveI : DecidableEq e := inferInstance
+  have : Fintype e := inferInstance
+  have : DecidableEq e := inferInstance
   have hecard : Fintype.card e = eSize := by
     simpa [e] using
       (Fintype.card_congr (Equiv.ulift : ULift.{y} (Fin eSize) ≃ Fin eSize))
   have heSize_pos : 0 < eSize := by
     exact lt_of_lt_of_le Nat.zero_lt_one (Nat.le_max_left _ _)
-  haveI : Nonempty e := ⟨ULift.up ⟨0, heSize_pos⟩⟩
+  have : Nonempty e := ⟨ULift.up ⟨0, heSize_pos⟩⟩
   have hcommLower :
       (2 : ℝ) ^ adhwFQSWIidCommunicationLogTarget ψ n δ ≤
         (Fintype.card q : ℝ) := by
@@ -1418,8 +1440,8 @@ theorem exists_adhwFQSWIidBalancedRateChoice_registers
   set upper := adhwFQSWIidRoundedCommunicationLogUpperTarget ψ n δ
   set qSize : ℕ := Nat.ceil ((2 : ℝ) ^ lower)
   let q : Type x := ULift.{x} (Fin qSize)
-  haveI : Fintype q := inferInstance
-  haveI : DecidableEq q := inferInstance
+  have : Fintype q := inferInstance
+  have : DecidableEq q := inferInstance
   have hqcard : Fintype.card q = qSize := by
     simpa [q] using
       (Fintype.card_congr (Equiv.ulift : ULift.{x} (Fin qSize) ≃ Fin qSize))
@@ -1427,13 +1449,13 @@ theorem exists_adhwFQSWIidBalancedRateChoice_registers
     Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) lower
   have hqSize_pos : 0 < qSize := by
     exact Nat.ceil_pos.mpr hpow_lower_pos
-  haveI : Nonempty q := ⟨ULift.up ⟨0, hqSize_pos⟩⟩
+  have : Nonempty q := ⟨ULift.up ⟨0, hqSize_pos⟩⟩
   set eLower := (n : ℝ) * (ψ.fqswEbitYieldRate - δ)
   set eUpper := (n : ℝ) * ψ.fqswEbitYieldRate
   set eSize : ℕ := Nat.ceil ((2 : ℝ) ^ eLower)
   let e : Type y := ULift.{y} (Fin eSize)
-  haveI : Fintype e := inferInstance
-  haveI : DecidableEq e := inferInstance
+  have : Fintype e := inferInstance
+  have : DecidableEq e := inferInstance
   have hecard : Fintype.card e = eSize := by
     simpa [e] using
       (Fintype.card_congr (Equiv.ulift : ULift.{y} (Fin eSize) ≃ Fin eSize))
@@ -1441,7 +1463,7 @@ theorem exists_adhwFQSWIidBalancedRateChoice_registers
     Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) eLower
   have heSize_pos : 0 < eSize := by
     exact Nat.ceil_pos.mpr hpow_eLower_pos
-  haveI : Nonempty e := ⟨ULift.up ⟨0, heSize_pos⟩⟩
+  have : Nonempty e := ⟨ULift.up ⟨0, heSize_pos⟩⟩
   have hcommLower :
       (2 : ℝ) ^ adhwFQSWIidCommunicationLogTarget ψ n δ ≤
         (Fintype.card q : ℝ) := by

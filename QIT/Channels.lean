@@ -9,6 +9,7 @@ module
 public import QIT.Core.Channel
 public import QIT.Channels.Topology
 public import QIT.Channels.Diamond
+public import QIT.Channels.Stinespring
 
 /-!
 # Channel interfaces

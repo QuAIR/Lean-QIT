@@ -93,7 +93,7 @@ theorem unitaryHaar_exists_le_of_integral_le
 
 private instance unitaryGroupSecondCountableTopology {ι : Type u} [Fintype ι] [DecidableEq ι] :
     SecondCountableTopology (Matrix.unitaryGroup ι ℂ) := by
-  haveI : SecondCountableTopology (Matrix ι ι ℂ) := by
+  have : SecondCountableTopology (Matrix ι ι ℂ) := by
     change SecondCountableTopology (ι → ι → ℂ)
     infer_instance
   change SecondCountableTopology ({x // x ∈ (Matrix.unitaryGroup ι ℂ : Set (Matrix ι ι ℂ))})
@@ -683,8 +683,15 @@ private theorem decoupling_unitaryTensorPowerMatrix_continuous [Fintype a] [Deci
       intro i
       refine continuous_pi ?_
       intro j
-      exact ((continuous_apply j.1).comp ((continuous_apply i.1).comp continuous_subtype_val)).mul
-        ((continuous_apply j.2).comp ((continuous_apply i.2).comp ih))
+      have hcoe : Continuous fun U : Matrix.unitaryGroup a ℂ => (U : CMatrix a) :=
+        continuous_subtype_val
+      have h1 : Continuous fun U : Matrix.unitaryGroup a ℂ =>
+          ((U : CMatrix a) i.1 j.1 : ℂ) :=
+        (continuous_apply j.1).comp ((continuous_apply i.1).comp hcoe)
+      have h2 : Continuous fun U : Matrix.unitaryGroup a ℂ =>
+          (unitaryTensorPowerMatrix U n : CMatrix (TensorPower a n)) i.2 j.2 :=
+        (continuous_apply j.2).comp ((continuous_apply i.2).comp ih)
+      exact h1.mul h2
 
 private theorem decoupling_continuous_kronecker_one {α : Type*} [TopologicalSpace α]
     {ι : Type u} {κ : Type v} [Fintype ι] [DecidableEq ι] [Fintype κ] [DecidableEq κ]
@@ -750,8 +757,7 @@ private theorem decoupling_integral_apply_apply {α : Type*} [MeasurableSpace α
     {μ : Measure α} {ι : Type w} [Fintype ι] [DecidableEq ι]
     {f : α → CMatrix ι} (hf : Integrable f μ) (i j : ι) :
     (∫ x, f x ∂μ) i j = ∫ x, f x i j ∂μ := by
-  simpa [decouplingCMatrixEntryCLM] using
-    ((decouplingCMatrixEntryCLM (ι := ι) i j).integral_comp_comm hf).symm
+  exact ((decouplingCMatrixEntryCLM (ι := ι) i j).integral_comp_comm hf).symm
 
 private theorem decoupling_integrable_apply_apply {α : Type*} [MeasurableSpace α]
     {μ : Measure α} {ι : Type w} [Fintype ι] [DecidableEq ι]
@@ -810,8 +816,7 @@ private theorem sideBlock_integral [Fintype a] [Fintype e] [DecidableEq a] [Deci
     {f : α → CMatrix (Prod (TensorPower a n) e)} (hf : Integrable f μ) (r s : e) :
     sideBlock (a := a) (e := e) n (∫ x, f x ∂μ) r s =
       ∫ x, sideBlock (a := a) (e := e) n (f x) r s ∂μ := by
-  simpa [sideBlockCLM] using
-    ((sideBlockCLM (a := a) (e := e) n r s).integral_comp_comm hf).symm
+  exact ((sideBlockCLM (a := a) (e := e) n r s).integral_comp_comm hf).symm
 
 private theorem sideBlock_sideTwirlIntegrand [Fintype a] [Fintype e] [DecidableEq a] [DecidableEq e]
     (n : ℕ) (X : CMatrix (Prod (TensorPower a n) e)) (r s : e)
@@ -1867,8 +1872,7 @@ private theorem haydenProjectedAE_continuous [Fintype a] [Fintype e]
   have hambient := ambientSideTwirl_integrand_continuous (a := a) (e := e) rho
   have hcont : Continuous fun U : Matrix.unitaryGroup a ℂ =>
       c • (K * ambientSideTwirlIntegrand (a := a) (e := e) rho U * K) := by
-    exact continuous_const.smul
-      (((continuous_const.matrix_mul hambient).matrix_mul continuous_const))
+    exact ((continuous_const.matrix_mul hambient).matrix_mul continuous_const).const_smul c
   refine hcont.congr ?_
   intro U
   simpa [K, c] using

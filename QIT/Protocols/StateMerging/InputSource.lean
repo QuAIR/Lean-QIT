@@ -83,23 +83,32 @@ theorem converseInputARSource_eq_sourceIsometryApply :
   apply SubnormalizedState.ext
   ext i j
   simp [converseInputARSource, SubnormalizedState.sourceIsometryApply_matrix,
-    ReferenceIsometry.applyMatrix, ReferenceIsometry.targetBlock,
+    ReferenceIsometry.applyMatrix,
     ReferenceIsometry.ofEquiv, Matrix.mul_apply]
+  change partialTraceB (rankOneMatrix C.converseInputPureVector.amp) (Prod.map Prod.swap id i)
+      (Prod.map Prod.swap id j) =
+    ∑ j_1 : TensorPower a n × kA,
+      (∑ k : TensorPower a n × kA, (if i.1 = k.swap then 1 else 0) *
+          (∑ x : TensorPower b n × kB,
+            rankOneMatrix C.converseInputPureVector.amp ((k, i.2), x) ((j_1, j.2), x))) *
+        star (if j.1 = j_1.swap then 1 else 0)
   rw [Finset.sum_eq_single j.1.swap]
-  · rw [Finset.sum_eq_single i.1.swap]
-    · simp [Prod.map]
-    · intro x _ hx
-      have hne : i.1 ≠ x.swap := by
-        intro hix
-        apply hx
-        simpa using (congrArg Prod.swap hix).symm
+  · simp only [Prod.swap_swap, ↓reduceIte, star_one, mul_one]
+    rw [Finset.sum_eq_single i.1.swap]
+    · simp only [Prod.swap_swap, ↓reduceIte, one_mul]
+      exact rfl
+    · intro k _ hk
+      have hne : i.1 ≠ k.swap := by
+        intro hik
+        apply hk
+        simpa using (congrArg Prod.swap hik).symm
       simp [hne]
     · simp
-  · intro x _ hx
-    have hne : j.1 ≠ x.swap := by
-      intro hjx
-      apply hx
-      simpa using (congrArg Prod.swap hjx).symm
+  · intro j_1 _ hj_1
+    have hne : j.1 ≠ j_1.swap := by
+      intro hj1
+      apply hj_1
+      simpa using (congrArg Prod.swap hj1).symm
     simp [hne]
   · simp
 
@@ -141,7 +150,13 @@ theorem converseInputARSource_sourceDiscard :
       (PureVector.maximallyEntangled C.inputEbitPairing).state.marginalA.trace_eq_one
   simp [SubnormalizedState.sourceDiscard_matrix, State.toSubnormalized_matrix,
     State.reindex, State.prod, State.marginalA, partialTraceA,
-    Matrix.kronecker, Matrix.kroneckerMap_apply]
+    Matrix.kronecker]
+  change (∑ i_1 : kA,
+      partialTraceB (rankOneMatrix (PureVector.maximallyEntangled C.inputEbitPairing).amp) i_1 i_1 *
+        (∑ x, (stateMergingBlockSource psi n).amp ((i.1, x), i.2) *
+          star ((stateMergingBlockSource psi n).amp ((j.1, x), j.2)))) =
+    ∑ x, (stateMergingBlockSource psi n).amp ((i.1, x), i.2) *
+      star ((stateMergingBlockSource psi n).amp ((j.1, x), j.2))
   rw [← Finset.sum_mul, htrace, one_mul]
 
 /-- Tensor-power form of `converseInputARSource_sourceDiscard`. -/
@@ -174,8 +189,8 @@ theorem converseInputARSource_smoothConditionalMinEntropyRaw_le_log2_card_add_te
       log2 (Fintype.card kA : Real) +
         SubnormalizedState.smoothConditionalMinEntropyRaw
           (psi.state.marginalAC.tensorPowerBipartite n).toSubnormalized epsilon := by
-  letI : Nonempty a := ⟨(Classical.choice psi.state.nonempty).1.1⟩
-  letI : Nonempty r := ⟨(Classical.choice psi.state.nonempty).2⟩
+  let : Nonempty a := ⟨(Classical.choice psi.state.nonempty).1.1⟩
+  let : Nonempty r := ⟨(Classical.choice psi.state.nonempty).2⟩
   have hepsilonTrace :
       epsilon < Real.sqrt C.converseInputARSource.matrix.trace.re := by
     rw [C.converseInputARSource_trace_re, Real.sqrt_one]

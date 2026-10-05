@@ -59,6 +59,7 @@ def finFunctionCoordSplitEquiv (k : ℕ) (m : Fin k) :
     cases yu
     apply Prod.ext
     · simp
+      rfl
     · funext i
       simp [i.2]
 

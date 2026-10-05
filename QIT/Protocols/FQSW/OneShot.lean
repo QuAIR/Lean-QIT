@@ -39,8 +39,8 @@ local instance fqswCMatrixContinuousENorm {ι : Type*} [Fintype ι] [DecidableEq
 private instance fqswUnitaryHaarMeasure_isMulRightInvariant {ι : Type u}
     [Fintype ι] [DecidableEq ι] [Nonempty ι] :
     MeasureTheory.Measure.IsMulRightInvariant (unitaryHaarMeasure (a := ι)) := by
-  haveI : SecondCountableTopology (Matrix.unitaryGroup ι ℂ) := by
-    haveI : SecondCountableTopology (Matrix ι ι ℂ) := by
+  have : SecondCountableTopology (Matrix.unitaryGroup ι ℂ) := by
+    have : SecondCountableTopology (Matrix ι ι ℂ) := by
       change SecondCountableTopology (ι → ι → ℂ)
       infer_instance
     change SecondCountableTopology
@@ -64,8 +64,8 @@ private instance fqswUnitaryHaarMeasure_isMulRightInvariant {ι : Type u}
 private instance fqswUnitaryHaarMeasure_isInvInvariant {ι : Type u}
     [Fintype ι] [DecidableEq ι] [Nonempty ι] :
     MeasureTheory.Measure.IsInvInvariant (unitaryHaarMeasure (a := ι)) := by
-  haveI : SecondCountableTopology (Matrix.unitaryGroup ι ℂ) := by
-    haveI : SecondCountableTopology (Matrix ι ι ℂ) := by
+  have : SecondCountableTopology (Matrix.unitaryGroup ι ℂ) := by
+    have : SecondCountableTopology (Matrix ι ι ℂ) := by
       change SecondCountableTopology (ι → ι → ℂ)
       infer_instance
     change SecondCountableTopology
@@ -297,6 +297,12 @@ theorem adhwFQSWSigmaA2RStateOfIsometry_eq_postAliceAR_marginalB
     State.marginalB, State.reindex, fqswAliceOutputToA2REquiv,
     fqswSourceToAliceInputEquiv, fqswQERToA2REquiv, partialTraceA,
     Fintype.sum_prod_type]
+  show (∑ x_1, ∑ x_2,
+      (adhwFQSWPostAliceStateOfIsometry ψ U).matrix ((x_1, x.1), x_2, x.2)
+        ((x_1, y.1), x_2, y.2)) =
+    ∑ i, ∑ j, (adhwFQSWPostAliceStateOfIsometry ψ U).matrix ((i, x.1), j, x.2)
+      ((i, y.1), j, y.2)
+  rfl
 
 omit [Nonempty e] in
 /-- Matrix form of the ADHW decoupling marginal: `σ^{A₂R}(U)` is the
@@ -546,8 +552,11 @@ theorem referenceIsometry_ofEquiv_applyMatrix_eq_submatrix
         (Equiv.prodCongr E.symm (Equiv.refl γ))
         (Equiv.prodCongr E.symm (Equiv.refl γ)) := by
   ext x y
-  simp [ReferenceIsometry.applyMatrix, ReferenceIsometry.targetBlock,
+  simp [ReferenceIsometry.applyMatrix,
     ReferenceIsometry.ofEquiv, Matrix.mul_apply, Matrix.conjTranspose]
+  show ∑ j : α, (∑ w : α, (if x.1 = E w then (1 : Complex) else 0) *
+      X (w, x.2) (j, y.2)) * star (if y.1 = E j then (1 : Complex) else 0) =
+    X (Prod.map (⇑E.symm) id x) (Prod.map (⇑E.symm) id y)
   rw [Finset.sum_eq_single (E.symm y.1)]
   · rw [Finset.sum_eq_single (E.symm x.1)]
     · simp [Prod.map]
@@ -579,7 +588,9 @@ theorem referenceIsometry_ofEquiv_mul_conjTranspose
   · subst j
     rw [Matrix.mul_apply]
     rw [Finset.sum_eq_single (E.symm i)]
-    · simp [ReferenceIsometry.ofEquiv, Matrix.conjTranspose]
+    · show (if i = E (E.symm i) then (1 : Complex) else 0) *
+        star (if i = E (E.symm i) then (1 : Complex) else 0) = (1 : CMatrix β) i i
+      simp
     · intro x _ hx
       have hne : i ≠ E x := by
         intro h
@@ -595,8 +606,12 @@ theorem referenceIsometry_ofEquiv_mul_conjTranspose
       · have hj : j ≠ E x := by
           intro hj
           exact hij (hi.trans hj.symm)
-        simp [ReferenceIsometry.ofEquiv, Matrix.conjTranspose, hi, hj]
-      · simp [ReferenceIsometry.ofEquiv, Matrix.conjTranspose, hi]
+        show (if i = E x then (1 : Complex) else 0) *
+          star (if j = E x then (1 : Complex) else 0) = 0
+        simp [hj]
+      · show (if i = E x then (1 : Complex) else 0) *
+          star (if j = E x then (1 : Complex) else 0) = 0
+        simp [hi]
 
 /-- A product-index finite sum with a delta on the right coordinate collapses
 to the fixed right-coordinate slice. -/
@@ -855,6 +870,35 @@ theorem adhwFQSWSigmaA2StateOfSplitUnitary_matrix_eq_partialTraceA_applyMatrix_A
       ReferenceIsometry.ofEquiv, adhwFQSWASplitMatrix, State.marginalA,
       partialTraceB, Matrix.mul_apply, Matrix.conjTranspose,
       Finset.sum_mul, Finset.mul_sum, mul_assoc]
+    have e1 : ∀ p : a, (∑ y : Prod q e, (U : CMatrix (Prod q e)) i y *
+        (if y = split p then (1 : Complex) else 0)) =
+        (U : CMatrix (Prod q e)) i (split p) := by
+      intro p
+      rw [Finset.sum_eq_single (split p)]
+      · simp
+      · intro z _ hz
+        simp [hz]
+      · simp
+    have e2 : ∀ p : a, (∑ y : Prod q e, (U : CMatrix (Prod q e)) j y *
+        (if y = split p then (1 : Complex) else 0)) =
+        (U : CMatrix (Prod q e)) j (split p) := by
+      intro p
+      rw [Finset.sum_eq_single (split p)]
+      · simp
+      · intro z _ hz
+        simp [hz]
+      · simp
+    show ∑ j_1, ∑ x, ∑ x_1,
+      (∑ y : Prod q e, (U : CMatrix (Prod q e)) i y *
+        (if y = split x then (1 : Complex) else 0)) *
+        ((adhwFQSWARState ψ).matrix (x, x_1) (j_1, x_1) *
+          star (∑ y : Prod q e, (U : CMatrix (Prod q e)) j y *
+            (if y = split j_1 then (1 : Complex) else 0))) =
+      ∑ j_1, ∑ x, ∑ x_1,
+        (U : CMatrix (Prod q e)) i x *
+          ((adhwFQSWARState ψ).matrix (split.symm x, x_1) (split.symm j_1, x_1) *
+            star ((U : CMatrix (Prod q e)) j j_1))
+    simp only [e1, e2]
     change
       (∑ x : a, ∑ y : a, ∑ rr : r,
         (U : CMatrix (Prod q e)) i (split y) *
@@ -1472,7 +1516,7 @@ theorem adhwFQSWSigmaA2RStateOfSplitUnitary_matrix_continuous
     State.marginalB
     partialTraceA
     rankOneMatrix
-  simp only [Matrix.submatrix_apply, Matrix.mul_apply, Matrix.mulVec,
+  simp only [Matrix.submatrix_apply, Matrix.mulVec,
     Matrix.vecMulVec_apply, dotProduct]
   continuity
 
@@ -3048,14 +3092,14 @@ theorem fqsw_A2R_square_trace_eq_twirl_inv_integrand
     · have hyx :
           ((tensorPowerProdEquiv (Prod q e) r 2) x).2 =
             ((tensorPowerProdEquiv (Prod q e) r 2) y).2 := hxy.symm
-      rw [if_pos hxy, if_pos hyx]
+      rw [ite_eq_left hxy, ite_eq_left hyx]
       simp
     · have hyx :
           ¬ ((tensorPowerProdEquiv (Prod q e) r 2) x).2 =
             ((tensorPowerProdEquiv (Prod q e) r 2) y).2 := by
           intro hyx
           exact hxy hyx.symm
-      rw [if_neg hxy, if_neg hyx]
+      rw [ite_eq_right hxy, ite_eq_right hyx]
       simp
   rw [show
       (Matrix.kronecker (U : CMatrix (Prod q e)) (1 : CMatrix r)) *
@@ -3206,10 +3250,10 @@ theorem adhwFQSWHSOneShotExact_eq_zero_of_subsingleton
   classical
   let q0 : q := Classical.choice inferInstance
   let e0 : e := Classical.choice inferInstance
-  haveI : Subsingleton q :=
+  have : Subsingleton q :=
     Function.Injective.subsingleton (f := fun x : q => (x, e0))
       (by intro x y h; exact congrArg Prod.fst h)
-  haveI : Subsingleton e :=
+  have : Subsingleton e :=
     Function.Injective.subsingleton (f := fun y : e => (q0, y))
       (by intro x y h; exact congrArg Prod.snd h)
   have hqcard : (Fintype.card q : ℝ) = 1 := by
@@ -3638,7 +3682,7 @@ theorem adhwFQSWProductDecouplingHilbertSchmidtAverage_le
   by_cases hnt : Nontrivial (Prod q e)
   · exact adhwFQSWProductDecouplingHilbertSchmidtAverage_le_of_nontrivial
       ψ split
-  · haveI : Subsingleton (Prod q e) :=
+  · have : Subsingleton (Prod q e) :=
       not_nontrivial_iff_subsingleton.mp hnt
     have hΔzero :=
       adhwFQSWARCorrelationSplitMatrix_eq_zero_of_subsingleton ψ split
@@ -3679,11 +3723,11 @@ theorem adhwFQSWMaxMixedA2HilbertSchmidtAverage_le
   by_cases hnt : Nontrivial (Prod q e)
   · exact adhwFQSWMaxMixedA2HilbertSchmidtAverage_le_of_nontrivial
       ψ split
-  · haveI : Subsingleton (Prod q e) :=
+  · have : Subsingleton (Prod q e) :=
       not_nontrivial_iff_subsingleton.mp hnt
     classical
     let q0 : q := Classical.choice inferInstance
-    haveI : Subsingleton e :=
+    have : Subsingleton e :=
       Function.Injective.subsingleton (f := fun y : e => (q0, y))
         (by intro x y h; exact congrArg Prod.snd h)
     have hfun :
@@ -4491,8 +4535,7 @@ namespace ADHWFQSWOneShotBound
 
 variable {ψ : PureVector (Prod (Prod a b) r)}
 variable {split : a ≃ Prod q e}
-variable [Fintype q] [DecidableEq q] [Nonempty q]
-variable [Fintype e] [DecidableEq e] [Nonempty e]
+variable [Nonempty q]
 variable (H : ADHWFQSWOneShotBound ψ q e split)
 
 /-- The assembled ADHW one-shot bound record computes the concrete one-shot

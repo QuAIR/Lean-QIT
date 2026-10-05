@@ -54,8 +54,8 @@ private theorem cMatrix_effect_mul_self_le_self {P : CMatrix e}
   let U : Matrix.unitaryGroup e ℂ := hPpos.1.eigenvectorUnitary
   let D : CMatrix e := Matrix.diagonal fun i => ((hPpos.1.eigenvalues i : ℝ) : ℂ)
   have hPdiag : P = (U : CMatrix e) * D * star (U : CMatrix e) := by
-    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hPpos.1.spectral_theorem
+    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply,
+      Function.comp_def] using hPpos.1.spectral_theorem
   have hUstarU : star (U : CMatrix e) * (U : CMatrix e) = 1 := by
     simp [U]
   have hDle1 : ∀ i, hPpos.1.eigenvalues i ≤ 1 := by
@@ -153,8 +153,8 @@ private theorem cMatrix_trace_mul_effect_abs_sq_le_quadratic
   classical
   let M : CMatrix e := σ⁻¹
   have hM : M.PosDef := by simpa [M] using hσ.inv
-  letI : NormedAddCommGroup (CMatrix e) := Matrix.toMatrixNormedAddCommGroup M hM
-  letI : InnerProductSpace ℂ (CMatrix e) := Matrix.toMatrixInnerProductSpace M hM.posSemidef
+  let : NormedAddCommGroup (CMatrix e) := Matrix.toMatrixNormedAddCommGroup M hM
+  let : InnerProductSpace ℂ (CMatrix e) := Matrix.toMatrixInnerProductSpace M hM.posSemidef
   let x : CMatrix e := R
   let y : CMatrix e := P * σ
   have hcs := norm_inner_le_norm (𝕜 := ℂ) x y
@@ -282,7 +282,7 @@ theorem cMatrix_mul_inv_mul_self_le_smul_of_posSemidef_le_posDef
   have hblock :
       (Matrix.fromBlocks A A A C : CMatrix (Sum e e)).PosSemidef :=
     cMatrix_fromBlocks_self_le_posSemidef (e := e) hA hCminusA
-  letI : Invertible C := hC.isUnit.invertible
+  let : Invertible C := hC.isUnit.invertible
   have hblock' :
       (Matrix.fromBlocks A A A.conjTranspose C : CMatrix (Sum e e)).PosSemidef := by
     simpa [hA.isHermitian.eq] using hblock
@@ -295,7 +295,7 @@ theorem cMatrix_mul_inv_mul_self_le_smul_of_posSemidef_le_posDef
     simpa [hA.isHermitian.eq] using hschur
   have hcne : (c : ℂ) ≠ 0 := by
     exact_mod_cast hc.ne'
-  letI : Invertible (c : ℂ) := invertibleOfNonzero hcne
+  let : Invertible (c : ℂ) := invertibleOfNonzero hcne
   have hσdet : IsUnit σ.det := (Matrix.isUnit_iff_isUnit_det σ).mp hσ.isUnit
   have hCinv : C⁻¹ = ((c : ℂ)⁻¹) • σ⁻¹ := by
     calc
@@ -742,7 +742,7 @@ omit [Fintype e] [DecidableEq e] [Fintype S] [DecidableEq S] [Nonempty S] in
 private theorem outputBlock_posSemidef {M : CMatrix (S × e)}
     (hM : M.PosSemidef) (s : S) :
     (outputBlock (e := e) M s).PosSemidef := by
-  simpa [outputBlock] using hM.submatrix (fun i : e => (s, i))
+  exact hM.submatrix (fun i : e => (s, i))
 
 omit [Fintype e] [Fintype S] [Nonempty S] in
 private theorem outputBlock_le_one {M : CMatrix (S × e)} (hM : M ≤ 1) (s : S) :
@@ -901,7 +901,7 @@ private theorem extractorSeedOutputMatrix_trace_local (H : HashFamily F Z S)
             (Matrix.trace_kronecker
               (Matrix.single (H.hash f z) (H.hash f z) (1 : ℂ))
               (E.states z).matrix).trans
-              (by rw [trace_single_one, if_pos rfl, (E.states z).trace_eq_one]; norm_num)
+              (by rw [trace_single_one, ite_eq_left rfl, (E.states z).trace_eq_one]; norm_num)
         rw [htrace]
         exact (Algebra.algebraMap_eq_smul_one _).symm
     _ = ↑(∑ z : Z, E.probs z) := by simp

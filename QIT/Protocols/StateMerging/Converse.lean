@@ -354,7 +354,7 @@ theorem converseInputPureVector_marginalB :
     PureVector.reindex_state, PureVector.prod_state, State.reindex,
     State.prod, State.marginalA, State.marginalB, partialTraceA, partialTraceB,
     Matrix.kronecker, Matrix.kroneckerMap_apply, Fintype.sum_prod_type]
-  simpa only [PureVector.maximallyEntangled_amp] using
+  simpa only [PureVector.maximallyEntangled_amp, starRingEnd_apply] using
     (sum_sum_sum_mul_eq_mul_sum_sum_sum
       (fun x x_2 =>
         (stateMergingBlockSource psi n).amp ((x, i.1), x_2) *
@@ -417,7 +417,7 @@ theorem targetPureVector_marginalA_marginalB :
     PureVector.prod_state, State.reindex, State.prod, State.marginalA,
     State.marginalB, partialTraceA, partialTraceB, Matrix.kronecker,
     Matrix.kroneckerMap_apply]
-  simpa only [PureVector.maximallyEntangled_amp] using
+  simpa only [PureVector.maximallyEntangled_amp, starRingEnd_apply] using
     (sum_sum_mul_eq_mul_sum
       (fun x =>
         (stateMergingBlockSource psi n).amp (i.1, x) *
@@ -506,9 +506,9 @@ theorem log2_converseBobOutput_card :
       n * log2 (Fintype.card a : Real) +
         n * log2 (Fintype.card b : Real) +
           log2 (Fintype.card lA : Real) := by
-  letI : Nonempty a := ⟨(Classical.choice psi.state.nonempty).1.1⟩
-  letI : Nonempty b := ⟨(Classical.choice psi.state.nonempty).1.2⟩
-  letI : Nonempty lB := ⟨C.outputEbitPairing (Classical.choice inferInstance)⟩
+  let : Nonempty a := ⟨(Classical.choice psi.state.nonempty).1.1⟩
+  let : Nonempty b := ⟨(Classical.choice psi.state.nonempty).1.2⟩
+  let : Nonempty lB := ⟨C.outputEbitPairing (Classical.choice inferInstance)⟩
   have ha : 0 < (Fintype.card (TensorPower a n) : Real) := by
     exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
   have hb : 0 < (Fintype.card (TensorPower b n) : Real) := by
@@ -674,7 +674,7 @@ private theorem how_predivision_to_netEntanglementRate
   have hn_ne : n ≠ 0 := Nat.ne_of_gt hn
   have hnR : (0 : Real) < (n : Real) := by exact_mod_cast hn
   have hscaled := mul_le_mul_of_nonneg_right houtput heta
-  rw [netEntanglementRate, if_neg hn_ne, le_div_iff₀ hnR]
+  rw [netEntanglementRate, ite_eq_right hn_ne, le_div_iff₀ hnR]
   nlinarith
 
 /-- HOW's finite-block converse bound in the protocol's normalized net-rate
@@ -771,19 +771,19 @@ theorem conditionalEntropy_le_of_isAchievableStateMergingRateWithOutputEbitExpon
     lB, lBFintype, lBDecidableEq,
     outcome, outcomeFintype, outcomeDecidableEq, outcomeNonempty,
     C, hrate, herror, houtput⟩ := hcodes N le_rfl
-  letI : Fintype kA := kAFintype
-  letI : DecidableEq kA := kADecidableEq
-  letI : Nonempty kA := kANonempty
-  letI : Fintype kB := kBFintype
-  letI : DecidableEq kB := kBDecidableEq
-  letI : Fintype lA := lAFintype
-  letI : DecidableEq lA := lADecidableEq
-  letI : Nonempty lA := lANonempty
-  letI : Fintype lB := lBFintype
-  letI : DecidableEq lB := lBDecidableEq
-  letI : Fintype outcome := outcomeFintype
-  letI : DecidableEq outcome := outcomeDecidableEq
-  letI : Nonempty outcome := outcomeNonempty
+  let : Fintype kA := kAFintype
+  let : DecidableEq kA := kADecidableEq
+  let : Nonempty kA := kANonempty
+  let : Fintype kB := kBFintype
+  let : DecidableEq kB := kBDecidableEq
+  let : Fintype lA := lAFintype
+  let : DecidableEq lA := lADecidableEq
+  let : Nonempty lA := lANonempty
+  let : Fintype lB := lBFintype
+  let : DecidableEq lB := lBDecidableEq
+  let : Fintype outcome := outcomeFintype
+  let : DecidableEq outcome := outcomeDecidableEq
+  let : Nonempty outcome := outcomeNonempty
   have hNPositive : 0 < N := lt_of_lt_of_le Nat.zero_lt_one hN
   have hsqrtEpsilon : Real.sqrt epsilon = t₀ / 2 := by
     dsimp only [epsilon]

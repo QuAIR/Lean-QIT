@@ -167,7 +167,7 @@ private theorem spectralSignBlockMatrix_mul
       star U * (X * Y) * U = star U * X * (Y * U) := by noncomm_ring
       _ = star U * X * (U * star U) * Y * U := by rw [hU]; noncomm_ring
       _ = (star U * X * U) * (star U * Y * U) := by noncomm_ring]
-  exact Matrix.reindexAlgEquiv_mul (R := ℂ) (A := ℂ) e.symm
+  exact map_mul (Matrix.reindexAlgEquiv ℂ ℂ e.symm)
     (star U * X * U) (star U * Y * U)
 
 private theorem spectralSignBlockMatrix_sub
@@ -193,8 +193,11 @@ private theorem hermitianEigenbasisConjugate_self
   let U : CMatrix a := hH.eigenvectorUnitary
   let D : CMatrix a := Matrix.diagonal fun i => ((hH.eigenvalues i : ℝ) : ℂ)
   have hHdiag : H = U * D * star U := by
+    have hspec := hH.spectral_theorem
+    rw [show (RCLike.ofReal ∘ hH.eigenvalues) =
+      (fun i => ((hH.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hH.spectral_theorem
+      using hspec
   unfold hermitianEigenbasisConjugate
   change star U * H * U = D
   rw [hHdiag]
@@ -383,10 +386,8 @@ public theorem cMatrix_rpow_mul_rpow_of_pos_add_eq_one {A : CMatrix a}
     exact hrs
   have hadd : A ^ (rNN + sNN) = A ^ rNN * A ^ sNN :=
     CFC.nnrpow_add (a := A) hrNN hsNN
-  have hrpow : A ^ rNN = CFC.rpow A r := by
-    simpa [rNN] using (CFC.nnrpow_eq_rpow (a := A) hrNN)
-  have hspow : A ^ sNN = CFC.rpow A s := by
-    simpa [sNN] using (CFC.nnrpow_eq_rpow (a := A) hsNN)
+  have hrpow : A ^ rNN = CFC.rpow A r := CFC.nnrpow_eq_rpow (a := A) hrNN
+  have hspow : A ^ sNN = CFC.rpow A s := CFC.nnrpow_eq_rpow (a := A) hsNN
   calc
     CFC.rpow A r * CFC.rpow A s = A ^ rNN * A ^ sNN := by rw [← hrpow, ← hspow]
     _ = A ^ (rNN + sNN) := hadd.symm
@@ -899,7 +900,7 @@ public theorem audenaertResolventPath_hasDerivAt {A B : CMatrix a}
           (Ring.inverse (X u)) (Ring.inverse (X u))) (A - B)) u := by
       exact HasFDerivAt.comp_hasDerivAt (f := X) (x := u) hInvAt hX
     simpa [V, X, C, audenaertPathResolvent, Matrix.nonsing_inv_eq_ringInverse,
-      ContinuousLinearMap.mulLeftRight_apply] using hcomp
+      ContinuousLinearMap.mulLeftRight_apply, Function.comp_def] using hcomp
   have hprod := hC.mul hInvDeriv
   have hdet : IsUnit (X u).det := by
     exact (Matrix.isUnit_iff_isUnit_det _).mp hXunit
@@ -924,9 +925,9 @@ public theorem audenaertResolventPath_hasDerivAt {A B : CMatrix a}
   have hder' :
       (A - B) * (X u)⁻¹ + C u * (-(V * (A - B) * V)) =
         r • (V * (A - B) * V) := by
-    simpa [V, X, C] using hder
+    simpa [V, X, C, audenaertPathResolvent] using hder
   have hprod' := hprod.congr_deriv hder'
-  simpa [C, X, V] using hprod'
+  exact hprod'
 
 /-- The path resolvent is continuous on the unit interval. -/
 public theorem audenaertPathResolvent_continuousOn {A B : CMatrix a}
@@ -1211,8 +1212,9 @@ public theorem audenaertLemma4_interior_trace_nonneg {t : ℝ≥0}
     constructor <;> exact_mod_cast ‹_›
   obtain ⟨μ, hAint, hBint, hpow⟩ :=
     audenaertRpowSubIntegralRepresentation (a := a) htNN hA hB
-  have hf : IntegrableOn f (Set.Ioi 0) μ := by
-    simpa [f] using hAint.sub hBint
+  have hf : IntegrableOn (fun r : ℝ =>
+      audenaertRpowIntegrand (t : ℝ) r A - audenaertRpowIntegrand (t : ℝ) r B)
+      (Set.Ioi 0) μ := hAint.sub hBint
   have htrace := audenaertTraceLeftRight_setIntegral hf P B
   rw [hpow]
   change 0 ≤ ((P * B * (∫ r in Set.Ioi 0, f r ∂μ)).trace).re
@@ -1390,10 +1392,10 @@ public theorem audenaertTraceInequality_leftHalf {s : ℝ}
   let P : CMatrix a := positiveSpectralProjector (X - Y) hXY
   let tNN : ℝ≥0 := ⟨t, ht0⟩
   have htNN : tNN ≤ 1 := by exact_mod_cast ht1
-  have hXpow : CFC.rpow X (tNN : ℝ) = CFC.rpow A s := by
-    simpa [X, tNN] using cMatrix_rpow_rpow_of_nonneg hA hrPos.le ht0 hrt
-  have hYpow : CFC.rpow Y (tNN : ℝ) = CFC.rpow B s := by
-    simpa [Y, tNN] using cMatrix_rpow_rpow_of_nonneg hB hrPos.le ht0 hrt
+  have hXpow : CFC.rpow X (tNN : ℝ) = CFC.rpow A s :=
+    cMatrix_rpow_rpow_of_nonneg hA hrPos.le ht0 hrt
+  have hYpow : CFC.rpow Y (tNN : ℝ) = CFC.rpow B s :=
+    cMatrix_rpow_rpow_of_nonneg hB hrPos.le ht0 hrt
   have hXmul : X * CFC.rpow A s = A := by
     simpa [X] using cMatrix_rpow_mul_rpow_of_pos_add_eq_one hA hrPos hsPos hrs
   have hYmul : Y * CFC.rpow B s = B := by

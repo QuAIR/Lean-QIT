@@ -219,7 +219,7 @@ theorem measurementMap_conditionalSandwichedRenyiUpSource_monotonicity
     rho.conditionalSandwichedRenyiUpSource alpha (by linarith) halpha1 <=
       (measureSubsystemState M rho).conditionalSandwichedRenyiUpSource
         alpha (by linarith) halpha1 := by
-  letI : Nonempty b := by
+  let : Nonempty b := by
     rcases rho.nonempty with ⟨z⟩
     exact ⟨z.2⟩
   unfold conditionalSandwichedRenyiUpSource
@@ -265,7 +265,7 @@ theorem ConditionalMinEntropyFeasible.measureSubsystemState
   rw [ConditionalMinEntropyFeasible]
   have hfinal : Phi.map rho.matrix <= (t : Complex) • rout :=
     hmapFeas.trans (by simpa [map_smul] using hscaleRef)
-  simpa [Phi, rin, rout, t, measureSubsystemState] using hfinal
+  exact hfinal
 
 /-- Conditional min-entropy cannot decrease under a sub-unital measurement of
 the first subsystem. This is the `alpha = infinity` endpoint of the total
@@ -275,7 +275,7 @@ theorem measurementMap_conditionalMinEntropy_monotonicity
     (M : POVM c a) (hMUnit : measurementMapDoesNotEnlargeUnit M) :
     rho.conditionalMinEntropy <=
       (measureSubsystemState M rho).conditionalMinEntropy := by
-  letI : Nonempty b := by
+  let : Nonempty b := by
     rcases rho.nonempty with ⟨z⟩
     exact ⟨z.2⟩
   rw [conditionalMinEntropy_eq, conditionalMinEntropy_eq]
@@ -700,7 +700,7 @@ theorem measurementMap_conditionalEntropy_monotonicity
   have hrhoMatrix : V.applyMatrixRight rhoC.matrix = rho.matrix := by
     have hrec := congrArg State.matrix
       (rho.conditioningSupportCompressedState_conditioningIsometryApply)
-    simpa [rhoC, V, State.conditioningIsometryApply_matrix] using hrec
+    exact hrec
   have houtRec : outC.conditioningIsometryApply V = out := by
     apply State.ext
     rw [State.conditioningIsometryApply_matrix]

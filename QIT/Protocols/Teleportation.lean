@@ -123,9 +123,10 @@ theorem teleportationPhase_conjTranspose_mul_self
   ext x y
   by_cases hxy : x = y
   · subst y
-    simpa only [Matrix.diagonal_apply_eq, Matrix.one_apply, if_pos] using
-      star_stdAddChar_mul_self
-        (cyclicBasisEquiv d j * cyclicBasisEquiv d x)
+    simp only [Matrix.diagonal_apply_eq, Matrix.one_apply, ite_eq_left,
+      Pi.star_apply]
+    exact star_stdAddChar_mul_self
+      (cyclicBasisEquiv d j * cyclicBasisEquiv d x)
   · simp [hxy]
 
 theorem teleportationShift_conjTranspose_mul_self
@@ -176,9 +177,9 @@ theorem teleportationWeyl_apply
   simp only [teleportationShift, Equiv.Perm.permMatrix, PEquiv.toMatrix_apply,
     Equiv.toPEquiv_apply, Equiv.Perm.inv_def, Option.mem_def, Option.some.injEq]
   by_cases h : x = teleportationShiftPerm d outcome.1 y
-  · rw [if_pos h, if_pos]
+  · rw [ite_eq_left h, ite_eq_left]
     exact (teleportationShiftPerm d outcome.1).symm_apply_eq.mpr h
-  · rw [if_neg h, if_neg]
+  · rw [ite_eq_right h, ite_eq_right]
     intro hy
     exact h ((teleportationShiftPerm d outcome.1).symm_apply_eq.mp hy)
 
@@ -228,7 +229,7 @@ theorem generalizedBellPureVector_amp
             (cyclicBasisEquiv d outcome.2 * cyclicBasisEquiv d x.1)
       else 0
     rw [teleportationWeyl_apply]
-    simp only [Equiv.refl_apply, if_true]
+    simp only [Equiv.refl_apply, ite_true]
     have hsupport :
         x.1 = teleportationShiftPerm d outcome.1 x.2 ↔
           cyclicBasisEquiv d x.1 =
@@ -241,15 +242,13 @@ theorem generalizedBellPureVector_amp
         simpa [teleportationShiftPerm] using h
     by_cases h : cyclicBasisEquiv d x.1 =
         cyclicBasisEquiv d x.2 + cyclicBasisEquiv d outcome.1
-    · rw [if_pos h, if_pos (hsupport.mpr h)]
+    · rw [ite_eq_left h, ite_eq_left (hsupport.mpr h)]
       ring
-    · rw [if_neg h, if_neg]
+    · rw [ite_eq_right h, ite_eq_right]
       · simp
       · exact fun h' => h (hsupport.mp h')
   · intro y _ hy
-    simp [PureVector.maximallyEntangled_amp]
-    intro h
-    exact False.elim (hy h)
+    simp [PureVector.maximallyEntangled_amp, hy]
   · simp
 
 theorem generalizedBellPureVector_inner
@@ -261,10 +260,10 @@ theorem generalizedBellPureVector_inner
       if outcome = other then 1 else 0 := by
   by_cases hout : outcome = other
   · subst other
-    rw [if_pos rfl]
+    rw [ite_eq_left rfl]
     simpa [rankOneMatrix_trace, dotProduct, mul_comm] using
       (generalizedBellPureVector d outcome).trace_rankOne_eq_one
-  · rw [if_neg hout]
+  · rw [ite_eq_right hout]
     rcases outcome with ⟨i, j⟩
     rcases other with ⟨i', j'⟩
     simp only [Prod.mk.injEq] at hout
@@ -293,7 +292,7 @@ theorem generalizedBellPureVector_inner
               rw [Finset.sum_eq_single y0]
               · have hxy : e x = e y0 + e i := by simp [y0, e]
                 rw [generalizedBellPureVector_amp,
-                  generalizedBellPureVector_amp, if_pos hxy, if_pos hxy]
+                  generalizedBellPureVector_amp, ite_eq_left hxy, ite_eq_left hxy]
                 have hcstar : star c = c := by simp [c]
                 calc
                   star (c * ZMod.stdAddChar (e j * e x)) *
@@ -316,11 +315,11 @@ theorem generalizedBellPureVector_inner
                   apply hy
                   apply e.injective
                   simpa [y0] using congrArg (fun z => z - e i) hxy.symm
-                rw [generalizedBellPureVector_amp, if_neg hne]
+                rw [generalizedBellPureVector_amp, ite_eq_right hne]
                 simp
               · simp
         _ = 0 := by
-          rw [sum_stdAddChar_mul_cyclicBasis d t, if_neg ht, mul_zero]
+          rw [sum_stdAddChar_mul_cyclicBasis d t, ite_eq_right ht, mul_zero]
     · rw [Fintype.sum_prod_type]
       apply Finset.sum_eq_zero
       intro x _
@@ -336,9 +335,9 @@ theorem generalizedBellPureVector_inner
           have := hxy.symm.trans h'
           exact add_left_cancel this
         rw [generalizedBellPureVector_amp, generalizedBellPureVector_amp,
-          if_pos hxy, if_neg hxy']
+          ite_eq_left hxy, ite_eq_right hxy']
         simp
-      · rw [generalizedBellPureVector_amp, if_neg hxy]
+      · rw [generalizedBellPureVector_amp, ite_eq_right hxy]
         simp
 
 /-- Matrix whose columns are the generalized Bell vectors. -/
@@ -391,15 +390,11 @@ theorem generalizedBellPureVector_isMaximallyEntangled
   apply PureVector.HasMaximallyMixedMarginals.isMaximallyEntangled
   constructor
   · apply State.ext
-    change (generalizedBellPureVector d outcome).state.marginalA.matrix =
-      (State.maximallyMixed d).matrix
     rw [generalizedBellPureVector, ReferenceIsometry.marginalA_applyPureVector]
     rw [PureVector.maximallyEntangled_marginalA (Equiv.refl d)]
     rw [State.maximallyMixed_matrix]
     simp [teleportationWeylIsometry, teleportationWeyl_mul_conjTranspose_self]
   · apply State.ext
-    change (generalizedBellPureVector d outcome).state.marginalB.matrix =
-      (State.maximallyMixed d).matrix
     rw [State.marginalB_matrix, generalizedBellPureVector, PureVector.state_matrix,
       ReferenceIsometry.applyPureVector_amp,
       (teleportationWeylIsometry d outcome).rankOne_applyAmp,
@@ -514,7 +509,7 @@ theorem bellContractionKraus_eq_card_inv_smul_conjTranspose_weyl
   rw [Finset.sum_eq_single bob]
   · simp only [TeleportationEntanglementResource.pureVector,
       teleportationEntanglementResource, PureVector.maximallyEntangled]
-    simp only [Equiv.refl_apply, if_true]
+    simp only [Equiv.refl_apply, ite_true]
     rw [generalizedBellPureVector_amp, teleportationWeyl_apply]
     have hsupport :
         cyclicBasisEquiv d input =
@@ -529,7 +524,7 @@ theorem bellContractionKraus_eq_card_inv_smul_conjTranspose_weyl
           congrArg (cyclicBasisEquiv d) h
     by_cases h : cyclicBasisEquiv d input =
         cyclicBasisEquiv d bob + cyclicBasisEquiv d outcome.1
-    · rw [if_pos h, if_pos (hsupport.mp h)]
+    · rw [ite_eq_left h, ite_eq_left (hsupport.mp h)]
       simp only [mul_one, star_mul, smul_eq_mul]
       have hcstar :
           star ((Real.sqrt (Fintype.card d : ℝ) : ℂ)⁻¹) =
@@ -548,7 +543,7 @@ theorem bellContractionKraus_eq_card_inv_smul_conjTranspose_weyl
               star (ZMod.stdAddChar
                 (cyclicBasisEquiv d outcome.2 * cyclicBasisEquiv d input)) := by
               rw [inv_sqrt_mul_self_eq_card_inv d]
-    · rw [if_neg h, if_neg]
+    · rw [ite_eq_right h, ite_eq_right]
       · simp
       · exact fun h' => h (hsupport.mpr h')
   · intro alice _ halice
@@ -619,7 +614,7 @@ theorem uncorrectedTeleportationChannel_offDiagonal
   apply Finset.sum_eq_zero
   intro i _
   by_cases hy : y = teleportationShiftPerm d i y
-  · rw [if_pos hy]
+  · rw [ite_eq_left hy]
     have hi0 : cyclicBasisEquiv d i = 0 := by
       have h : cyclicBasisEquiv d y =
           cyclicBasisEquiv d y + cyclicBasisEquiv d i := by
@@ -632,7 +627,7 @@ theorem uncorrectedTeleportationChannel_offDiagonal
       apply (cyclicBasisEquiv d).injective
       simp [teleportationShiftPerm, hi0]
     rw [← hy]
-    simp only [if_pos hx]
+    simp only [ite_eq_left hx]
     have ht : cyclicBasisEquiv d y - cyclicBasisEquiv d x ≠ 0 := by
       intro ht0
       apply hxy
@@ -656,9 +651,9 @@ theorem uncorrectedTeleportationChannel_offDiagonal
     simp_rw [hchar]
     rw [← Finset.mul_sum]
     rw [← Finset.mul_sum]
-    rw [sum_stdAddChar_mul_cyclicBasis, if_neg ht]
+    rw [sum_stdAddChar_mul_cyclicBasis, ite_eq_right ht]
     simp
-  · rw [if_neg hy]
+  · rw [ite_eq_right hy]
 
 /-- Without Bob's outcome-conditioned correction, the Bell-measurement channel
 is not the identity in every nontrivial finite dimension. -/
@@ -761,6 +756,7 @@ private theorem idChannel_prod_idChannel_applyState
     rho.matrix
   ext x y
   simp [Channel.idChannel, MatrixMap.ofKraus, MatrixMap.kron, Matrix.single, ite_and]
+  rfl
 
 /-- Teleportation preserves every joint state with an inaccessible reference system. -/
 theorem teleportation_preserves_reference

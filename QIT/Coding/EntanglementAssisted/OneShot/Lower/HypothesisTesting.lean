@@ -963,7 +963,7 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_strict
               (ε - η)) :
     ((lower - log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
       N.oneShotEntanglementAssistedClassicalCapacityE ε := by
-  haveI : Nonempty (PureVector (Prod a a)) :=
+  have : Nonempty (PureVector (Prod a a)) :=
     ⟨PureVector.basisPureVector⟩
   have htol_nonneg : 0 ≤ ε - η := le_of_lt (sub_pos.mpr hη_lt)
   obtain ⟨ψ, Λ, hΛlt⟩ :=
@@ -981,9 +981,9 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_strict
     PositionBasedCodingProtocol.exists_message_card_for_ht_lower_bound_rounding
       hε_pos hη_pos hbeta_real_pos
   let Message : Type u := ULift.{u} (Fin k)
-  haveI : Fintype Message := inferInstance
-  haveI : DecidableEq Message := inferInstance
-  haveI : Nonempty Message := ⟨ULift.up ⟨0, hk_pos⟩⟩
+  have : Fintype Message := inferInstance
+  have : DecidableEq Message := inferInstance
+  have : Nonempty Message := ⟨ULift.up ⟨0, hk_pos⟩⟩
   let seqLen : ℕ := k - 1
   have hseq_eq : seqLen + 1 = k := by
     simpa [seqLen] using Nat.succ_pred_eq_of_pos hk_pos
@@ -1040,7 +1040,7 @@ theorem exists_oneShotAchievabilityWitness_htLowerBound_strict_E
         ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
           Nonempty (EntanglementAssistedOneShotAchievabilityWitness N ε
             (lower - log2 (4 * ε / η ^ 2)) M EA EB) := by
-  haveI : Nonempty (PureVector (Prod a a)) :=
+  have : Nonempty (PureVector (Prod a a)) :=
     ⟨PureVector.basisPureVector⟩
   have htol_nonneg : 0 ≤ ε - η := le_of_lt (sub_pos.mpr hη_lt)
   obtain ⟨ψ, Λ, hΛlt⟩ :=
@@ -1058,9 +1058,9 @@ theorem exists_oneShotAchievabilityWitness_htLowerBound_strict_E
     PositionBasedCodingProtocol.exists_message_card_for_ht_lower_bound_rounding
       hε_pos hη_pos hbeta_real_pos
   let Message : Type u := ULift.{u} (Fin k)
-  haveI : Fintype Message := inferInstance
-  haveI : DecidableEq Message := inferInstance
-  haveI : Nonempty Message := ⟨ULift.up ⟨0, hk_pos⟩⟩
+  have : Fintype Message := inferInstance
+  have : DecidableEq Message := inferInstance
+  have : Nonempty Message := ⟨ULift.up ⟨0, hk_pos⟩⟩
   let seqLen : ℕ := k - 1
   have hseq_eq : seqLen + 1 = k := by
     simpa [seqLen] using Nat.succ_pred_eq_of_pos hk_pos
@@ -1121,13 +1121,13 @@ theorem exists_oneShotAchievabilityWitness_htLowerBound_rate_strict_E
   obtain ⟨M, hMft, hMeq, hMne, EA, hEAft, hEAeq, EB, hEBft, hEBeq, hW⟩ :=
     N.exists_oneShotAchievabilityWitness_htLowerBound_strict_E
       hε_pos hη_pos hη_lt hrate
-  letI : Fintype M := hMft
-  letI : DecidableEq M := hMeq
-  letI : Nonempty M := hMne
-  letI : Fintype EA := hEAft
-  letI : DecidableEq EA := hEAeq
-  letI : Fintype EB := hEBft
-  letI : DecidableEq EB := hEBeq
+  let : Fintype M := hMft
+  let : DecidableEq M := hMeq
+  let : Nonempty M := hMne
+  let : Fintype EA := hEAft
+  let : DecidableEq EA := hEAeq
+  let : Fintype EB := hEBft
+  let : DecidableEq EB := hEBeq
   rcases hW with ⟨W⟩
   refine ⟨M, hMft, hMeq, hMne, EA, hEAft, hEAeq, EB, hEBft, hEBeq, ?_⟩
   have hsame :
@@ -1155,7 +1155,7 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_strict_E
     (hlower : (lower : EReal) < N.barHypothesisTestingMutualInformation (ε - η)) :
     ((lower - log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
       N.oneShotEntanglementAssistedClassicalCapacityE ε := by
-  haveI : Nonempty (PureVector (Prod a a)) :=
+  have : Nonempty (PureVector (Prod a a)) :=
     ⟨PureVector.basisPureVector⟩
   have htol_nonneg : 0 ≤ ε - η := le_of_lt (sub_pos.mpr hη_lt)
   obtain ⟨ψ, Λ, hΛlt⟩ :=
@@ -1173,9 +1173,9 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_htLowerBound_strict_E
     PositionBasedCodingProtocol.exists_message_card_for_ht_lower_bound_rounding
       hε_pos hη_pos hbeta_real_pos
   let Message : Type u := ULift.{u} (Fin k)
-  haveI : Fintype Message := inferInstance
-  haveI : DecidableEq Message := inferInstance
-  haveI : Nonempty Message := ⟨ULift.up ⟨0, hk_pos⟩⟩
+  have : Fintype Message := inferInstance
+  have : DecidableEq Message := inferInstance
+  have : Nonempty Message := ⟨ULift.up ⟨0, hk_pos⟩⟩
   let seqLen : ℕ := k - 1
   have hseq_eq : seqLen + 1 = k := by
     simpa [seqLen] using Nat.succ_pred_eq_of_pos hk_pos

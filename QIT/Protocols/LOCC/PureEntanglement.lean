@@ -317,8 +317,9 @@ private theorem bobBranchWeight_smul_finalNormalizedBranch_state_matrix
       ((L.bobChannel j.1.1.1).asSingletonInstrument)
       (L.bobBranchInput psi j.1) j.2
   ext z w
-  have hentry := congrFun (congrFun hBob (z.2, z.1)) (w.2, w.1)
-  simpa [finalNormalizedBranch, PureVector.state_matrix, rankOneMatrix_apply] using hentry
+  have hentry := congrFun (congrFun hBob z.swap) w.swap
+  simp only [finalNormalizedBranch, PureVector.state_matrix, rankOneMatrix_apply] at hentry ⊢
+  exact hentry
 
 /-- Weighting a positive sequential branch recovers its physical joint Kraus branch. -/
 theorem jointPositiveBranchProbability_smul_finalNormalizedBranch_state_matrix
@@ -468,7 +469,7 @@ theorem sum_jointPositiveBranchProbability_smul_finalNormalizedBranch_state_matr
     L.jointPositivePhysicalIndex psi
   have hf : Function.Injective f :=
     L.jointPositivePhysicalIndex_injective psi
-  letI : Fintype {q : L.jointBranchIndex // q ∈ Set.range f} :=
+  let : Fintype {q : L.jointBranchIndex // q ∈ Set.range f} :=
     Subtype.fintype fun q => q ∈ Set.range f
   have hRangeProbability :
       (∑ q : {q : L.jointBranchIndex // q ∈ Set.range f},

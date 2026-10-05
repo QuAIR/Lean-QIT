@@ -436,7 +436,7 @@ theorem chernoffPartitionNNReal_eq_petzChernoffCoefficient_of_mem_Ioo
     unfold chernoffPartitionNNReal commonSupport f
     exact Finset.sum_bij
       (fun x hx => ⟨x, by simpa using (Finset.mem_filter.mp hx).2⟩)
-      (by intro x hx; simp)
+      (by intro x hx; exact Finset.mem_univ _)
       (by intro a _ b _ h; simpa using h)
       (by
         intro y _hy
@@ -576,7 +576,7 @@ noncomputable def commonSupportTiltedDistribution
             M.p x ^ s * M.q x ^ (1 - s)) = M.chernoffPartitionNNReal s := by
         unfold chernoffPartitionNNReal commonSupport
         exact Finset.sum_bij (fun x hx => ⟨x, by simpa using (Finset.mem_filter.mp hx).2⟩)
-          (by intro x hx; simp)
+          (by intro x hx; exact Finset.mem_univ _)
           (by intro a _ b _ h; simpa using h)
           (by
             intro y _hy
@@ -672,7 +672,7 @@ theorem relativeEntropySummandReal_commonSupportTilted_p_of_mem
     positivity
   have hrne_nn : (M.commonSupportTiltedDistribution s hZ).prob x ≠ 0 := by
     exact_mod_cast hrpos.ne'
-  rw [relativeEntropySummandReal, if_neg hrne_nn]
+  rw [relativeEntropySummandReal, ite_eq_right hrne_nn]
   rw [hr]
   congr 1
   simp [pDistribution]
@@ -722,7 +722,7 @@ theorem relativeEntropySummandReal_commonSupportTilted_q_of_mem
     positivity
   have hrne_nn : (M.commonSupportTiltedDistribution s hZ).prob x ≠ 0 := by
     exact_mod_cast hrpos.ne'
-  rw [relativeEntropySummandReal, if_neg hrne_nn]
+  rw [relativeEntropySummandReal, ite_eq_right hrne_nn]
   rw [hr]
   congr 1
   simp [qDistribution]
@@ -752,7 +752,7 @@ theorem relativeEntropySummandReal_commonSupportTilted_p_of_not_mem
     commonSupportTiltedDistribution_prob_toReal_of_not_mem (M := M) (s := s) hZ hx
   have hrnn : (M.commonSupportTiltedDistribution s hZ).prob x = 0 := by
     exact_mod_cast hr
-  rw [relativeEntropySummandReal, if_pos hrnn]
+  rw [relativeEntropySummandReal, ite_eq_left hrnn]
 
 /-- Outside the common support, the `q` KL summand of the common-support tilted
 distribution is zero. -/
@@ -767,7 +767,7 @@ theorem relativeEntropySummandReal_commonSupportTilted_q_of_not_mem
     commonSupportTiltedDistribution_prob_toReal_of_not_mem (M := M) (s := s) hZ hx
   have hrnn : (M.commonSupportTiltedDistribution s hZ).prob x = 0 := by
     exact_mod_cast hr
-  rw [relativeEntropySummandReal, if_pos hrnn]
+  rw [relativeEntropySummandReal, ite_eq_left hrnn]
 
 /-- Common-support sum algebra for the tilted KL against `p`. -/
 theorem commonSupportTilted_relativeEntropy_p_sum_algebra
@@ -865,7 +865,7 @@ theorem relativeEntropyReal_commonSupportTilted_p
     intro x _hxmem
     by_cases hx : M.p x ≠ 0 ∧ M.q x ≠ 0
     · simp [hx]
-    · rw [if_neg hx]
+    · rw [ite_eq_right hx]
       rw [relativeEntropySummandReal_commonSupportTilted_p_of_not_mem (M := M) (s := s) hZ hx]
   rw [hrestrict]
   rw [← Finset.sum_filter
@@ -883,7 +883,7 @@ theorem relativeEntropyReal_commonSupportTilted_p
           (M.commonSupportTiltedDistribution s hZ) M.pDistribution y.1 := by
           unfold commonSupport
           exact Finset.sum_bij (fun x hx => ⟨x, by simpa using (Finset.mem_filter.mp hx).2⟩)
-            (by intro x hx; simp)
+            (by intro x hx; exact Finset.mem_univ _)
             (by intro a _ b _ h; simpa using h)
             (by
               intro y _hy
@@ -925,7 +925,7 @@ theorem relativeEntropyReal_commonSupportTilted_q
     intro x _hxmem
     by_cases hx : M.p x ≠ 0 ∧ M.q x ≠ 0
     · simp [hx]
-    · rw [if_neg hx]
+    · rw [ite_eq_right hx]
       rw [relativeEntropySummandReal_commonSupportTilted_q_of_not_mem (M := M) (s := s) hZ hx]
   rw [hrestrict]
   rw [← Finset.sum_filter
@@ -943,7 +943,7 @@ theorem relativeEntropyReal_commonSupportTilted_q
           (M.commonSupportTiltedDistribution s hZ) M.qDistribution y.1 := by
           unfold commonSupport
           exact Finset.sum_bij (fun x hx => ⟨x, by simpa using (Finset.mem_filter.mp hx).2⟩)
-            (by intro x hx; simp)
+            (by intro x hx; exact Finset.mem_univ _)
             (by intro a _ b _ h; simpa using h)
             (by
               intro y _hy
@@ -1006,7 +1006,7 @@ theorem hasDerivAt_chernoffPartition
     have hid : HasDerivAt (fun t : ℝ => t) 1 s := hasDerivAt_id s
     simpa using hid.const_rpow ha
   have hlin : HasDerivAt (fun t : ℝ => 1 - t) (-1) s := by
-    simpa using (hasDerivAt_const (x := s) (c := (1 : ℝ))).sub (hasDerivAt_id s)
+    exact (hasDerivAt_id s).const_sub 1
   have hpowb :
       HasDerivAt (fun t : ℝ => b ^ (1 - t))
         (-(Real.log b * b ^ (1 - s))) s := by
@@ -1071,7 +1071,7 @@ theorem chernoffPartitionDeriv_nonneg_at_left_min
   have hnonneg :
       0 ≤
         (ContinuousLinearMap.toSpanSingleton ℝ (M.chernoffPartitionDeriv 0)) (1 : ℝ) :=
-    hmin.localize.hasFDerivWithinAt_nonneg
+    hmin.isLocalMinOn.hasFDerivWithinAt_nonneg
       ((hasDerivAt_chernoffPartition M 0).hasDerivWithinAt) hdir
   simpa [ContinuousLinearMap.toSpanSingleton_apply] using hnonneg
 
@@ -1091,7 +1091,7 @@ theorem chernoffPartitionDeriv_nonpos_at_right_min
   have hnonneg :
       0 ≤
         (ContinuousLinearMap.toSpanSingleton ℝ (M.chernoffPartitionDeriv 1)) (-1 : ℝ) :=
-    hmin.localize.hasFDerivWithinAt_nonneg
+    hmin.isLocalMinOn.hasFDerivWithinAt_nonneg
       ((hasDerivAt_chernoffPartition M 1).hasDerivWithinAt) hdir
   simpa [ContinuousLinearMap.toSpanSingleton_apply] using hnonneg
 

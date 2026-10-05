@@ -10,7 +10,7 @@ public import Mathlib.Topology.Order.Monotone
 public import Mathlib.Topology.MetricSpace.Sequences
 public import Mathlib.Analysis.Normed.Operator.Basic
 public import Mathlib.Data.EReal.Basic
-public import Mathlib.Data.Real.Sqrt
+public import Mathlib.Analysis.Real.Sqrt
 public import Mathlib.Analysis.CStarAlgebra.Matrix
 public import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Order
 public import QIT.Util.SDP.HermitianPSDTraceDuality

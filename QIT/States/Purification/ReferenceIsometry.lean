@@ -62,14 +62,24 @@ def ofInjective
     ext i j
     by_cases hij : i = j
     · subst j
-      rw [Matrix.mul_apply]
+      -- Lean 4.34: the entrywise `Matrix.mul_apply` / `Matrix.conjTranspose`
+      -- simp lemmas no longer fire on raw-lambda matrices.  Bridge the product
+      -- entry by its equation, then pre-digest the entrywise layer of each
+      -- leaf with `show` (defeq only, no metavariable assignment), so the
+      -- closing `simp` does C-level `if`-algebra alone.
+      refine (Matrix.mul_apply ..).trans ?_
       rw [Finset.sum_eq_single (f i)]
-      · simp [Matrix.conjTranspose]
+      · show (starRingEnd ℂ) ((fun y x => if y = f x then (1:ℂ) else 0) (f i) i)
+            * (fun y x => if y = f x then (1:ℂ) else 0) (f i) i
+            = (1 : Matrix _ _ ℂ) i i
+        simp
       · intro y _ hy
-        simp [Matrix.conjTranspose, hy]
+        show (starRingEnd ℂ) ((fun y x => if y = f x then (1:ℂ) else 0) y i)
+            * (fun y x => if y = f x then (1:ℂ) else 0) y i = 0
+        simp [hy]
       · intro hnot
         exact False.elim (hnot (Finset.mem_univ (f i)))
-    · rw [Matrix.mul_apply]
+    · refine (Matrix.mul_apply ..).trans ?_
       rw [Finset.sum_eq_zero]
       · simp [hij]
       · intro y _
@@ -77,11 +87,12 @@ def ofInjective
         · have hfi_ne_fj : f i ≠ f j := by
             intro h
             exact hij (hf h)
-          have hyj : y ≠ f j := by
-            intro hyj
-            exact hfi_ne_fj (hyi.symm.trans hyj)
-          simp [Matrix.conjTranspose, hyi, hfi_ne_fj]
-        · simp [Matrix.conjTranspose, hyi]
+          show (starRingEnd ℂ) ((fun y x => if y = f x then (1:ℂ) else 0) y i)
+              * (fun y x => if y = f x then (1:ℂ) else 0) y j = 0
+          simp [hyi, hfi_ne_fj]
+        · show (starRingEnd ℂ) ((fun y x => if y = f x then (1:ℂ) else 0) y i)
+              * (fun y x => if y = f x then (1:ℂ) else 0) y j = 0
+          simp [hyi]
 
 variable {r₃ : Type w} [Fintype r₃] [DecidableEq r₃]
 
@@ -312,10 +323,32 @@ def tensorPower (V : ReferenceIsometry r₁ r₂) :
           ext x y
           cases x
           cases y
-          rw [Matrix.mul_apply]
-          simp [TensorPower, Matrix.conjTranspose]
-          change (1 : ℂ) = (1 : ℂ)
-          rfl }
+          -- Same 4.34 entrywise bridge as `ofInjective`: the `show` absorbs
+          -- `mul_apply` and `conjTranspose` up to the defeq-reachable sum form
+          -- (crossing the Finset sum is not defeq, so stop there).  Collapse
+          -- the one-point sum by `Finset.sum_eq_single` in term mode: `rw`
+          -- cannot match its higher-order pattern here, and `simp`'s sum-
+          -- contraction route needs the non-reducible `tensorPowerFintype`
+          -- instance's cardinal on 4.34.
+          show (∑ k : TensorPower r₁ 0, (starRingEnd ℂ)
+                  ((fun _ _ => (1:ℂ)) k (PUnit.unit : TensorPower r₂ 0))
+              * (fun _ _ => (1:ℂ)) k (PUnit.unit : TensorPower r₂ 0))
+              = (1 : Matrix _ _ ℂ) (PUnit.unit : TensorPower r₂ 0)
+                  (PUnit.unit : TensorPower r₂ 0)
+          refine (Finset.sum_eq_single (PUnit.unit : TensorPower r₁ 0) ?_ ?_).trans ?_
+          · intro b _ hb
+            cases b
+            exact absurd rfl hb
+          · intro hnot
+            exact False.elim (hnot (Finset.mem_univ (PUnit.unit : TensorPower r₁ 0)))
+          · show (starRingEnd ℂ)
+                  ((fun _ _ => (1:ℂ)) (PUnit.unit : TensorPower r₁ 0)
+                    (PUnit.unit : TensorPower r₂ 0))
+              * (fun _ _ => (1:ℂ)) (PUnit.unit : TensorPower r₁ 0)
+                  (PUnit.unit : TensorPower r₂ 0)
+              = (1 : Matrix _ _ ℂ) (PUnit.unit : TensorPower r₂ 0)
+                  (PUnit.unit : TensorPower r₂ 0)
+            simp }
   | n + 1 => V.prod (tensorPower V n)
 
 @[simp]
@@ -336,7 +369,18 @@ def sumInr (extra : Type*) [Fintype extra] [DecidableEq extra]
   isometry := by
     classical
     ext i j
-    simp [Matrix.mul_apply, Matrix.conjTranspose, Matrix.one_apply, eq_comm]
+    -- Same 4.34 entrywise bridge as `ofInjective`: pre-digest the entrywise
+    -- layer with `show`, then C-level `if`-algebra.
+    refine (Matrix.mul_apply ..).trans ?_
+    show (∑ k : Sum extra r, (starRingEnd ℂ)
+            (match k with
+             | Sum.inl _ => (0:ℂ)
+             | Sum.inr j' => if j' = i then 1 else 0)
+          * (match k with
+             | Sum.inl _ => (0:ℂ)
+             | Sum.inr j' => if j' = j then 1 else 0)) =
+        (1 : Matrix _ _ ℂ) i j
+    simp [Matrix.one_apply, eq_comm]
 
 end ReferenceIsometry
 

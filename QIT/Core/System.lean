@@ -74,6 +74,7 @@ def tensorPowerProdEquiv (a : Type u) (b : Type v) :
           | mk ab rest =>
               cases ab
               simp [ih]
+              rfl
         right_inv := by
           intro y
           cases y with

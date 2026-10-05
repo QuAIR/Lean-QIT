@@ -85,7 +85,7 @@ theorem prepareMap_single {x : Type w} [Fintype x] [DecidableEq x]
   ext r s
   by_cases h : i = i'
   · subst h
-    rw [if_pos rfl]
+    rw [ite_eq_left rfl]
     change (∑ x, Matrix.single i i (1 : Complex) x x • (rho x).matrix) r s = (rho i).matrix r s
     simp only [Matrix.sum_apply, Matrix.smul_apply]
     rw [Finset.sum_eq_single i]
@@ -97,7 +97,7 @@ theorem prepareMap_single {x : Type w} [Fintype x] [DecidableEq x]
       simp [Matrix.single, hxi]
     · intro hi
       simp at hi
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     change (∑ x, Matrix.single i i' (1 : Complex) x x • (rho x).matrix) r s = 0
     simp only [Matrix.sum_apply, Matrix.smul_apply]
     refine Finset.sum_eq_zero fun x _ => ?_
@@ -117,7 +117,7 @@ theorem prepareMap_choi {x : Type w} [Fintype x] [DecidableEq x]
   rcases xb' with ⟨x', b2⟩
   by_cases h : x = x'
   · subst h
-    rw [MatrixMap.choi, prepareMap_single rho x x, if_pos rfl]
+    rw [MatrixMap.choi, prepareMap_single rho x x, ite_eq_left rfl]
     simp only [Matrix.sum_apply]
     rw [Finset.sum_eq_single x]
     · simp [Matrix.kronecker, Matrix.single]
@@ -125,7 +125,7 @@ theorem prepareMap_choi {x : Type w} [Fintype x] [DecidableEq x]
       simp [Matrix.kronecker, Matrix.single, hz]
     · intro hx
       simp at hx
-  · rw [MatrixMap.choi, prepareMap_single rho x x', if_neg h]
+  · rw [MatrixMap.choi, prepareMap_single rho x x', ite_eq_right h]
     simp only [Matrix.sum_apply, Matrix.kronecker, Matrix.single]
     symm
     refine Finset.sum_eq_zero fun z _ => ?_
@@ -245,7 +245,8 @@ theorem prepare_map {x : Type w} [Fintype x] [DecidableEq x]
 theorem prepare_map_single_eq {x : Type w} [Fintype x] [DecidableEq x]
     (rho : x → State b) (x0 : x) :
     (prepare rho).map (Matrix.single x0 x0 (1 : Complex)) = (rho x0).matrix := by
-  simpa [prepare_map] using (prepareMap_single rho x0 x0)
+  change prepareMap rho (Matrix.single x0 x0 (1 : ℂ)) = _
+  simpa only [ite_true] using (prepareMap_single rho x0 x0)
 
 /-- The measurement channel returns the Born-rule diagonal classical state. -/
 @[simp]

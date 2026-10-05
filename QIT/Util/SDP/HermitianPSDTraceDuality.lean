@@ -262,11 +262,11 @@ namespace HermitianMatrix
 /-- The inherited real Hilbert inner product is the trace pairing. -/
 theorem inner_eq_tracePairing (T X : HermitianMatrix n) :
     inner ℝ T X = tracePairing T X := by
-  letI : NormedAddCommGroup (CMatrix n) :=
+  let : NormedAddCommGroup (CMatrix n) :=
     Matrix.toMatrixNormedAddCommGroup (1 : CMatrix n) Matrix.PosDef.one
-  letI : InnerProductSpace ℂ (CMatrix n) :=
+  let : InnerProductSpace ℂ (CMatrix n) :=
     Matrix.toMatrixInnerProductSpace (1 : CMatrix n) Matrix.PosSemidef.one
-  letI : InnerProductSpace ℝ (CMatrix n) :=
+  let : InnerProductSpace ℝ (CMatrix n) :=
     InnerProductSpace.complexToReal
   change re (inner ℂ
     ((toCMatrixLinear : HermitianMatrix n →ₗ[ℝ] CMatrix n) T)

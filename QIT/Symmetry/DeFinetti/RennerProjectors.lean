@@ -187,8 +187,8 @@ private theorem rankOneMatrix_mul_of_mulVec_eq_self
             refine Finset.sum_congr rfl fun k _ => ?_
             ring
     _ = ψ i * star (ψ j) := by
-            rw [show ∑ k, P i k * ψ k = ψ i by
-              simpa [Matrix.mulVec] using congrFun hψ i]
+            have hi : ∑ k, P i k * ψ k = ψ i := congrFun hψ i
+            rw [hi]
 
 omit [DecidableEq a] in
 private theorem rankOneMatrix_mul_right_of_mulVec_eq_self
@@ -198,8 +198,7 @@ private theorem rankOneMatrix_mul_right_of_mulVec_eq_self
   have hrow (j : a) : (∑ k, star (ψ k) * P k j) = star (ψ j) := by
     have hconj : (∑ k, P k j * star (ψ k)) = star (ψ j) := by
       have hconj := congrArg star
-        (show ∑ k, P j k * ψ k = ψ j by
-          simpa [Matrix.mulVec] using congrFun hψ j)
+        (show ∑ k, P j k * ψ k = ψ j from congrFun hψ j)
       simpa [map_sum, map_mul, hPherm.apply] using hconj
     calc
       (∑ k, star (ψ k) * P k j) =
@@ -447,8 +446,16 @@ theorem PureVector.tensorPower_reindex_addZero_isRennerMIIDIn_zero
     ((ν.tensorPower m).reindex (tensorPowerAddZeroEquiv a m)).IsRennerMIIDIn
       (a := a) (m := m) (r := 0) ν := by
   refine ⟨1, ν.tensorPower 0, ?_⟩
-  simpa using (pure_prod_zero_reindex_state_eq_tensorPower_reindex (a := a)
-    ν m (ν.tensorPower 0)).symm
+  have h0 :
+      (((ν.tensorPower m).prod (ν.tensorPower 0)).reindex
+        (tensorPowerTakeDropEquiv a m 0).symm).state.reindex
+          (permEquiv (a := a) (m + 0) 1).symm =
+      (((ν.tensorPower m).prod (ν.tensorPower 0)).reindex
+        (tensorPowerTakeDropEquiv a m 0).symm).state := by
+    rw [permEquiv_one]
+    exact State.reindex_refl _
+  exact (pure_prod_zero_reindex_state_eq_tensorPower_reindex (a := a)
+    ν m (ν.tensorPower 0)).symm.trans h0.symm
 
 private theorem RennerMIIDSubspace_zero_le_tensorPower_span
     (m : ℕ) (ν : PureVector a) :
@@ -591,8 +598,8 @@ private theorem matrix_le_one (ρ : State a) :
   let U : Matrix.unitaryGroup a ℂ := ρ.pos.1.eigenvectorUnitary
   let D : CMatrix a := Matrix.diagonal fun i => ((ρ.pos.1.eigenvalues i : ℝ) : ℂ)
   have hdiag : ρ.matrix = (U : CMatrix a) * D * star (U : CMatrix a) := by
-    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using ρ.pos.1.spectral_theorem
+    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply,
+      Function.comp_def] using ρ.pos.1.spectral_theorem
   have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 := by
     simp [U]
   have heig_sum : ∑ i, ρ.pos.1.eigenvalues i = 1 := by
@@ -977,7 +984,17 @@ theorem rennerMIIDProjectorZero_idempotent
     (rennerMIIDProjector_idempotent (a := a) (m := m) (r := 0) ν U)
       ((tensorPowerAddZeroEquiv a m) x))
       ((tensorPowerAddZeroEquiv a m) y)
-  simpa [Matrix.mul_apply] using hP
+  rw [Fintype.sum_equiv (tensorPowerAddZeroEquiv a m)
+      (fun z : TensorPower a m =>
+        rennerMIIDProjector (a := a) m 0 ν U ((tensorPowerAddZeroEquiv a m) x)
+          ((tensorPowerAddZeroEquiv a m) z) *
+          rennerMIIDProjector (a := a) m 0 ν U ((tensorPowerAddZeroEquiv a m) z)
+            ((tensorPowerAddZeroEquiv a m) y))
+      (fun j : TensorPower a (m + 0) =>
+        rennerMIIDProjector (a := a) m 0 ν U ((tensorPowerAddZeroEquiv a m) x) j *
+          rennerMIIDProjector (a := a) m 0 ν U j ((tensorPowerAddZeroEquiv a m) y))
+      (fun _ => rfl)]
+  exact hP
 
 theorem rennerMIIDProjectorZero_le_one
     (m : ℕ) (ν : PureVector a) (U : Matrix.unitaryGroup a ℂ) :
@@ -1282,8 +1299,7 @@ private theorem integral_trace {α : Type*} [MeasurableSpace α]
   rw [MeasureTheory.integral_finsetSum]
   · refine Finset.sum_congr rfl ?_
     intro i _
-    simpa [definettiCMatrixEntryCLM] using
-      ((definettiCMatrixEntryCLM (ι := ι) i i).integral_comp_comm hf).symm
+    exact ((definettiCMatrixEntryCLM (ι := ι) i i).integral_comp_comm hf).symm
   · intro i _
     exact (definettiCMatrixEntryCLM (ι := ι) i i).integrable_comp hf
 
@@ -1330,6 +1346,8 @@ private theorem integral_dotProduct_mulVec {α : Type*} [MeasurableSpace α]
     rw [Finset.mul_sum]
     refine Finset.sum_congr rfl ?_
     intro j _
+    show (starRingEnd ℂ) (x i) * x j * A i j =
+      (starRingEnd ℂ) (x i) * (A i j * x j)
     ring
   simp_rw [← definettiCMatrixQuadraticCLM_apply x]
   exact
@@ -1610,8 +1628,7 @@ private theorem rennerRhoUMatrix_continuous [Nonempty a] {n k : ℕ}
           (Matrix.kronecker (1 : CMatrix (TensorPower a n))
               (rennerMIIDProjectorZero (a := a) k ν U) * X) :=
     (partialTraceBCLM (ι := TensorPower a n) (κ := TensorPower a k)).continuous.comp hK
-  simpa [rennerRhoUMatrix, X] using
-    hPT.const_smul (((Fintype.card (TensorPowerProfile a k) : ℝ) : ℂ))
+  exact hPT.const_smul (((Fintype.card (TensorPowerProfile a k) : ℝ) : ℂ))
 
 /-- Renner's projected family
 `barρ_U = P_U^{m,r} ρ_U P_U^{m,r}` on the retained `m+r`
@@ -2090,8 +2107,15 @@ private theorem psdSqrt_permutationChannel_map {n : ℕ}
   have hpow := cMatrix_rpow_unitary_conj (a := TensorPower a n) hM U
     (s := (1/2 : ℝ)) (by norm_num)
   rw [permutationChannel_map, permutationChannel_map]
-  simpa [psdSqrt, CFC.sqrt_eq_rpow, U, Matrix.star_eq_conjTranspose,
-    permutationMatrix_conjTranspose, Equiv.Perm.inv_def, Matrix.mul_assoc] using hpow
+  have hstar : star ((U : CMatrix (TensorPower a n))) =
+      permutationMatrix (a := a) n σ := by
+    simp [U, Matrix.star_eq_conjTranspose]
+  have hcoe : ((U : CMatrix (TensorPower a n))) =
+      permutationMatrix (a := a) n σ⁻¹ := rfl
+  simp only [psdSqrt, CFC.sqrt_eq_rpow]
+  rw [permutationMatrix_conjTranspose]
+  rw [hstar, hcoe] at hpow
+  exact hpow
 
 namespace State
 
@@ -2325,8 +2349,8 @@ theorem matrix_eq_sum_spectralPureVector (ρ : State a) :
   let D : CMatrix a :=
     Matrix.diagonal (fun i => ((ρ.pos.isHermitian.eigenvalues i : ℝ) : ℂ))
   have hspec : ρ.matrix = (U : CMatrix a) * D * (U⁻¹ : Matrix.unitaryGroup a ℂ) := by
-    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using ρ.pos.isHermitian.spectral_theorem
+    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply,
+      Function.comp_def] using ρ.pos.isHermitian.spectral_theorem
   calc
     ρ.matrix = (U : CMatrix a) * D * (U⁻¹ : Matrix.unitaryGroup a ℂ) := hspec
     _ = ∑ i : a,

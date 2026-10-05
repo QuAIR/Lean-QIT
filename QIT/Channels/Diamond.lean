@@ -434,16 +434,23 @@ theorem TraceNonincreasingCP.hatCompletion_apply_fromBlocks {Φ : MatrixMap a b}
                     rw [Matrix.trace_mul_comm]
               _ = (X * hΦ.lossEffect).trace := by
                     rw [hHerm, hsqrt]
+          show hΦ.hatCompletion.map (Matrix.fromBlocks f 0 0 X) (Sum.inl PUnit.unit)
+              (Sum.inl PUnit.unit) =
+            f PUnit.unit PUnit.unit + (X * hΦ.lossEffect).trace
           simpa [TraceNonincreasingCP.hatCompletion, MatrixMap.ofKraus,
             TraceNonincreasingCP.hatCompletionKraus, Matrix.sum_apply, Matrix.mul_apply,
             Matrix.conjTranspose_apply, Fintype.sum_sum_type] using hloss
       | inr yj =>
+          show hΦ.hatCompletion.map (Matrix.fromBlocks f 0 0 X) (Sum.inl xi)
+              (Sum.inr yj) = (0 : ℂ)
           simp [TraceNonincreasingCP.hatCompletion, MatrixMap.ofKraus,
             TraceNonincreasingCP.hatCompletionKraus, Matrix.sum_apply, Matrix.mul_apply,
             Matrix.conjTranspose_apply, Fintype.sum_sum_type]
   | inr xi =>
       cases y with
       | inl yj =>
+          show hΦ.hatCompletion.map (Matrix.fromBlocks f 0 0 X) (Sum.inr xi)
+              (Sum.inl yj) = (0 : ℂ)
           simp [TraceNonincreasingCP.hatCompletion, MatrixMap.ofKraus,
             TraceNonincreasingCP.hatCompletionKraus, Matrix.sum_apply, Matrix.mul_apply,
             Matrix.conjTranspose_apply, Fintype.sum_sum_type]
@@ -513,6 +520,14 @@ theorem kron_idChannel_apply_slice {r : Type w} [Fintype r] [DecidableEq r]
   simp only [MatrixMap.kron, Channel.idChannel, MatrixMap.ofKraus, LinearMap.coe_mk,
     AddHom.coe_mk, Matrix.one_mul, Matrix.mul_one, Matrix.conjTranspose_one,
     Matrix.single]
+  show (∑ x : r, ∑ x_1 : r, ∑ x_2 : a, ∑ i' : a,
+      X (x_2, x) (i', x_1) *
+        Φ (Matrix.of fun i'_1 j' => if x_2 = i'_1 ∧ i' = j' then 1 else 0) br.1 br'.1 *
+        (∑ _k : Unit, Matrix.of fun i' j' => if x = i' ∧ x_1 = j' then 1 else 0) br.2
+          br'.2) =
+    (∑ x : a, ∑ x_1 : a,
+      X (x, br.2) (x_1, br'.2) •
+        Φ (Matrix.of fun i' j' => if x = i' ∧ x_1 = j' then 1 else 0) br.1 br'.1)
   rw [Finset.sum_eq_single br.2]
   · rw [Finset.sum_eq_single br'.2]
     · simp
@@ -605,8 +620,8 @@ theorem partialTraceA_kron_idChannel_left
   rw [hpt]
   have hmap :
       Φ (∑ i : a, (fun x y => X (i, x) (i, y))) =
-        ∑ i : a, Φ (fun x y => X (i, x) (i, y)) := by
-    rw [map_sum]
+        ∑ i : a, Φ (fun x y => X (i, x) (i, y)) :=
+    map_sum Φ (fun i : a => (fun x y => X (i, x) (i, y))) Finset.univ
   have hmap_entry := congrFun (congrFun hmap j) j'
   calc
     (∑ i : a,
@@ -646,9 +661,9 @@ theorem kron_idChannel_apply_applyMatrixRight
         ∑ y : r₁, ∑ x : r₁,
           (V.matrix br.2 x * star (V.matrix br'.2 y)) •
             Φ (fun i i' => X (i, x) (i', y)) := by
-    rw [map_sum]
+    refine Eq.trans (map_sum _ _ _) ?_
     refine Finset.sum_congr rfl fun y _ => ?_
-    rw [map_sum]
+    refine Eq.trans (map_sum _ _ _) ?_
     refine Finset.sum_congr rfl fun x _ => ?_
     exact LinearMap.map_smul Φ (V.matrix br.2 x * star (V.matrix br'.2 y))
       (fun i i' => X (i, x) (i', y))
@@ -693,9 +708,9 @@ theorem kron_idChannel_left_apply_applyMatrix
         ∑ y : r₁, ∑ x : r₁,
           (V.matrix rb.1 x * star (V.matrix rb'.1 y)) •
             Φ (fun j j' => X (x, j) (y, j')) := by
-    rw [map_sum]
+    refine Eq.trans (map_sum _ _ _) ?_
     refine Finset.sum_congr rfl fun y _ => ?_
-    rw [map_sum]
+    refine Eq.trans (map_sum _ _ _) ?_
     refine Finset.sum_congr rfl fun x _ => ?_
     exact LinearMap.map_smul Φ (V.matrix rb.1 x * star (V.matrix rb'.1 y))
       (fun j j' => X (x, j) (y, j'))
@@ -1023,7 +1038,7 @@ private theorem choi_blockCompression (i : ι) :
   ext x y
   rcases x with ⟨⟨xi, xb⟩, xo⟩
   rcases y with ⟨⟨yi, yb⟩, yo⟩
-  simp [MatrixMap.choi, blockCompression, Matrix.single, Matrix.vecMulVec]
+  simp [MatrixMap.choi, Matrix.single, Matrix.vecMulVec]
   by_cases hxi : xi = i <;> by_cases hxb : xb = xo <;>
     by_cases hyi : yi = i <;> by_cases hyb : yb = yo <;>
       simp [hxi, hxb, hyi, hyb]
@@ -1097,14 +1112,14 @@ private theorem choi_sumInrCompression :
   cases xi with
   | inl xu =>
       cases yi with
-      | inl yu => simp [MatrixMap.choi, sumInrCompression, Matrix.single, Matrix.vecMulVec]
-      | inr yv => simp [MatrixMap.choi, sumInrCompression, Matrix.single, Matrix.vecMulVec]
+      | inl yu => simp [MatrixMap.choi, Matrix.single, Matrix.vecMulVec]
+      | inr yv => simp [MatrixMap.choi, Matrix.single, Matrix.vecMulVec]
   | inr xv =>
       cases yi with
-      | inl yu => simp [MatrixMap.choi, sumInrCompression, Matrix.single, Matrix.vecMulVec]
+      | inl yu => simp [MatrixMap.choi, Matrix.single, Matrix.vecMulVec]
       | inr yv =>
           by_cases hx : xv = xo <;> by_cases hy : yv = yo <;>
-            simp [MatrixMap.choi, sumInrCompression, Matrix.single, Matrix.vecMulVec, hx, hy]
+            simp [MatrixMap.choi, Matrix.single, Matrix.vecMulVec, hx, hy]
 
 /-- Success-block compression is completely positive. -/
 theorem sumInrCompression_completelyPositive :
@@ -1182,16 +1197,16 @@ private theorem choi_sumInrBlockCompression :
   | inl xu =>
       cases yi with
       | inl yu =>
-          simp [MatrixMap.choi, sumInrBlockCompression, Matrix.single, Matrix.vecMulVec]
+          simp [MatrixMap.choi, Matrix.single, Matrix.vecMulVec]
       | inr yv =>
-          simp [MatrixMap.choi, sumInrBlockCompression, Matrix.single, Matrix.vecMulVec]
+          simp [MatrixMap.choi, Matrix.single, Matrix.vecMulVec]
   | inr xv =>
       cases yi with
       | inl yu =>
-          simp [MatrixMap.choi, sumInrBlockCompression, Matrix.single, Matrix.vecMulVec]
+          simp [MatrixMap.choi, Matrix.single, Matrix.vecMulVec]
       | inr yv =>
           by_cases hx : xv = xo <;> by_cases hy : yv = yo <;>
-            simp [MatrixMap.choi, sumInrBlockCompression, Matrix.single, Matrix.vecMulVec, hx, hy]
+            simp [MatrixMap.choi, Matrix.single, Matrix.vecMulVec, hx, hy]
 
 /-- Arbitrary right-summand block compression is completely positive. -/
 theorem sumInrBlockCompression_completelyPositive :
@@ -1298,10 +1313,16 @@ def sumInrTraceDiscard :
     ∑ k : β, X (x.2, Sum.inr (x.1, k)) (y.2, Sum.inr (y.1, k))
   map_add' X Y := by
     ext x y
-    simp [Finset.sum_add_distrib]
+    show (∑ k : β, (X (x.2, Sum.inr (x.1, k)) (y.2, Sum.inr (y.1, k)) +
+        Y (x.2, Sum.inr (x.1, k)) (y.2, Sum.inr (y.1, k)))) =
+      ((∑ k : β, X (x.2, Sum.inr (x.1, k)) (y.2, Sum.inr (y.1, k)) +
+        ∑ k : β, Y (x.2, Sum.inr (x.1, k)) (y.2, Sum.inr (y.1, k))))
+    exact Finset.sum_add_distrib
   map_smul' c X := by
     ext x y
-    simp [Finset.mul_sum]
+    show (∑ k : β, c * X (x.2, Sum.inr (x.1, k)) (y.2, Sum.inr (y.1, k))) =
+      c * ∑ k : β, X (x.2, Sum.inr (x.1, k)) (y.2, Sum.inr (y.1, k))
+    exact (Finset.mul_sum _ _ _).symm
 
 @[simp]
 theorem sumInrTraceDiscard_apply
@@ -1318,9 +1339,9 @@ private theorem sumInrTraceDiscard_eq_ofKraus :
   apply LinearMap.ext
   intro X
   ext x y
-  simp only [sumInrTraceDiscard, MatrixMap.ofKraus, LinearMap.coe_mk,
-    AddHom.coe_mk, Matrix.sum_apply]
-  simp [sumInrTraceDiscardKraus_mul_apply]
+  simp only [MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk, Matrix.sum_apply,
+    sumInrTraceDiscardKraus_mul_apply]
+  rfl
 
 /-- Success-block trace-discard is completely positive. -/
 theorem sumInrTraceDiscard_completelyPositive :
@@ -1397,7 +1418,16 @@ theorem kron_sub_left (Φ Ψ : MatrixMap a b) (Γ : MatrixMap r r) :
   apply LinearMap.ext
   intro X
   ext br br'
-  simp [kron, mul_sub, sub_mul, Finset.sum_sub_distrib]
+  show (∑ j : r, ∑ j' : r, ∑ i : a, ∑ i' : a,
+      X (i, j) (i', j') * (Φ - Ψ) (Matrix.single i i' (1 : Complex)) br.1 br'.1 *
+        Γ (Matrix.single j j' (1 : Complex)) br.2 br'.2) =
+    (∑ j : r, ∑ j' : r, ∑ i : a, ∑ i' : a,
+      X (i, j) (i', j') * Φ (Matrix.single i i' (1 : Complex)) br.1 br'.1 *
+        Γ (Matrix.single j j' (1 : Complex)) br.2 br'.2) -
+    (∑ j : r, ∑ j' : r, ∑ i : a, ∑ i' : a,
+      X (i, j) (i', j') * Ψ (Matrix.single i i' (1 : Complex)) br.1 br'.1 *
+        Γ (Matrix.single j j' (1 : Complex)) br.2 br'.2)
+  simp [LinearMap.sub_apply, mul_sub, sub_mul, Finset.sum_sub_distrib]
 
 theorem channelDifference_kron_id_apply_eq_output_sub
     (Φ Ψ : Channel a b) (ω : State (Prod a r)) :
@@ -1487,12 +1517,14 @@ theorem ofReferenceIsometry_ofInjective_single
       · intro x _
         have hjk : j ≠ k := fun h => hkj h.symm
         simp [hjk]
+  have hmat : ∀ (y : β) (x : α),
+      (ReferenceIsometry.ofInjective f hf).matrix y x =
+        if y = f x then (1 : ℂ) else 0 := fun _ _ => rfl
   rw [Matrix.mul_apply]
   simp_rw [hleft]
   by_cases hy' : y' = f j
   · rw [Finset.sum_eq_single j]
-    · simp [hy', Matrix.conjTranspose, ReferenceIsometry.ofInjective,
-        Matrix.single_apply, eq_comm]
+    · simp [hy', hmat, Matrix.conjTranspose_apply, Matrix.single_apply, eq_comm]
     · intro k _ hk
       simp [hk]
     · intro hnot
@@ -1502,7 +1534,7 @@ theorem ofReferenceIsometry_ofInjective_single
     · intro k _
       by_cases hkj : k = j
       · subst k
-        simp [hy', Matrix.conjTranspose, ReferenceIsometry.ofInjective]
+        simp [hy', hmat, Matrix.conjTranspose_apply]
       · simp [hkj]
 
 theorem ofReferenceIsometry_isCompletelyPositive
@@ -1592,7 +1624,16 @@ private theorem traceEffectToUnit_krausAdjoint_one_of_posSemidef
   calc
     krausAdjoint K (1 : CMatrix PUnit) i j =
         ∑ k : a, star (S k i) * S k j := by
-          simp [krausAdjoint, K, S, Matrix.sum_apply, Matrix.mul_apply]
+          rw [krausAdjoint, Matrix.sum_apply]
+          refine Finset.sum_congr rfl fun k _ => ?_
+          refine Eq.trans (Matrix.mul_apply ..) ?_
+          rw [Finset.sum_eq_single (PUnit.unit : PUnit)]
+          · rw [Matrix.mul_one]
+            rfl
+          · intro x _ hx
+            exact absurd (Subsingleton.elim x PUnit.unit) hx
+          · intro hnot
+            exact absurd (Finset.mem_univ PUnit.unit) hnot
     _ = ∑ k : a, S i k * S k j := by
           refine Finset.sum_congr rfl fun k _ => ?_
           have hstar : star (S k i) = S i k := by
@@ -1629,12 +1670,18 @@ theorem traceEffectToUnit_traceNonincreasingCP {E : CMatrix a}
     (hEpos : E.PosSemidef) (hEle : E ≤ 1) :
     TraceNonincreasingCP (traceEffectToUnit E) where
   completelyPositive := by
-    rw [traceEffectToUnit, IsCompletelyPositive, choi_ofKraus]
+    rw [traceEffectToUnit, IsCompletelyPositive]
+    refine Eq.mp (congrArg Matrix.PosSemidef (choi_ofKraus
+      (fun k : a => fun (_ : PUnit) (i : a) => (psdSqrt E) k i))).symm ?_
     exact Matrix.posSemidef_sum Finset.univ fun k _ =>
       Matrix.posSemidef_vecMulVec_self_star _
   traceNonincreasing := by
     intro X hX
-    rw [traceEffectToUnit_apply_of_posSemidef hEpos]
+    have htr : (traceEffectToUnit E X).trace = (X * E).trace := by
+      rw [traceEffectToUnit_apply_of_posSemidef hEpos]
+      show (∑ _p : PUnit, (X * E).trace) = (X * E).trace
+      simp
+    rw [htr]
     have hcomp : (1 - E).PosSemidef := by
       rwa [← Matrix.le_iff]
     have hnonneg := cMatrix_trace_mul_posSemidef_re_nonneg hX hcomp
@@ -1644,7 +1691,7 @@ theorem traceEffectToUnit_traceNonincreasingCP {E : CMatrix a}
       simp
     have hle : ((X * E).trace).re ≤ X.trace.re := by
       linarith
-    simpa [Matrix.trace] using hle
+    exact hle
 
 end MatrixMap
 
@@ -1660,9 +1707,39 @@ def ofEquiv (e : α ≃ β) : ReferenceIsometry α β where
     ext i j
     by_cases h : i = j
     · subst h
-      simp [Matrix.mul_apply, Matrix.conjTranspose]
-    · have hji : j ≠ i := fun hji => h hji.symm
-      simp [Matrix.mul_apply, Matrix.conjTranspose, h, hji]
+      refine (Matrix.mul_apply ..).trans ?_
+      rw [Finset.sum_eq_single (e i)]
+      · show (starRingEnd ℂ) ((fun y x => if y = e x then (1:ℂ) else 0) (e i) i)
+            * (fun y x => if y = e x then (1:ℂ) else 0) (e i) i
+            = (1 : Matrix _ _ ℂ) i i
+        simp
+      · intro y _ hy
+        show (starRingEnd ℂ) ((fun y x => if y = e x then (1:ℂ) else 0) y i)
+            * (fun y x => if y = e x then (1:ℂ) else 0) y i = 0
+        simp [hy]
+      · intro hnot
+        exact False.elim (hnot (Finset.mem_univ (e i)))
+    · refine (Matrix.mul_apply ..).trans ?_
+      rw [Finset.sum_eq_zero]
+      · simp [h]
+      · intro y _
+        by_cases hyi : y = e i
+        · have hei_ne_hej : e i ≠ e j := fun hb => h (e.injective hb)
+          show (starRingEnd ℂ) ((fun y x => if y = e x then (1:ℂ) else 0) y i)
+              * (fun y x => if y = e x then (1:ℂ) else 0) y j = 0
+          simp [hyi, hei_ne_hej]
+        · show (starRingEnd ℂ) ((fun y x => if y = e x then (1:ℂ) else 0) y i)
+              * (fun y x => if y = e x then (1:ℂ) else 0) y j = 0
+          simp [hyi]
+
+/-- Indexed entry form of `ReferenceIsometry.ofEquiv`.  On Lean 4.34 the
+whole-matrix structure field leaves a bare lambda inside `Matrix.kroneckerMap`
+applications, which fails the implicit-transparency type check and stalls
+`simp`; rewriting at applied positions keeps the matrix well-formed. -/
+theorem ofEquiv_matrix_apply {α : Type u} {β : Type v}
+    [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    (e : α ≃ β) (y : β) (x : α) :
+    (ofEquiv e).matrix y x = if y = e x then (1 : ℂ) else 0 := rfl
 
 end ReferenceIsometry
 
@@ -1758,8 +1835,15 @@ theorem reindex_applyState (e : a ≃ b) (ρ : State a) :
     (reindex e).applyState ρ = ρ.reindex e := by
   apply State.ext
   ext i j
-  simp [Channel.applyState, reindex, MatrixMap.ofReferenceIsometry_apply,
-    ReferenceIsometry.ofEquiv, State.reindex, Matrix.mul_apply]
+  have hmap : ((Channel.reindex e).applyState ρ).matrix i j =
+      ((ReferenceIsometry.ofEquiv e).matrix * ρ.matrix *
+        Matrix.conjTranspose (ReferenceIsometry.ofEquiv e).matrix) i j :=
+    congrFun (congrFun (MatrixMap.ofReferenceIsometry_apply
+      (ReferenceIsometry.ofEquiv e) ρ.matrix) i) j
+  refine hmap.trans ?_
+  show (∑ y : a, (∑ x : a, (if i = e x then (1:ℂ) else 0) * ρ.matrix x y) *
+      (starRingEnd ℂ) (if j = e y then 1 else 0)) =
+    ρ.matrix (e.symm i) (e.symm j)
   rw [Finset.sum_eq_single (e.symm j)]
   · rw [Finset.sum_eq_single (e.symm i)]
     · simp
@@ -1909,9 +1993,14 @@ def replacer (τ : State b) : Channel a b :=
 @[simp]
 theorem replacer_map (τ : State b) (X : CMatrix a) :
     (replacer (a := a) τ).map X = X.trace • τ.matrix := by
-  ext i j
-  simp [replacer, comp, traceToUnit, Channel.prepare_map,
-    MatrixMap.traceEffectToUnit_apply_of_posSemidef Matrix.PosSemidef.one]
+  show (Channel.prepare (fun _ : PUnit.{u + 1} => τ)).map
+      ((Channel.traceToUnit a).map X) = X.trace • τ.matrix
+  have h2 : (Channel.traceToUnit a).map X =
+      (fun _ _ : PUnit.{u + 1} => (X * (1 : CMatrix a)).trace) :=
+    MatrixMap.traceEffectToUnit_apply_of_posSemidef Matrix.PosSemidef.one
+  rw [h2, Channel.prepare_map (fun _ : PUnit.{u + 1} => τ)
+    (fun _ _ : PUnit.{u + 1} => (X * (1 : CMatrix a)).trace)]
+  simp
 
 @[simp]
 theorem replacer_applyState (τ : State b) (ρ : State a) :
@@ -2022,7 +2111,7 @@ theorem diamondTraceDistance_le_of_inputReferenceBound [Nonempty a]
         ((Ψ.prod (idChannel a)).applyState ω) ≤ ε) :
     diamondTraceDistance Φ Ψ ≤ ε := by
   unfold diamondTraceDistance
-  haveI : Nonempty (State (Prod a a)) :=
+  have : Nonempty (State (Prod a a)) :=
     ⟨Classical.basisState (Classical.choice (inferInstance : Nonempty (Prod a a)))⟩
   exact csSup_le (Set.range_nonempty _) fun y hy => by
     rcases hy with ⟨ω, rfl⟩
@@ -2069,7 +2158,7 @@ theorem marginalB_applyState_prod_id {a : Type u} {b : Type v} {c : Type w}
             (MatrixMap.kron_idChannel_apply_slice (a := a) (b := c) (r := b)
               (Φ := D.map) (X := ρ.matrix) (br := (i, j)) (br' := (i, j')))
     _ = ∑ i : a, ρ.matrix (i, j) (i, j') := by
-          simpa [S, Matrix.trace] using htrace
+          exact htrace
 
 /-- A channel applied to the right subsystem (tensored with the identity on the
 left) preserves the left marginal. -/
@@ -2096,7 +2185,7 @@ theorem marginalA_applyState_id_prod {a : Type u} {b : Type v} {c : Type w}
             (MatrixMap.kron_idChannel_left_apply_slice (a := a)
               (Φ := D.map) (X := ρ.matrix) (ad := (i, j)) (ad' := (i', j)))
     _ = ∑ j : b, ρ.matrix (i, j) (i', j) := by
-          simpa [S, Matrix.trace] using htrace
+          exact htrace
 
 /-- The left marginal of a state transformed by a channel on the left factor
 equals the channel applied to the left marginal. -/
@@ -2117,8 +2206,6 @@ theorem marginalA_applyState_prod_id {a : Type u} {b : Type v} {c : Type w}
       (fun x x' => ∑ j : b, ρ.matrix (x, j) (x', j)) =
         ∑ j : b, S j := by
     ext x x'
-    change (∑ j : b, ρ.matrix (x, j) (x', j)) =
-      (∑ j : b, S j) x x'
     simp only [Matrix.sum_apply]
     rfl
   change (∑ j : b,

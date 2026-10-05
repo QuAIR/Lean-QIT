@@ -98,7 +98,17 @@ theorem idealExtractorOutputChannel_applyState (ρ : State (S × (F × e))) :
       (Matrix.kronecker (uniformExtractorOutputState (S := S)).matrix
         ρ.marginalB.matrix) (s, b) (s', b')
   rw [MatrixMap.kron_idChannel_apply_slice]
-  simp [State.marginalB, partialTraceA, Matrix.trace, Matrix.kronecker,
+  have ht : Matrix.trace (fun i i' => ρ.matrix (i, b) (i', b')) =
+      ∑ x, ρ.matrix (x, b) (x, b') := by
+    simp only [Matrix.trace, Matrix.diag]
+  have hrep : (Channel.replacer (uniformExtractorOutputState (S := S))).map
+      (fun i i' => ρ.matrix (i, b) (i', b')) =
+      (∑ x, ρ.matrix (x, b) (x, b')) •
+        (uniformExtractorOutputState (S := S)).matrix := by
+    rw [← ht]
+    exact Channel.replacer_map _ _
+  rw [hrep]
+  simp [State.marginalB, partialTraceA, Matrix.kronecker,
     Matrix.kroneckerMap_apply, mul_comm]
 
 /-- Idealizing the extractor output register is a CPTP contraction. -/
@@ -211,8 +221,8 @@ def hashSeedOutputState (H : HashFamily F Z S) (z : Z) : State (S × F) where
                     (Matrix.single (H.hash f z) (H.hash f z) (1 : ℂ)).trace *
                       (Matrix.single f f (1 : ℂ)).trace := by
               simpa [Matrix.kronecker] using htrace
-            rw [htrace', trace_single_one, if_pos rfl,
-              trace_single_one, if_pos rfl]
+            rw [htrace', trace_single_one, ite_eq_left rfl,
+              trace_single_one, ite_eq_left rfl]
             norm_num
       _ = ↑(∑ f : F, H.prob f) := by simp
       _ = 1 := by
@@ -347,7 +357,9 @@ omit [Fintype F] [DecidableEq F] [Fintype S] [DecidableEq S] [Nonempty S]
 private theorem seedBlock_posSemidef {M : CMatrix (S × (F × e))}
     (hM : M.PosSemidef) (f : F) :
     (seedBlock (S := S) (e := e) M f).PosSemidef := by
-  simpa [seedBlock] using hM.submatrix (fun se : S × e => (se.1, (f, se.2)))
+  show (Matrix.submatrix M (fun se : S × e => (se.1, (f, se.2)))
+      (fun se : S × e => (se.1, (f, se.2)))).PosSemidef
+  exact hM.submatrix (fun se : S × e => (se.1, (f, se.2)))
 
 omit [Fintype F] [Fintype S] [Nonempty S] [Fintype e] [Nonempty F] in
 private theorem seedBlock_le_one {M : CMatrix (S × (F × e))} (hM : M ≤ 1) (f : F) :
@@ -446,7 +458,7 @@ private theorem extractorSeedOutputMatrix_trace (H : HashFamily F Z S)
             (Matrix.trace_kronecker
               (Matrix.single (H.hash f z) (H.hash f z) (1 : ℂ))
               (E.states z).matrix).trans
-              (by rw [trace_single_one, if_pos rfl, (E.states z).trace_eq_one]; norm_num)
+              (by rw [trace_single_one, ite_eq_left rfl, (E.states z).trace_eq_one]; norm_num)
         rw [htrace]
         exact (Algebra.algebraMap_eq_smul_one _).symm
     _ = ↑(∑ z : Z, E.probs z) := by simp

@@ -43,8 +43,9 @@ theorem partialTraceA_kron_idChannel_of_tracePreserving
       QIT.partialTraceA (a := a) (b := r) X := by
   ext i j
   have htrace := hPhi (fun x x' => X (x, i) (x', j))
-  simpa [QIT.partialTraceA, Matrix.trace,
-    MatrixMap.kron_idChannel_apply_slice] using htrace
+  unfold Matrix.trace at htrace
+  unfold Matrix.diag at htrace
+  simpa [QIT.partialTraceA, MatrixMap.kron_idChannel_apply_slice] using htrace
 
 /-- A trace-preserving map on the right tensor factor leaves the left marginal unchanged. -/
 theorem partialTraceB_kron_idChannel_of_tracePreserving
@@ -55,8 +56,9 @@ theorem partialTraceB_kron_idChannel_of_tracePreserving
       QIT.partialTraceB (a := r) (b := a) X := by
   ext i j
   have htrace := hPhi (fun x x' => X (i, x) (j, x'))
-  simpa [QIT.partialTraceB, Matrix.trace,
-    MatrixMap.kron_idChannel_left_apply_slice] using htrace
+  unfold Matrix.trace at htrace
+  unfold Matrix.diag at htrace
+  simpa [QIT.partialTraceB, MatrixMap.kron_idChannel_left_apply_slice] using htrace
 
 end MatrixMap
 

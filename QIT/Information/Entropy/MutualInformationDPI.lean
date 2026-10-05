@@ -187,10 +187,12 @@ theorem psdSupportLog_embedding_eq_cfc_logZero
   have hleft :
       (∑ x : psdSupportIndex σ hσ, g x.1) =
         ∑ x ∈ (Finset.univ : Finset a) with 0 < d x, g x := by
-    simpa [g, d] using
-      (Finset.sum_subtype_eq_sum_filter
-        (s := (Finset.univ : Finset a))
-        (p := fun x => 0 < d x) (f := g))
+    show (∑ x : {x : a // 0 < d x}, g x.1) =
+      ∑ x ∈ (Finset.univ : Finset a) with 0 < d x, g x
+    rw [show (Finset.univ : Finset {x : a // 0 < d x}) =
+        Finset.univ.subtype (fun x => 0 < d x) from (Finset.subtype_univ _).symm]
+    exact Finset.sum_subtype_eq_sum_filter (s := (Finset.univ : Finset a))
+      (p := fun x => 0 < d x) (f := g)
   rw [hleft]
   rw [Finset.sum_filter]
   refine Finset.sum_congr rfl ?_
@@ -552,8 +554,6 @@ theorem marginalB_applyState_prod
           (fun y y' => ∑ i : a, ρ.matrix (i, y) (i, y')) =
             ∑ i : a, S i := by
         ext y y'
-        change (∑ i : a, ρ.matrix (i, y) (i, y')) =
-          (∑ i : a, S i) y y'
         simp only [Matrix.sum_apply]
         rfl
       change (∑ i : a,

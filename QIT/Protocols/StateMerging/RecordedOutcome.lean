@@ -251,7 +251,10 @@ private theorem reindexChannel_map
   simp [Channel.reindex, MatrixMap.ofReferenceIsometry_apply,
     ReferenceIsometry.ofEquiv, Matrix.mul_apply]
   rw [Finset.sum_eq_single (e.symm j)]
-  · rw [Finset.sum_eq_single (e.symm i)]
+  · change (∑ k : A, (if i = e k then 1 else 0) * X k (e.symm j)) *
+        star (if j = e (e.symm j) then 1 else 0) =
+      X (e.symm i) (e.symm j)
+    rw [Finset.sum_eq_single (e.symm i)]
     · simp
     · intro x _ hx
       have hne : i ≠ e x := by
@@ -265,6 +268,9 @@ private theorem reindexChannel_map
       intro hj
       apply hx
       simp [hj]
+    simp only [mul_eq_zero]
+    right
+    show star (if j = e x then 1 else 0) = 0
     simp [hne]
   · simp
 
@@ -403,8 +409,11 @@ private theorem sum_rankOne_localPostAmplitude_eq_kron_ofKraus
   simp only [MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk,
     Matrix.sum_apply, rankOneMatrix_apply]
   refine Finset.sum_congr rfl fun k _ => ?_
-  simp [Matrix.mul_apply, Matrix.conjTranspose_apply, Finset.sum_mul,
-    Finset.mul_sum, mul_assoc, mul_left_comm, mul_comm]
+  change (∑ a, kraus k i.1 a * amp (a, i.2)) *
+      star (∑ a, kraus k j.1 a * amp (a, j.2)) =
+    ∑ j_1 : A, (∑ a : A, kraus k i.1 a * (amp (a, i.2) * star (amp (j_1, j.2)))) *
+      star (kraus k j.1 j_1)
+  simp [Finset.sum_mul, Finset.mul_sum, mul_assoc, mul_left_comm, mul_comm]
 
 private theorem FiniteInstrument.sum_rankOne_postAmplitude_fixedOutcome
     {A : Type u} {A' : Type v} {B : Type w} {X : Type x}
@@ -415,8 +424,10 @@ private theorem FiniteInstrument.sum_rankOne_postAmplitude_fixedOutcome
       MatrixMap.kron (M.branch result) (Channel.idChannel B).map
         psi.state.matrix := by
   rw [← (M.branchTraceNonincreasingCP result).ofKraus_kraus]
-  simpa [FiniteInstrument.postAmplitude, FiniteInstrument.refinedKraus,
-    PureVector.state_matrix] using
+  have hpost : ∀ k : A × A', M.postAmplitude psi (result, k) =
+      fun out => ∑ a, (M.branchTraceNonincreasingCP result).kraus k out.1 a *
+        psi.amp (a, out.2) := fun k => rfl
+  simpa [hpost, PureVector.state_matrix] using
     (sum_rankOne_localPostAmplitude_eq_kron_ofKraus
       (M.branchTraceNonincreasingCP result).kraus psi.amp)
 
@@ -504,8 +515,7 @@ theorem sum_alicePositiveBranchWeight_smul_conditionedOutputState_matrix
           (rankOneMatrix (L.aliceInstrument.postAmplitude input i.1))
       rw [← map_smul]
       congr 1
-      simpa only [NNReal.smul_def] using
-        L.aliceInstrument.branchWeight_smul_normalizedBranch_state_matrix input i
+      exact L.aliceInstrument.branchWeight_smul_normalizedBranch_state_matrix input i
     _ = ∑ i : L.aliceInstrument.refinedBranchIndex, f i := hsupport
     _ = ∑ result : X, ∑ k : A × A', f (result, k) := by
       simp only [FiniteInstrument.refinedBranchIndex, Fintype.sum_prod_type]
@@ -843,7 +853,18 @@ theorem originalAlicePostBobEnsemble_averageState :
       (Equiv.prodAssoc lA (TensorPower r n)
         (Prod (Prod (TensorPower a n) (TensorPower b n)) lB)).symm)
     hlocal
-  simpa [State.reindex_symm_reindex] using h
+  have hcol : ∀ ρ : State
+      ((lA × TensorPower r n) × (TensorPower a n × TensorPower b n) × lB),
+      (ρ.reindex
+          (Equiv.prodAssoc lA (TensorPower r n)
+            ((TensorPower a n × TensorPower b n) × lB))).reindex
+        (Equiv.prodAssoc lA (TensorPower r n)
+          ((TensorPower a n × TensorPower b n) × lB)).symm = ρ := by
+    intro ρ
+    apply State.ext
+    ext i j
+    simp [State.reindex]
+  rwa [hcol] at h
 
 /-- Berta's physical recorded state on `L_A | (R^n X_A)`, built from the
 original Alice instrument rather than the canonical Kraus refinement of its
@@ -1087,9 +1108,9 @@ theorem recordedOutcomeState_purifiedBall :
         (Real.sqrt
           (2 * Real.sqrt C.fidelityError - (Real.sqrt C.fidelityError) ^ 2))
       C.idealRecordedOutcomeState := by
-  letI : DecidableEq (TensorPower a n) := tensorPowerDecidableEq n
-  letI : DecidableEq (TensorPower b n) := tensorPowerDecidableEq n
-  letI : DecidableEq (TensorPower r n) := tensorPowerDecidableEq n
+  let : DecidableEq (TensorPower a n) := tensorPowerDecidableEq n
+  let : DecidableEq (TensorPower b n) := tensorPowerDecidableEq n
+  let : DecidableEq (TensorPower r n) := tensorPowerDecidableEq n
   rw [State.purifiedBall_eq]
   apply State.purifiedDistance_le_sqrt_two_mul_sub_sq_of_normalizedTraceDistance_le
   · apply Real.sqrt_le_one.mpr

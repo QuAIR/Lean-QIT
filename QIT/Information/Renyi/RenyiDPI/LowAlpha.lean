@@ -344,7 +344,7 @@ theorem sandwichedRenyi_reverseHolder_fullRank_sideState_trace_pos
     0 <
       ((sandwichedRenyiInner ρ σ α *
         CFC.rpow N (1 - 1 / α)).trace).re := by
-  haveI : Nonempty a := ρ.nonempty
+  have : Nonempty a := ρ.nonempty
   exact _root_.QIT.trace_mul_posDef_re_pos
     (sandwichedRenyiInner_posDef ρ σ hρ hσ α)
     (_root_.QIT.cMatrix_rpow_posDef_of_posDef hN (1 - 1 / α))

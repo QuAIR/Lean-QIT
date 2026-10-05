@@ -88,8 +88,8 @@ theorem cMatrix_rpow_real_smul_posSemidef
   have hA_spec :
       A = (U : CMatrix a) * (Matrix.diagonal fun i => (d i : ℂ)) *
         star (U : CMatrix a) := by
-    simpa [U, d, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hA.isHermitian.spectral_theorem
+    simpa [U, d, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply,
+      Function.comp_def] using hA.isHermitian.spectral_theorem
   have hscaled_spec :
       (lambda • A : CMatrix a) =
         (U : CMatrix a) *
@@ -496,7 +496,7 @@ theorem petzRenyi_add_log_inv_epsilon_le_hypothesisTestingRelativeEntropyFinite
     rho.petzRenyi sigma hρ hσ alpha halpha0 (ne_of_lt halpha1) +
         alpha / (alpha - 1) * log2 (1 / epsilon) ≤
       rho.hypothesisTestingRelativeEntropyFinite sigma epsilon := by
-  haveI : Nonempty a := rho.nonempty
+  have : Nonempty a := rho.nonempty
   let T : ℝ :=
     ((CFC.rpow rho.matrix alpha *
       CFC.rpow sigma.matrix (1 - alpha)).trace).re
@@ -1192,7 +1192,7 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_petzLowerBound
         α / (1 - α) * log2 (1 / (ε - η)) -
         log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
       N.oneShotEntanglementAssistedClassicalCapacityE ε := by
-  haveI : Nonempty (PureVector (Prod a a)) :=
+  have : Nonempty (PureVector (Prod a a)) :=
     ⟨PureVector.basisPureVector⟩
   have hεη : 0 < ε - η := sub_pos.mpr hη_lt
   exact N.oneShotEntanglementAssistedClassicalCapacityE_petzLowerBound_of_comparison_EReal
@@ -1220,7 +1220,7 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_petzPSDFiniteLowerBound_of
         α / (1 - α) * log2 (1 / (ε - η)) -
         log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
       N.oneShotEntanglementAssistedClassicalCapacityE ε := by
-  haveI : Nonempty (PureVector (Prod a a)) :=
+  have : Nonempty (PureVector (Prod a a)) :=
     ⟨PureVector.basisPureVector⟩
   have hεη : 0 < ε - η := sub_pos.mpr hη_lt
   exact N.oneShotEntanglementAssistedClassicalCapacityE_petzPSDFiniteLowerBound_of_comparison_EReal
@@ -1247,7 +1247,7 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_petzPSDFiniteLowerBound_of
         α / (1 - α) * log2 (1 / (ε - η)) -
         log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
       N.oneShotEntanglementAssistedClassicalCapacityE ε := by
-  haveI : Nonempty (PureVector (Prod a a)) :=
+  have : Nonempty (PureVector (Prod a a)) :=
     ⟨PureVector.basisPureVector⟩
   have hεη : 0 < ε - η := sub_pos.mpr hη_lt
   exact N.oneShotEntanglementAssistedClassicalCapacityE_petzPSDFiniteLowerBound_of_comparison_EReal
@@ -1326,7 +1326,7 @@ theorem exists_oneShotAchievabilityWitness_petzPSDFiniteLowerBound_rate_strict
       ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
         ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
           Nonempty (EntanglementAssistedOneShotAchievabilityWitness N ε rate M EA EB) := by
-  haveI : Nonempty (PureVector (Prod a a)) :=
+  have : Nonempty (PureVector (Prod a a)) :=
     ⟨PureVector.basisPureVector⟩
   have hεη : 0 < ε - η := sub_pos.mpr hη_lt
   have hcmp :=
@@ -1374,7 +1374,7 @@ theorem exists_oneShotAchievabilityWitness_petzPSDLowerBound_rate_strict
       ∃ (EA : Type u), ∃ (_ : Fintype EA), ∃ (_ : DecidableEq EA),
         ∃ (EB : Type u), ∃ (_ : Fintype EB), ∃ (_ : DecidableEq EB),
           Nonempty (EntanglementAssistedOneShotAchievabilityWitness N ε rate M EA EB) := by
-  haveI : Nonempty (PureVector (Prod a a)) := ⟨PureVector.basisPureVector⟩
+  have : Nonempty (PureVector (Prod a a)) := ⟨PureVector.basisPureVector⟩
   have hεη : 0 < ε - η := sub_pos.mpr hη_lt
   have hcmp := N.barHypothesisTesting_dominates_barPetzPSD
     hεη hα_pos hα_lt_one
@@ -1413,7 +1413,7 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_petzPSDFiniteLowerBound
         α / (1 - α) * log2 (1 / (ε - η)) -
         log2 (4 * ε / η ^ 2) : ℝ) : EReal) ≤
       N.oneShotEntanglementAssistedClassicalCapacityE ε := by
-  haveI : Nonempty (PureVector (Prod a a)) :=
+  have : Nonempty (PureVector (Prod a a)) :=
     ⟨PureVector.basisPureVector⟩
   have hεη : 0 < ε - η := sub_pos.mpr hη_lt
   exact N.oneShotEntanglementAssistedClassicalCapacityE_petzPSDFiniteLowerBound_of_comparison_EReal
@@ -1433,7 +1433,7 @@ theorem oneShotEntanglementAssistedClassicalCapacityE_petzPSDLowerBound
           ((α / (1 - α) * log2 (1 / (ε - η)) : ℝ) : EReal) -
         (log2 (4 * ε / η ^ 2) : EReal) ≤
       N.oneShotEntanglementAssistedClassicalCapacityE ε := by
-  haveI : Nonempty (PureVector (Prod a a)) :=
+  have : Nonempty (PureVector (Prod a a)) :=
     ⟨PureVector.basisPureVector⟩
   have hεη : 0 < ε - η := sub_pos.mpr hη_lt
   exact N.oneShotEntanglementAssistedClassicalCapacityE_petzPSDLowerBound_of_comparison_EReal

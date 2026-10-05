@@ -98,7 +98,7 @@ theorem mixedInputOutput_mutualInformation_le_information
     (ρ : State (Prod r a)) :
     mutualInformation (((Channel.idChannel r).prod N).applyState ρ) ≤
       N.entanglementAssistedInformation := by
-  haveI : Nonempty r := by
+  have : Nonempty r := by
     rcases ρ.nonempty with ⟨ra⟩
     exact ⟨ra.1⟩
   let ψ : PureVector (Prod (Prod (Prod r a) r) a) :=
@@ -182,13 +182,22 @@ private theorem applyState_prod_reindex_entanglementAssistedProductInput
     rcases z' with ⟨z1', z2'⟩
     simp [State.bipartiteProductEquiv, Matrix.kronecker,
       Matrix.kroneckerMap_apply]
+    rfl
   rw [hslice]
   change MatrixMap.kron N₁.map N₂.map
       (Matrix.kronecker
         (fun i i' => ρ.matrix (xR1, i) (yR1, i'))
         (fun k k' => σ.matrix (xR2, k) (yR2, k')))
-      (xB1, xB2) (yB1, yB2) = _
-  rw [MatrixMap.kron_apply_kronecker]
+      (xB1, xB2) (yB1, yB2) =
+    Matrix.kronecker
+      (((Channel.idChannel a₁).map.kron N₁.map) ρ.matrix)
+      (((Channel.idChannel a₂).map.kron N₂.map) σ.matrix)
+      (State.bipartiteProductEquiv.symm ((xR1, xR2), xB1, xB2))
+      (State.bipartiteProductEquiv.symm ((yR1, yR2), yB1, yB2))
+  have hk := MatrixMap.kron_apply_kronecker N₁.map N₂.map
+    (fun i i' => ρ.matrix (xR1, i) (yR1, i'))
+    (fun k k' => σ.matrix (xR2, k) (yR2, k'))
+  rw [hk]
   simp [State.bipartiteProductEquiv, Matrix.kronecker,
     Matrix.kroneckerMap_apply]
   rw [MatrixMap.kron_idChannel_left_apply_slice]
@@ -361,7 +370,7 @@ theorem entanglementAssistedInformation_tensorPower_eq_mul
             exact entanglementAssistedInformation_unit
         _ = ((0 : ℕ) : ℝ) * N.entanglementAssistedInformation := by norm_num
   | succ n ih =>
-      haveI : Nonempty (QIT.TensorPower a n) :=
+      have : Nonempty (QIT.TensorPower a n) :=
         tensorPower_nonempty_of_nonempty (α := a) n
       rw [Channel.tensorPower_succ]
       calc

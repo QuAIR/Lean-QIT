@@ -9,7 +9,7 @@ module
 public import QIT.Coding.EntanglementAssisted.PositionBasedCoding
 public import QIT.Symmetry.DeFinetti
 public import QIT.Util.SDP.HermitianPSDTraceDuality
-public import Mathlib.Data.Complex.BigOperators
+public import Mathlib.Basic.Complex.BigOperators
 
 /-!
 # Sequential decoding
@@ -833,9 +833,11 @@ theorem reverseProduct_effect_le_one
     (P : ProjectionSequence a n) :
     Matrix.conjTranspose P.reverseProduct * P.reverseProduct ≤ (1 : CMatrix a) := by
   rw [Matrix.le_iff]
-  simpa [ProjectionSequence.reverseProduct, ProjectionSequence.matrixList] using
-    projectionList_reverseProduct_effect_compl_posSemidef
-      (List.ofFn fun i : Fin n => P i)
+  have hlist := projectionList_reverseProduct_effect_compl_posSemidef
+    (List.ofFn fun i : Fin n => P i)
+  simp only [List.map_ofFn] at hlist
+  simp only [ProjectionSequence.reverseProduct, ProjectionSequence.matrixList]
+  exact hlist
 
 /-- Heisenberg effect for accepting an ordered sequential projector test. -/
 def sequentialAcceptEffect (P : ProjectionSequence a n) : CMatrix a :=
@@ -971,7 +973,7 @@ theorem sequentialDecoderEffectsList_get_posSemidef
   | cons P Ps ih =>
       cases i using Fin.cases with
       | zero =>
-          simpa [sequentialDecoderEffectsList] using P.posSemidef
+          exact P.posSemidef
       | succ i =>
           let i' : Fin (sequentialDecoderEffectsList Ps).length :=
             ⟨i.val, by simpa using i.isLt⟩
@@ -979,7 +981,19 @@ theorem sequentialDecoderEffectsList_get_posSemidef
               ((sequentialDecoderEffectsList Ps).get i').PosSemidef := ih i'
           have hmul := htail.mul_mul_conjTranspose_same P.compl.matrix
           rw [P.compl.isHermitian] at hmul
-          simpa [sequentialDecoderEffectsList, i'] using hmul
+          have hidx : (sequentialDecoderEffectsList (P :: Ps)).get i.succ
+              = P.compl.matrix * (sequentialDecoderEffectsList Ps).get i' *
+                P.compl.matrix := by
+            have hstep :
+                (sequentialDecoderEffectsList (P :: Ps)).get
+                  ⟨i.val + 1,
+                    Nat.succ_lt_succ (by simpa [List.length_map] using i.isLt)⟩ =
+                  P.compl.matrix * (sequentialDecoderEffectsList Ps).get i' *
+                    P.compl.matrix := by
+              simp [sequentialDecoderEffectsList, i']
+            exact hstep
+          rw [hidx]
+          exact hmul
 
 theorem sequentialDecoderEffectsList_get_succ
     (P : ProjectionMatrix a) (Ps : List (ProjectionMatrix a))

@@ -53,7 +53,7 @@ theorem ext {rho sigma : State a} (h : rho.matrix = sigma.matrix) : rho = sigma 
 theorem nonempty (rho : State a) : Nonempty a := by
   classical
   by_contra h
-  haveI : IsEmpty a := not_nonempty_iff.mp h
+  have : IsEmpty a := not_nonempty_iff.mp h
   have htrace := rho.trace_eq_one
   simp [Matrix.trace] at htrace
 
@@ -247,9 +247,11 @@ def marginalBC (rho : State (Prod (Prod a b) c)) : State (Prod b c) where
       · intro i s his hs
         simpa [Finset.sum_insert his, block] using
           (rho.pos.submatrix (fun bc : Prod b c => ((i, bc.1), bc.2))).add hs
-    convert hsum using 1
-    ext bc bc'
-    simp [block, Matrix.sum_apply]
+    have hmatrix : (fun bc bc' =>
+        ∑ i : a, rho.matrix ((i, bc.1), bc.2) ((i, bc'.1), bc'.2)) = ∑ i, block i := by
+      ext bc bc'
+      simp [block, Matrix.sum_apply]
+    exact hmatrix.symm ▸ hsum
   trace_eq_one := by
     rw [← rho.trace_eq_one]
     rw [Matrix.trace]
@@ -282,9 +284,11 @@ def marginalAC (rho : State (Prod (Prod a b) c)) : State (Prod a c) where
       · intro j s hjs hs
         simpa [Finset.sum_insert hjs, block] using
           (rho.pos.submatrix (fun ac : Prod a c => ((ac.1, j), ac.2))).add hs
-    convert hsum using 1
-    ext ac ac'
-    simp [block, Matrix.sum_apply]
+    have hmatrix : (fun ac ac' =>
+        ∑ i : b, rho.matrix ((ac.1, i), ac.2) ((ac'.1, i), ac'.2)) = ∑ i, block i := by
+      ext ac ac'
+      simp [block, Matrix.sum_apply]
+    exact hmatrix.symm ▸ hsum
   trace_eq_one := by
     rw [← rho.trace_eq_one]
     rw [Matrix.trace]
@@ -377,6 +381,7 @@ theorem tensorPowerBipartite_marginalA (rho : State (Prod a b)) :
       cases y
       simp [tensorPowerBipartite, tensorPowerProdEquiv, marginalA, tensorPower,
         unit, reindex, partialTraceB, TensorPower]
+      rfl
   | n + 1 => by
       ext x y
       cases x with
@@ -429,6 +434,7 @@ theorem tensorPowerBipartite_marginalB (rho : State (Prod a b)) :
       cases y
       simp [tensorPowerBipartite, tensorPowerProdEquiv, marginalB, tensorPower,
         unit, reindex, partialTraceA, TensorPower]
+      rfl
   | n + 1 => by
       ext x y
       cases x with

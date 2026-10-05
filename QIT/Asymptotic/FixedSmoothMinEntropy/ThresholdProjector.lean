@@ -413,7 +413,7 @@ def fixedPetzThresholdHatCompressedAmplitudeMatrix
     (ρ : State (Prod a b)) (σ : State b) (lambda : ℝ) :
     CMatrix (Sum PUnit (Prod a b)) :=
   Matrix.fromBlocks
-    (fun _ _ : PUnit =>
+    (Matrix.of fun _ _ : PUnit =>
       ((Real.sqrt
         (ρ.fixedPetzThresholdCompressedSubstate σ lambda).hatFailureMass : ℝ) : ℂ))
     0 0
@@ -531,7 +531,7 @@ def fixedPetzSmoothMinWitnessHatAmplitudeMatrix
           ρ.fixedPetzSmoothMinG σ lambda ≤ 1) :
     CMatrix (Sum PUnit (Prod a b)) :=
   Matrix.fromBlocks
-    (fun _ _ : PUnit =>
+    (Matrix.of fun _ _ : PUnit =>
       ((Real.sqrt
         (ρ.fixedPetzSmoothMinWitnessSubstate σ lambda hcontract).hatFailureMass : ℝ) : ℂ))
     0 0 (ρ.fixedPetzSmoothMinG σ lambda * ρ.sqrtMatrix)
@@ -861,7 +861,7 @@ theorem fixedPetzThresholdPositivePart_trace_re_le_petzTrace_of_unitaryDephaseMo
       lambda ^ (1 - α) * ρ.conditionalPetzRenyiTraceTerm σ α := by
   have hB : (identityTensorStateMatrix (a := a) σ).PosDef :=
     identityTensorStateMatrix_posDef_of_posDef (a := a) σ hσ
-  simpa [fixedPetzThresholdPositivePart, conditionalPetzRenyiTraceTerm] using
+  exact
     cMatrix_posPart_trace_re_le_scaled_petzTrace_of_unitaryDephaseMonotone
       (A := ρ.matrix) (B := identityTensorStateMatrix (a := a) σ)
       ρ.pos hB hlambda hα_gt hα_le_two
@@ -887,7 +887,7 @@ theorem fixedPetzThresholdPositivePart_trace_re_le_petzTrace_of_unitaryDephaseMo
       lambda ^ (1 - α) * ρ.conditionalPetzRenyiTraceTerm σ α := by
   have hB : (identityTensorStateMatrix (a := a) σ).PosDef :=
     identityTensorStateMatrix_posDef_of_posDef (a := a) σ hσ
-  simpa [fixedPetzThresholdPositivePart, conditionalPetzRenyiTraceTerm] using
+  exact
     cMatrix_posPart_trace_re_le_scaled_petzTrace_of_unitaryDephaseMonotone
       (A := ρ.matrix) (B := identityTensorStateMatrix (a := a) σ)
       hρ.posSemidef hB hlambda hα_gt hα_le_two

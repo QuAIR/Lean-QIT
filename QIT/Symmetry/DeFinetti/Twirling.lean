@@ -80,7 +80,8 @@ theorem permutationChannel_prod_id_map_apply {r : Type w} [Fintype r] [Decidable
   change MatrixMap.kron (permutationChannel (a := a) n π).map
     (Channel.idChannel r).map X x y = _
   rw [MatrixMap.kron_idChannel_apply_slice]
-  rw [permutationChannel_map_apply]
+  exact permutationChannel_map_apply (a := a) n π
+    (fun i i' => X (i, x.2) (i', y.2)) x.1 y.1
 
 /-- Partial trace over the reference register commutes with a tensor-factor
 permutation on the input register. -/
@@ -164,7 +165,9 @@ theorem inputPermutationTwirling_apply_permutation {r : Type w} [Fintype r] [Dec
   | mk yA yr =>
     simp only [Channel.applyState]
     rw [MatrixMap.kron_idChannel_apply_slice]
-    rw [permutationChannel_map_apply]
+    refine Eq.trans (permutationChannel_map_apply (a := a) n τ
+      (fun i i' => ((permutationChannel (a := a) n σ).prod (Channel.idChannel r)).map
+        ω.matrix (i, (xA, xr).2) (i', (yA, yr).2)) (xA, xr).1 (yA, yr).1) ?_
     simp only [permutationChannel_prod_id_map_apply]
     change ω.matrix (σ • (τ • xA), xr) (σ • (τ • yA), yr) =
       ω.matrix ((σ * τ) • xA, xr) ((σ * τ) • yA, yr)

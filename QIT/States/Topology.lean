@@ -279,7 +279,7 @@ private noncomputable def ampSubtypeHomeomorph :
 
 /-- Finite-dimensional normalized pure vectors form a compact space. -/
 instance instCompactSpace : CompactSpace (PureVector a) := by
-  haveI : CompactSpace {ψ : a → ℂ // ψ ∈ normalizedAmplitudeSet a} :=
+  have : CompactSpace {ψ : a → ℂ // ψ ∈ normalizedAmplitudeSet a} :=
     isCompact_iff_compactSpace.mp normalizedAmplitudeSet_isCompact
   exact ampSubtypeHomeomorph.symm.compactSpace
 

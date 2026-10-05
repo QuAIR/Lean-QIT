@@ -107,25 +107,32 @@ theorem teleportationAppendResourceChannel_map
       (Channel.reindex (teleportationAppendRightUnitEquiv d)).map X =
         Matrix.kronecker X (1 : CMatrix PUnit.{u + 1}) := by
     ext i j
-    cases i.2
-    cases j.2
-    simp only [Channel.reindex, MatrixMap.ofReferenceIsometry_apply,
-      ReferenceIsometry.ofEquiv, teleportationAppendRightUnitEquiv,
-      Matrix.mul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply,
-      Matrix.one_apply]
-    rw [Finset.sum_eq_single j.1]
-    · rw [Finset.sum_eq_single i.1]
-      · simp
+    have hmap : ((Channel.reindex (teleportationAppendRightUnitEquiv d)).map X) i j =
+        ((ReferenceIsometry.ofEquiv (teleportationAppendRightUnitEquiv d)).matrix * X *
+          Matrix.conjTranspose
+            (ReferenceIsometry.ofEquiv (teleportationAppendRightUnitEquiv d)).matrix) i j :=
+      congrFun (congrFun (MatrixMap.ofReferenceIsometry_apply
+        (ReferenceIsometry.ofEquiv (teleportationAppendRightUnitEquiv d)) X) i) j
+    refine hmap.trans ?_
+    show (∑ y : d, (∑ x : d,
+          (if i = teleportationAppendRightUnitEquiv d x then (1 : ℂ) else 0) * X x y) *
+        (starRingEnd ℂ) (if j = teleportationAppendRightUnitEquiv d y then 1 else 0)) =
+      X i.1 j.1 * (if i.2 = j.2 then (1 : ℂ) else 0)
+    rw [Finset.sum_eq_single ((teleportationAppendRightUnitEquiv d).symm j)]
+    · rw [Finset.sum_eq_single ((teleportationAppendRightUnitEquiv d).symm i)]
+      · simp [teleportationAppendRightUnitEquiv]
       · intro x _ hx
-        have hne : i ≠ (x, PUnit.unit) := by
+        have hne : i ≠ teleportationAppendRightUnitEquiv d x := by
           intro hi
-          exact hx (congrArg Prod.fst hi).symm
+          apply hx
+          simp [hi, teleportationAppendRightUnitEquiv]
         simp [hne]
       · simp
     · intro x _ hx
-      have hne : j ≠ (x, PUnit.unit) := by
+      have hne : j ≠ teleportationAppendRightUnitEquiv d x := by
         intro hj
-        exact hx (congrArg Prod.fst hj).symm
+        apply hx
+        simp [hj, teleportationAppendRightUnitEquiv]
       simp [hne]
     · simp
   change
@@ -155,14 +162,34 @@ def teleportationLOCCResourceChannel
       (Channel.reindex (teleportationLOCCInputEquiv d)).comp <|
         teleportationAppendResourceChannel d
 
+private theorem kron_apply_entry
+    {a : Type u} {b : Type u} {c : Type u} {dd : Type u}
+    [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+    [Fintype c] [DecidableEq c] [Fintype dd] [DecidableEq dd]
+    (Phi : MatrixMap a b) (Psi : MatrixMap c dd)
+    (X : CMatrix (Prod a c)) (bd bd' : Prod b dd) :
+    MatrixMap.kron Phi Psi X bd bd' =
+      ∑ j : c, ∑ j' : c, ∑ i : a, ∑ i' : a,
+        X (i, j) (i', j') *
+          Phi (Matrix.single i i' (1 : Complex)) bd.1 bd'.1 *
+          Psi (Matrix.single j j' (1 : Complex)) bd.2 bd'.2 := rfl
+
 private theorem teleportationReindex_map
     {a : Type u} {b : Type u}
     [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
     (e : a ≃ b) (X : CMatrix a) :
     (Channel.reindex e).map X = X.submatrix e.symm e.symm := by
   ext i j
-  simp [Channel.reindex, MatrixMap.ofReferenceIsometry_apply,
-    ReferenceIsometry.ofEquiv, Matrix.mul_apply]
+  have hmap : ((Channel.reindex e).map X) i j =
+      ((ReferenceIsometry.ofEquiv e).matrix * X *
+        Matrix.conjTranspose (ReferenceIsometry.ofEquiv e).matrix) i j :=
+    congrFun (congrFun (MatrixMap.ofReferenceIsometry_apply
+      (ReferenceIsometry.ofEquiv e) X) i) j
+  refine hmap.trans ?_
+  show (∑ y : a, (∑ x : a,
+        (if i = e x then (1 : ℂ) else 0) * X x y) *
+      (starRingEnd ℂ) (if j = e y then 1 else 0)) =
+    X (e.symm i) (e.symm j)
   rw [Finset.sum_eq_single (e.symm j)]
   · rw [Finset.sum_eq_single (e.symm i)]
     · simp
@@ -282,7 +309,7 @@ theorem teleportationLOCCResourceChannel_eq_teleportationChannel
     teleportationReindex_map, teleportationReindex_map]
   ext bob bob'
   simp only [Matrix.submatrix_apply, Matrix.sum_apply]
-  simp only [MatrixMap.kron]
+  simp only [kron_apply_entry]
   simp only [generalizedBellPOVM]
   simp only [teleportationLOCCInputEquiv, teleportationLOCCOutputEquiv,
     teleportationChannel, MatrixMap.ofKraus, LinearMap.coe_mk, AddHom.coe_mk,

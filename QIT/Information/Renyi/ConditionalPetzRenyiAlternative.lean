@@ -549,7 +549,9 @@ theorem conditionalPetzRenyiTraceTerm_optimizerRegularization_tendsto [Nonempty 
         ρ.conditionalPetzRenyiUpOptimizerRegularization_scale_tendsto hα_pos
     have hcont : ContinuousAt (fun x : ℝ => x ^ (1 - α)) (1 : ℝ) :=
       Real.continuousAt_rpow_const 1 (1 - α) (Or.inl one_ne_zero)
-    simpa using hcont.tendsto.comp hs
+    have hcomp := hcont.tendsto.comp hs
+    rw [Real.one_rpow] at hcomp
+    exact hcomp
   have hprod :
       Filter.Tendsto
         (fun ε : ℝ =>

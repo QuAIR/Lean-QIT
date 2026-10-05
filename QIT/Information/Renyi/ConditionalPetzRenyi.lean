@@ -200,7 +200,7 @@ theorem cMatrix_rpow_identity_kronecker
           (Matrix.diagonal fun i => ((d i : ℝ) : ℂ)) *
             star (U₂ : CMatrix b) := by
     simpa [U₂, d, Matrix.IsHermitian.spectral_theorem,
-      Unitary.conjStarAlgAut_apply] using hN.isHermitian.spectral_theorem
+      Unitary.conjStarAlgAut_apply, Function.comp_def] using hN.isHermitian.spectral_theorem
   have hleft_arg :
       Matrix.kronecker (1 : CMatrix a) N =
         (U : CMatrix (Prod a b)) *
@@ -297,9 +297,8 @@ theorem conditionalPetzRenyiTraceTerm_conditioningSupportCompressedState
         ρ.conditioningSupportCompressedState_conditioningIsometryApply
     have hmat := congrArg State.matrix hstate
     rw [← hmat, conditioningIsometryApply_matrix]
-    simpa [W, Vref, Vb, psdSupportReferenceIsometry] using
-      referenceIsometry_applyMatrixRight_eq_kronecker_conj
-        (a := a) Vref ρc.matrix
+    exact referenceIsometry_applyMatrixRight_eq_kronecker_conj
+      (a := a) Vref ρc.matrix
   have hρ_pow :
       CFC.rpow ρ.matrix α =
         W * CFC.rpow ρc.matrix α * Matrix.conjTranspose W := by
@@ -314,15 +313,13 @@ theorem conditionalPetzRenyiTraceTerm_conditioningSupportCompressedState
           Matrix.conjTranspose Vb =
         CFC.rpow N (1 - α) := by
     rw [hρcB_matrix]
-    simpa [Vb] using
-      cMatrix_rpow_psdSupportCompress_reconstruct_self N hN h_one_sub_ne
+    exact cMatrix_rpow_psdSupportCompress_reconstruct_self N hN h_one_sub_ne
   have hτc_pow :
       CFC.rpow τc (1 - α) =
         Matrix.kronecker (1 : CMatrix a)
           (CFC.rpow ρc.marginalB.matrix (1 - α)) := by
-    simpa [τc, identityTensorStateMatrix] using
-      cMatrix_rpow_identity_kronecker
-        (a := a) ρc.marginalB.matrix ρc.marginalB.pos (1 - α)
+    exact cMatrix_rpow_identity_kronecker
+      (a := a) ρc.marginalB.matrix ρc.marginalB.pos (1 - α)
   have hτ_pow :
       CFC.rpow τ (1 - α) =
         W * CFC.rpow τc (1 - α) * Matrix.conjTranspose W := by
@@ -361,7 +358,7 @@ theorem conditionalPetzRenyiTraceTerm_conditioningSupportCompressedState
           Matrix.kronecker (1 : CMatrix a)
             (CFC.rpow ρc.marginalB.matrix (1 - α)) *
           Matrix.kronecker (1 : CMatrix a) (Matrix.conjTranspose Vb) := by
-            simpa [R] using (Matrix.mul_assoc
+            exact (Matrix.mul_assoc
               (Matrix.kronecker (1 : CMatrix a) Vb)
               (Matrix.kronecker (1 : CMatrix a) R)
               (Matrix.kronecker (1 : CMatrix a) (Matrix.conjTranspose Vb))).symm
@@ -398,7 +395,7 @@ theorem conditionalPetzRenyiTraceTerm_conditioningSupportCompressedState
                       rw [hW]
                 _ = W * (A * B) * Matrix.conjTranspose W := by
                       simp [Matrix.mul_assoc]
-            simpa [A, B] using congrArg Matrix.trace halg
+            exact congrArg Matrix.trace halg
       _ = (CFC.rpow ρc.matrix α * CFC.rpow τc (1 - α)).trace :=
             trace_isometry_conj W hW _
   exact congrArg Complex.re htrace.symm
@@ -502,7 +499,7 @@ theorem cMatrix_rpow_submatrix_equiv_nonneg
   have hM_nonneg : 0 ≤ M := Matrix.nonneg_iff_posSemidef.mpr hM
   rw [CFC.rpow_eq_cfc_real (a := M.submatrix e e) (y := s) hsub_nonneg]
   rw [CFC.rpow_eq_cfc_real (a := M) (y := s) hM_nonneg]
-  simpa [conditionalPetzRenyiCMatrixReindexStarAlgEquiv, Matrix.reindexAlgEquiv_apply] using
+  simpa [conditionalPetzRenyiCMatrixReindexStarAlgEquiv, Matrix.coe_reindexAlgEquiv] using
     (StarAlgHomClass.map_cfc
       (conditionalPetzRenyiCMatrixReindexStarAlgEquiv e)
       (fun x : ℝ => x ^ s) M
@@ -662,14 +659,14 @@ theorem conditionalPetzRenyiEntropyCandidate_prod_kroneckerReference
       hρ₁ hσ₁ hρ₂ hσ₂ α
   have hxpos : 0 < conditionalPetzRenyiTraceTerm ρ₁ σ₁ α := by
     dsimp [conditionalPetzRenyiTraceTerm]
-    haveI : Nonempty (Prod a b) := ρ₁.nonempty
+    have : Nonempty (Prod a b) := ρ₁.nonempty
     exact trace_mul_posDef_re_pos
       (ρ₁.rpowMatrix_posDef_of_posDef hρ₁ α)
       (cMatrix_rpow_posDef_of_posDef
         (identityTensorStateMatrix_posDef_of_posDef (a := a) σ₁ hσ₁) (1 - α))
   have hypos : 0 < conditionalPetzRenyiTraceTerm ρ₂ σ₂ α := by
     dsimp [conditionalPetzRenyiTraceTerm]
-    haveI : Nonempty (Prod c d) := ρ₂.nonempty
+    have : Nonempty (Prod c d) := ρ₂.nonempty
     exact trace_mul_posDef_re_pos
       (ρ₂.rpowMatrix_posDef_of_posDef hρ₂ α)
       (cMatrix_rpow_posDef_of_posDef
@@ -857,14 +854,14 @@ theorem conditionalPetzRenyiEntropyCandidate_prod_grouped_of_rpow_reindex
       hρ₁ hσ₁ hρ₂ hσ₂ α hρpow hrefpow
   have hxpos : 0 < conditionalPetzRenyiTraceTerm ρ₁ σ₁ α := by
     dsimp [conditionalPetzRenyiTraceTerm]
-    haveI : Nonempty (Prod a b) := ρ₁.nonempty
+    have : Nonempty (Prod a b) := ρ₁.nonempty
     exact trace_mul_posDef_re_pos
       (ρ₁.rpowMatrix_posDef_of_posDef hρ₁ α)
       (cMatrix_rpow_posDef_of_posDef
         (identityTensorStateMatrix_posDef_of_posDef (a := a) σ₁ hσ₁) (1 - α))
   have hypos : 0 < conditionalPetzRenyiTraceTerm ρ₂ σ₂ α := by
     dsimp [conditionalPetzRenyiTraceTerm]
-    haveI : Nonempty (Prod c d) := ρ₂.nonempty
+    have : Nonempty (Prod c d) := ρ₂.nonempty
     exact trace_mul_posDef_re_pos
       (ρ₂.rpowMatrix_posDef_of_posDef hρ₂ α)
       (cMatrix_rpow_posDef_of_posDef

@@ -251,7 +251,9 @@ theorem partialTraceB_local_unitary_conj
   let L : CMatrix (Prod a b) := Matrix.kronecker (1 : CMatrix a) (V : CMatrix b)
   have hfactor :
       Matrix.kronecker (U : CMatrix a) (V : CMatrix b) = K * L := by
-    simpa using
+    -- 4.34: unfold the local `let`s explicitly; the default simpa no longer
+    -- bridges `K * L` to the `kroneckerMap` normal form.
+    simpa [K, L] using
       (Matrix.mul_kronecker_mul (U : CMatrix a) (1 : CMatrix a)
         (1 : CMatrix b) (V : CMatrix b))
   rw [hfactor]
@@ -277,7 +279,9 @@ theorem partialTraceA_local_unitary_conj
   let L : CMatrix (Prod a b) := Matrix.kronecker (1 : CMatrix a) (V : CMatrix b)
   have hfactor :
       Matrix.kronecker (U : CMatrix a) (V : CMatrix b) = K * L := by
-    simpa using
+    -- 4.34: unfold the local `let`s explicitly; the default simpa no longer
+    -- bridges `K * L` to the `kroneckerMap` normal form.
+    simpa [K, L] using
       (Matrix.mul_kronecker_mul (U : CMatrix a) (1 : CMatrix a)
         (1 : CMatrix b) (V : CMatrix b))
   rw [hfactor]
@@ -390,7 +394,11 @@ theorem Supports.left_of_posSemidef_add {M N : CMatrix a}
   have hqM_zero : qM = 0 :=
     (Finset.sum_eq_zero_iff_of_nonneg hnonneg).mp hsum_zero true
       (Finset.mem_univ true)
-  exact (hM.dotProduct_mulVec_zero_iff v).mp hqM_zero
+  -- 4.34: `dotProduct_mulVec_zero_iff`'s vector argument is now implicit, so
+  -- applying the `Iff` to `v` fails ("Function expected"). The `show` pins the
+  -- vector to `v`; `qM` unfolds to the pinned type definitionally.
+  exact (hM.dotProduct_mulVec_zero_iff).mp
+    (show dotProduct (star v) (Matrix.mulVec M v) = 0 from hqM_zero)
 
 omit [DecidableEq a] in
 /-- A PSD summand is supported by the PSD sum, right-hand version. -/
@@ -568,8 +576,10 @@ theorem unitary_row_normSq_sum (U : Matrix.unitaryGroup a ℂ) (i : a) :
     exact Unitary.coe_mul_star_self U
   have hij := congrFun (congrFun hunit i) i
   have hre := congrArg Complex.re hij
+  -- 4.34: the goal-side `Complex.normSq` no longer unfolds under the default
+  -- simp set; expand it explicitly.
   simpa [Matrix.mul_apply, Matrix.one_apply, Complex.normSq_eq_conj_mul_self,
-    mul_comm] using hre
+    Complex.normSq_apply, mul_comm] using hre
 
 /-- Each column of a finite unitary matrix has squared entry norms summing to one. -/
 theorem unitary_col_normSq_sum (U : Matrix.unitaryGroup a ℂ) (j : a) :
@@ -578,8 +588,10 @@ theorem unitary_col_normSq_sum (U : Matrix.unitaryGroup a ℂ) (j : a) :
     exact Unitary.coe_star_mul_self U
   have hij := congrFun (congrFun hunit j) j
   have hre := congrArg Complex.re hij
+  -- 4.34: the goal-side `Complex.normSq` no longer unfolds under the default
+  -- simp set; expand it explicitly.
   simpa [Matrix.mul_apply, Matrix.one_apply, Complex.normSq_eq_conj_mul_self,
-    mul_comm] using hre
+    Complex.normSq_apply, mul_comm] using hre
 
 /-- A PSD matrix diagonal entry is the convex spectral average determined by
 the corresponding eigenvector-unitary row. -/
@@ -593,12 +605,20 @@ theorem posSemidef_diagonal_re_eq_eigenvalue_weighted_sum
   let D : CMatrix a := Matrix.diagonal
     (fun j => ((hB.isHermitian.eigenvalues j : ℝ) : ℂ))
   have hBdiag : B = (U : CMatrix a) * D * (U⁻¹ : Matrix.unitaryGroup a ℂ) := by
+    have hspec := hB.isHermitian.spectral_theorem
+    -- 4.34: `spectral_theorem` now states the diagonal with
+    -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+    -- pointwise coercion used here.
+    rw [show (RCLike.ofReal ∘ hB.isHermitian.eigenvalues) =
+          (fun i => ((hB.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hB.isHermitian.spectral_theorem
+      using hspec
   have hentry := congrFun (congrFun hBdiag i) i
   have hre := congrArg Complex.re hentry
+  -- 4.34: expand the goal-side `Complex.normSq` explicitly.
   simpa [U, D, Matrix.mul_apply, Matrix.diagonal, Complex.normSq_eq_conj_mul_self,
-    Finset.mul_sum, mul_assoc, mul_left_comm, mul_comm] using hre
+    Complex.normSq_apply, Finset.mul_sum, mul_assoc, mul_left_comm, mul_comm]
+    using hre
 
 /-- Diagonal entries of a PSD matrix are nonnegative in real part. -/
 theorem posSemidef_diagonal_re_nonneg {B : CMatrix a} (hB : B.PosSemidef) (i : a) :
@@ -616,9 +636,9 @@ theorem posSemidef_zero_diag_zero_row_col
   classical
   set e : a → ℂ := Pi.single i 1 with he
   have hei : e i = (1 : ℂ) := by
-    rw [he, Pi.single_apply, if_pos rfl]
+    rw [he, Pi.single_apply, ite_eq_left rfl]
   have hek : ∀ k, k ≠ i → e k = 0 := fun k hk => by
-    rw [he, Pi.single_apply, if_neg hk]
+    rw [he, Pi.single_apply, ite_eq_right hk]
   have hmulVec : Matrix.mulVec A e = fun k => A k i := by
     ext k
     rw [Matrix.mulVec, dotProduct, Finset.sum_eq_single i]
@@ -633,7 +653,11 @@ theorem posSemidef_zero_diag_zero_row_col
       simp [hek k hk]
     · simp [hei]
   have hcol : Matrix.mulVec A e = 0 :=
-    (hA.dotProduct_mulVec_zero_iff e).mp (by rw [hform, hii])
+    -- 4.34: the Iff's vector argument is now implicit; the `show` pins it to
+    -- `e`. Spelled-out `Matrix.mulVec`: the `*ᵥ` notation's 4.34 elaborator
+    -- is unavailable here ("subscriptTerm not implemented").
+    (hA.dotProduct_mulVec_zero_iff).mp
+      (show dotProduct (star e) (Matrix.mulVec A e) = 0 by rw [hform, hii])
   have hji : A j i = 0 := by
     have h1 : (fun k => A k i) j = 0 := by
       rw [← hmulVec, hcol]
@@ -671,8 +695,14 @@ theorem posSemidef_trace_mul_eq_eigenvalue_conjugate_diag_sum
     (fun i => ((hM.isHermitian.eigenvalues i : ℝ) : ℂ))
   let B' : CMatrix a := star (U : CMatrix a) * B * (U : CMatrix a)
   have hMdiag : M = (U : CMatrix a) * D * (U⁻¹ : Matrix.unitaryGroup a ℂ) := by
+    have hspec := hM.isHermitian.spectral_theorem
+    -- 4.34: `spectral_theorem` now states the diagonal with
+    -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+    -- pointwise coercion used here.
+    rw [show (RCLike.ofReal ∘ hM.isHermitian.eigenvalues) =
+          (fun i => ((hM.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hM.isHermitian.spectral_theorem
+      using hspec
   have htrace :
       (M * B).trace = (D * B').trace := by
     calc
@@ -1714,8 +1744,14 @@ theorem cMatrix_rpow_supports_self
         (U : CMatrix a) *
           Matrix.diagonal (fun i => ((d i : ℝ) : ℂ)) *
           star (U : CMatrix a) := by
+    have hspec := hA.isHermitian.spectral_theorem
+    -- 4.34: `spectral_theorem` now states the diagonal with
+    -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+    -- pointwise coercion used here.
+    rw [show (RCLike.ofReal ∘ hA.isHermitian.eigenvalues) =
+          (fun i => ((hA.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [U, d, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hA.isHermitian.spectral_theorem
+      using hspec
   rw [hpow, hAdiag]
   exact hconj
 
@@ -1727,9 +1763,9 @@ theorem PosSemidef.zero_diag_zero_row_col
   classical
   set e : a → ℂ := Pi.single i 1 with he
   have hei : e i = (1 : ℂ) := by
-    rw [he, Pi.single_apply, if_pos rfl]
+    rw [he, Pi.single_apply, ite_eq_left rfl]
   have hek : ∀ k, k ≠ i → e k = 0 := fun k hk => by
-    rw [he, Pi.single_apply, if_neg hk]
+    rw [he, Pi.single_apply, ite_eq_right hk]
   have hmulVec : Matrix.mulVec A e = fun k => A k i := by
     ext k
     rw [Matrix.mulVec, dotProduct, Finset.sum_eq_single i]
@@ -1744,7 +1780,11 @@ theorem PosSemidef.zero_diag_zero_row_col
       simp [hek k hk]
     · simp [hei]
   have hcol : Matrix.mulVec A e = 0 :=
-    (hA.dotProduct_mulVec_zero_iff e).mp (by rw [hform, hii])
+    -- 4.34: the Iff's vector argument is now implicit; the `show` pins it to
+    -- `e`. Spelled-out `Matrix.mulVec`: the `*ᵥ` notation's 4.34 elaborator
+    -- is unavailable here ("subscriptTerm not implemented").
+    (hA.dotProduct_mulVec_zero_iff).mp
+      (show dotProduct (star e) (Matrix.mulVec A e) = 0 by rw [hform, hii])
   have hji : A j i = 0 := by
     have h1 : (fun k => A k i) j = 0 := by
       rw [← hmulVec, hcol]
@@ -1838,6 +1878,11 @@ theorem matrix_supports_prod_marginals (ρ : State (Prod a b)) :
         star (UA : CMatrix a) * ρA.matrix * (UA : CMatrix a) =
           Matrix.diagonal fun i => ((dA i : ℝ) : ℂ) := by
       have hspec := ρA.pos.isHermitian.spectral_theorem
+      -- 4.34: `spectral_theorem` now states the diagonal with
+      -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+      -- pointwise coercion used below.
+      rw [show (RCLike.ofReal ∘ ρA.pos.isHermitian.eigenvalues) =
+            (fun i => ((ρA.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
       -- The spectral theorem is `ρA = UA * D * UAᴴ`; conjugating by `UAᴴ`
       -- gives the diagonal eigenvalue matrix.
       have hρA :
@@ -1868,6 +1913,11 @@ theorem matrix_supports_prod_marginals (ρ : State (Prod a b)) :
         star (UB : CMatrix b) * ρB.matrix * (UB : CMatrix b) =
           Matrix.diagonal fun j => ((dB j : ℝ) : ℂ) := by
       have hspec := ρB.pos.isHermitian.spectral_theorem
+      -- 4.34: `spectral_theorem` now states the diagonal with
+      -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+      -- pointwise coercion used below.
+      rw [show (RCLike.ofReal ∘ ρB.pos.isHermitian.eigenvalues) =
+            (fun i => ((ρB.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
       have hρB :
           ρB.matrix =
             (UB : CMatrix b) * (Matrix.diagonal fun j => ((dB j : ℝ) : ℂ)) *
@@ -1956,14 +2006,26 @@ theorem matrix_supports_prod_marginals (ρ : State (Prod a b)) :
         ρA.matrix =
           (UA : CMatrix a) * (Matrix.diagonal fun i => ((dA i : ℝ) : ℂ)) *
             star (UA : CMatrix a) := by
+      have hspec := ρA.pos.isHermitian.spectral_theorem
+      -- 4.34: `spectral_theorem` now states the diagonal with
+      -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+      -- pointwise coercion used here.
+      rw [show (RCLike.ofReal ∘ ρA.pos.isHermitian.eigenvalues) =
+            (fun i => ((ρA.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
       simpa [UA, dA, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-        using ρA.pos.isHermitian.spectral_theorem
+        using hspec
     have hB :
         ρB.matrix =
           (UB : CMatrix b) * (Matrix.diagonal fun j => ((dB j : ℝ) : ℂ)) *
             star (UB : CMatrix b) := by
+      have hspec := ρB.pos.isHermitian.spectral_theorem
+      -- 4.34: `spectral_theorem` now states the diagonal with
+      -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+      -- pointwise coercion used here.
+      rw [show (RCLike.ofReal ∘ ρB.pos.isHermitian.eigenvalues) =
+            (fun i => ((ρB.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
       simpa [UB, dB, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-        using ρB.pos.isHermitian.spectral_theorem
+        using hspec
     let DA : CMatrix a := Matrix.diagonal fun i => ((dA i : ℝ) : ℂ)
     let DB : CMatrix b := Matrix.diagonal fun j => ((dB j : ℝ) : ℂ)
     have hD :
@@ -2019,7 +2081,10 @@ end State
 theorem posSemidef_unitary_conj {A : CMatrix a} (hA : A.PosSemidef)
     (U : Matrix.unitaryGroup a ℂ) :
     (star (U : CMatrix a) * A * (U : CMatrix a)).PosSemidef := by
-  simpa [Matrix.mul_assoc] using hA.conjTranspose_mul_mul_same (U : CMatrix a)
+  -- 4.34: the PosSemidef conjTranspose lemmas now state results with `ᴴ`;
+  -- `Matrix.star_eq_conjTranspose` normalizes the goal's `star` to match.
+  simpa [Matrix.mul_assoc, Matrix.star_eq_conjTranspose] using
+    hA.conjTranspose_mul_mul_same (U : CMatrix a)
 
 /-- Real powers commute with inverse unitary conjugation on PSD matrices. -/
 theorem cMatrix_rpow_unitary_conj {A : CMatrix a} (hA : A.PosSemidef)
@@ -2489,7 +2554,8 @@ theorem cMatrix_normalized_regularized_tendsto_of_psdTracePower_eq_one
       have hBq' : (trace (B ^ q)).re = (1 : ℝ) := by
         simpa [psdTracePower] using hBq
       simpa [hBq'] using htrace
-    simpa using hcont.tendsto.comp htrace_one
+    -- 4.34: `Function.comp` no longer collapses in the default simp set.
+    simpa [Function.comp_def] using hcont.tendsto.comp htrace_one
   have hpath := cMatrix_tendsto_add_pos_smul_one (A := B)
   simpa using hscale.smul hpath
 
@@ -2507,8 +2573,14 @@ theorem cMatrix_rpow_real_smul_posSemidef_schatten
   have hA_spec :
       A = (U : CMatrix a) * (Matrix.diagonal fun i => (d i : ℂ)) *
         star (U : CMatrix a) := by
+    have hspec := hA.isHermitian.spectral_theorem
+    -- 4.34: `spectral_theorem` now states the diagonal with
+    -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+    -- pointwise coercion used here.
+    rw [show (RCLike.ofReal ∘ hA.isHermitian.eigenvalues) =
+          (fun i => ((hA.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [U, d, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hA.isHermitian.spectral_theorem
+      using hspec
   have hscaled_spec :
       (lambda • A : CMatrix a) =
         (U : CMatrix a) *
@@ -2589,8 +2661,14 @@ theorem cMatrix_rpow_add_nonneg_smul_one_eigenbasis_diagonal
   have hd : ∀ i, 0 ≤ d i := fun i => hA.eigenvalues_nonneg i
   have hA_spec :
       A = (U : CMatrix a) * D * star (U : CMatrix a) := by
+    have hspec := hA.isHermitian.spectral_theorem
+    -- 4.34: `spectral_theorem` now states the diagonal with
+    -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+    -- pointwise coercion used here.
+    rw [show (RCLike.ofReal ∘ hA.isHermitian.eigenvalues) =
+          (fun i => ((hA.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [U, d, D, Matrix.IsHermitian.spectral_theorem,
-      Unitary.conjStarAlgAut_apply] using hA.isHermitian.spectral_theorem
+      Unitary.conjStarAlgAut_apply] using hspec
   have hone_spec :
       (1 : CMatrix a) = (U : CMatrix a) * (1 : CMatrix a) *
         star (U : CMatrix a) := by
@@ -2663,8 +2741,14 @@ theorem posSemidef_le_one_of_psdTracePower_le_one
   let D : CMatrix a := Matrix.diagonal
     (fun i => ((hB.isHermitian.eigenvalues i : ℝ) : ℂ))
   have hdiag : B = (U : CMatrix a) * D * star (U : CMatrix a) := by
+    have hspec := hB.isHermitian.spectral_theorem
+    -- 4.34: `spectral_theorem` now states the diagonal with
+    -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+    -- pointwise coercion used here.
+    rw [show (RCLike.ofReal ∘ hB.isHermitian.eigenvalues) =
+          (fun i => ((hB.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hB.isHermitian.spectral_theorem
+      using hspec
   have hpower_sum :
       ∑ i, hB.isHermitian.eigenvalues i ^ q ≤ 1 := by
     simpa [psdTracePower_eq_sum_eigenvalues_rpow B hB q] using hBq
@@ -3102,9 +3186,15 @@ theorem supportProjector_supports
   let P : CMatrix a := Matrix.diagonal (fun i =>
     ((p i : ℝ) : ℂ))
   have hN_spec : N = (U : CMatrix a) * D * star (U : CMatrix a) := by
+    have hspec := hN.isHermitian.spectral_theorem
+    -- 4.34: `spectral_theorem` now states the diagonal with
+    -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+    -- pointwise coercion used here.
+    rw [show (RCLike.ofReal ∘ hN.isHermitian.eigenvalues) =
+          (fun i => ((hN.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [U, D, d, Matrix.IsHermitian.spectral_theorem,
       Unitary.conjStarAlgAut_apply]
-      using hN.isHermitian.spectral_theorem
+      using hspec
   have hPi_spec :
       psdInvSqrt N hN.isHermitian * N * psdInvSqrt N hN.isHermitian =
         (U : CMatrix a) * P * star (U : CMatrix a) := by
@@ -3205,11 +3295,14 @@ theorem psdSupportIsometry_mul_conjTranspose_eq_supportProjector
           (U : CMatrix a) i x.1 * star ((U : CMatrix a) j x.1)) =
         ∑ x ∈ (Finset.univ : Finset a) with
           0 < hN.isHermitian.eigenvalues x, f x := by
-    simpa [f] using
-      (Finset.sum_subtype_eq_sum_filter
-        (s := (Finset.univ : Finset a))
-        (p := fun x => 0 < hN.isHermitian.eigenvalues x)
-        (f := f))
+    -- 4.34: `Finset.sum_subtype_eq_sum_filter` sums over the finset
+    -- `Finset.subtype p univ`; bridge it to the subtype's Fintype sum.
+    have h := Finset.sum_subtype_eq_sum_filter
+      (s := (Finset.univ : Finset a))
+      (p := fun x => 0 < hN.isHermitian.eigenvalues x)
+      (f := f)
+    rw [Finset.subtype_univ] at h
+    exact h
   simp only [psdSupportIsometry, Matrix.mul_apply, Matrix.conjTranspose_apply,
     Matrix.diagonal, P, U]
   rw [hsub]
@@ -3444,7 +3537,9 @@ theorem psdSupportIndex_nonempty_of_trace_one_supports
     Nonempty (psdSupportIndex N hN) := by
   classical
   by_contra hnon
-  haveI : IsEmpty (psdSupportIndex N hN) := not_nonempty_iff.mp hnon
+  -- 4.34: plain `have` (not `haveI`) — linter.style.haveILetI flags `haveI`
+  -- in Prop proofs; `have` still registers the instance downstream.
+  have : IsEmpty (psdSupportIndex N hN) := not_nonempty_iff.mp hnon
   have htrace :=
     psdSupportCompress_trace_of_supports
       (M := M) (N := N) hM hN hSupport
@@ -3470,8 +3565,14 @@ theorem psdSupportCompress_self_eq_diagonal
     Matrix.diagonal fun i => ((hN.isHermitian.eigenvalues i : ℝ) : ℂ)
   have hspec :
       N = (U : CMatrix a) * D * star (U : CMatrix a) := by
+    have hspec0 := hN.isHermitian.spectral_theorem
+    -- 4.34: `spectral_theorem` now states the diagonal with
+    -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+    -- pointwise coercion used here.
+    rw [show (RCLike.ofReal ∘ hN.isHermitian.eigenvalues) =
+          (fun i => ((hN.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec0
     simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hN.isHermitian.spectral_theorem
+      using hspec0
   have hdiag :
       star (U : CMatrix a) * N * (U : CMatrix a) = D := by
     have hUstarU : star (U : CMatrix a) * (U : CMatrix a) = 1 := by
@@ -3591,11 +3692,14 @@ theorem cMatrix_rpow_psdSupportCompress_reconstruct_self
           (U : CMatrix a) i x.1 * ((d x.1 ^ s : ℝ) : ℂ) *
             star ((U : CMatrix a) j x.1)) =
         ∑ x ∈ (Finset.univ : Finset a) with 0 < d x, f x := by
-    simpa [f, d] using
-      (Finset.sum_subtype_eq_sum_filter
-        (s := (Finset.univ : Finset a))
-        (p := fun x => 0 < d x)
-        (f := f))
+    -- 4.34: `Finset.sum_subtype_eq_sum_filter` sums over the finset
+    -- `Finset.subtype p univ`; bridge it to the subtype's Fintype sum.
+    have h := Finset.sum_subtype_eq_sum_filter
+      (s := (Finset.univ : Finset a))
+      (p := fun x => 0 < d x)
+      (f := f)
+    rw [Finset.subtype_univ] at h
+    exact h
   have hfilter :
       (∑ x ∈ (Finset.univ : Finset a) with 0 < d x, f x) =
         ∑ x, f x := by
@@ -3670,7 +3774,11 @@ theorem psdTracePower_kronecker
     {p : Real} (hp : 0 <= p) :
     psdTracePower (Matrix.kronecker A B) (hA.kronecker hB) p =
       psdTracePower A hA p * psdTracePower B hB p := by
-  rw [psdTracePower, cMatrix_rpow_kronecker_nonneg hA hB hp]
+  -- 4.34: `rw [psdTracePower]` now instantiates from a different occurrence
+  -- (the RHS); target the Kronecker occurrence explicitly with the named
+  -- rfl lemma instead of the definition name.
+  rw [psdTracePower_eq (Matrix.kronecker A B) (hA.kronecker hB) p,
+    cMatrix_rpow_kronecker_nonneg hA hB hp]
   change (Matrix.kroneckerMap (fun x y => x * y) (CFC.rpow A p)
       (CFC.rpow B p)).trace.re =
     psdTracePower A hA p * psdTracePower B hB p
@@ -4066,8 +4174,8 @@ theorem psdSchattenPNorm_tendsto_of_tendsto_posSemidef
   have hpow :
       ContinuousAt (fun x : ℝ => x ^ (1 / p : ℝ)) (psdTracePower A hA p) :=
     Real.continuousAt_rpow_const (psdTracePower A hA p) (1 / p) (Or.inr hexp_nonneg)
-  simpa [psdSchattenPNorm, Internal.psdSchattenExpression] using
-    hpow.tendsto.comp htrace
+  simpa [psdSchattenPNorm, Internal.psdSchattenExpression, Function.comp_def]
+    using hpow.tendsto.comp htrace
 
 /-- PSD Schatten `p`-norm expressions multiply over Kronecker products. -/
 theorem psdSchattenPNorm_kronecker
@@ -4076,9 +4184,16 @@ theorem psdSchattenPNorm_kronecker
     (p : SchattenOrder) :
     psdSchattenPNorm (Matrix.kronecker A B) (hA.kronecker hB) p =
       psdSchattenPNorm A hA p * psdSchattenPNorm B hB p := by
-  rw [psdSchattenPNorm, psdSchattenPNorm, psdSchattenPNorm,
-    Internal.psdSchattenExpression,
-    psdTracePower_kronecker hA hB p.property.le]
+  -- 4.34: `rw [psdSchattenPNorm]` fails to generate usable equation theorems;
+  -- unfold each occurrence with a local rfl equation instead.
+  have hK : psdSchattenPNorm (Matrix.kronecker A B) (hA.kronecker hB) p =
+      Real.rpow (psdTracePower (Matrix.kronecker A B) (hA.kronecker hB) (p : ℝ))
+        (1 / (p : ℝ)) := rfl
+  have hAe : psdSchattenPNorm A hA p =
+      Real.rpow (psdTracePower A hA (p : ℝ)) (1 / (p : ℝ)) := rfl
+  have hBe : psdSchattenPNorm B hB p =
+      Real.rpow (psdTracePower B hB (p : ℝ)) (1 / (p : ℝ)) := rfl
+  rw [hK, hAe, hBe, psdTracePower_kronecker hA hB p.property.le]
   exact Real.mul_rpow (psdTracePower_nonneg A hA p)
     (psdTracePower_nonneg B hB p)
 
@@ -4154,7 +4269,10 @@ theorem psdTracePower_pos_of_psdSchattenPNorm_pos_of_one_lt
   have htrace_ne : psdTracePower A hA p ≠ 0 := by
     intro htrace_zero
     have hnorm_zero : psdSchattenPNorm A hA ⟨p, hp_pos⟩ = 0 := by
-      rw [psdSchattenPNorm, Internal.psdSchattenExpression, htrace_zero]
+      -- 4.34: local rfl unfold instead of `rw [psdSchattenPNorm, ...]`.
+      have he : psdSchattenPNorm A hA ⟨p, hp_pos⟩ =
+          Real.rpow (psdTracePower A hA p) (1 / p) := rfl
+      rw [he, htrace_zero]
       exact Real.zero_rpow hexp_ne
     exact (ne_of_gt hnorm) hnorm_zero
   exact lt_of_le_of_ne htrace_nonneg (Ne.symm htrace_ne)
@@ -4393,8 +4511,10 @@ theorem posSemidef_trace_mul_le_psdSchattenPNorm_of_tracePower_le_one
   have hMnorm :
       (∑ i ∈ (Finset.univ : Finset a), hM.isHermitian.eigenvalues i ^ p) ^ (1 / p) =
         psdSchattenPNorm M hM ⟨p, hpq.pos⟩ := by
-    rw [psdSchattenPNorm, Internal.psdSchattenExpression,
-      psdTracePower_eq_sum_eigenvalues_rpow]
+    -- 4.34: local rfl unfold instead of `rw [psdSchattenPNorm, ...]`.
+    have he : psdSchattenPNorm M hM ⟨p, hpq.pos⟩ =
+        Real.rpow (psdTracePower M hM p) (1 / p) := rfl
+    rw [he, psdTracePower_eq_sum_eigenvalues_rpow]
     simp
   have hBpower_conj :
       psdTracePower B' hB' q = psdTracePower B hB q := by
@@ -4542,8 +4662,14 @@ theorem psdTracePower_le_one_of_trace_mul_le_psdSchattenPNorm
           (U : CMatrix a) *
             Matrix.diagonal (fun i => ((d i : ℝ) : ℂ)) *
               star (U : CMatrix a) := by
+      have hspec := hB.isHermitian.spectral_theorem
+      -- 4.34: `spectral_theorem` now states the diagonal with
+      -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+      -- pointwise coercion used here.
+      rw [show (RCLike.ofReal ∘ hB.isHermitian.eigenvalues) =
+            (fun i => ((hB.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
       simpa [U, d, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-        using hB.isHermitian.spectral_theorem
+        using hspec
     have hterm : ∀ i, d i ^ (q - 1) * d i = d i ^ q := by
       intro i
       have hd_nonneg : 0 ≤ d i := hB.eigenvalues_nonneg i
@@ -4642,7 +4768,8 @@ theorem psd_trace_rpow_holder_variational_upper
     exact one_div_mul_cancel hpq.symm.ne_zero
   have hpow : CFC.rpow B q = N := by
     dsimp [B]
-    change (N ^ r) ^ q = N
+    -- 4.34: the former `change (N ^ r) ^ q = N` here was a no-op (unused-tactic
+    -- linter); the goal already has that shape after `dsimp`.
     rw [CFC.rpow_rpow_of_exponent_nonneg N r q hr_nonneg hq_nonneg
       (Matrix.nonneg_iff_posSemidef.mpr hN)]
     rw [hrq]
@@ -4708,8 +4835,10 @@ theorem psd_trace_rpow_reverse_holder_variational
         (p := p) (le_of_lt hp0) (le_of_lt hp1)
   have hnorm_bound :
       psdSchattenPNorm M hM ⟨p, hp0⟩ ≤ (∑ i, x i ^ p) ^ (1 / p) := by
-    rw [psdSchattenPNorm, Internal.psdSchattenExpression]
-    rw [← htracePower_conj]
+    -- 4.34: local rfl unfold instead of `rw [psdSchattenPNorm, ...]`.
+    have he : psdSchattenPNorm M hM ⟨p, hp0⟩ =
+        Real.rpow (psdTracePower M hM p) (1 / p) := rfl
+    rw [he, ← htracePower_conj]
     exact Real.rpow_le_rpow
       (psdTracePower_nonneg M' hM' p) hdiag_bound (one_div_nonneg.mpr (le_of_lt hp0))
   calc
@@ -4881,7 +5010,9 @@ theorem psdTraceReverseHolderOptimizer_props
         intro i
         change (0 : ℂ) ≤ ((n i : ℝ) : ℂ)
         exact_mod_cast hn_nonneg i)
-    simpa [N] using hdiag.mul_mul_conjTranspose_same (U : CMatrix a)
+    -- 4.34: `mul_mul_conjTranspose_same` now states its result with `ᴴ`.
+    simpa [N, Matrix.star_eq_conjTranspose] using
+      hdiag.mul_mul_conjTranspose_same (U : CMatrix a)
   have hNtr : N.trace.re = 1 := by
     calc
       N.trace.re = ∑ i, n i := by
@@ -4894,8 +5025,14 @@ theorem psdTraceReverseHolderOptimizer_props
   have hMdiag :
       M = (U : CMatrix a) * (Matrix.diagonal fun i => ((d i : ℝ) : ℂ)) *
         star (U : CMatrix a) := by
+    have hspec := hM.isHermitian.spectral_theorem
+    -- 4.34: `spectral_theorem` now states the diagonal with
+    -- `RCLike.ofReal ∘ eigenvalues`; the composition is rfl-equal to the
+    -- pointwise coercion used here.
+    rw [show (RCLike.ofReal ∘ hM.isHermitian.eigenvalues) =
+          (fun i => ((hM.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [U, d, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hM.isHermitian.spectral_theorem
+      using hspec
   have hSupport : Matrix.Supports M N := by
     have hdiagSupport :
         Matrix.Supports
@@ -4936,8 +5073,10 @@ theorem psdTraceReverseHolderOptimizer_props
               real_sum_reverse_holder_optimizer_value (ι := a) (x := d) hp0 hd hSpos_sum
   have hnorm :
       psdSchattenPNorm M hM ⟨p, hp0⟩ = (∑ i, d i ^ p) ^ (1 / p) := by
-    rw [psdSchattenPNorm, Internal.psdSchattenExpression,
-      psdTracePower_eq_sum_eigenvalues_rpow]
+    -- 4.34: local rfl unfold instead of `rw [psdSchattenPNorm, ...]`.
+    have he : psdSchattenPNorm M hM ⟨p, hp0⟩ =
+        Real.rpow (psdTracePower M hM p) (1 / p) := rfl
+    rw [he, psdTracePower_eq_sum_eigenvalues_rpow]
     simp [d]
   have hattain :
       psdSchattenPNorm M hM ⟨p, hp0⟩ =
@@ -5298,7 +5437,9 @@ theorem psdTraceHolderUnitBall_isGreatest
         exact_mod_cast (g i).2)
     let B : CMatrix a := (U : CMatrix a) * D * star (U : CMatrix a)
     have hB : B.PosSemidef := by
-      simpa [B] using hD.mul_mul_conjTranspose_same (U : CMatrix a)
+      -- 4.34: `mul_mul_conjTranspose_same` now states its result with `ᴴ`.
+      simpa [B, Matrix.star_eq_conjTranspose] using
+        hD.mul_mul_conjTranspose_same (U : CMatrix a)
     have hUBU : star (U : CMatrix a) * B * (U : CMatrix a) = D := by
       have hUU : star (U : CMatrix a) * (U : CMatrix a) = 1 :=
         Unitary.coe_star_mul_self U
@@ -5349,15 +5490,29 @@ theorem psdTraceHolderUnitBall_isGreatest
       have hval_coe := congrArg (fun x : ℝ≥0 => (x : ℝ)) hval
       have hvalR0 :
           (∑ i ∈ (Finset.univ : Finset a), hM.isHermitian.eigenvalues i * d i) =
-            (∑ i ∈ (Finset.univ : Finset a), hM.isHermitian.eigenvalues i ^ p) ^ (1 / p) := by
-        simpa [f, d] using hval_coe
+            (∑ i ∈ (Finset.univ : Finset a), hM.isHermitian.eigenvalues i ^ p) ^
+              (1 / p) := by
+        -- 4.34: the ℝ≥0→ℝ coe simp lemmas no longer rewrite these summands.
+        -- NNReal's `*`/`rpow` are subtype-pointwise, so the per-summand
+        -- bridges are definitional; the sum-level coercions are pulled out
+        -- explicitly instead.
+        have hmul : ∀ i : a, hM.isHermitian.eigenvalues i * d i =
+            ((f i * g i : ℝ≥0) : ℝ) := fun i => rfl
+        have hrp : ∀ i : a, hM.isHermitian.eigenvalues i ^ p =
+            ((f i ^ p : ℝ≥0) : ℝ) := fun i => rfl
+        rw [Finset.sum_congr rfl (fun i _ => hmul i),
+          Finset.sum_congr rfl (fun i _ => hrp i),
+          ← NNReal.coe_sum, ← NNReal.coe_sum, ← NNReal.coe_rpow]
+        exact hval_coe
       calc
         (∑ i ∈ (Finset.univ : Finset a), hM.isHermitian.eigenvalues i * d i)
             = (∑ i ∈ (Finset.univ : Finset a), hM.isHermitian.eigenvalues i ^ p) ^
                 (1 / p) := hvalR0
         _ = psdSchattenPNorm M hM ⟨p, hpq.pos⟩ := by
-            rw [psdSchattenPNorm, Internal.psdSchattenExpression,
-              psdTracePower_eq_sum_eigenvalues_rpow]
+            -- 4.34: local rfl unfold instead of `rw [psdSchattenPNorm, ...]`.
+            have he : psdSchattenPNorm M hM ⟨p, hpq.pos⟩ =
+                Real.rpow (psdTracePower M hM p) (1 / p) := rfl
+            rw [he, psdTracePower_eq_sum_eigenvalues_rpow]
             simp
     refine ⟨B, hB, hBq, ?_⟩
     rw [htraceB, hvalR]
@@ -5508,8 +5663,12 @@ theorem psdSchattenPNorm_le_of_psdTracePower_le
     {p : ℝ} (hp : 0 < p)
     (hpower : psdTracePower M hM p ≤ psdTracePower N hN p) :
     psdSchattenPNorm M hM ⟨p, hp⟩ ≤ psdSchattenPNorm N hN ⟨p, hp⟩ := by
-  rw [psdSchattenPNorm, psdSchattenPNorm,
-    Internal.psdSchattenExpression, Internal.psdSchattenExpression]
+  -- 4.34: local rfl unfolds instead of `rw [psdSchattenPNorm, ...]`.
+  have heM : psdSchattenPNorm M hM ⟨p, hp⟩ =
+      Real.rpow (psdTracePower M hM p) (1 / p) := rfl
+  have heN : psdSchattenPNorm N hN ⟨p, hp⟩ =
+      Real.rpow (psdTracePower N hN p) (1 / p) := rfl
+  rw [heM, heN]
   exact Real.rpow_le_rpow
     (psdTracePower_nonneg M hM p) hpower
     (one_div_nonneg.mpr (le_of_lt hp))
@@ -5524,7 +5683,12 @@ theorem psdTracePower_le_of_psdSchattenPNorm_le
     (hNpos : 0 < psdTracePower N hN p)
     (hnorm : psdSchattenPNorm M hM ⟨p, hp⟩ ≤ psdSchattenPNorm N hN ⟨p, hp⟩) :
     psdTracePower M hM p ≤ psdTracePower N hN p := by
-  rw [psdSchattenPNorm, Internal.psdSchattenExpression] at hnorm
+  -- 4.34: local rfl unfolds instead of `rw [psdSchattenPNorm, ...] at hnorm`.
+  have heM : psdSchattenPNorm M hM ⟨p, hp⟩ =
+      Real.rpow (psdTracePower M hM p) (1 / p) := rfl
+  have heN : psdSchattenPNorm N hN ⟨p, hp⟩ =
+      Real.rpow (psdTracePower N hN p) (1 / p) := rfl
+  rw [heM, heN] at hnorm
   exact (Real.rpow_le_rpow_iff (le_of_lt hMpos) (le_of_lt hNpos)
     (one_div_pos.2 hp)).mp hnorm
 

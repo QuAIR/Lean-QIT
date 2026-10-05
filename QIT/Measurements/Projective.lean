@@ -113,7 +113,7 @@ theorem toPOVM_measureMap_one_eq_one_of_traceOne
       simp [houtcome]
     · intro hi
       simp at hi
-  · rw [Matrix.one_apply, if_neg hij]
+  · rw [Matrix.one_apply, ite_eq_right hij]
     refine Finset.sum_eq_zero fun outcome _ => ?_
     rw [Matrix.smul_apply, Matrix.single_apply]
     have hnot : ¬ (outcome = i ∧ outcome = j) := by
@@ -395,7 +395,7 @@ def ofHermitianEigenbasis (M : CMatrix a) (hM : M.IsHermitian) :
       by_cases hij : i = j
       · subst j
         rw [Matrix.sum_apply]
-        simp only [D, Matrix.diagonal_apply, Matrix.one_apply, if_true]
+        simp only [D, Matrix.diagonal_apply, Matrix.one_apply, ite_true]
         change (∑ outcome, if i = outcome then (1 : ℂ) else 0) = 1
         rw [Finset.sum_eq_single i]
         · simp
@@ -620,8 +620,8 @@ theorem ofHermitianEigenbasis_pinchingMap_psdTracePower_le
       star (U : CMatrix a) * Xp * (U : CMatrix a) =
         Matrix.diagonal (fun i => X' i i) := by
     simpa [U, P, Xp, X'] using ofHermitianEigenbasis_pinchingMap_eigenbasis M hM X
-  have hreal_fun : (fun i => (((X' i i).re : ℝ) : ℂ)) = fun i => X' i i := by
-    simpa [Matrix.diag] using hX'.isHermitian.coe_re_diag
+  have hreal_fun : (fun i => (((X' i i).re : ℝ) : ℂ)) = fun i => X' i i :=
+    funext fun i => congrFun hX'.isHermitian.coe_re_diag i
   have hpinch_conj_real :
       star (U : CMatrix a) * Xp * (U : CMatrix a) =
         Matrix.diagonal (fun i => (((X' i i).re : ℝ) : ℂ)) := by
@@ -674,8 +674,8 @@ theorem ofHermitianEigenbasis_pinchingMap_psdTracePower_ge
       star (U : CMatrix a) * Xp * (U : CMatrix a) =
         Matrix.diagonal (fun i => X' i i) := by
     simpa [U, P, Xp, X'] using ofHermitianEigenbasis_pinchingMap_eigenbasis M hM X
-  have hreal_fun : (fun i => (((X' i i).re : ℝ) : ℂ)) = fun i => X' i i := by
-    simpa [Matrix.diag] using hX'.isHermitian.coe_re_diag
+  have hreal_fun : (fun i => (((X' i i).re : ℝ) : ℂ)) = fun i => X' i i :=
+    funext fun i => congrFun hX'.isHermitian.coe_re_diag i
   have hpinch_conj_real :
       star (U : CMatrix a) * Xp * (U : CMatrix a) =
         Matrix.diagonal (fun i => (((X' i i).re : ℝ) : ℂ)) := by
@@ -946,8 +946,8 @@ theorem ofHermitianEigenbasis_pinchingChannel_applyState_matrix_eq_unitary_diago
     simpa [Y, hstar] using ρ.pos.mul_mul_conjTranspose_same (star (U : CMatrix a))
   have hYdiag :
       Matrix.diagonal (fun i => Y i i) = D := by
-    have hreal_fun : (fun i => (((Y i i).re : ℝ) : ℂ)) = fun i => Y i i := by
-      simpa [Matrix.diag] using hYpsd.isHermitian.coe_re_diag
+    have hreal_fun : (fun i => (((Y i i).re : ℝ) : ℂ)) = fun i => Y i i :=
+      funext fun i => congrFun hYpsd.isHermitian.coe_re_diag i
     ext i j
     simp only [D]
     by_cases hij : i = j

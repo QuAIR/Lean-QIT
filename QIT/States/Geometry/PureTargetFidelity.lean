@@ -111,7 +111,9 @@ theorem State.squaredFidelity_pure_right_eq_trace
       change (Real.sqrt t : ℂ) * ((Real.sqrt t : ℂ) * P i j) = (t : ℂ) * P i j
       rw [← mul_assoc, hcoeff]
     · apply Matrix.nonneg_iff_posSemidef.mpr
-      simpa using phi.state.pos.smul (Real.sqrt_nonneg t)
+      -- 4.34: unfold the `P` let so simp aligns both sides syntactically; the
+      -- previous defeq tail dies on unexposed `Complex.mulAux`.
+      simpa [P] using phi.state.pos.smul (Real.sqrt_nonneg t)
   rw [State.squaredFidelity_eq_traceNorm_sqrtMatrix_mul_sqrtMatrix_sq,
     pure_state_sqrtMatrix phi]
   change traceNorm M ^ 2 = t

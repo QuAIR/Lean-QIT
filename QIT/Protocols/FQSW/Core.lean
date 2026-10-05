@@ -59,9 +59,12 @@ def coherentTransferReferenceState
       · intro j s hjs hs
         simpa [Finset.sum_insert hjs, block] using
           (ρ.pos.submatrix (fun ar : Prod a r => ((ar.1, j), ar.2))).add hs
-    convert hsum using 1
-    ext ar ar'
-    simp [block, Matrix.sum_apply]
+    have hmatrix : (∑ j : b, block j) =
+        fun ar ar' => ∑ j : b,
+          ρ.matrix ((ar.1, j), ar.2) ((ar'.1, j), ar'.2) := by
+      ext ar ar'
+      simp [block, Matrix.sum_apply]
+    exact hmatrix ▸ hsum
   trace_eq_one := by
     rw [← ρ.trace_eq_one]
     rw [Matrix.trace]
@@ -500,8 +503,18 @@ private theorem fqswChannel_reindex_map
     (E : alpha ≃ beta) (X : CMatrix alpha) :
     (Channel.reindex E).map X = X.submatrix E.symm E.symm := by
   ext i j
-  simp [Channel.reindex, MatrixMap.ofReferenceIsometry_apply,
-    ReferenceIsometry.ofEquiv, Matrix.mul_apply]
+  simp only [Channel.reindex, MatrixMap.ofReferenceIsometry_apply,
+    ReferenceIsometry.ofEquiv]
+  show (∑ x : alpha, (∑ x_1 : alpha,
+        (fun y x => if y = E x then (1 : ℂ) else 0) i x_1 * X x_1 x) *
+      star ((fun y x => if y = E x then (1 : ℂ) else 0) j x)) =
+    X (E.symm i) (E.symm j)
+  have hstar : ∀ x : alpha,
+      star ((fun y x => if y = E x then (1 : ℂ) else 0) j x) =
+      if j = E x then (1 : ℂ) else 0 := by
+    intro x
+    by_cases hx : j = E x <;> simp [hx]
+  simp only [hstar, ite_mul, zero_mul, one_mul, mul_ite]
   rw [Finset.sum_eq_single (E.symm j)]
   · rw [Finset.sum_eq_single (E.symm i)]
     · simp

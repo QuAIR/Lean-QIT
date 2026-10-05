@@ -127,7 +127,7 @@ theorem entanglementAssisted_sourceAsymptoticUpperInput_of_sandwichedLimit
           ((N.entanglementAssistedInformation + δ : ℝ) : EReal) := by
     exact (tendsto_order.mp hlim).2
       ((N.entanglementAssistedInformation + δ : ℝ) : EReal) htarget_lt
-  haveI : Filter.NeBot State.relativeEntropyHighAlphaRightToOne :=
+  have : Filter.NeBot State.relativeEntropyHighAlphaRightToOne :=
     State.relativeEntropyHighAlphaRightToOne_neBot
   obtain ⟨alpha, hα_lt⟩ := hα_eventually.exists
   refine ⟨alpha.1, alpha.2, ?_⟩

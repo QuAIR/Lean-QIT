@@ -68,7 +68,7 @@ theorem entanglementAssistedInformation_isAchievable_of_oneShotPetzLowerBound
             alpha.1 alpha.2.1 (ne_of_lt alpha.2.2) := by
     exact (tendsto_order.mp hlim).1
       (N.entanglementAssistedInformation - δ / 2) (by linarith)
-  haveI : Filter.NeBot PetzRenyiAlpha.leftToOne := PetzRenyiAlpha.leftToOne_neBot
+  have : Filter.NeBot PetzRenyiAlpha.leftToOne := PetzRenyiAlpha.leftToOne_neBot
   obtain ⟨alpha, hα_lower⟩ := hα_eventually.exists
   let penalty : ℝ :=
     alpha.1 / (1 - alpha.1) * log2 (1 / (ε - η)) +
@@ -148,13 +148,13 @@ theorem entanglementAssistedInformation_isAchievable_of_oneShotPetzLowerBound
     EA, hEAfin, hEAdec, EB, hEBfin, hEBdec, C, hCerr, hCrate_gt⟩ :=
     blockN.exists_oneShotCode_rate_gt_of_lt_oneShotCapacityE
       (le_of_lt hε) hlower_lt_capacity
-  letI : Fintype M := hMfin
-  letI : DecidableEq M := hMdec
-  letI : Nonempty M := hMnonempty
-  letI : Fintype EA := hEAfin
-  letI : DecidableEq EA := hEAdec
-  letI : Fintype EB := hEBfin
-  letI : DecidableEq EB := hEBdec
+  let : Fintype M := hMfin
+  let : DecidableEq M := hMdec
+  let : Nonempty M := hMnonempty
+  let : Fintype EA := hEAfin
+  let : DecidableEq EA := hEAdec
+  let : Fintype EB := hEBfin
+  let : DecidableEq EB := hEBdec
   refine ⟨M, inferInstance, inferInstance, inferInstance,
     EA, inferInstance, inferInstance, EB, inferInstance, inferInstance, ?_⟩
   let C' : EntanglementAssistedClassicalCode (N.tensorPower n) 1 M EA EB := by

@@ -48,7 +48,7 @@ theorem Matrix.Supports.posDef_right_of_left_posDef
     hN.dotProduct_mulVec_nonneg x
   have hne : star x ⬝ᵥ N.mulVec x ≠ 0 := by
     intro hzero
-    have hNzero : N.mulVec x = 0 := (hN.dotProduct_mulVec_zero_iff x).mp hzero
+    have hNzero : N.mulVec x = 0 := hN.dotProduct_mulVec_zero_iff.mp hzero
     have hMzero : M.mulVec x = 0 := hSupport x hNzero
     have hMquad_zero : star x ⬝ᵥ M.mulVec x = 0 := by
       rw [hMzero, dotProduct_zero]
@@ -164,9 +164,10 @@ theorem Matrix.Supports.kronecker_of_posSemidef
     have hspec := hRefA.isHermitian.spectral_theorem
     have hRefA_spec :
         refA = (V1 : CMatrix a) * D1 * star (V1 : CMatrix a) := by
-      simpa [V1, D1, d1, Matrix.IsHermitian.spectral_theorem,
-        Unitary.conjStarAlgAut_apply]
-        using hspec
+      have hdiag : Matrix.diagonal
+          (RCLike.ofReal ∘ hRefA.isHermitian.eigenvalues) = D1 := rfl
+      rw [hdiag] at hspec
+      simpa only [V1, Unitary.conjStarAlgAut_apply] using hspec
     have hdiagV : star (V1 : CMatrix a) * refA * (V1 : CMatrix a) = D1 := by
       calc
         star (V1 : CMatrix a) * refA * (V1 : CMatrix a) =
@@ -185,9 +186,10 @@ theorem Matrix.Supports.kronecker_of_posSemidef
     have hspec := hRefB.isHermitian.spectral_theorem
     have hRefB_spec :
         refB = (V2 : CMatrix b) * D2 * star (V2 : CMatrix b) := by
-      simpa [V2, D2, d2, Matrix.IsHermitian.spectral_theorem,
-        Unitary.conjStarAlgAut_apply]
-        using hspec
+      have hdiag : Matrix.diagonal
+          (RCLike.ofReal ∘ hRefB.isHermitian.eigenvalues) = D2 := rfl
+      rw [hdiag] at hspec
+      simpa only [V2, Unitary.conjStarAlgAut_apply] using hspec
     have hdiagV : star (V2 : CMatrix b) * refB * (V2 : CMatrix b) = D2 := by
       calc
         star (V2 : CMatrix b) * refB * (V2 : CMatrix b) =
@@ -528,11 +530,11 @@ theorem cMatrix_rpow_reindex_posSemidef_support
       (Matrix.reindexAlgEquiv ℂ ℂ e)
           (Matrix.diagonal (fun i => (d i : ℂ)) : CMatrix a) =
         Matrix.diagonal (fun i => (de i : ℂ)) := by
-    simpa [Matrix.reindexAlgEquiv_apply] using hdiag
+    simpa [Matrix.coe_reindexAlgEquiv] using hdiag
   have hstarUAlg :
       (Matrix.reindexAlgEquiv ℂ ℂ e) (star (U : CMatrix a)) =
         star ((Matrix.reindexAlgEquiv ℂ ℂ e) (U : CMatrix a)) := by
-    simpa [Matrix.reindexAlgEquiv_apply] using hstarU
+    simpa [Matrix.coe_reindexAlgEquiv] using hstarU
   have hre_spec :
       Matrix.reindex e e A =
         Unitary.conjStarAlgAut ℂ _ Ue
@@ -541,7 +543,7 @@ theorem cMatrix_rpow_reindex_posSemidef_support
     change (Matrix.reindexAlgEquiv ℂ ℂ e)
         (((U : CMatrix a) * Matrix.diagonal (fun i => (d i : ℂ))) * star (U : CMatrix a)) =
       ((Ue : CMatrix b) * Matrix.diagonal (fun i => (de i : ℂ))) * star (Ue : CMatrix b)
-    rw [Matrix.reindexAlgEquiv_mul, Matrix.reindexAlgEquiv_mul]
+    rw [map_mul, map_mul]
     rw [hdiagAlg, hstarUAlg]
     rfl
   have hA_rpow :
@@ -573,12 +575,12 @@ theorem cMatrix_rpow_reindex_posSemidef_support
       (Matrix.reindexAlgEquiv ℂ ℂ e)
         (((U : CMatrix a) * Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ))) *
           star (U : CMatrix a))
-  rw [Matrix.reindexAlgEquiv_mul, Matrix.reindexAlgEquiv_mul]
+  rw [map_mul, map_mul]
   have hdiagPowAlg :
       (Matrix.reindexAlgEquiv ℂ ℂ e)
           (Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ)) : CMatrix a) =
         Matrix.diagonal (fun i => ((de i ^ s : ℝ) : ℂ)) := by
-    simpa [Matrix.reindexAlgEquiv_apply] using hdiag_pow
+    simpa [Matrix.coe_reindexAlgEquiv] using hdiag_pow
   rw [hdiagPowAlg, hstarUAlg]
   rfl
 
@@ -587,7 +589,7 @@ private theorem State.marginalB_posDef_of_posDef
     [Fintype b] [DecidableEq b]
     (rhoAB : State (Prod a b)) (hrho : rhoAB.matrix.PosDef) :
     rhoAB.marginalB.matrix.PosDef := by
-  letI : Nonempty a := by
+  let : Nonempty a := by
     rcases rhoAB.nonempty with ⟨x⟩
     exact ⟨x.1⟩
   simpa [State.marginalB_matrix] using

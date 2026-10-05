@@ -154,7 +154,7 @@ theorem fourierMatrix_isUnitary (d : ℕ) [NeZero d] :
       apply hij
       apply (ZMod.finEquiv d).injective
       exact (sub_eq_zero.mp hzero).symm
-    rw [zmod_character_sum, if_neg hzij]
+    rw [zmod_character_sum, ite_eq_right hzij]
     simp [hij]
 
 /-- The inverse Fourier matrix is a left inverse to the Fourier matrix. -/

@@ -59,7 +59,7 @@ theorem continuous_conditionalMaxEntropyExponentCandidate_left
   have hnorm : Continuous fun ρ : SubnormalizedState (Prod a b) =>
       traceNorm (psdSqrt ρ.matrix * psdSqrt (identityTensorStateMatrix (a := a) σ)) :=
     traceNorm_continuous_forTopology.comp hmul
-  simpa [conditionalMaxEntropyExponentCandidate] using hnorm.pow 2
+  exact hnorm.pow 2
 
 /-- Compact feasible pairs `(ρ', T_B)` for the conditional-min scale over a
 purified-distance ball, with a harmless trace cap on `T_B`. -/
@@ -158,7 +158,8 @@ theorem conditionalMaxEntropyRaw_lowerSemicontinuousOn_trace_lower_bound
   have hcandidate :
       ContinuousAt (fun τ : SubnormalizedState (Prod a b) =>
         τ.conditionalMaxEntropyFidelityCandidate (a := a) σ) ρ := by
-    simpa [f, conditionalMaxEntropyFidelityCandidate_eq_log2_exponentCandidate]
+    simpa [f, conditionalMaxEntropyFidelityCandidate_eq_log2_exponentCandidate,
+      Function.comp_def]
       using hlog.comp (hf.continuousAt (x := ρ))
   have hevent_gt :
       ∀ᶠ τ in 𝓝[{ρ : SubnormalizedState (Prod a b) | δ ≤ ρ.matrix.trace.re}] ρ,

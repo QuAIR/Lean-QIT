@@ -15,7 +15,7 @@ public import QIT.Asymptotic.Typicality
 public import QIT.Symmetry.DeFinetti
 public import Mathlib.Analysis.Complex.ExponentialBounds
 public import Mathlib.Analysis.SpecificLimits.Basic
-public import Mathlib.Data.Real.Sqrt
+public import Mathlib.Analysis.Real.Sqrt
 
 /-!
 # Quantum Asymptotic Equipartition Property
@@ -731,7 +731,7 @@ private theorem tensorPowerTripartiteGroupedEquiv_symm_succ_apply
         (((a₀, as), (b₀, bs)), (c₀, cs)) =
       (((a₀, b₀), c₀),
         (tensorPowerTripartiteGroupedEquiv a b c n).symm ((as, bs), cs)) := by
-  simp [tensorPowerTripartiteGroupedEquiv, tensorPowerProdEquiv]
+  rfl
 
 /-- Grouped IID tensor power of a pure tripartite vector, read as
 `(A^nB^n)C^n`. -/
@@ -773,17 +773,25 @@ private theorem State.tensorPowerTripartiteGrouped_marginalAC
       ((ρ.tensorPower n).reindex (tensorPowerTripartiteGroupedEquiv a b c n)).marginalAC =
         ρ.marginalAC.tensorPowerBipartite n
   | 0 => by
+      have : Subsingleton (TensorPower a 0) :=
+        ⟨fun x y => by cases x; cases y; rfl⟩
+      have : Subsingleton (TensorPower c 0) :=
+        ⟨fun x y => by cases x; cases y; rfl⟩
+      have hentry :
+          ∀ (τ : State (Prod (TensorPower a 0) (TensorPower c 0)))
+            (i : Prod (TensorPower a 0) (TensorPower c 0)), τ.matrix i i = 1 := by
+        intro τ i
+        have hsum : τ.matrix.trace = τ.matrix i i := by
+          rw [Matrix.trace]
+          exact Finset.sum_eq_single_of_mem i (Finset.mem_univ i)
+            (fun k _ hk => absurd (Subsingleton.elim k i) hk)
+        rw [← hsum]
+        exact τ.trace_eq_one
       apply State.ext
       ext x y
-      rcases x with ⟨xA, xC⟩
-      rcases y with ⟨yA, yC⟩
-      cases xA
-      cases xC
-      cases yA
-      cases yC
-      simp [tensorPowerTripartiteGroupedEquiv, State.tensorPowerBipartite,
-        State.tensorPower, State.unit, State.reindex, State.marginalAC_matrix,
-        tensorPowerProdEquiv, TensorPower]
+      have hxy : x = y := Subsingleton.elim x y
+      subst hxy
+      rw [hentry _ x, hentry _ x]
   | n + 1 => by
       apply State.ext
       ext x y
@@ -799,7 +807,7 @@ private theorem State.tensorPowerTripartiteGrouped_marginalAC
         (State.tensorPowerTripartiteGrouped_marginalAC ρ n)
       simp [tensorPowerTripartiteGroupedEquiv, State.tensorPowerBipartite,
         State.tensorPower, State.prod, State.reindex, State.marginalAC_matrix,
-        Matrix.kronecker, Matrix.kroneckerMap_apply, TensorPower] at hih ⊢
+        Matrix.kronecker, TensorPower] at hih ⊢
       have hih_grouped :
           (∑ rest : TensorPower b n,
             (ρ.tensorPower n).matrix
@@ -1068,10 +1076,10 @@ theorem SmoothMinRateUpperFromContinuity.afw_of_tensorPower_ordering
         τ.conditionalMinEntropy ≤ τ.conditionalEntropy) :
     ρ.SmoothMinRateUpperFromContinuity := by
   classical
-  letI : Nonempty a := by
+  let : Nonempty a := by
     rcases ρ.nonempty with ⟨x⟩
     exact ⟨x.1⟩
-  letI : Nonempty b := by
+  let : Nonempty b := by
     rcases ρ.nonempty with ⟨x⟩
     exact ⟨x.2⟩
   intro γ hγ
@@ -1345,10 +1353,17 @@ theorem SmoothMaxRateFromMinDuality.of_all_min
     ρ.canonicalPurification.reindex (Equiv.prodComm (Prod a b) (Prod a b))
   have hAB : Ω.state.marginalAB = ρ := by
     apply State.ext
-    simpa [Ω, State.marginalAB_eq_marginalA, PureVector.reindex_state, State.reindex,
-      State.marginalA, State.marginalB, partialTraceA, partialTraceB,
-      PureVector.state_matrix, rankOneMatrix_apply] using
-      ρ.canonicalPurification_purifies
+    have hswap : ∀ X : CMatrix (Prod (Prod a b) (Prod a b)),
+        partialTraceB (X.submatrix Prod.swap Prod.swap) = partialTraceA X := by
+      intro X
+      ext ab ab'
+      simp [partialTraceA, partialTraceB, Matrix.submatrix_apply, Prod.swap_prod_mk]
+    rw [show Ω.state.marginalAB.matrix =
+        partialTraceB ((rankOneMatrix ρ.canonicalPurification.amp).submatrix Prod.swap Prod.swap) from by
+      simp [Ω, State.marginalAB_eq_marginalA, PureVector.reindex_state, State.reindex,
+        State.marginalA, PureVector.state_matrix]]
+    rw [hswap]
+    exact ρ.canonicalPurification_purifies
   have hmaxΩ : Ω.state.marginalAB.SmoothMaxRateFromMinDuality :=
     State.SmoothMaxRateFromMinDuality.of_pure_min_complement
       (a := a) (b := b) (c := Prod a b) Ω

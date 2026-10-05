@@ -51,7 +51,7 @@ theorem sandwichedRenyiMutualInformationCandidateE_eq_top_of_not_side_posDef
   have hrefPD : (rhoAB.marginalA.prod sigmaB).matrix.PosDef :=
     Matrix.Supports.posDef_right_of_left_posDef hrho
       (rhoAB.marginalA.prod sigmaB).pos hSupport
-  haveI : Nonempty a := by
+  have : Nonempty a := by
     rcases rhoAB.nonempty with ⟨x⟩
     exact ⟨x.1⟩
   exact hsigma
@@ -87,9 +87,9 @@ theorem sandwichedRenyiReference_reindex {alpha : Type u1} {beta : Type u2}
     (1 / (alphaR - 1)) *
       log2 (((CFC.rpow (CFC.rpow sigma s * rho.matrix * CFC.rpow sigma s)
         alphaR).trace).re)
-  rw [← Matrix.reindexAlgEquiv_mul (R := ℂ) (A := ℂ) e
+  rw [← map_mul (Matrix.reindexAlgEquiv ℂ ℂ e)
     (CFC.rpow sigma s) rho.matrix]
-  rw [← Matrix.reindexAlgEquiv_mul (R := ℂ) (A := ℂ) e
+  rw [← map_mul (Matrix.reindexAlgEquiv ℂ ℂ e)
     (CFC.rpow sigma s * rho.matrix) (CFC.rpow sigma s)]
   change (1 / (alphaR - 1)) *
       log2 (((CFC.rpow
@@ -132,7 +132,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_reindex
     cMatrix_rpow_reindex_posSemidef_support e hsigma s
   let inner : CMatrix alpha := CFC.rpow sigma s * rho.matrix * CFC.rpow sigma s
   have hinner_psd : inner.PosSemidef := by
-    simpa [inner, s] using
+    simpa [inner, s, sandwichedRenyiReferenceInner] using
       sandwichedRenyiReferenceInner_posSemidef rho hsigma alphaR
   have hinner_reindex :
       CFC.rpow (Matrix.reindex e e sigma) s *
@@ -145,9 +145,9 @@ theorem sandwichedRenyiPSDReferenceHighAlphaFinite_reindex
             (Matrix.reindexAlgEquiv ℂ ℂ e) rho.matrix *
           (Matrix.reindexAlgEquiv ℂ ℂ e) (CFC.rpow sigma s) =
         (Matrix.reindexAlgEquiv ℂ ℂ e) inner
-    rw [← Matrix.reindexAlgEquiv_mul (R := ℂ) (A := ℂ) e
+    rw [← map_mul (Matrix.reindexAlgEquiv ℂ ℂ e)
       (CFC.rpow sigma s) rho.matrix]
-    rw [← Matrix.reindexAlgEquiv_mul (R := ℂ) (A := ℂ) e
+    rw [← map_mul (Matrix.reindexAlgEquiv ℂ ℂ e)
       (CFC.rpow sigma s * rho.matrix) (CFC.rpow sigma s)]
   have hpow_inner :
       CFC.rpow
@@ -510,7 +510,7 @@ theorem sandwichedRenyiMutualInformationE_eq_sInf_fullRankCandidateReal
       sInf (Set.range fun sigmaB : {sigma : State b // sigma.matrix.PosDef} =>
         (sandwichedRenyiMutualInformationCandidateRealPosDef
           rhoAB sigmaB.1 hrho hA sigmaB.2 alphaR halpha : EReal)) := by
-  haveI : Nonempty {sigma : State b // sigma.matrix.PosDef} :=
+  have : Nonempty {sigma : State b // sigma.matrix.PosDef} :=
     ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   rw [State.sandwichedRenyiMutualInformationE_eq_sInf]
   apply le_antisymm
@@ -1377,8 +1377,8 @@ theorem sandwichedACTraceMatrixLog_fullRankProduct_sSup_eq_add
               (sandwichedAlternateSchattenOrder halpha))) := by
   let S1 := {tau : State c1 // tau.matrix.PosDef}
   let S2 := {tau : State c2 // tau.matrix.PosDef}
-  haveI : Nonempty S1 := ⟨⟨State.maximallyMixed c1, State.maximallyMixed_posDef⟩⟩
-  haveI : Nonempty S2 := ⟨⟨State.maximallyMixed c2, State.maximallyMixed_posDef⟩⟩
+  have : Nonempty S1 := ⟨⟨State.maximallyMixed c1, State.maximallyMixed_posDef⟩⟩
+  have : Nonempty S2 := ⟨⟨State.maximallyMixed c2, State.maximallyMixed_posDef⟩⟩
   let f : S1 → Real := fun tauC1 =>
     alpha / (alpha - 1) *
       log2
@@ -1780,8 +1780,8 @@ theorem sandwichedRenyiMutualInformationE_bipartiteProduct_le_add
   let prodF : State b1 × State b2 → EReal := fun p =>
     (xi.bipartiteProduct omega).sandwichedRenyiMutualInformationCandidateE
       (p.1.prod p.2) alpha
-  haveI : Nonempty (State b1) := ⟨State.maximallyMixed b1⟩
-  haveI : Nonempty (State b2) := ⟨State.maximallyMixed b2⟩
+  have : Nonempty (State b1) := ⟨State.maximallyMixed b1⟩
+  have : Nonempty (State b2) := ⟨State.maximallyMixed b2⟩
   have hfNonneg : ∀ sigma1 : State b1, 0 ≤ f sigma1 := by
     intro sigma1
     exact State.sandwichedRenyiMutualInformationCandidateE_nonneg xi sigma1 halpha
@@ -1943,7 +1943,7 @@ theorem sandwichedRenyiMutualInformationE_dataProcessing_left
       rhoAB.sandwichedRenyiMutualInformationE alpha := by
   classical
   let rhoOut : State (Prod c b) := (Phi.prod (Channel.idChannel b)).applyState rhoAB
-  haveI : Nonempty b := by
+  have : Nonempty b := by
     rcases rhoAB.nonempty with ⟨x⟩
     exact ⟨x.2⟩
   rw [State.sandwichedRenyiMutualInformationE_eq_sInf]
@@ -1998,7 +1998,7 @@ theorem sandwichedRenyiMutualInformationE_dataProcessing_right
       rhoAB.sandwichedRenyiMutualInformationE alpha := by
   classical
   let rhoOut : State (Prod a c) := ((Channel.idChannel a).prod Psi).applyState rhoAB
-  haveI : Nonempty b := by
+  have : Nonempty b := by
     rcases rhoAB.nonempty with ⟨x⟩
     exact ⟨x.2⟩
   rw [State.sandwichedRenyiMutualInformationE_eq_sInf]
@@ -2510,7 +2510,7 @@ theorem sandwichedMutualInformationSionBracketRe_sSup_eq_holderUnitBall_sSup
     simpa [holder, M] using
       sandwichedMutualInformationSionBracketRe_le_weightedPurification_holderUnitBall_sSup
         rhoA ψ sigmaB tauC hrhoA hsigmaB halpha
-  haveI : Nonempty (State c) := ⟨State.maximallyMixed c⟩
+  have : Nonempty (State c) := ⟨State.maximallyMixed c⟩
   apply le_antisymm
   · refine csSup_le (Set.range_nonempty _) ?_
     rintro y ⟨tauC, rfl⟩
@@ -2556,7 +2556,7 @@ theorem sandwichedMutualInformationSionBracketRe_sSup_eq_holderUnitBall_sSup_of_
     simpa [holder, M] using
       sandwichedMutualInformationSionBracketRe_le_weightedPurification_holderUnitBall_sSup_of_side_posDef
         rhoA ψ sigmaB tauC hsigmaB halpha
-  haveI : Nonempty (State c) := ⟨State.maximallyMixed c⟩
+  have : Nonempty (State c) := ⟨State.maximallyMixed c⟩
   apply le_antisymm
   · refine csSup_le (Set.range_nonempty _) ?_
     rintro y ⟨tauC, rfl⟩
@@ -2806,9 +2806,9 @@ theorem one_le_sandwichedMutualInformationSionBracketRe_sSup_of_side_posDef
     have hsup_eq :=
       sandwichedMutualInformationSionBracketRe_sSup_eq_holderUnitBall_sSup_of_side_posDef
         ψ.state.marginalAB.marginalA ψ sigmaB hsigmaB halpha
-    simpa [x] using congrArg
-      (fun y : ℝ => ((alpha / (alpha - 1) * log2 y : ℝ) : EReal))
-      hsup_eq.symm
+    simp only [x]
+    rw [hsup_eq]
+    rfl
   have hreal_eq : finite = alpha / (alpha - 1) * log2 x :=
     EReal.coe_eq_coe_iff.mp (hcandidate_finite.symm.trans hcandidate_holder)
   have hlog_nonneg : 0 ≤ log2 x := by
@@ -2923,7 +2923,7 @@ theorem sandwichedRenyiMutualInformationE_eq_coeff_log2_sInf_sSup_sionBracketRe
   let coeff : ℝ := alpha / (alpha - 1)
   let logs : S → ℝ := fun σB => log2 (supRaw σB)
   let scaled : S → ℝ := fun σB => coeff * logs σB
-  haveI : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
+  have : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   have hsup_one (σB : S) : 1 ≤ supRaw σB := by
     simpa [supRaw, raw] using
       one_le_sandwichedMutualInformationSionBracketRe_sSup
@@ -3025,7 +3025,7 @@ theorem sandwichedRenyiMutualInformationE_eq_coeff_log2_sInf_sSup_sionBracketRe_
   let coeff : ℝ := alpha / (alpha - 1)
   let logs : S → ℝ := fun σB => log2 (supRaw σB)
   let scaled : S → ℝ := fun σB => coeff * logs σB
-  haveI : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
+  have : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   have hsup_one (σB : S) : 1 ≤ supRaw σB := by
     simpa [supRaw, raw] using
       one_le_sandwichedMutualInformationSionBracketRe_sSup_of_side_posDef
@@ -3118,8 +3118,8 @@ theorem sandwichedMutualInformationSionBracketRe_real_sInf_sSup_eq_sSup_sInf
     sandwichedMutualInformationSionBracketRe rhoA ψ σB.1 τC alpha
   let supRaw : S → ℝ := fun σB => sSup (Set.range fun τC : State c => raw σB τC)
   let infRaw : State c → ℝ := fun τC => sInf (Set.range fun σB : S => raw σB τC)
-  haveI : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
-  haveI : Nonempty (State c) := ⟨State.maximallyMixed c⟩
+  have : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
+  have : Nonempty (State c) := ⟨State.maximallyMixed c⟩
   have hrawBddAbove (σB : S) :
       BddAbove (Set.range fun τC : State c => raw σB τC) := by
     refine ⟨sSup
@@ -3212,8 +3212,8 @@ theorem sandwichedMutualInformationSionBracketRe_real_sInf_sSup_eq_sSup_sInf_of_
     sandwichedMutualInformationSionBracketRe rhoA ψ σB.1 τC alpha
   let supRaw : S → ℝ := fun σB => sSup (Set.range fun τC : State c => raw σB τC)
   let infRaw : State c → ℝ := fun τC => sInf (Set.range fun σB : S => raw σB τC)
-  haveI : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
-  haveI : Nonempty (State c) := ⟨State.maximallyMixed c⟩
+  have : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
+  have : Nonempty (State c) := ⟨State.maximallyMixed c⟩
   have hrawBddAbove (σB : S) :
       BddAbove (Set.range fun τC : State c => raw σB τC) := by
     refine ⟨sSup
@@ -3572,7 +3572,7 @@ theorem one_le_sSup_ACTraceMatrixNorm_support
       (sandwichedMutualInformationACTraceMatrix_posSemidef
         ψ.state.marginalAB.marginalA ψ τC alpha)
       (sandwichedAlternateSchattenOrder halpha)
-  haveI : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
+  have : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   have hsup_one (σB : S) : 1 ≤ supRaw σB := by
     simpa [supRaw, raw] using
       one_le_sandwichedMutualInformationSionBracketRe_sSup_of_side_posDef
@@ -3678,8 +3678,8 @@ theorem sandwichedRenyiMutualInformationE_bipartiteProductPurification_ge_add
   have hFφ_sup_pos : 0 < sSup (Set.range Fφ) := by
     exact zero_lt_one.trans_le (by
       simpa [Fφ] using one_le_sSup_ACTraceMatrixNorm_support φ halpha)
-  haveI : Nonempty (State c1) := ⟨State.maximallyMixed c1⟩
-  haveI : Nonempty (State c2) := ⟨State.maximallyMixed c2⟩
+  have : Nonempty (State c1) := ⟨State.maximallyMixed c1⟩
+  have : Nonempty (State c2) := ⟨State.maximallyMixed c2⟩
   let Fpair : State c1 × State c2 → ℝ := fun p => Fψ p.1 * Fφ p.2
   have hFpairBdd : BddAbove (Set.range Fpair) := by
     refine ⟨sSup (Set.range Fprod), ?_⟩
@@ -3768,7 +3768,7 @@ theorem sandwichedRenyiMutualInformationE_le_sInf_fullRank_sSup_sionBracketLog
               sandwichedMutualInformationSionBracketRe
                 ψ.state.marginalAB.marginalA ψ σB.1 τC alpha)) : ℝ) : EReal)) := by
   let S := {σ : State b // σ.matrix.PosDef}
-  haveI : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
+  have : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   let holder : S → ℝ := fun σB =>
     alpha / (alpha - 1) *
       log2
@@ -3940,7 +3940,7 @@ theorem sandwichedACTraceMatrixLog_le_sandwichedRenyiMutualInformationE_posDef
                 (sandwichedMutualInformationWeightedPurificationAmp
                   ψ.state.marginalAB.marginalA σB.1 ψ alpha)))
             (Real.conjExponent alpha)))
-  haveI : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
+  have : Nonempty S := ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   have hAC_le_f (σB : S) : acLog ≤ f σB := by
     simpa [acLog, f, S] using
       sandwichedACTraceMatrixLog_le_SionBracketLog_posDef
@@ -4060,7 +4060,7 @@ theorem sandwichedACTraceMatrixLog_fullRank_bddAbove
               ψ.state.marginalAB.marginalA ψ τC.1 alpha)
             (sandwichedAlternateSchattenOrder halpha))) := by
   let S := {σ : State b // σ.matrix.PosDef}
-  haveI : Nonempty S := ⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩
+  have : Nonempty S := ⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩
   let f : S → ℝ := fun σB =>
     State.sandwichedRenyiMutualInformationCandidateRealPosDef
       ψ.state.marginalAB σB.1 hAB hA σB.2 alpha halpha
@@ -4110,7 +4110,7 @@ theorem sandwichedACTraceMatrixLog_fullRank_ereal_sSup_eq
               (sandwichedMutualInformationACTraceMatrix_posSemidef
                 ψ.state.marginalAB.marginalA ψ τC.1 alpha)
               (sandwichedAlternateSchattenOrder halpha))) : ℝ) : EReal) := by
-  haveI : Nonempty {τ : State c // τ.matrix.PosDef} :=
+  have : Nonempty {τ : State c // τ.matrix.PosDef} :=
     ⟨⟨State.maximallyMixed c, State.maximallyMixed_posDef⟩⟩
   exact ereal_sSup_range_coe_eq_coe_real_sSup _
     (sandwichedACTraceMatrixLog_fullRank_bddAbove ψ hAB hA halpha)
@@ -4136,7 +4136,7 @@ theorem sandwichedACTraceMatrixLog_fullRank_sSup_le_sandwichedRenyiMutualInforma
               ψ.state.marginalAB.marginalA ψ τC.1 alpha)
             (sandwichedAlternateSchattenOrder halpha)) : ℝ) : EReal)) ≤
       ψ.state.marginalAB.sandwichedRenyiMutualInformationE alpha := by
-  haveI : Nonempty {τ : State c // τ.matrix.PosDef} :=
+  have : Nonempty {τ : State c // τ.matrix.PosDef} :=
     ⟨⟨State.maximallyMixed c, State.maximallyMixed_posDef⟩⟩
   refine csSup_le (Set.range_nonempty _) ?_
   rintro y ⟨τC, rfl⟩
@@ -4428,12 +4428,12 @@ theorem sandwichedRenyiMutualInformationE_bipartiteProduct_ge_add
     xi.sandwichedRenyiMutualInformationE alpha +
         omega.sandwichedRenyiMutualInformationE alpha ≤
       (xi.bipartiteProduct omega).sandwichedRenyiMutualInformationE alpha := by
-  haveI : Nonempty (Prod a1 b1) := xi.nonempty
-  haveI : Nonempty a1 := ⟨(Classical.choice (xi.nonempty)).1⟩
-  haveI : Nonempty b1 := ⟨(Classical.choice (xi.nonempty)).2⟩
-  haveI : Nonempty (Prod a2 b2) := omega.nonempty
-  haveI : Nonempty a2 := ⟨(Classical.choice (omega.nonempty)).1⟩
-  haveI : Nonempty b2 := ⟨(Classical.choice (omega.nonempty)).2⟩
+  have : Nonempty (Prod a1 b1) := xi.nonempty
+  have : Nonempty a1 := ⟨(Classical.choice (xi.nonempty)).1⟩
+  have : Nonempty b1 := ⟨(Classical.choice (xi.nonempty)).2⟩
+  have : Nonempty (Prod a2 b2) := omega.nonempty
+  have : Nonempty a2 := ⟨(Classical.choice (omega.nonempty)).1⟩
+  have : Nonempty b2 := ⟨(Classical.choice (omega.nonempty)).2⟩
   let psi : PureVector (Prod (Prod a1 b1) (Prod a1 b1)) :=
     xi.canonicalPurification.reindex (Equiv.prodComm (Prod a1 b1) (Prod a1 b1))
   let phi : PureVector (Prod (Prod a2 b2) (Prod a2 b2)) :=
@@ -4470,10 +4470,10 @@ theorem sandwichedRenyiMutualInformationE_bipartiteProduct_eq_add
     (xi.bipartiteProduct omega).sandwichedRenyiMutualInformationE alpha =
       xi.sandwichedRenyiMutualInformationE alpha +
         omega.sandwichedRenyiMutualInformationE alpha := by
-  haveI : Nonempty (Prod a1 b1) := xi.nonempty
-  haveI : Nonempty b1 := ⟨(Classical.choice (xi.nonempty)).2⟩
-  haveI : Nonempty (Prod a2 b2) := omega.nonempty
-  haveI : Nonempty b2 := ⟨(Classical.choice (omega.nonempty)).2⟩
+  have : Nonempty (Prod a1 b1) := xi.nonempty
+  have : Nonempty b1 := ⟨(Classical.choice (xi.nonempty)).2⟩
+  have : Nonempty (Prod a2 b2) := omega.nonempty
+  have : Nonempty b2 := ⟨(Classical.choice (omega.nonempty)).2⟩
   exact le_antisymm
     (State.sandwichedRenyiMutualInformationE_bipartiteProduct_le_add
       xi omega halpha)

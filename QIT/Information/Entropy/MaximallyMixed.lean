@@ -43,7 +43,7 @@ theorem vonNeumann_maximallyMixed [Nonempty a] :
     exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
   have hcard_ne : (Fintype.card a : ℝ) ≠ 0 := ne_of_gt hcard_pos
   rw [Finset.sum_const, nsmul_eq_mul]
-  simp only [xlog2, if_neg (inv_ne_zero hcard_ne), Finset.card_univ]
+  simp only [xlog2, ite_eq_right (inv_ne_zero hcard_ne), Finset.card_univ]
   unfold log2
   rw [Real.log_inv]
   field_simp [hcard_ne]

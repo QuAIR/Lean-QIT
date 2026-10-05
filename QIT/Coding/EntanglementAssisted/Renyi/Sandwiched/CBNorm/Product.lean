@@ -648,10 +648,10 @@ private theorem alphaToAlphaNorm_mul_le_kron
       alphaToAlphaNorm (MatrixMap.kron Phi Psi)
         (MatrixMap.isCompletelyPositive_kron Phi Psi hPhi hPsi)
         (SchattenOrder.ofOneLt halpha)
-  haveI : Nonempty
+  have : Nonempty
       (AlphaToAlphaPositiveDomain a (SchattenOrder.ofOneLt halpha)) :=
     alphaToAlphaPositiveDomain_nonempty (a := a) (SchattenOrder.ofOneLt halpha)
-  haveI : Nonempty
+  have : Nonempty
       (AlphaToAlphaPositiveDomain c (SchattenOrder.ofOneLt halpha)) :=
     alphaToAlphaPositiveDomain_nonempty (a := c) (SchattenOrder.ofOneLt halpha)
   refine ciSup_le ?_

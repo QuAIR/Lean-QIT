@@ -110,8 +110,8 @@ theorem mem_holevoInformationValues_le_log_card {r : ℝ}
     (hr : r ∈ (Channel.holevoInformationValues.{uIn, uOut, uEnsemble} N)) :
     r ≤ log2 (Fintype.card b) := by
   rcases hr with ⟨ι, hιF, hιD, E, rfl⟩
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact Ensemble.holevo_le_log_card (N.outputEnsemble E)
 
 /-- The finite-ensemble Holevo value set is bounded above by the output
@@ -200,7 +200,7 @@ theorem regularizedHolevoRateValues_bddAbove [Nonempty a] [Nonempty b] :
   have hbound :
       (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n ≤
         log2 (Fintype.card (QIT.TensorPower b n)) := by
-    haveI : Nonempty (QIT.TensorPower a n) := tensorPower_nonempty a n
+    have : Nonempty (QIT.TensorPower a n) := tensorPower_nonempty a n
     unfold blockHolevoInformation Channel.holevoInformation
     exact csSup_le
       (N.tensorPower n).holevoInformationValues_nonempty
@@ -236,7 +236,7 @@ theorem lowerBound_le_of_rpow_two_mul_le_card
   have hlog := log2_mono_of_pos hpow_pos hcard
   rw [log2_rpow_two] at hlog
   unfold hswMessageRate
-  rw [if_neg hn_ne]
+  rw [ite_eq_right hn_ne]
   calc
     R = ((n : ℝ) * R) / (n : ℝ) := by field_simp [ne_of_gt hn_pos]
     _ ≤ log2 (Fintype.card M : ℝ) / (n : ℝ) :=
@@ -269,7 +269,7 @@ theorem ge_sub_inv_of_two_card_ge
   have hn_pos : (0 : ℝ) < n := by exact_mod_cast hn
   have hlog := log_card_subtype_ge_sub_one (M := M) (M' := M') hcard
   unfold hswMessageRate
-  rw [if_neg hn_ne, if_neg hn_ne]
+  rw [ite_eq_right hn_ne, ite_eq_right hn_ne]
   calc
     log2 (Fintype.card M : ℝ) / (n : ℝ) - 1 / (n : ℝ) =
         (log2 (Fintype.card M : ℝ) - 1) / (n : ℝ) := by ring
@@ -328,7 +328,7 @@ theorem hswReindex_prob_reindex_state {out' : Type uAux} [Fintype out'] [Decidab
       ((((Matrix.reindexAlgEquiv ℂ ℂ e) rho.matrix) *
         ((Matrix.reindexAlgEquiv ℂ ℂ e) (D.effects y))).trace) =
     Complex.re ((rho.matrix * D.effects y).trace)
-  rw [← Matrix.reindexAlgEquiv_mul (R := ℂ) (A := ℂ) e rho.matrix (D.effects y)]
+  rw [← map_mul (Matrix.reindexAlgEquiv ℂ ℂ e) rho.matrix (D.effects y)]
   change Complex.re ((Matrix.reindex e e (rho.matrix * D.effects y)).trace) =
     Complex.re ((rho.matrix * D.effects y).trace)
   rw [hswTrace_reindex e]
@@ -650,7 +650,7 @@ noncomputable def restrictToFinset (C : HSWClassicalCode N n M)
                 m0
                 (fun m _ hm => by
                   change (if m = m0 then discarded else (0 : CMatrix (TensorPower b n))) = 0
-                  rw [if_neg hm])
+                  rw [ite_eq_right hm])
                 (fun hm => False.elim (hm (Finset.mem_univ m0)))
         _ = discarded := by simp
     have hsum : (∑ m, effects' m) = 1 := by
@@ -719,9 +719,9 @@ theorem exists_expurgatedCode_of_averageErrorAtMost (C : HSWClassicalCode N n M)
     omega
   have hSnonempty : S.Nonempty := Finset.card_pos.mp hSpos
   let M' := {m : M // m ∈ S}
-  letI : Fintype M' := inferInstance
-  letI : DecidableEq M' := inferInstance
-  letI : Nonempty M' := ⟨⟨hSnonempty.choose, hSnonempty.choose_spec⟩⟩
+  let : Fintype M' := inferInstance
+  let : DecidableEq M' := inferInstance
+  let : Nonempty M' := ⟨⟨hSnonempty.choose, hSnonempty.choose_spec⟩⟩
   let C' : HSWClassicalCode N n M' := C.restrictToFinset S
   refine ⟨M', inferInstance, inferInstance, inferInstance, C', ?_, ?_⟩
   · have hcard_eq : Fintype.card M' = S.card := by
@@ -743,9 +743,9 @@ theorem exists_expurgatedCode_of_averageErrorAtMost_rate (C : HSWClassicalCode N
         C'.rate ≥ C.rate - (1 : ℝ) / (n : ℝ) ∧ C'.maxErrorAtMost (2 * ε) := by
   obtain ⟨M', hM'fin, hM'dec, hM'nonempty, C', hcard, herr⟩ :=
     C.exists_expurgatedCode_of_averageErrorAtMost havg hε
-  letI : Fintype M' := hM'fin
-  letI : DecidableEq M' := hM'dec
-  letI : Nonempty M' := hM'nonempty
+  let : Fintype M' := hM'fin
+  let : DecidableEq M' := hM'dec
+  let : Nonempty M' := hM'nonempty
   refine ⟨M', inferInstance, inferInstance, inferInstance, C', ?_, herr⟩
   exact hswMessageRate.ge_sub_inv_of_two_card_ge (M := M) (M' := M') hn hcard
 
@@ -892,9 +892,9 @@ theorem exists_directCodingWitness_expurgated
   obtain ⟨M', hM'fin, hM'dec, hM'nonempty, C', hrate, herr⟩ :=
     W.code.exists_expurgatedCode_of_averageErrorAtMost_rate hn
       W.packing_average_error_le hε
-  letI : Fintype M' := hM'fin
-  letI : DecidableEq M' := hM'dec
-  letI : Nonempty M' := hM'nonempty
+  let : Fintype M' := hM'fin
+  let : DecidableEq M' := hM'dec
+  let : Nonempty M' := hM'nonempty
   refine ⟨M', inferInstance, inferInstance, inferInstance, ?_⟩
   refine ⟨{ code := C', rate_ge := ?_, maxError_le := herr }⟩
   linarith [W.rate_ge, hrate]
@@ -937,9 +937,9 @@ theorem hsw_direct_achievable_of_directCodingWitness
   refine ⟨N0, ?_⟩
   intro n hn
   obtain ⟨M, hMfin, hMdec, hMnonempty, ⟨witness⟩⟩ := hN0 n hn
-  letI : Fintype M := hMfin
-  letI : DecidableEq M := hMdec
-  letI : Nonempty M := hMnonempty
+  let : Fintype M := hMfin
+  let : DecidableEq M := hMdec
+  let : Nonempty M := hMnonempty
   exact ⟨M, inferInstance, inferInstance, inferInstance, witness.code,
     witness.rate_ge, witness.maxError_le⟩
 
@@ -996,15 +996,15 @@ theorem hsw_directWitnessAssembly_from_averageErrorPacking
   refine ⟨N0, ?_⟩
   intro n hnN0
   obtain ⟨hn_pos, hinv, M, hMfin, hMdec, hMnonempty, ⟨W⟩⟩ := hN0 n hnN0
-  letI : Fintype M := hMfin
-  letI : DecidableEq M := hMdec
-  letI : Nonempty M := hMnonempty
+  let : Fintype M := hMfin
+  let : DecidableEq M := hMdec
+  let : Nonempty M := hMnonempty
   have hε_half : 0 < ε / 2 := by linarith
   obtain ⟨M', hM'fin, hM'dec, hM'nonempty, ⟨W'⟩⟩ :=
     W.exists_directCodingWitness_expurgated hn_pos hε_half
-  letI : Fintype M' := hM'fin
-  letI : DecidableEq M' := hM'dec
-  letI : Nonempty M' := hM'nonempty
+  let : Fintype M' := hM'fin
+  let : DecidableEq M' := hM'dec
+  let : Nonempty M' := hM'nonempty
   refine ⟨M', inferInstance, inferInstance, inferInstance, ?_⟩
   refine ⟨{ code := W'.code, rate_ge := ?_, maxError_le := ?_ }⟩
   · have hslack : δ / 2 + (1 : ℝ) / (n : ℝ) ≤ δ := by linarith
@@ -1033,8 +1033,8 @@ theorem hsw_holevoInformation_direct_of_ensembleWitnesses [Nonempty a]
     (lt_csSup_iff N.holevoInformationValues_bddAbove
       N.holevoInformationValues_nonempty).mp hR
   rcases hrmem with ⟨ι, hιF, hιD, E, rfl⟩
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
   exact Channel.IsAchievableClassicalRate.mono N
     (h ι inferInstance inferInstance E) (le_of_lt hRr)
 
@@ -1149,7 +1149,7 @@ theorem hsw_regularized_direct_of_blockChannelEnsembleWitnesses [Nonempty a] [No
             ((Channel.holevoInformation.{uIn, uOut, uEnsemble} (N.tensorPower n)) / (n : ℝ)) := hmul
       _ = (Channel.holevoInformation.{uIn, uOut, uEnsemble} (N.tensorPower n)) := by
         field_simp [ne_of_gt hnR_pos]
-  haveI : Nonempty (QIT.TensorPower a n) := tensorPower_nonempty a n
+  have : Nonempty (QIT.TensorPower a n) := tensorPower_nonempty a n
   have hblockAch :
       (Channel.IsAchievableClassicalRate.{uIn, uOut, uMessage} blockN) ((n : ℝ) * R) := by
     dsimp [blockN]

@@ -127,6 +127,7 @@ theorem controlledOperator_isometry {H : Type u} [Fintype H] [DecidableEq H]
   by_cases hkk : kx = ky
   · subst ky
     have hentry := congrFun (congrFun (hU kx) hx) hy
+    rw [Matrix.mul_apply] at hentry
     rw [Matrix.mul_apply]
     rw [← Finset.univ_product_univ, Finset.sum_product]
     simpa [controlledOperator, Matrix.conjTranspose, Matrix.one_apply] using hentry
@@ -448,8 +449,8 @@ theorem aliceControlledUnitary_isometry
     (B : SchmidtTarget.BaseReindexToFin data.target) :
     Matrix.conjTranspose (data.aliceControlledUnitary B.toEquiv) *
         data.aliceControlledUnitary B.toEquiv = 1 := by
-  haveI : Nonempty ι := ⟨data.target.base⟩
-  haveI : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
+  have : Nonempty ι := ⟨data.target.base⟩
+  have : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
   simpa [aliceControlledUnitary] using
     controlledUnitary_isometry
       (fun k : Fin (Fintype.card ι) => data.aliceUnitary (B.toEquiv.symm k))
@@ -459,8 +460,8 @@ theorem aliceControlledPhase_isometry
     (B : SchmidtTarget.BaseReindexToFin data.target) :
     Matrix.conjTranspose (data.aliceControlledPhase B.toEquiv) *
         data.aliceControlledPhase B.toEquiv = 1 := by
-  haveI : Nonempty ι := ⟨data.target.base⟩
-  haveI : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
+  have : Nonempty ι := ⟨data.target.base⟩
+  have : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
   apply controlledPhase_isometry_of_orthogonal_projection_family
   · intro k
     exact data.aliceProjection.isHermitian (B.toEquiv.symm k)
@@ -492,8 +493,8 @@ def aliceSideMatrix (B : SchmidtTarget.BaseReindexToFin data.target) :
 theorem aliceSideMatrix_isometry
     (B : SchmidtTarget.BaseReindexToFin data.target) :
     Matrix.conjTranspose (data.aliceSideMatrix B) * data.aliceSideMatrix B = 1 := by
-  haveI : Nonempty ι := ⟨data.target.base⟩
-  haveI : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
+  have : Nonempty ι := ⟨data.target.base⟩
+  have : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
   unfold aliceSideMatrix
   apply left_mul_isometry
   · exact data.aliceControlledUnitary_isometry B
@@ -527,8 +528,8 @@ theorem bobControlledUnitary_isometry (_W : BobLocalOrthogonalization data rho)
     (B : SchmidtTarget.BaseReindexToFin data.target) :
     Matrix.conjTranspose (data.bobControlledUnitary B.toEquiv) *
         data.bobControlledUnitary B.toEquiv = 1 := by
-  haveI : Nonempty ι := ⟨data.target.base⟩
-  haveI : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
+  have : Nonempty ι := ⟨data.target.base⟩
+  have : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
   simpa [YNData.bobControlledUnitary] using
     controlledUnitary_isometry
       (fun k : Fin (Fintype.card ι) => data.bobUnitary (B.toEquiv.symm k))
@@ -538,8 +539,8 @@ theorem bobControlledPhase_isometry
     (B : SchmidtTarget.BaseReindexToFin data.target) :
     Matrix.conjTranspose (W.bobControlledPhase B.toEquiv) *
         W.bobControlledPhase B.toEquiv = 1 := by
-  haveI : Nonempty ι := ⟨data.target.base⟩
-  haveI : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
+  have : Nonempty ι := ⟨data.target.base⟩
+  have : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
   apply controlledPhase_isometry_of_orthogonal_projection_family
   · intro k
     exact (W.bobLocal (B.toEquiv.symm k)).isHermitian
@@ -571,8 +572,8 @@ def bobSideMatrix (W : BobLocalOrthogonalization data rho)
 theorem bobSideMatrix_isometry
     (B : SchmidtTarget.BaseReindexToFin data.target) :
     Matrix.conjTranspose (W.bobSideMatrix B) * W.bobSideMatrix B = 1 := by
-  haveI : Nonempty ι := ⟨data.target.base⟩
-  haveI : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
+  have : Nonempty ι := ⟨data.target.base⟩
+  have : NeZero (Fintype.card ι) := ⟨Fintype.card_ne_zero⟩
   unfold bobSideMatrix
   apply left_mul_isometry
   · exact W.bobControlledUnitary_isometry B

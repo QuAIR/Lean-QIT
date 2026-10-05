@@ -8,7 +8,7 @@ module
 
 public import QIT.Core.State
 public import QIT.Util.Matrix
-public import Mathlib.Data.NNReal.Basic
+public import Mathlib.Basic.NNReal.Basic
 
 /-!
 # Finite ensembles of states

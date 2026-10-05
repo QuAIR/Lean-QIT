@@ -41,6 +41,20 @@ variable [Fintype Y] [DecidableEq Y]
 
 namespace State
 
+/-- Congruence of the sandwiched Renyi divergence under an equality of the
+reference matrix, with an arbitrary positive-semidefiniteness proof on each
+side.  On the 4.34 toolchain the entrywise real/complex smul coercion is no
+longer definitionally exposed (`Complex.mulAux`), so proofs that used to be
+unified by `simpa` now need this explicit transport. -/
+private theorem sandwichedRenyiQ_congr_matrix {ρ : State (A × B)} {α r : ℝ}
+    {M₁ M₂ : CMatrix (A × B)} {h₁ : M₁.PosSemidef} {h₂ : M₂.PosSemidef}
+    (hM : M₁ = M₂)
+    (h : sandwichedRenyiQ ρ.matrix M₁ ρ.pos h₁ α = r) :
+    sandwichedRenyiQ ρ.matrix M₂ ρ.pos h₂ α = r := by
+  subst hM
+  rw [proof_irrel h₁ h₂] at h
+  exact h
+
 /-! ### Source-facing declarations -/
 
 /-! The branch quantity below is the normalized source optimizer for the
@@ -207,7 +221,7 @@ theorem sandwichedUpSourceCandidate_half_eq_conditionalMaxEntropyCandidate
     ρ.conditionalSandwichedRenyiUpSourceCandidate
         σ hσ (1 / 2 : ℝ) (by norm_num) (by norm_num) =
       ρ.conditionalMaxEntropyCandidate σ := by
-  letI : Nonempty A := by
+  let : Nonempty A := by
     rcases ρ.nonempty with ⟨a, _⟩
     exact ⟨a⟩
   let d : ℝ := Fintype.card A
@@ -230,7 +244,10 @@ theorem sandwichedUpSourceCandidate_half_eq_conditionalMaxEntropyCandidate
         d ^ (1 / 2 : ℝ) *
           sandwichedRenyiQ ρ.matrix τ.matrix ρ.pos τ.pos
             (1 / 2 : ℝ) := by
-    simpa [d, τ, identityTensorStateMatrix_eq_card_smul_maximallyMixed_prod] using hscale
+    exact sandwichedRenyiQ_congr_matrix
+      ((RCLike.real_smul_eq_coe_smul d τ.matrix).trans <|
+        (identityTensorStateMatrix_eq_card_smul_maximallyMixed_prod (a := A) σ).symm)
+      hscale
   have hQτ :
       sandwichedRenyiQ ρ.matrix τ.matrix ρ.pos τ.pos (1 / 2 : ℝ) =
         ρ.fidelity τ := by
@@ -324,7 +341,7 @@ theorem sandwichedRenyiQ_half_eq_conditionalMaxEntropyCandidate
           (identityTensorStateMatrix_posSemidef_of_state (a := A) σ)
           (1 / 2 : ℝ)) =
       ρ.conditionalMaxEntropyCandidate σ := by
-  letI : Nonempty A := by
+  let : Nonempty A := by
     rcases ρ.nonempty with ⟨a, _⟩
     exact ⟨a⟩
   let d : ℝ := Fintype.card A
@@ -341,8 +358,10 @@ theorem sandwichedRenyiQ_half_eq_conditionalMaxEntropyCandidate
           (1 / 2 : ℝ) =
         d ^ (1 / 2 : ℝ) * sandwichedRenyiQ ρ.matrix τ.matrix ρ.pos τ.pos
           (1 / 2 : ℝ) := by
-    simpa [d, τ, identityTensorStateMatrix_eq_card_smul_maximallyMixed_prod]
-      using hscale
+    exact sandwichedRenyiQ_congr_matrix
+      ((RCLike.real_smul_eq_coe_smul d τ.matrix).trans <|
+        (identityTensorStateMatrix_eq_card_smul_maximallyMixed_prod (a := A) σ).symm)
+      hscale
   have hQτ : sandwichedRenyiQ ρ.matrix τ.matrix ρ.pos τ.pos
       (1 / 2 : ℝ) = ρ.fidelity τ := by
     rw [sandwichedRenyiQ_eq_psdTracePower_inner]
@@ -386,10 +405,10 @@ theorem sandwichedUpSourceCandidate_half_regularization_tendsto
         else 0)
       (nhdsWithin (0 : ℝ) (Set.Ioi 0))
       (nhds (ρ.conditionalMaxEntropyCandidate σ)) := by
-  letI : Nonempty A := by
+  let : Nonempty A := by
     rcases ρ.nonempty with ⟨a, _⟩
     exact ⟨a⟩
-  letI : Nonempty B := by
+  let : Nonempty B := by
     rcases ρ.nonempty with ⟨_, b⟩
     exact ⟨b⟩
   let d : ℝ := Fintype.card A
@@ -405,8 +424,10 @@ theorem sandwichedUpSourceCandidate_half_regularization_tendsto
           (1 / 2 : ℝ) =
         d ^ (1 / 2 : ℝ) * sandwichedRenyiQ ρ.matrix τ.matrix ρ.pos τ.pos
           (1 / 2 : ℝ) := by
-    simpa [d, τ, identityTensorStateMatrix_eq_card_smul_maximallyMixed_prod]
-      using hscale
+    exact sandwichedRenyiQ_congr_matrix
+      ((RCLike.real_smul_eq_coe_smul d τ.matrix).trans <|
+        (identityTensorStateMatrix_eq_card_smul_maximallyMixed_prod (a := A) σ).symm)
+      hscale
   have hQτ : sandwichedRenyiQ ρ.matrix τ.matrix ρ.pos τ.pos
       (1 / 2 : ℝ) = ρ.fidelity τ := by
     rw [sandwichedRenyiQ_eq_psdTracePower_inner]
@@ -466,7 +487,7 @@ theorem sandwichedUpSourceCandidate_half_regularization_tendsto
         (identityTensorStateMatrix_posSemidef_of_state (a := A) σ)
         (1 / 2 : ℝ)))) := by
     have h := Filter.Tendsto.log hQ_tend hQ_target.ne'
-    simpa [log2] using h.div tendsto_const_nhds
+    simpa [log2, Pi.div_def] using h.div tendsto_const_nhds
       (ne_of_gt (Real.log_pos one_lt_two))
   have hreal_tend : Filter.Tendsto
       (fun ε => -(1 / ((1 / 2 : ℝ) - 1)) *
@@ -499,7 +520,7 @@ theorem sandwichedUpSourceCandidate_half_regularization_tendsto
         (densityIdentityRegularization_posDef_of_pos σ hε)
         (1 / 2 : ℝ) (by norm_num) (by norm_num)
     have hε' : 0 < ε := hε
-    rw [dif_pos hε']
+    rw [dite_eq_left hε']
     rw [hsource]
     rfl
   exact Filter.Tendsto.congr' (heq.mono fun _ h => h.symm) hreal_tend
@@ -509,10 +530,10 @@ theorem sandwichedUpSourceCandidate_half_le_conditionalMaxEntropy
     ρ.conditionalSandwichedRenyiUpSourceCandidate
         σ hσ (1 / 2 : ℝ) (by norm_num) (by norm_num) ≤
       ρ.conditionalMaxEntropy := by
-  letI : Nonempty A := by
+  let : Nonempty A := by
     rcases ρ.nonempty with ⟨a, _⟩
     exact ⟨a⟩
-  letI : Nonempty B := by
+  let : Nonempty B := by
     rcases ρ.nonempty with ⟨_, b⟩
     exact ⟨b⟩
   let d : ℝ := Fintype.card A
@@ -534,7 +555,10 @@ theorem sandwichedUpSourceCandidate_half_le_conditionalMaxEntropy
         d ^ (1 / 2 : ℝ) *
           sandwichedRenyiQ ρ.matrix τ.matrix ρ.pos τ.pos
             (1 / 2 : ℝ) := by
-    simpa [d, τ, identityTensorStateMatrix_eq_card_smul_maximallyMixed_prod] using hscale
+    exact sandwichedRenyiQ_congr_matrix
+      ((RCLike.real_smul_eq_coe_smul d τ.matrix).trans <|
+        (identityTensorStateMatrix_eq_card_smul_maximallyMixed_prod (a := A) σ).symm)
+      hscale
   have hQτ :
       sandwichedRenyiQ ρ.matrix τ.matrix ρ.pos τ.pos (1 / 2 : ℝ) =
         ρ.fidelity τ := by
@@ -568,10 +592,10 @@ theorem sandwichedUpSourceCandidate_half_le_conditionalMaxEntropy
 theorem conditionalMaxEntropyExponentCandidate_pos_of_posDef
     (ρ : State (A × B)) (σ : State B) (hσ : σ.matrix.PosDef) :
     0 < ρ.conditionalMaxEntropyExponentCandidate (a := A) σ := by
-  letI : Nonempty A := by
+  let : Nonempty A := by
     rcases ρ.nonempty with ⟨a, _⟩
     exact ⟨a⟩
-  letI : Nonempty B := by
+  let : Nonempty B := by
     rcases ρ.nonempty with ⟨_, b⟩
     exact ⟨b⟩
   let d : ℝ := Fintype.card A
@@ -587,8 +611,10 @@ theorem conditionalMaxEntropyExponentCandidate_pos_of_posDef
           (1 / 2 : ℝ) =
         d ^ (1 / 2 : ℝ) * sandwichedRenyiQ ρ.matrix τ.matrix ρ.pos τ.pos
           (1 / 2 : ℝ) := by
-    simpa [d, τ, identityTensorStateMatrix_eq_card_smul_maximallyMixed_prod]
-      using hscale
+    exact sandwichedRenyiQ_congr_matrix
+      ((RCLike.real_smul_eq_coe_smul d τ.matrix).trans <|
+        (identityTensorStateMatrix_eq_card_smul_maximallyMixed_prod (a := A) σ).symm)
+      hscale
   have hQ_pos : 0 < sandwichedRenyiQ ρ.matrix
       (identityTensorStateMatrix (a := A) σ) ρ.pos
       (identityTensorStateMatrix_posSemidef_of_state (a := A) σ)
@@ -618,10 +644,10 @@ theorem conditionalSandwichedRenyiUpSource_half_eq_conditionalMaxEntropy
         (1 / 2 : ℝ) (by norm_num) (by norm_num) =
       ρ.conditionalMaxEntropy := by
   classical
-  letI : Nonempty A := by
+  let : Nonempty A := by
     rcases ρ.nonempty with ⟨a, _⟩
     exact ⟨a⟩
-  letI : Nonempty B := by
+  let : Nonempty B := by
     rcases ρ.nonempty with ⟨_, b⟩
     exact ⟨b⟩
   let S := ρ.conditionalSandwichedRenyiUpSourceValueSet
@@ -664,7 +690,7 @@ theorem conditionalSandwichedRenyiUpSource_half_eq_conditionalMaxEntropy
         else 0) ≤ sSup S := by
       filter_upwards [self_mem_nhdsWithin] with ε hε
       have hε' : 0 < ε := hε
-      rw [dif_pos hε']
+      rw [dite_eq_left hε']
       exact le_csSup hS_bdd ⟨densityIdentityRegularization σ ε,
         densityIdentityRegularization_posDef_of_pos σ hε', rfl⟩
     exact le_of_tendsto hlim hbound
@@ -1114,8 +1140,8 @@ theorem conditionalSandwichedRenyiUp_candidateE_fullRankApprox_tendsto_of_lowAlp
         (identityTensorStateMatrix (a := A) σ)
         (identityTensorStateMatrix_posSemidef_of_state (a := A) σ) α)) := by
   classical
-  letI : Nonempty Y := Ensemble.index_nonempty E
-  letI : Nonempty (B × Y) := inferInstance
+  let : Nonempty Y := Ensemble.index_nonempty E
+  let : Nonempty (B × Y) := inferInstance
   let ρ := State.cqConditioningState E
   let τ := identityTensorStateMatrix (a := A) σ
   let hτ : τ.PosSemidef := identityTensorStateMatrix_posSemidef_of_state (a := A) σ
@@ -1139,7 +1165,7 @@ theorem conditionalSandwichedRenyiUp_candidateE_fullRankApprox_tendsto_of_lowAlp
       simpa [scale] using log2_one_sub_tendsto_zero
     have hneg := hlow'.neg
     convert hneg.add hlog using 1
-    all_goals simp [ρ, τ]
+    all_goals simp [ρ, τ, ε, Fintype.card_prod]
   have hevent : ∀ᶠ δ in nhdsWithin (0 : ℝ) (Set.Ioo 0 1),
       0 < δ ∧ δ < 1 := by
     exact self_mem_nhdsWithin

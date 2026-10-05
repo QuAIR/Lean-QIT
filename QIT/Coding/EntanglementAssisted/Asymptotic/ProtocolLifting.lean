@@ -134,6 +134,7 @@ theorem applyState_tensorPower_one_prod_id_reindex
     cases i
     cases j
     simp [Channel.unit, MatrixMap.unit, Channel.idChannel, MatrixMap.ofKraus]
+    rfl
   apply State.ext
   ext x y
   rcases x with ⟨xr, xs⟩
@@ -156,7 +157,9 @@ theorem applyState_tensorPower_one_prod_id_reindex
         (fun z z' => ρ.matrix (z, xs) (z', ys))
         (xr, PUnit.unit) (yr, PUnit.unit)
   rw [unit_map_eq_idChannel_forAsymptotic]
-  rw [MatrixMap.kron_idChannel_apply_slice]
+  have hs3 := MatrixMap.kron_idChannel_apply_slice (r := PUnit) D.map
+    (fun z z' => ρ.matrix (z, xs) (z', ys)) (xr, PUnit.unit) (yr, PUnit.unit)
+  rw [hs3]
   change
     D.map (fun z z' => ρ.matrix ((z, PUnit.unit), xs) ((z', PUnit.unit), ys))
         xr yr =
@@ -238,7 +241,9 @@ theorem asBlockOneShot_outputState
   have hout :
       C.outputState m =
         (C.asBlockOneShot.outputState m).reindex eout := by
-    simpa [EntanglementAssistedClassicalCode.outputState] using h
+    have h' := h
+    simp [EntanglementAssistedClassicalCode.outputState] at h' ⊢
+    exact h'
   change C.asBlockOneShot.outputState m = (C.outputState m).reindex eout.symm
   calc
     C.asBlockOneShot.outputState m =

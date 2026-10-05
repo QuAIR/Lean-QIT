@@ -59,9 +59,9 @@ private theorem traceNorm_mul_le_frobenius (A B : CMatrix a) :
       Real.sqrt ((A * Matrix.conjTranspose A).trace).re *
         Real.sqrt ((B * Matrix.conjTranspose B).trace).re := by
   -- Frobenius / Hilbert--Schmidt inner product `⟨X, Y⟩ = Tr(Y Xᴴ)` from `M = 1`.
-  letI iSemi : SeminormedAddCommGroup (CMatrix a) :=
+  let iSemi : SeminormedAddCommGroup (CMatrix a) :=
     (1 : CMatrix a).toMatrixSeminormedAddCommGroup Matrix.PosSemidef.one
-  letI iInner : InnerProductSpace ℂ (CMatrix a) :=
+  let iInner : InnerProductSpace ℂ (CMatrix a) :=
     (1 : CMatrix a).toMatrixInnerProductSpace Matrix.PosSemidef.one
   -- Local Frobenius-norm squared helper: `‖X‖² = Re Tr(X Xᴴ)`.
   -- Uses the local `iInner`/`iSemi` (both induced by the identity `M = 1`).

@@ -267,7 +267,7 @@ theorem sandwichedRenyiReferenceInner_one_add_tendsto_state_matrix_posDef
       exact continuousAt_id.div
         (continuousAt_const.mul (continuousAt_const.add continuousAt_id))
         (by norm_num)
-    simpa [q] using hcont.tendsto.comp hid
+    simpa [q, Function.comp_def] using hcont.tendsto.comp hid
   have hq_pos : ∀ᶠ p in l, q p ∈ Set.Ioi (0 : Real) := by
     filter_upwards [self_mem_nhdsWithin] with p hp
     have hp0 : 0 < p := by simpa using hp
@@ -424,7 +424,7 @@ theorem sandwichedRenyiReferenceInner_trace_re_one_add_slope_tendsto_neg_trace_m
   have hq_nhds : Filter.Tendsto q l (nhds 0) := by
     have hcont : ContinuousAt (fun p : Real => p / (1 + p)) 0 := by
       exact continuousAt_id.div (continuousAt_const.add continuousAt_id) (by norm_num)
-    simpa [q] using hcont.tendsto.comp hid
+    simpa [q, Function.comp_def] using hcont.tendsto.comp hid
   have hq_pos : ∀ᶠ p in l, q p ∈ Set.Ioi (0 : Real) := by
     filter_upwards [self_mem_nhdsWithin] with p hp
     have hp0 : 0 < p := by simpa using hp
@@ -440,7 +440,7 @@ theorem sandwichedRenyiReferenceInner_trace_re_one_add_slope_tendsto_neg_trace_m
     have hcont : ContinuousAt (fun p : Real => (1 : Real) / (1 + p)) 0 := by
       exact continuousAt_const.div (continuousAt_const.add continuousAt_id) (by norm_num)
     have hlim : Filter.Tendsto (fun p : Real => (1 : Real) / (1 + p)) l (nhds 1) := by
-      simpa using hcont.tendsto.comp hid
+      simpa [Function.comp_def] using hcont.tendsto.comp hid
     refine hlim.congr' ?_
     filter_upwards [self_mem_nhdsWithin] with p hp
     have hp0 : 0 < p := by simpa using hp
@@ -607,7 +607,7 @@ theorem xlog2_mul_log2_self_of_nonneg {x : Real} (hx : 0 ≤ x) :
   · simp [xlog2, hzx, Real.log_zero]
   · have hxp : 0 < x := lt_of_le_of_ne hx (Ne.symm hzx)
     have hlog2 : Real.log 2 ≠ 0 := (Real.log_pos one_lt_two).ne'
-    simp only [xlog2, if_neg hzx, log2]
+    simp only [xlog2, ite_eq_right hzx, log2]
     field_simp [hlog2]
 
 /-- CFC trace form of the von Neumann entropy endpoint.
@@ -816,7 +816,7 @@ theorem cfc_trace_rpow_one_add_sub_self_div_tendsto_of_tendsto_posSemidef
         ((cfc (fun x : Real => (x ^ (1 + p) - x) / p) (F p)).trace).re)
       (nhdsWithin (0 : Real) (Set.Ioi 0))
       (nhds ((cfc (fun x : Real => x * Real.log x) rho.matrix).trace).re) := by
-  haveI : Nonempty a := rho.nonempty
+  have : Nonempty a := rho.nonempty
   let M : Real := ‖rho.matrix‖ + 2
   let S : Set Real := Set.Icc (0 : Real) M
   have hMpos : 0 < M := by
@@ -840,7 +840,7 @@ theorem cfc_trace_rpow_one_add_sub_self_div_tendsto_of_tendsto_posSemidef
     intro s hs
     simp only [Set.mem_singleton_iff] at hs
     subst hs
-    simpa [G, G0, UniformOnFun.toFun_ofFun] using hGunif
+    simpa [G, G0, UniformOnFun.toFun_ofFun, Function.comp_def] using hGunif
   let pair : Real -> (Real →ᵤ[{S}] Real) × CMatrix a := fun p => (G p, F p)
   let pair0 : (Real →ᵤ[{S}] Real) × CMatrix a := (G0, rho.matrix)
   have hpair : Filter.Tendsto pair (nhdsWithin (0 : Real) (Set.Ioi 0)) (nhds pair0) := by
@@ -907,12 +907,12 @@ theorem cfc_trace_rpow_one_add_sub_self_div_tendsto_of_tendsto_posSemidef
       (fun p : Real => cfc (UniformOnFun.toFun {S} (G p)) (F p))
       (nhdsWithin (0 : Real) (Set.Ioi 0))
       (nhds (cfc (UniformOnFun.toFun {S} G0) rho.matrix)) := by
-    simpa [pair, pair0] using hcont.tendsto.comp hwithin
+    simpa [pair, pair0, Function.comp_def] using hcont.tendsto.comp hwithin
   have htraceCont : Continuous fun M : CMatrix a => M.trace :=
     Continuous.matrix_trace continuous_id
   have htrace :=
     (Complex.continuous_re.tendsto _).comp (htraceCont.tendsto _ |>.comp hcfc)
-  simpa [G, G0, UniformOnFun.toFun_ofFun] using htrace
+  simpa [G, G0, UniformOnFun.toFun_ofFun, Function.comp_def] using htrace
 
 /-- CFC self endpoint for the sandwiched inner operator with positive-definite
 reference. -/
@@ -1193,7 +1193,7 @@ theorem relativeEntropyHighAlphaRightToOne_neBot :
   have hflt :
       t ∩ Set.Ioi (1 : Real) ∈ nhdsWithin (1 : Real) (Set.Ioi 1) := by
     exact Filter.inter_mem ht self_mem_nhdsWithin
-  haveI : Filter.NeBot (nhdsWithin (1 : Real) (Set.Ioi 1)) :=
+  have : Filter.NeBot (nhdsWithin (1 : Real) (Set.Ioi 1)) :=
     nhdsWithin_Ioi_neBot (α := Real) (a := 1) (b := 1) le_rfl
   rcases Filter.nonempty_of_mem hflt with ⟨x, hx⟩
   exact ⟨⟨x, hx.2⟩, hx.1⟩
@@ -1497,7 +1497,7 @@ theorem relativeEntropy_posDefReferenceTraceLog_nonneg
   have hlim :=
     sandwichedRenyiPSDReferenceHighAlphaFinite_tendsto_posDef_traceLog
       ρ hσ
-  haveI : Filter.NeBot relativeEntropyHighAlphaRightToOne :=
+  have : Filter.NeBot relativeEntropyHighAlphaRightToOne :=
     relativeEntropyHighAlphaRightToOne_neBot
   exact ge_of_tendsto hlim
     (Filter.Eventually.of_forall fun alpha =>
@@ -1588,7 +1588,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaCurve_tendsto_traceLogFinite_of_supp
       relativeEntropyHighAlphaRightToOne
       (nhds (relativeEntropyPSDReferenceTraceLogFinite rho sigma hSigma hSupport : EReal)) := by
   classical
-  letI : Nonempty (psdSupportIndex sigma hSigma) :=
+  let : Nonempty (psdSupportIndex sigma hSigma) :=
     psdSupportCompressedState_support_nonempty rho hSigma hSupport
   let rhoC : State (psdSupportIndex sigma hSigma) :=
     psdSupportCompressedState rho hSigma hSupport
@@ -1606,8 +1606,7 @@ theorem sandwichedRenyiPSDReferenceHighAlphaCurve_tendsto_traceLogFinite_of_supp
             rhoC sigmaC hSigmaC.posSemidef alpha.1)
         relativeEntropyHighAlphaRightToOne
         (nhds (relativeEntropyPSDReferenceTraceLogFinite rho sigma hSigma hSupport)) := by
-    simpa [relativeEntropyPSDReferenceTraceLogFinite, rhoC, sigmaC, hSigmaC]
-      using hFiniteC
+    exact hFiniteC
   have hFinite :
       Filter.Tendsto
         (fun alpha : {alpha : Real // 1 < alpha} =>
@@ -1648,7 +1647,7 @@ theorem relativeEntropyPSDReferenceE_eq_traceLogE_of_supports_of_tendsto
         (nhds (relativeEntropyPSDReferenceTraceLogFinite rho sigma hSigma hSupport : EReal))) :
     relativeEntropyPSDReferenceE rho sigma hSigma =
       relativeEntropyPSDReferenceTraceLogE rho sigma hSigma := by
-  haveI : Filter.NeBot relativeEntropyHighAlphaRightToOne :=
+  have : Filter.NeBot relativeEntropyHighAlphaRightToOne :=
     relativeEntropyHighAlphaRightToOne_neBot
   rw [relativeEntropyPSDReferenceE_eq_limsup_of_supports rho hSigma hSupport,
     relativeEntropyPSDReferenceTraceLogE_eq_coe_of_supports rho hSigma hSupport]

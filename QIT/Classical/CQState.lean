@@ -46,7 +46,7 @@ def cqState (E : Ensemble ι a) : State (Prod ι a) where
         (Matrix.single x x (1 : ℂ)).trace * (E.states x).matrix.trace := fun x =>
       Matrix.trace_kronecker _ _
     simp only [Matrix.trace_sum, Matrix.trace_smul]
-    rw [Finset.sum_congr rfl fun x _ => by rw [hkr x, trace_single_one, if_pos rfl, one_mul,
+    rw [Finset.sum_congr rfl fun x _ => by rw [hkr x, trace_single_one, ite_eq_left rfl, one_mul,
       (E.states x).trace_eq_one]]
     rw [Finset.sum_congr rfl fun x _ => (Algebra.algebraMap_eq_smul_one _).symm]
     rw [← map_sum (algebraMap ℝ≥0 ℂ) E.probs Finset.univ, E.weights_sum, map_one]
@@ -67,9 +67,9 @@ theorem partialTraceA_cqState (E : Ensemble ι a) :
   refine Finset.sum_congr rfl fun i _ => ?_
   rw [Finset.sum_eq_single_of_mem i (Finset.mem_univ _)
       fun x _ hx => by
-        simp only [Matrix.single_apply, hx, if_false, and_self_iff, if_false, zero_mul,
+        simp only [Matrix.single_apply, hx, ite_false, and_self_iff, ite_false, zero_mul,
           smul_zero]]
-  simp only [Matrix.single_apply, and_self_iff, if_true, one_mul]
+  simp only [Matrix.single_apply, and_self_iff, ite_true, one_mul]
 
 /-- The quantum marginal of an ensemble cq-state is the ensemble average state. -/
 theorem cqState_marginalB_eq_averageState (E : Ensemble ι a) :
@@ -85,7 +85,7 @@ theorem partialTraceB_cqState (E : Ensemble ι a) :
     Matrix.smul_apply, Matrix.kronecker, Matrix.kroneckerMap_apply]
   by_cases h : x = x'
   · subst h
-    rw [if_pos rfl]
+    rw [ite_eq_left rfl]
     have key : ∀ (i : a),
         (∑ c : ι, (E.probs c • (Matrix.single c c (1 : ℂ) x x * (E.states c).matrix i i) : ℂ)) =
           (E.probs x • (E.states x).matrix i i : ℂ) := by
@@ -93,19 +93,19 @@ theorem partialTraceB_cqState (E : Ensemble ι a) :
       rw [Finset.sum_eq_single_of_mem x (Finset.mem_univ _)
           fun c _ hc => by
             have hz : Matrix.single c c (1 : ℂ) x x = 0 := by
-              rw [Matrix.single_apply, if_neg fun hcc => hc hcc.1]
+              rw [Matrix.single_apply, ite_eq_right fun hcc => hc hcc.1]
             rw [hz, zero_mul, smul_zero]]
-      simp only [Matrix.single_apply, and_self_iff, if_true, one_mul]
+      simp only [Matrix.single_apply, and_self_iff, ite_true, one_mul]
     simp only [key]
     rw [← Finset.smul_sum]
     show (E.probs x) • ((E.states x).matrix.trace) = ↑↑(E.probs x)
     rw [(E.states x).trace_eq_one, Algebra.smul_def, mul_one]
     rfl
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     refine Finset.sum_eq_zero fun i _ => ?_
     refine Finset.sum_eq_zero fun j _ => ?_
     have hz : Matrix.single j j (1 : ℂ) x x' = 0 := by
-      rw [Matrix.single_apply, if_neg fun hcc => h (hcc.1.symm.trans hcc.2)]
+      rw [Matrix.single_apply, ite_eq_right fun hcc => h (hcc.1.symm.trans hcc.2)]
     rw [hz, zero_mul, smul_zero]
 
 end Ensemble
@@ -132,9 +132,9 @@ theorem blockDiagonal_block_self (blocks : ι → CMatrix a) (x : ι) :
   rw [Finset.sum_eq_single_of_mem x (Finset.mem_univ _)
       fun y _ hy => by
         have hz : Matrix.single y y (1 : ℂ) x x = 0 := by
-          rw [Matrix.single_apply, if_neg fun hyy => hy hyy.1]
+          rw [Matrix.single_apply, ite_eq_right fun hyy => hy hyy.1]
         rw [hz, zero_mul]]
-  simp only [Matrix.single_apply, and_self_iff, if_true, one_mul]
+  simp only [Matrix.single_apply, and_self_iff, ite_true, one_mul]
 
 /-- Off-diagonal classical blocks of a block-diagonal matrix vanish. -/
 @[simp]
@@ -145,7 +145,7 @@ theorem blockDiagonal_block_ne (blocks : ι → CMatrix a) {x x' : ι} (h : x �
     Matrix.kroneckerMap_apply]
   refine Finset.sum_eq_zero fun y _ => ?_
   have hz : Matrix.single y y (1 : ℂ) x x' = 0 := by
-    rw [Matrix.single_apply, if_neg fun hyy => h (hyy.1.symm.trans hyy.2)]
+    rw [Matrix.single_apply, ite_eq_right fun hyy => h (hyy.1.symm.trans hyy.2)]
   rw [hz, zero_mul]
 
 /-- Block-diagonal reconstruction commutes with blockwise subtraction. -/
@@ -219,7 +219,7 @@ theorem blockDiagonal_trace (blocks : ι → CMatrix a) :
       ((Matrix.kronecker (Matrix.single x x (1 : ℂ)) (blocks x)).trace) =
         (Matrix.single x x (1 : ℂ)).trace * (blocks x).trace :=
     Matrix.trace_kronecker _ _
-  rw [hkr, trace_single_one, if_pos rfl]
+  rw [hkr, trace_single_one, ite_eq_left rfl]
   simp
 
 omit [Fintype a] [DecidableEq a] in

@@ -64,7 +64,7 @@ def finiteAEPFullRankRegularization
       (Matrix.PosSemidef.smul ρ.pos hleft)
       (Matrix.PosSemidef.smul Matrix.PosSemidef.one hright)
   trace_eq_one := by
-    letI : Nonempty (Prod a b) := ρ.nonempty
+    let : Nonempty (Prod a b) := ρ.nonempty
     have hcardR : (Fintype.card (Prod a b) : ℝ) ≠ 0 := by
       exact_mod_cast (Nat.cast_ne_zero.mpr (Fintype.card_ne_zero : Fintype.card (Prod a b) ≠ 0))
     have hscalar :
@@ -151,7 +151,7 @@ theorem finiteAEPFullRankRegularization_posDef
     (ρ : State (Prod a b)) {η : ℝ} (hη0 : 0 ≤ η) (hη1 : η ≤ 1)
     (hηpos : 0 < η) :
     (ρ.finiteAEPFullRankRegularization η hη0 hη1).matrix.PosDef := by
-  letI : Nonempty (Prod a b) := ρ.nonempty
+  let : Nonempty (Prod a b) := ρ.nonempty
   unfold finiteAEPFullRankRegularization finiteAEPFullRankRegularizationMatrix
   have hleft : (0 : ℂ) ≤ (((1 - η : ℝ) : ℂ)) := by
     exact_mod_cast sub_nonneg.mpr hη1
@@ -177,9 +177,9 @@ private theorem finiteAEPFullRankRegularization_whiteNoise_marginalB_scalar
     ((η / (Fintype.card (Prod a b) : ℝ) : ℝ) *
         (Fintype.card a : ℝ)) =
       η / (Fintype.card b : ℝ) := by
-  letI : Nonempty (Prod a b) := ρ.nonempty
-  letI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
-  letI : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
+  let : Nonempty (Prod a b) := ρ.nonempty
+  let : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
+  let : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
   have ha : (Fintype.card a : ℝ) ≠ 0 := by
     exact_mod_cast (Nat.cast_ne_zero.mpr (Fintype.card_ne_zero : Fintype.card a ≠ 0))
   have hb : (Fintype.card b : ℝ) ≠ 0 := by
@@ -219,7 +219,7 @@ theorem finiteAEPFullRankRegularization_marginalB_posDef
     (ρ : State (Prod a b)) {η : ℝ} (hη0 : 0 ≤ η) (hη1 : η ≤ 1)
     (hηpos : 0 < η) :
     (ρ.finiteAEPFullRankRegularization η hη0 hη1).marginalB.matrix.PosDef := by
-  letI : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
+  let : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
   rw [finiteAEPFullRankRegularization_marginalB_matrix]
   have hleft : (0 : ℂ) ≤ (((1 - η : ℝ) : ℂ)) := by
     exact_mod_cast sub_nonneg.mpr hη1
@@ -285,7 +285,7 @@ theorem finiteAEPFullRankRegularization_marginalB_matrix_tendsto_zero
   refine Filter.Tendsto.congr' ?_
     (finiteAEPFullRankRegularization_marginalB_matrix_path_tendsto_zero ρ)
   filter_upwards [self_mem_nhdsWithin] with η hη
-  rw [dif_pos hη]
+  rw [dite_eq_left hη]
   exact
     (finiteAEPFullRankRegularization_marginalB_matrix
       (a := a) (b := b) ρ η hη.1.le hη.2.le).symm
@@ -315,7 +315,7 @@ theorem finiteAEPFullRankRegularization_tendsto_zero
     (if hη' : η ∈ Set.Ioo (0 : ℝ) 1 then
       ρ.finiteAEPFullRankRegularization η hη'.1.le hη'.2.le
     else ρ).matrix
-  rw [dif_pos hη]
+  rw [dite_eq_left hη]
   rfl
 
 /-- Conditional entropy is continuous along the full-rank white-noise
@@ -409,8 +409,19 @@ theorem finiteAEPFullRankRegularization_tensorPowerBipartite_normalizedTraceDist
   have hcont :=
     finiteAEP_normalizedTraceDistance_continuous_left
       (a := TensorPower a n) (b := TensorPower b n) (ρ.tensorPowerBipartite n)
-  simpa using hcont.tendsto (ρ.tensorPowerBipartite n) |>.comp
-    (finiteAEPFullRankRegularization_tensorPowerBipartite_tendsto_zero ρ n)
+  have hcomp : Filter.Tendsto
+      (fun η : ℝ =>
+        ((if hη : η ∈ Set.Ioo (0 : ℝ) 1 then
+          ρ.finiteAEPFullRankRegularization η hη.1.le hη.2.le
+        else
+          ρ).tensorPowerBipartite n).normalizedTraceDistance
+            (ρ.tensorPowerBipartite n))
+      (nhdsWithin (0 : ℝ) (Set.Ioo 0 1))
+      (nhds ((ρ.tensorPowerBipartite n).normalizedTraceDistance
+        (ρ.tensorPowerBipartite n))) :=
+    hcont.tendsto (ρ.tensorPowerBipartite n) |>.comp
+      (finiteAEPFullRankRegularization_tensorPowerBipartite_tendsto_zero ρ n)
+  simpa using hcomp
 
 /-- Bipartite tensor powers of the full-rank regularization approach the
 original tensor power in purified distance. -/
@@ -1208,7 +1219,8 @@ theorem tensorPowerBipartite_succ_grouped
   rcases y with ⟨⟨yA, ysA⟩, ⟨yB, ysB⟩⟩
   simp [State.tensorPowerBipartite, State.tensorPower_succ,
     conditionalPetzRenyiProductGroupingEquiv, tensorPowerProdEquiv,
-    State.prod, State.reindex, Matrix.kronecker, Matrix.kroneckerMap_apply]
+    State.prod, State.reindex, Matrix.kronecker]
+  rfl
 
 theorem tensorPowerBipartite_succ_grouped_marginalB
     (ρ : State (Prod a b)) (n : ℕ) :
@@ -1282,11 +1294,34 @@ theorem conditioningIsometryApply_tensorPowerBipartite
       cases xB
       cases yA
       cases yB
-      simp [State.tensorPowerBipartite, State.tensorPower, State.reindex,
-        State.conditioningIsometryApply_matrix, ReferenceIsometry.applyMatrixRight,
-        ReferenceIsometry.rightBlock, ReferenceIsometry.tensorPower,
-        Matrix.mul_apply, Matrix.conjTranspose, TensorPower, tensorPowerProdEquiv]
-      rfl
+      simp only [State.tensorPowerBipartite, State.tensorPower, State.reindex,
+        ReferenceIsometry.tensorPower, tensorPowerProdEquiv]
+      rw [State.conditioningIsometryApply_matrix]
+      -- Same 4.34 entrywise bridge as `ReferenceIsometry.tensorPower`: the
+      -- `show` absorbs `submatrix`/`rightBlock`/`conjTranspose`/`mul_apply`
+      -- up to the defeq-reachable double-sum form.  Each one-point sum is
+      -- collapsed by `Finset.sum_eq_single` in term mode (`rw` cannot match
+      -- its higher-order pattern, and `simp` cannot compute the cardinal of
+      -- the non-reducible `tensorPowerFintype` instance).
+      show (1 : Matrix _ _ ℂ)
+          (PUnit.unit : TensorPower (Prod a bPlus) 0)
+          (PUnit.unit : TensorPower (Prod a bPlus) 0) =
+        ∑ l : TensorPower b 0,
+          ((∑ k : TensorPower b 0, (1 : ℂ) * (1 : ℂ)) * (starRingEnd ℂ) (1 : ℂ))
+      have hInner :
+          ∑ k : TensorPower b 0, (1 : ℂ) * (1 : ℂ) = (1 : ℂ) * (1 : ℂ) :=
+        Finset.sum_eq_single (PUnit.unit : TensorPower b 0)
+          (fun b _ hb => by cases b; exact absurd rfl hb)
+          (fun hnot =>
+            False.elim (hnot (Finset.mem_univ (PUnit.unit : TensorPower b 0))))
+      rw [hInner]
+      refine Eq.trans ?_ (Finset.sum_eq_single (PUnit.unit : TensorPower b 0) ?_ ?_).symm
+      · simp
+      · intro b _ hb
+        cases b
+        exact absurd rfl hb
+      · intro hnot
+        exact False.elim (hnot (Finset.mem_univ (PUnit.unit : TensorPower b 0)))
   | n + 1 => by
       have ih := conditioningIsometryApply_tensorPowerBipartite ρ V n
       rw [State.tensorPowerBipartite_succ_grouped]
@@ -1396,24 +1431,13 @@ theorem tensorPowerBipartite_conditionalPetzRenyiEntropyCandidate_succ
           (conditionalPetzRenyiProductGroupingEquiv
             a b (TensorPower a n) (TensorPower b n)).symm := by
     simpa [State.tensorPowerBipartite_matrix, τ, State.reindex_matrix] using hτ_matrix
-  have hτB_matrix :
-      (ρ.tensorPowerBipartite (n + 1)).marginalB.matrix =
-        (ρ.marginalB.prod (ρ.tensorPowerBipartite n).marginalB).matrix := by
-    simpa [← hτ] using congrArg State.matrix hτB
   have hτB_ref :
       identityTensorStateMatrix (a := TensorPower a (n + 1))
           (ρ.tensorPowerBipartite (n + 1)).marginalB =
         identityTensorStateMatrix (a := Prod a (TensorPower a n))
           (ρ.marginalB.prod (ρ.tensorPowerBipartite n).marginalB) := by
-    ext i j
-    by_cases hij : i.1 = j.1
-    · simp [identityTensorStateMatrix, Matrix.kronecker, Matrix.kroneckerMap_apply,
-        Matrix.one_apply, hij]
-      exact congrFun (congrFun hτB_matrix i.2) j.2
-    · simp [identityTensorStateMatrix, Matrix.kronecker, Matrix.kroneckerMap_apply,
-        Matrix.one_apply, hij]
-      intro h
-      exact False.elim (hij h)
+    rw [hτ]
+    exact congrArg (fun σ => identityTensorStateMatrix (a := Prod a (TensorPower a n)) σ) hτB
   dsimp [conditionalPetzRenyiEntropyCandidate, conditionalPetzRenyiTraceTerm]
   rw [hτ_matrix', hτB_ref]
   rfl
@@ -1472,24 +1496,13 @@ theorem tensorPowerBipartite_conditionalPetzRenyiEntropyCandidateFullReference_s
             (conditionalPetzRenyiProductGroupingEquiv
               a b (TensorPower a n) (TensorPower b n)).symm := by
       simp [τ, State.reindex_matrix]
-    have hτB_matrix :
-        (ρ.tensorPowerBipartite (n + 1)).marginalB.matrix =
-          (ρ.marginalB.prod (ρ.tensorPowerBipartite n).marginalB).matrix := by
-      simpa [← hτ] using congrArg State.matrix hτB
     have hτB_ref :
         identityTensorStateMatrix (a := TensorPower a (n + 1))
             (ρ.tensorPowerBipartite (n + 1)).marginalB =
           identityTensorStateMatrix (a := Prod a (TensorPower a n))
             (ρ.marginalB.prod (ρ.tensorPowerBipartite n).marginalB) := by
-      ext i j
-      by_cases hij : i.1 = j.1
-      · simp [identityTensorStateMatrix, Matrix.kronecker, Matrix.kroneckerMap_apply,
-          Matrix.one_apply, hij]
-        exact congrFun (congrFun hτB_matrix i.2) j.2
-      · simp [identityTensorStateMatrix, Matrix.kronecker, Matrix.kroneckerMap_apply,
-          Matrix.one_apply, hij]
-        intro h
-        exact False.elim (hij h)
+      rw [hτ]
+      exact congrArg (fun σ => identityTensorStateMatrix (a := Prod a (TensorPower a n)) σ) hτB
     dsimp [conditionalPetzRenyiEntropyCandidateFullReference, conditionalPetzRenyiTraceTerm]
     rw [hτ_matrix', hτB_ref, hτ_matrix_def]
     rfl
@@ -1534,9 +1547,10 @@ theorem tensorPowerBipartite_conditionalPetzRenyiEntropyCandidate_zero
         (ρ.tensorPowerBipartite 0).matrix PUnit.unit PUnit.unit =
       (1 : CMatrix (TensorPower b 0)) PUnit.unit PUnit.unit
     rw [hmat]
-    simp [partialTraceA, TensorPower]
-    change (1 : ℂ) = 1
-    norm_num
+    have h1 := congrFun (congrFun (partialTraceA_one_forFiniteAEP
+      (a := TensorPower a 0) (b := TensorPower b 0)) PUnit.unit) PUnit.unit
+    rw [h1]
+    simp [tensorPower_card]
   have href :
       identityTensorStateMatrix (a := TensorPower a 0)
           (ρ.tensorPowerBipartite 0).marginalB =
@@ -1555,7 +1569,7 @@ theorem tensorPowerBipartite_conditionalPetzRenyiEntropyCandidate_zero
         (1 : CMatrix (Prod (TensorPower a 0) (TensorPower b 0)))
           (PUnit.unit, PUnit.unit) (PUnit.unit, PUnit.unit)
     rw [hBmat]
-    simp [TensorPower, Matrix.kronecker, Matrix.kroneckerMap_apply]
+    simp [TensorPower, Matrix.kronecker]
     change (1 : ℂ) * 1 = 1
     norm_num
   unfold conditionalPetzRenyiEntropyCandidate
@@ -1604,9 +1618,10 @@ theorem tensorPowerBipartite_conditionalPetzRenyiEntropyCandidateFullReference_z
         (ρ.tensorPowerBipartite 0).matrix PUnit.unit PUnit.unit =
       (1 : CMatrix (TensorPower b 0)) PUnit.unit PUnit.unit
     rw [hmat]
-    simp [partialTraceA, TensorPower]
-    change (1 : ℂ) = 1
-    norm_num
+    have h1 := congrFun (congrFun (partialTraceA_one_forFiniteAEP
+      (a := TensorPower a 0) (b := TensorPower b 0)) PUnit.unit) PUnit.unit
+    rw [h1]
+    simp [tensorPower_card]
   have href :
       identityTensorStateMatrix (a := TensorPower a 0)
           (ρ.tensorPowerBipartite 0).marginalB =
@@ -1625,7 +1640,7 @@ theorem tensorPowerBipartite_conditionalPetzRenyiEntropyCandidateFullReference_z
         (1 : CMatrix (Prod (TensorPower a 0) (TensorPower b 0)))
           (PUnit.unit, PUnit.unit) (PUnit.unit, PUnit.unit)
     rw [hBmat]
-    simp [TensorPower, Matrix.kronecker, Matrix.kroneckerMap_apply]
+    simp [TensorPower, Matrix.kronecker]
     change (1 : ℂ) * 1 = 1
     norm_num
   unfold conditionalPetzRenyiEntropyCandidateFullReference conditionalPetzRenyiTraceTerm
@@ -2833,13 +2848,13 @@ theorem tensorPowerSubnormalizedSmoothConditionalMinEntropyRaw_conditioningSuppo
   let ρc := ρ.conditioningSupportCompressedState
   let V : ReferenceIsometry (psdSupportIndex ρ.marginalB.matrix ρ.marginalB.pos) b :=
     psdSupportReferenceIsometry ρ.marginalB.matrix ρ.marginalB.pos
-  haveI : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
-  haveI : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
-  haveI : Nonempty (psdSupportIndex ρ.marginalB.matrix ρ.marginalB.pos) :=
+  have : Nonempty a := ⟨(Classical.choice ρ.nonempty).1⟩
+  have : Nonempty b := ⟨(Classical.choice ρ.nonempty).2⟩
+  have : Nonempty (psdSupportIndex ρ.marginalB.matrix ρ.marginalB.pos) :=
     ⟨(Classical.choice ρc.nonempty).2⟩
-  haveI : Nonempty (TensorPower a n) := tensorPower_nonempty_of_nonempty n
-  haveI : Nonempty (TensorPower b n) := tensorPower_nonempty_of_nonempty n
-  haveI :
+  have : Nonempty (TensorPower a n) := tensorPower_nonempty_of_nonempty n
+  have : Nonempty (TensorPower b n) := tensorPower_nonempty_of_nonempty n
+  have :
       Nonempty (TensorPower (psdSupportIndex ρ.marginalB.matrix ρ.marginalB.pos) n) :=
     tensorPower_nonempty_of_nonempty n
   have hε_sqrt :
@@ -3024,10 +3039,10 @@ limit. -/
 theorem fullyQuantumAsymptoticEquipartitionProperty_twoStage
     (ρ : State (Prod a b)) :
     QIT.asymptoticAEPTwoStage_statement ρ := by
-  letI : Nonempty a := by
+  let : Nonempty a := by
     rcases ρ.nonempty with ⟨x⟩
     exact ⟨x.1⟩
-  letI : Nonempty b := by
+  let : Nonempty b := by
     rcases ρ.nonempty with ⟨x⟩
     exact ⟨x.2⟩
   exact ρ.asymptoticAEPTwoStage_statement_of_traceEta_continuity_and_duality

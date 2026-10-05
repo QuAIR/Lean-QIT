@@ -142,10 +142,10 @@ theorem tripartiteEntropicUncertainty
         State.conditionalSandwichedRenyiUpExtendedOrder
           (measureSubsystemState Y.toPOVM psi.state.marginalAC) beta := by
   let omega := hY.coherentGroupedPureVector psi
-  letI : Nonempty c := by
+  let : Nonempty c := by
     rcases omega.state.nonempty with ⟨⟨_, side⟩⟩
     exact ⟨side⟩
-  letI : Nonempty (Prod y b) := by
+  let : Nonempty (Prod y b) := by
     rcases omega.state.nonempty with ⟨⟨⟨_, side⟩, _⟩⟩
     exact ⟨side⟩
   have hcomparison :=
@@ -229,7 +229,7 @@ private theorem discardReference_marginalAC_reindex_prodAssoc
         (tau.reindex (Equiv.prodAssoc (Prod a b) c r)).marginalAC.matrix i j =
       tau.marginalA.marginalAC.matrix i j
   rw [MatrixMap.kron_idChannel_left_apply_slice]
-  simp only [Channel.traceOutRight, MatrixMap.partialTraceB_apply]
+  simp only [Channel.traceOutRight]
   change
     (∑ ref : r, ∑ side : b,
       tau.matrix (((i.1, side), i.2), ref) (((j.1, side), j.2), ref)) =
@@ -274,41 +274,53 @@ private theorem measureSubsystemState_discardRight
           (Channel.traceOutRight c r).map tau.matrix) (iy, ic) (jy, jc)
   rw [MatrixMap.kron_idChannel_left_apply_slice]
   rw [MatrixMap.kron_idChannel_apply_slice]
-  simp only [Channel.traceOutRight, MatrixMap.partialTraceB_apply]
-  simp [partialTraceB, MatrixMap.kron_idChannel_apply_slice,
+  simp only [Channel.traceOutRight,
+    MatrixMap.kron_idChannel_apply_slice,
     MatrixMap.kron_idChannel_left_apply_slice]
-  by_cases hij : iy = jy
-  · subst jy
-    simp only [Matrix.trace, Matrix.sum_apply]
-    rw [Finset.sum_comm]
-    rw [Finset.sum_eq_single_of_mem iy (Finset.mem_univ iy)]
-    · simp only [Matrix.single_apply, and_self, if_true]
+  have hmain :
+      (∑ x : r, (Channel.measure M).map
+        (fun i i' => tau.matrix (i, (ic, x)) (i', (jc, x))) iy jy) =
+      (Channel.measure M).map
+        (fun i i' => ∑ z : r, tau.matrix (i, (ic, z)) (i', (jc, z))) iy jy := by
+    show (∑ x : r, (∑ x_1 : y,
+        ((Matrix.of fun i i' => tau.matrix (i, (ic, x)) (i', (jc, x))) *
+          M.effects x_1).trace • Matrix.single x_1 x_1 (1 : ℂ)) iy jy) =
+      ((∑ x : y, ((Matrix.of fun i i' => ∑ z : r,
+          tau.matrix (i, (ic, z)) (i', (jc, z))) * M.effects x).trace •
+        Matrix.single x x (1 : ℂ)) iy jy)
+    simp only [Matrix.smul_single, smul_eq_mul, mul_one]
+    by_cases hij : iy = jy
+    · subst jy
+      simp only [Matrix.trace, Matrix.sum_apply]
+      rw [Finset.sum_comm]
       rw [Finset.sum_eq_single_of_mem iy (Finset.mem_univ iy)]
-      · simp only [if_true]
-        simp only [Matrix.diag_apply, Matrix.mul_apply]
-        rw [Finset.sum_comm]
-        refine Finset.sum_congr rfl fun inputRow _ => ?_
-        rw [Finset.sum_comm]
-        refine Finset.sum_congr rfl fun inputColumn _ => ?_
-        rw [Finset.sum_mul]
+      · simp only [Matrix.single_apply, and_self, ite_true]
+        rw [Finset.sum_eq_single_of_mem iy (Finset.mem_univ iy)]
+        · simp only [ite_true]
+          simp only [Matrix.diag_apply, Matrix.mul_apply]
+          rw [Finset.sum_comm]
+          refine Finset.sum_congr rfl fun inputRow _ => ?_
+          rw [Finset.sum_comm]
+          refine Finset.sum_congr rfl fun inputColumn _ => ?_
+          simp only [Matrix.of_apply]
+          rw [Finset.sum_mul]
+        · intro outcome _ houtcome
+          split
+          · rename_i h
+            exact (houtcome h).elim
+          · rfl
       · intro outcome _ houtcome
-        split
-        · rename_i h
-          exact (houtcome h).elim
-        · rfl
-    · intro outcome _ houtcome
-      apply Finset.sum_eq_zero
-      intro reference _
-      rw [Matrix.single_apply, if_neg]
-      intro hdiag
-      exact houtcome hdiag.1
-  · have hnone : ∀ outcome : y, ¬ (outcome = iy ∧ outcome = jy) := by
-      intro outcome houtcome
-      exact hij (houtcome.1.symm.trans houtcome.2)
-    simp [Matrix.sum_apply, hnone]
+        apply Finset.sum_eq_zero
+        intro reference _
+        rw [Matrix.single_apply, ite_eq_right]
+        intro hdiag
+        exact houtcome hdiag.1
+    · have hnone : ∀ outcome : y, ¬ (outcome = iy ∧ outcome = jy) := by
+        intro outcome houtcome
+        exact hij (houtcome.1.symm.trans houtcome.2)
+      simp [Matrix.sum_apply, hnone]
+  exact hmain
 
-/-- Measuring `A` and then discarding the canonical reference gives the
-ordinary measured `YC` state of `rho_AC`. -/
 theorem entropicUncertaintyPurification_measure_marginalAC_discardReference
     (rho : State (Prod (Prod a b) c)) :
     (((Channel.idChannel y).prod

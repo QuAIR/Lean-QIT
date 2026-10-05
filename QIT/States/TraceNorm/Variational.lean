@@ -79,8 +79,11 @@ theorem posSemidef_trace_mul_unitary_abs_le_trace_re
   let D : CMatrix a := Matrix.diagonal (fun i => ((hP.1.eigenvalues i : ℝ) : ℂ))
   let U' : Matrix.unitaryGroup a ℂ := E⁻¹ * U * E
   have hPdiag : P = (E : CMatrix a) * D * (E⁻¹ : Matrix.unitaryGroup a ℂ) := by
+    have hspec := hP.1.spectral_theorem
+    rw [show (RCLike.ofReal ∘ hP.1.eigenvalues) =
+      (fun i => ((hP.1.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [E, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hP.1.spectral_theorem
+      using hspec
   have htrace :
       (P * (U : CMatrix a)).trace = (D * (U' : CMatrix a)).trace := by
     calc
@@ -205,8 +208,11 @@ theorem posSemidef_trace_mul_contraction_abs_le_trace_re
   let D : CMatrix a := Matrix.diagonal (fun i => ((hP.1.eigenvalues i : ℝ) : ℂ))
   let K' : CMatrix a := ((E⁻¹ : Matrix.unitaryGroup a ℂ) : CMatrix a) * K * (E : CMatrix a)
   have hPdiag : P = (E : CMatrix a) * D * (E⁻¹ : Matrix.unitaryGroup a ℂ) := by
+    have hspec := hP.1.spectral_theorem
+    rw [show (RCLike.ofReal ∘ hP.1.eigenvalues) =
+      (fun i => ((hP.1.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
     simpa [E, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hP.1.spectral_theorem
+      using hspec
   have hK' : K'ᴴ * K' ≤ 1 := by
     have hK'eq : K'ᴴ * K' = (E : CMatrix a)ᴴ * (Kᴴ * K) * (E : CMatrix a) := by
       calc
@@ -924,10 +930,16 @@ theorem applyMatrixRight_sumInr_submatrix_prodSumRightEquiv
       (prodSumRightEquiv a extra b) (prodSumRightEquiv a extra b) =
         (Matrix.fromBlocks (0 : CMatrix (Prod a extra)) 0 0 X :
           CMatrix (Sum (Prod a extra) (Prod a b))) := by
+  have hinl : ∀ (e : extra) (k : b),
+      (ReferenceIsometry.sumInr extra b).matrix (Sum.inl e) k = 0 := fun _ _ => rfl
+  have hinr : ∀ (j k : b),
+      (ReferenceIsometry.sumInr extra b).matrix (Sum.inr j) k = if j = k then 1 else 0 :=
+    fun _ _ => rfl
   ext x y
   cases x <;> cases y <;>
     simp [prodSumRightEquiv, ReferenceIsometry.applyMatrixRight,
-      ReferenceIsometry.rightBlock, ReferenceIsometry.sumInr, Matrix.mul_apply]
+      ReferenceIsometry.rightBlock, Matrix.mul_apply, Matrix.conjTranspose_apply,
+      hinl, hinr]
 
 /-- Concrete right-summand reference padding preserves trace norm. -/
 theorem traceNorm_applyMatrixRight_sumInr

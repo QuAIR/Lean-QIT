@@ -344,12 +344,12 @@ theorem coordinateYPinchedFullRankPath_posDef
       (fullRankApproxMaximallyMixedStatePath
         (coordinateYPinchedState σ) δ)).cqState.reindex
           (Equiv.prodComm Y B)).matrix.PosDef := by
-  letI : Nonempty Y := by
+  let : Nonempty Y := by
     rcases σ.nonempty with ⟨⟨b, y⟩⟩
     exact ⟨y⟩
   rw [coordinateYPinchedEnsemble_cqState_reindex]
   rw [fullRankApproxMaximallyMixedStatePath, fullRankApproxStatePath,
-    dif_pos hδ]
+    dite_eq_left hδ]
   rw [coordinateYPinchedState_regularized_maximallyMixed_fixed]
   exact fullRankApproxState_posDef_of_noise
     (coordinateYPinchedState σ) (State.maximallyMixed (B × Y))
@@ -541,7 +541,8 @@ theorem classical_blockDiagonal_posDef
         (U i : CMatrix D) * diagonalBlocks i * star (U i : CMatrix D) := by
       intro i
       simpa [d, U, diagonalBlocks, Unitary.conjStarAlgAut_apply,
-        Matrix.mul_assoc] using (hblocks i).isHermitian.spectral_theorem
+        Matrix.mul_assoc, Function.comp_def] using
+        (hblocks i).isHermitian.spectral_theorem
     change Classical.blockDiagonal blocks =
       (Classical.blockDiagonal (fun i => (U i : CMatrix D))) *
         Classical.blockDiagonal diagonalBlocks *
@@ -588,10 +589,13 @@ theorem sandwiched_reference_cq_block_posDef
     intro b b' h
     exact congrArg Prod.fst h
   have hsub := hF.submatrix hinj
-  simpa [State.reindex_matrix, State.reindex, Ensemble.cqState_matrix,
-    Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.submatrix,
-    Fintype.sum_prod_type, Matrix.sum_apply, Matrix.single_apply,
-        smul_eq_mul] using hsub
+  have hsub' : (Matrix.of fun i j =>
+      ((F.probs y : ℝ) : ℂ) * (F.states y).matrix i j).PosDef := by
+    simpa [State.reindex_matrix, State.reindex, Ensemble.cqState_matrix,
+      Matrix.kronecker, Matrix.kroneckerMap_apply, Matrix.submatrix,
+      Fintype.sum_prod_type, Matrix.sum_apply, Matrix.single_apply,
+        smul_eq_mul, NNReal.smul_def] using hsub
+  exact hsub'
 
 theorem sandwiched_reference_cq_posDef_of_positive
     (F : Ensemble Y B) (hprob : ∀ y, 0 < F.probs y)
@@ -613,7 +617,7 @@ theorem sandwiched_reference_cq_prob_pos
     (hF : (F.cqState.reindex (Equiv.prodComm Y B)).matrix.PosDef)
     (y : Y) :
     0 < F.probs y := by
-  letI : Nonempty B := (F.states y).nonempty
+  let : Nonempty B := (F.states y).nonempty
   have hblock := sandwiched_reference_cq_block_posDef F hF y
   have htrace := Matrix.PosDef.trace_pos hblock
   have htrace_re : 0 < (((F.probs y : ℂ) • (F.states y).matrix).trace).re := by
@@ -630,7 +634,7 @@ theorem sandwiched_reference_cq_state_posDef
     (hF : (F.cqState.reindex (Equiv.prodComm Y B)).matrix.PosDef)
     (y : Y) :
     (F.states y).matrix.PosDef := by
-  letI : Nonempty B := (F.states y).nonempty
+  let : Nonempty B := (F.states y).nonempty
   have hqNN : 0 < F.probs y := sandwiched_reference_cq_prob_pos F hF y
   have hq : 0 < (F.probs y : ℝ) := by exact_mod_cast hqNN
   have hblock := sandwiched_reference_cq_block_posDef F hF y
@@ -670,7 +674,8 @@ private theorem matrixBlockDiagonal_rpow
           Matrix.diagonal (fun i => (d y i : ℂ)) *
         star (U y : CMatrix (A × B)) := by
     intro y
-    simpa [U, d, Unitary.conjStarAlgAut_apply, Matrix.mul_assoc] using
+    simpa [U, d, Unitary.conjStarAlgAut_apply, Matrix.mul_assoc,
+      Function.comp_def] using
       (hblocks y).isHermitian.spectral_theorem
   let Ubig : Matrix.unitaryGroup ((A × B) × Y) ℂ :=
     ⟨Matrix.blockDiagonal (fun y => (U y : CMatrix (A × B))), by
@@ -789,7 +794,9 @@ private theorem conditionalRightBlockDiagonal_rpow_nonneg
   have hmath_pos : (Matrix.blockDiagonal blocks).PosSemidef := by
     have hclassical := Classical.blockDiagonal_posSemidef blocks hblocks
     have hreindexed := hclassical.submatrix e
-    simpa only [← hblock] using hreindexed
+    rw [← hblock, Matrix.submatrix_submatrix, Equiv.symm_comp_self,
+      Matrix.submatrix_id_id] at hreindexed
+    exact hreindexed
   have hclassical_rpow :
       CFC.rpow (Classical.blockDiagonal blocks) s =
         Classical.blockDiagonal (fun y => CFC.rpow (blocks y) s) := by
@@ -979,7 +986,7 @@ theorem sandwichedQ_real_smul_both
         rw [Real.rpow_add hp_pos]
       calc
         ((p : ℝ) ^ s * (p : ℝ) * (p : ℝ) ^ s) ^ α =
-            (((p : ℝ) ^ s * (p : ℝ) ^ s) * (p : ℝ)) ^ α := by ring
+            (((p : ℝ) ^ s * (p : ℝ) ^ s) * (p : ℝ)) ^ α := by ring_nf
         _ = ((p : ℝ) ^ (s + s) * (p : ℝ)) ^ α := by rw [hmul]
         _ = ((p : ℝ) ^ (s + s)) ^ α * (p : ℝ) ^ α := by
           rw [Real.mul_rpow (Real.rpow_nonneg hp_nonneg _) hp_nonneg]
@@ -1094,7 +1101,7 @@ theorem sandwichedQ_real_smul_left_right
           rw [Real.rpow_add hq_pos]
         calc
           ((q : ℝ) ^ s * (p : ℝ) * (q : ℝ) ^ s) ^ α =
-              ((q : ℝ) ^ s * (q : ℝ) ^ s * (p : ℝ)) ^ α := by ring
+              ((q : ℝ) ^ s * (q : ℝ) ^ s * (p : ℝ)) ^ α := by ring_nf
           _ = ((q : ℝ) ^ (s + s) * (p : ℝ)) ^ α := by rw [hmul]
           _ = (q : ℝ) ^ ((s + s) * α) * (p : ℝ) ^ α := by
             rw [Real.mul_rpow (Real.rpow_nonneg hq_nonneg _) hp_nonneg,

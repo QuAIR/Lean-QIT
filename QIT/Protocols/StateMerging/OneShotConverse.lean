@@ -75,12 +75,12 @@ theorem oneShotSmoothMinEntropy_converse
         psi.state.marginalAC.tensorPowerSubnormalizedSmoothConditionalMinEntropy
           C.oneShotConversePurifiedRadius n
           C.oneShotConversePurifiedRadius_nonneg hradius := by
-  letI : DecidableEq (TensorPower a n) := tensorPowerDecidableEq n
-  letI : DecidableEq (TensorPower b n) := tensorPowerDecidableEq n
-  letI : DecidableEq (TensorPower r n) := tensorPowerDecidableEq n
-  letI : DecidableEq C.recordedOutcomeIndex := Classical.decEq _
-  letI : Nonempty a := Nonempty.map (fun i ↦ i.1.1) psi.state.nonempty
-  letI : Nonempty r := Nonempty.map (fun i ↦ i.2) psi.state.nonempty
+  let : DecidableEq (TensorPower a n) := tensorPowerDecidableEq n
+  let : DecidableEq (TensorPower b n) := tensorPowerDecidableEq n
+  let : DecidableEq (TensorPower r n) := tensorPowerDecidableEq n
+  let : DecidableEq C.recordedOutcomeIndex := Classical.decEq _
+  let : Nonempty a := Nonempty.map (fun i ↦ i.1.1) psi.state.nonempty
+  let : Nonempty r := Nonempty.map (fun i ↦ i.2) psi.state.nonempty
   have hballState :
       C.recordedOutcomeState.purifiedBall C.oneShotConversePurifiedRadius
         C.idealRecordedOutcomeState := by
@@ -197,8 +197,8 @@ theorem oneShotSmoothMinEntropyRate_converse
     -psi.state.marginalAC.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate
         eta n (C.oneShotConversePurifiedRadius_nonneg.trans hradius) heta1 <=
       C.netEntanglementRate := by
-  letI : Nonempty a := Nonempty.map (fun i ↦ i.1.1) psi.state.nonempty
-  letI : Nonempty r := Nonempty.map (fun i ↦ i.2) psi.state.nonempty
+  let : Nonempty a := Nonempty.map (fun i ↦ i.1.1) psi.state.nonempty
+  let : Nonempty r := Nonempty.map (fun i ↦ i.2) psi.state.nonempty
   have heta0 : 0 <= eta := C.oneShotConversePurifiedRadius_nonneg.trans hradius
   have hradius1 : C.oneShotConversePurifiedRadius < 1 :=
     lt_of_le_of_lt hradius heta1
@@ -237,7 +237,7 @@ theorem oneShotSmoothMinEntropyRate_converse
   have hscaled :=
     mul_le_mul_of_nonneg_left hcost (le_of_lt (one_div_pos.mpr hnR))
   rw [State.tensorPowerSubnormalizedSmoothConditionalMinEntropyRate_eq,
-    netEntanglementRate, if_neg hn_ne]
+    netEntanglementRate, ite_eq_right hn_ne]
   calc
     -(1 / (n : Real) *
         psi.state.marginalAC.tensorPowerSubnormalizedSmoothConditionalMinEntropy

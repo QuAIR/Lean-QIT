@@ -65,7 +65,7 @@ theorem flattenBlock_rate_eq_div (C : HSWClassicalCode (N.tensorPower k) t M)
   have ht_pos : (0 : ℝ) < t := by exact_mod_cast ht
   have hk_pos : (0 : ℝ) < k := by exact_mod_cast hk
   unfold flattenBlock HSWClassicalCode.rate hswMessageRate
-  rw [if_neg htk_ne, if_neg ht_ne]
+  rw [ite_eq_right htk_ne, ite_eq_right ht_ne]
   field_simp [ne_of_gt ht_pos, ne_of_gt hk_pos]
   rw [Nat.cast_mul]
   ring

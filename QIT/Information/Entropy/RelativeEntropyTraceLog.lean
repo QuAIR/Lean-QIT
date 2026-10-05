@@ -151,10 +151,9 @@ private theorem relativeEntropyTraceLog_psdSupportLog_embedding_eq_cfc_logZero
   have hleft :
       (∑ x : psdSupportIndex sigma hSigma, g x.1) =
         ∑ x ∈ (Finset.univ : Finset a) with 0 < d x, g x := by
-    simpa [g, d] using
-      (Finset.sum_subtype_eq_sum_filter
-        (s := (Finset.univ : Finset a))
-        (p := fun x => 0 < d x) (f := g))
+    exact (Finset.sum_subtype
+      ((Finset.univ : Finset a).filter (fun x => 0 < d x))
+      (fun x => by simp [d]) g).symm
   rw [hleft]
   rw [Finset.sum_filter]
   refine Finset.sum_congr rfl ?_

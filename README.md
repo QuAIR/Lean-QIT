@@ -1,15 +1,10 @@
 <h1 align="center">Lean-QIT</h1>
 <p align="center"><strong>Kernel-checked infrastructure for finite-dimensional quantum information theory in Lean 4</strong></p>
-
-<p align="center"><a href="https://github.com/QuAIR/Lean-QIT/actions/workflows/ci.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/QuAIR/Lean-QIT/ci.yml?branch=main&amp;label=build&amp;style=flat-square"></a> <a href="https://lean-lang.org/"><img alt="Lean 4.30.0" src="https://img.shields.io/badge/Lean-4.30.0-0f4c81.svg?style=flat-square"></a> <a href="https://arxiv.org/abs/2607.09632"><img alt="arXiv 2607.09632" src="https://img.shields.io/badge/arXiv-2607.09632-b31b1b.svg?style=flat-square"></a> <a href="LICENSE"><img alt="Apache 2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=flat-square"></a></p>
-
+<p align="center"><a href="https://github.com/QuAIR/Lean-QIT/actions/workflows/ci.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/QuAIR/Lean-QIT/ci.yml?branch=main&amp;label=build&amp;style=flat-square"></a> <a href="https://lean-lang.org/"><img alt="Lean 4.34.0" src="https://img.shields.io/badge/Lean-4.34.0-0f4c81.svg?style=flat-square"></a> <a href="https://arxiv.org/abs/2607.09632"><img alt="arXiv 2607.09632" src="https://img.shields.io/badge/arXiv-2607.09632-b31b1b.svg?style=flat-square"></a> <a href="LICENSE"><img alt="Apache 2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=flat-square"></a></p>
 <p align="center"><a href="https://quair.github.io/Lean-QIT/">Theorem Catalog</a> &middot; <a href="https://arxiv.org/abs/2607.09632">Paper</a> &middot; <a href="#installation">Installation</a> &middot; <a href="#coverage">Coverage</a> &middot; <a href="#citation">Citation</a></p>
 
 ## Overview
-Lean-QIT provides composable interfaces for states, channels, codes, finite-block criteria,
-hypothesis testing, one-shot quantities, and asymptotic rates, while separating operational definitions from analytic characterizations.
-
-Reusable achievability, converse, and limit components support formal proofs of coding theorems in quantum Shannon theory.
+Lean-QIT provides composable interfaces for states, channels, codes, finite-block criteria, hypothesis testing, one-shot quantities, and asymptotic rates. Reusable achievability, converse, and limit components support quantum Shannon theory while separating operational definitions from analytic characterizations.
 
 ## Coverage
 | Layer | Public facades and scope |
@@ -19,6 +14,16 @@ Reusable achievability, converse, and limit components support formal proofs of 
 | Coding and protocols | `QIT.Coding`, `QIT.Protocols`: source coding, classical and entanglement-assisted communication, state merging, and FQSW. |
 | Structure and applications | `QIT.Symmetry`, `QIT.Entanglement`, `QIT.Nonlocality`, `QIT.Security`: de Finetti tools, separability, Bell phenomena, self-testing, and QKD. |
 
+### Quantum capacity: unreleased APIs
+
+Use `import QIT.Coding.Quantum` for kernel-checked support for these conditional results:
+
+- Fully quantum blowing-up: `QIT.EntanglementGenerationCode.exists_transmissionCode_of_oneShotAchievability`, conditional on one-shot achievability (Fact 1).
+- Polynomial projector approximation: `QIT.QuantumPolyApprox.lemma3_of_sherstovNOR`, conditional on scalar NOR approximation (Fact 2).
+- Exponential strong converse: `QIT.Channel.theorem1_of_weakConverse`, conditional on Fact 1 for every positive blocklength, Fact 2, and the weak converse (Fact 3).
+
+Proofs of these external facts and the Lloyd-Shor-Devetak capacity identification remain deferred. These APIs are unreleased; tagged snapshots retain their documented release coverage.
+
 ## Installation
 For reproducible builds, add the latest tagged Lean-QIT release to `lakefile.toml` and use the Lean version pinned by `lean-toolchain`:
 ```toml
@@ -27,11 +32,7 @@ name = "QIT"
 git = "https://github.com/QuAIR/Lean-QIT.git"
 rev = "v0.1.0"
 ```
-The `main` branch tracks unreleased work and may change between tagged releases.
-Import the complete public API:
-```lean
-import QIT
-```
+The `main` branch tracks unreleased work and may change between tagged releases. Import the complete public API with `import QIT`.
 
 ## Build
 ```bash
@@ -40,8 +41,7 @@ lake build QIT
 ```
 
 ## Documentation
-Browse the [theorem catalog](https://quair.github.io/Lean-QIT/) for statements, citations, exact
-Lean declarations, and release status. Lean docstrings resolve source keys through `REFERENCES.json`.
+Browse the [theorem catalog](https://quair.github.io/Lean-QIT/) for statements, citations, exact Lean declarations, and release status. Lean docstrings resolve source keys through `REFERENCES.json`.
 
 ## Citation
 ```bibtex

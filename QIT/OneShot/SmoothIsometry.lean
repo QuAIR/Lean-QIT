@@ -149,7 +149,7 @@ private theorem applyMatrix_mul
       simpa [Matrix.kronecker] using
         (Matrix.conjTranspose_kronecker V.matrix (1 : CMatrix a))
     rw [hconj]
-    simpa [V.isometry] using
+    simpa [V.isometry, K] using
       (Matrix.mul_kronecker_mul (Matrix.conjTranspose V.matrix) V.matrix
         (1 : CMatrix a) (1 : CMatrix a)).symm
   rw [applyMatrix_eq_kron_conj V X, applyMatrix_eq_kron_conj V Y,
@@ -498,7 +498,7 @@ private theorem conditionalMaxEntropyTraceNorm_sourceIsometryApply_eq
       simpa [Matrix.kronecker] using
         (Matrix.conjTranspose_kronecker U.matrix (1 : CMatrix b))
     rw [hconj]
-    simpa [U.isometry] using
+    simpa [U.isometry, K] using
       (Matrix.mul_kronecker_mul (Matrix.conjTranspose U.matrix) U.matrix
         (1 : CMatrix b) (1 : CMatrix b)).symm
   have hEpos : E.PosSemidef := by
@@ -572,7 +572,8 @@ private theorem conditionalMaxEntropyTraceNorm_sourceIsometryApply_eq
       have h2 := Matrix.mul_kronecker_mul
         (Matrix.conjTranspose U.matrix * (1 : CMatrix aPlus))
         U.matrix ((1 : CMatrix b) * σ.matrix) (1 : CMatrix b)
-      simpa [Matrix.kronecker, Matrix.mul_one, Matrix.one_mul, U.isometry] using h2.symm
+      simpa [Matrix.kronecker, Matrix.mul_one, Matrix.one_mul, U.isometry,
+        identityTensorStateMatrix] using h2.symm
     calc
       E * RPlus * E = K * (Matrix.conjTranspose K * RPlus * K) *
           Matrix.conjTranspose K := by simp [E, Matrix.mul_assoc]

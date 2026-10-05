@@ -560,7 +560,12 @@ private theorem sideSupportFilter_traceNonincreasingCP
         X.trace.re - (X * Q).trace.re := by
       rw [Matrix.mul_sub, Matrix.trace_sub, Complex.sub_re, Matrix.mul_one]
     linarith
-  simpa [sideSupportFilter, MatrixMap.ofKraus, Q] using hineq
+  have hfilter : sideSupportFilter ρ X =
+      supportProjector ρ.marginalB.matrix ρ.marginalB.pos * X *
+        Matrix.conjTranspose (supportProjector ρ.marginalB.matrix ρ.marginalB.pos) := by
+    simp [sideSupportFilter, MatrixMap.ofKraus]
+  rw [hfilter]
+  exact hineq
 
 private def sideSupportState
     (ρ : SubnormalizedState (Prod a b)) (σ : SubnormalizedState b) :

@@ -75,7 +75,7 @@ theorem chernoffPartitionNNReal_one_of_p_supportedBy_q
           exact ⟨hx', hpq x hx'⟩⟩ : M.commonSupport))
       (by
         intro x hx
-        simp)
+        exact Finset.mem_univ _)
       (by
         intro x _ y _ hxy
         simpa using congrArg Subtype.val hxy)
@@ -147,7 +147,7 @@ theorem chernoffPartitionDeriv_one_eq_relativeEntropyReal_of_p_supportedBy_q
           exact ⟨hx', hpq x hx'⟩⟩ : M.commonSupport))
       (by
         intro x hx
-        simp)
+        exact Finset.mem_univ _)
       (by
         intro x _ y _ hxy
         simpa using congrArg Subtype.val hxy)
@@ -316,8 +316,8 @@ theorem relativeEntropySummandReal_p_commonSupportTilted_of_p_ne_zero
           M.chernoffPartition s := by
     positivity
   rw [relativeEntropySummandReal]
+  rw [ite_eq_right (show M.pDistribution.prob x ≠ 0 from hx)]
   simp only [pDistribution]
-  rw [if_neg hx]
   rw [ht]
   congr 1
   rw [Real.log_div hp.ne' hdenom_pos.ne']
@@ -530,7 +530,9 @@ theorem nussbaumSzkolaModel_p_supportedBy_q_of_matrix_support
                 rw [Unitary.coe_star_mul_self]
                 simp
       have hentry := congrFun (congrFun hmatrix x) y
-      simpa [Drho, T, Matrix.mul_apply, Matrix.diagonal, stateSpectralWeight] using hentry
+      rw [show ((stateSpectralWeight rho x : ℝ) : ℂ) =
+          ((rho.pos.isHermitian.eigenvalues x : ℝ) : ℂ) from rfl]
+      simpa [Drho, T, Matrix.mul_apply, Matrix.diagonal] using hentry
     have hprod_zero :
         (((stateSpectralWeight rho x : ℝ) : ℂ) * T x y) = 0 := by
       rw [← hleft_diag]

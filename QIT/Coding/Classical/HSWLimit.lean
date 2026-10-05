@@ -293,9 +293,9 @@ theorem blockHolevoInformation_superadditive [Nonempty a] (N : Channel a b) (m r
       (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) (m + r) := by
   rw [le_iff_forall_pos_lt_add]
   intro η hη
-  letI : Nonempty (QIT.TensorPower a m) := tensorPower_nonempty_of_nonempty (α := a) m
-  letI : Nonempty (QIT.TensorPower a r) := tensorPower_nonempty_of_nonempty (α := a) r
-  letI : Nonempty (QIT.TensorPower a (m + r)) :=
+  let : Nonempty (QIT.TensorPower a m) := tensorPower_nonempty_of_nonempty (α := a) m
+  let : Nonempty (QIT.TensorPower a r) := tensorPower_nonempty_of_nonempty (α := a) r
+  let : Nonempty (QIT.TensorPower a (m + r)) :=
     tensorPower_nonempty_of_nonempty (α := a) (m + r)
   have hη4 : 0 < η / 4 := by positivity
   obtain ⟨ι, hιF, hιD, E, hE⟩ :=
@@ -310,10 +310,10 @@ theorem blockHolevoInformation_superadditive [Nonempty a] (N : Channel a b) (m r
       (R := (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) r - η / 4) (by
         dsimp [Channel.blockHolevoInformation]
         linarith)
-  letI : Fintype ι := hιF
-  letI : DecidableEq ι := hιD
-  letI : Fintype κ := hκF
-  letI : DecidableEq κ := hκD
+  let : Fintype ι := hιF
+  let : DecidableEq ι := hιD
+  let : Fintype κ := hκF
+  let : DecidableEq κ := hκD
   let G : Ensemble (Prod ι κ) (QIT.TensorPower a (m + r)) :=
     (E.prod F).reindexStates (TensorPower.appendEquiv a m r)
   have hGmem :
@@ -342,15 +342,15 @@ nonnegativity, but it is self-contained and sufficient for the Fekete-limit rema
 theorem neg_block_log_card_le_blockHolevoInformation [Nonempty a] [Nonempty b]
     (N : Channel a b) (n : ℕ) :
     -((n : ℝ) * log2 (Fintype.card b : ℝ)) ≤ (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n := by
-  letI : Nonempty (QIT.TensorPower a n) := tensorPower_nonempty_of_nonempty (α := a) n
+  let : Nonempty (QIT.TensorPower a n) := tensorPower_nonempty_of_nonempty (α := a) n
   have hne :
       (Channel.holevoInformationValues.{uIn, uOut, uEnsemble} (N.tensorPower n)).Nonempty :=
     (N.tensorPower n).holevoInformationValues_nonempty
   obtain ⟨r, hr⟩ := hne
   have hr_lower : -log2 (Fintype.card (QIT.TensorPower b n) : ℝ) ≤ r := by
     rcases hr with ⟨ι, hιF, hιD, E, rfl⟩
-    letI : Fintype ι := hιF
-    letI : DecidableEq ι := hιD
+    let : Fintype ι := hιF
+    let : DecidableEq ι := hιD
     exact Ensemble.neg_log_card_le_holevoInformation ((N.tensorPower n).outputEnsemble E)
   have hr_le : r ≤ (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n := by
     unfold blockHolevoInformation Channel.holevoInformation
@@ -403,7 +403,7 @@ theorem regularizedHolevoInformation_limit [Nonempty a] [Nonempty b] (N : Channe
     exact csSup_le N.regularizedHolevoRateValues_nonempty
       (fun r hr => by
         rcases hr with ⟨n, hn, rfl⟩
-        exact blockHolevoRate_le_log_card.{uIn, uOut, uEnsemble, uEnsemble} N hn)
+        exact blockHolevoRate_le_log_card.{uIn, uOut, uEnsemble} N hn)
   have hs_ne : (Channel.regularizedHolevoRateValues.{uIn, uOut, uEnsemble} N).Nonempty :=
     N.regularizedHolevoRateValues_nonempty
   have hs_bdd : BddAbove (Channel.regularizedHolevoRateValues.{uIn, uOut, uEnsemble} N) :=
@@ -515,7 +515,7 @@ theorem regularizedHolevoInformation_limit [Nonempty a] [Nonempty b] (N : Channe
       (Channel.blockHolevoInformation.{uIn, uOut, uEnsemble} N) n / (n : ℝ) ≤ s := by
     dsimp [s]
     exact blockHolevoRate_le_regularizedHolevoInformation.{
-      uIn, uOut, uEnsemble, uEnsemble} N hn_pos_nat
+      uIn, uOut, uEnsemble} N hn_pos_nat
   rw [abs_sub_lt_iff]
   constructor <;> linarith
 

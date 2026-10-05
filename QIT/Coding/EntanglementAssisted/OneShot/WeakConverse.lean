@@ -422,7 +422,8 @@ theorem hypothesisTestingRelativeEntropyMarginalsWeakConverseBound
       (rho := rhoAB) (sigma := sigma.matrix) (epsilon := ε) (C := C)
       hε_nonneg hlower
   simpa [HypothesisTestingRelativeEntropyMarginalsWeakConverseBound, sigma, C,
-    State.hypothesisTestingRelativeEntropyPSDE_eq_state] using hpsd
+    State.hypothesisTestingRelativeEntropyPSDE_eq_state,
+    EReal.coe_add, EReal.coe_sub, EReal.coe_div] using hpsd
 
 /-- Optimizing hypothesis-testing mutual information over Bob-side states is
 bounded by the barred choice `σ_B = ρ_B`. -/

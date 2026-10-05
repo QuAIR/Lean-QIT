@@ -9,6 +9,7 @@ module
 public import QIT.Coding.Classical
 public import QIT.Coding.Source
 public import QIT.Coding.EntanglementAssisted
+public import QIT.Coding.Quantum
 
 /-!
 # Coding

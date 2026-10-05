@@ -155,7 +155,7 @@ theorem naimarkProjector_sum_eq_one (M : POVM y a) :
   by_cases hij : i = j
   · subst j
     rw [Matrix.sum_apply]
-    simp only [naimarkProjector, Matrix.diagonal_apply, if_true, Matrix.one_apply]
+    simp only [naimarkProjector, Matrix.diagonal_apply, ite_true, Matrix.one_apply]
     rw [Finset.sum_eq_single i.2]
     · simp
     · intro other _ hother
@@ -604,9 +604,8 @@ theorem familyNaimark_compression_projector_eq [Inhabited y]
     Matrix.conjTranspose (familyNaimarkEmbedding M) *
         (familyNaimarkProjectiveMeasurement M setting).effects outcome *
         familyNaimarkEmbedding M =
-      (M setting).effects outcome := by
-  simpa [familyNaimarkEmbedding, familyNaimarkProjectiveMeasurement, fixedNaimarkEmbedding]
-    using (M setting).fixedNaimark_compression_projector outcome
+      (M setting).effects outcome :=
+  (M setting).fixedNaimark_compression_projector outcome
 
 /-- The shared lifted state for a family Naimark dilation. -/
 def familyNaimarkLiftState [Inhabited y]
@@ -633,10 +632,8 @@ theorem familyNaimark_prob_eq [Inhabited y]
     (M : settings → POVM y a) (rho : State a) (setting : settings) (outcome : y) :
     (familyNaimarkProjectiveMeasurement M setting).toPOVM.prob
         (familyNaimarkLiftState M rho) outcome =
-      (M setting).prob rho outcome := by
-  simpa [familyNaimarkProjectiveMeasurement, familyNaimarkLiftState, familyNaimarkEmbedding,
-    fixedNaimarkLiftState, fixedNaimarkEmbedding] using
-      (M setting).fixedNaimark_prob_eq rho outcome
+      (M setting).prob rho outcome :=
+  (M setting).fixedNaimark_prob_eq rho outcome
 
 end POVM
 

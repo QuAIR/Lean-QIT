@@ -353,7 +353,7 @@ private lemma PackingLemma.codeExpectation_marginal
     have hsel : ∏ k, (if k = m then h (C k) else (1 : ℝ)) = h (C m) := by
       classical
       rw [← Finset.prod_filter (p := (· = m)),
-          Finset.filter_eq' _ m, if_pos (Finset.mem_univ _),
+          Finset.filter_eq' _ m, ite_eq_left (Finset.mem_univ _),
           Finset.prod_singleton]
     rw [hsel]
   -- (2) Re-index the function-type sum as a product of per-coordinate sums via
@@ -374,11 +374,11 @@ private lemma PackingLemma.codeExpectation_marginal
   -- `m`-th factor. Pull the `m`-th factor out via `prod_erase_mul`, then
   -- discharge each remaining factor with `Σ_x p x = 1`.
   have hm : ∑ x, φ m x = ∑ x, p x * h x := by
-    simp only [φ, if_true]
+    simp only [φ, ite_true]
   have ho : ∀ k : M, k ≠ m → ∑ x, φ k x = 1 := by
     intro k hk
     have hφ : φ k = fun x => p x := by
-      funext x; simp only [φ, if_neg hk, mul_one]
+      funext x; simp only [φ, ite_eq_right hk, mul_one]
     rw [hφ, ← hpsum]
   have hmem : m ∈ (Finset.univ : Finset M) := Finset.mem_univ _
   rw [← Finset.prod_erase_mul Finset.univ (fun k => ∑ x, φ k x) hmem,
@@ -433,7 +433,6 @@ theorem PackingLemma.codeExpectation_pair_indep
         (fun Cr => p Cr.1 * (∏ k : R, p (Cr.2 k)) * g Cr.1 (Cr.2 mr))
         (by
           intro C
-          dsimp only
           rw [heC_mr C, hprd C]
           have h1 : (e C).1 = C m := (heC C).1
           have h2 : ∀ k : R, (e C).2 k = C k.1 := (heC C).2
@@ -1174,11 +1173,11 @@ theorem PackingLemma.packingLemma_avgError
     by_cases hm : m = m₀
     · have : decEffects m = pgmEffect Sf₀ hSf₀ m + failMass := by
         show _ + (if m = m₀ then failMass else 0) = _ + failMass
-        rw [if_pos hm]
+        rw [ite_eq_left hm]
       rw [this]; exact hpgm.add hfail_psd
     · have : decEffects m = pgmEffect Sf₀ hSf₀ m := by
         show _ + (if m = m₀ then failMass else 0) = _
-        rw [if_neg hm]; rw [add_zero]
+        rw [ite_eq_right hm]; rw [add_zero]
       rw [this]; exact hpgm
   have hdec_sum : (∑ m, decEffects m) = 1 := by
     simp only [decEffects, Finset.sum_add_distrib]
@@ -1186,7 +1185,7 @@ theorem PackingLemma.packingLemma_avgError
     have hsingle : (∑ m, (if m = m₀ then failMass else (0 : CMatrix a))) = failMass := by
       have := @Finset.sum_eq_single M (CMatrix a) _ (Finset.univ : Finset M)
         (fun m => if m = m₀ then failMass else (0 : CMatrix a)) m₀
-        (fun b _ hb => if_neg hb)
+        (fun b _ hb => ite_eq_right hb)
         (fun h => absurd (Finset.mem_univ m₀) h)
       rw [this]
       simp

@@ -586,19 +586,21 @@ theorem cbOneToAlphaOriginalValue_ofState_mix_le
           (CBOneToAlphaOriginalDomain.ofState tau0)
           (SchattenOrder.ofOneLt halpha) =
         alphaToAlphaTraceValue PhiC hPhiC Y0 := by
-    simpa [PhiC, hPhiC, Y0] using
-      cbOneToAlphaOriginalValue_eq_cpComplement_alphaToAlphaTraceValue_transpose
-        Phi hPhi (lt_trans zero_lt_one halpha)
-        (CBOneToAlphaOriginalDomain.ofState tau0)
+    have h := cbOneToAlphaOriginalValue_eq_cpComplement_alphaToAlphaTraceValue_transpose
+      Phi hPhi (lt_trans zero_lt_one halpha)
+      (CBOneToAlphaOriginalDomain.ofState tau0)
+    simp [PhiC, Y0] at h ⊢
+    exact h
   have h1 :
       cbOneToAlphaOriginalValue Phi hPhi
           (CBOneToAlphaOriginalDomain.ofState tau1)
           (SchattenOrder.ofOneLt halpha) =
         alphaToAlphaTraceValue PhiC hPhiC Y1 := by
-    simpa [PhiC, hPhiC, Y1] using
-      cbOneToAlphaOriginalValue_eq_cpComplement_alphaToAlphaTraceValue_transpose
-        Phi hPhi (lt_trans zero_lt_one halpha)
-        (CBOneToAlphaOriginalDomain.ofState tau1)
+    have h := cbOneToAlphaOriginalValue_eq_cpComplement_alphaToAlphaTraceValue_transpose
+      Phi hPhi (lt_trans zero_lt_one halpha)
+      (CBOneToAlphaOriginalDomain.ofState tau1)
+    simp [PhiC, Y1] at h ⊢
+    exact h
   have hmix :
       cbOneToAlphaOriginalValue Phi hPhi
           (CBOneToAlphaOriginalDomain.ofState tauMix)
@@ -621,12 +623,13 @@ theorem cbOneToAlphaOriginalValue_ofState_mix_le
                       (mul_le_mul_of_nonneg_left Y1.trace_le_one
                         (sub_nonneg.mpr hlambda1))
                 _ = 1 := by ring } := by
-    simpa [PhiC, hPhiC, tauMix, Y0, Y1, CBOneToAlphaOriginalDomain.ofState,
+    have h := cbOneToAlphaOriginalValue_eq_cpComplement_alphaToAlphaTraceValue_transpose
+      Phi hPhi (lt_trans zero_lt_one halpha)
+      (CBOneToAlphaOriginalDomain.ofState tauMix)
+    simp [PhiC, tauMix, Y0, Y1, CBOneToAlphaOriginalDomain.ofState,
       CBOneToAlphaOriginalDomain.toTransposeTraceDomain, Matrix.transpose_add,
-      Matrix.transpose_smul] using
-      cbOneToAlphaOriginalValue_eq_cpComplement_alphaToAlphaTraceValue_transpose
-        Phi hPhi (lt_trans zero_lt_one halpha)
-        (CBOneToAlphaOriginalDomain.ofState tauMix)
+      Matrix.transpose_smul] at h ⊢
+    exact h
   have hgoal :
       lambda *
           cbOneToAlphaOriginalValue Phi hPhi
@@ -799,8 +802,8 @@ theorem cbOneToAlphaNorm_eq_sSup_stateOriginalValueSet_of_one_lt
     rintro y ⟨tau, rfl⟩
     exact cbOneToAlphaOriginalValue_le_cbOneToAlphaNorm_of_one_lt
       Phi hPhi halpha (CBOneToAlphaOriginalDomain.ofState tau)
-  haveI : Nonempty (State a1) := ⟨State.maximallyMixed a1⟩
-  haveI : Nonempty (CBOneToAlphaOriginalDomain a1) :=
+  have : Nonempty (State a1) := ⟨State.maximallyMixed a1⟩
+  have : Nonempty (CBOneToAlphaOriginalDomain a1) :=
     ⟨CBOneToAlphaOriginalDomain.ofState (State.maximallyMixed a1)⟩
   refine le_antisymm ?_ ?_
   · unfold cbOneToAlphaNorm cbOneToAlphaOriginalValueSet
@@ -1819,7 +1822,7 @@ theorem sandwichedRenyiMutualInformationE_le_fullRankCB_sInf_of_input_le
       ((sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
         sandwichedRenyiCBNormExpression N sigma.1 alpha) : ℝ) : EReal) := by
   let S := {sigma : State b1 // sigma.matrix.PosDef}
-  haveI : Nonempty S := ⟨State.maximallyMixed b1, State.maximallyMixed_posDef⟩
+  have : Nonempty S := ⟨State.maximallyMixed b1, State.maximallyMixed_posDef⟩
   let f : S → ℝ := fun sigma =>
     sandwichedRenyiCBNormExpression N sigma.1 alpha
   have hInf :
@@ -2079,21 +2082,25 @@ theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_log_mix_min_le
       (MatrixMap.CBOneToAlphaOriginalDomain.ofState tauMix)
       (SchattenOrder.ofOneLt halpha)
   have hraw : min v0 v1 ≤ vmix := by
-    simpa [Phi, hPhi, tauMix, v0, v1, vmix] using
-      MatrixMap.cbOneToAlphaOriginalValue_ofState_min_le_mix
-        Phi hPhi halpha hlambda0 hlambda1 tau0 tau1
+    have h := MatrixMap.cbOneToAlphaOriginalValue_ofState_min_le_mix
+      Phi hPhi halpha hlambda0 hlambda1 tau0 tau1
+    simp [Phi, tauMix, v0, v1, vmix] at h ⊢
+    exact h
   have hv0_pos : 0 < v0 := by
-    simpa [Phi, hPhi, v0] using
-      cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
-        N sigma hsigma tau0 (lt_trans zero_lt_one halpha)
+    have h := cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
+      N sigma hsigma tau0 (lt_trans zero_lt_one halpha)
+    simp [Phi, v0] at h ⊢
+    exact h
   have hv1_pos : 0 < v1 := by
-    simpa [Phi, hPhi, v1] using
-      cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
-        N sigma hsigma tau1 (lt_trans zero_lt_one halpha)
+    have h := cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
+      N sigma hsigma tau1 (lt_trans zero_lt_one halpha)
+    simp [Phi, v1] at h ⊢
+    exact h
   have hvmix_pos : 0 < vmix := by
-    simpa [Phi, hPhi, tauMix, vmix] using
-      cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
-        N sigma hsigma tauMix (lt_trans zero_lt_one halpha)
+    have h := cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
+      N sigma hsigma tauMix (lt_trans zero_lt_one halpha)
+    simp [Phi, tauMix, vmix] at h ⊢
+    exact h
   have hcoeff_nonneg : 0 ≤ coeff := le_of_lt (by
     simpa [coeff] using sandwichedCoeff_pos halpha)
   by_cases h01 : v0 ≤ v1
@@ -2174,8 +2181,11 @@ private theorem cbOneToAlphaReferenceWeight_continuousOn_posSemidef
       Continuous fun T : CMatrix a1 => Matrix.kronecker T (1 : CMatrix a1) := by
     unfold Matrix.kronecker
     exact _root_.continuous_matrix fun x y => by
-      simpa [Matrix.kroneckerMap_apply] using
+      have h : Continuous fun T : CMatrix a1 =>
+          T x.1 y.1 * (1 : CMatrix a1) x.2 y.2 :=
         (continuous_id.matrix_elem x.1 y.1).mul continuous_const
+      simp only [Matrix.kroneckerMap_apply]
+      exact h
   simpa [MatrixMap.cbOneToAlphaReferenceWeight, Function.comp_def] using
     hkr.comp_continuousOn hpow
 
@@ -2214,7 +2224,7 @@ private theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_log_continuo
       (sandwichedChannelOriginalValueLogDensity N sigma
         (SchattenOrder.ofOneLt halpha))
       (State.densityMatrixSet a1) := by
-  rw [continuousOn_iff_continuous_restrict]
+  rw [continuousOn_iff_continuous_domRestrict]
   let S := {M : CMatrix a1 // M ∈ State.densityMatrixSet a1}
   let Phi : MatrixMap a1 b1 := sandwichedSideWeightedMap N sigma alpha
   let hPhi : MatrixMap.IsCompletelyPositive Phi :=
@@ -2229,7 +2239,9 @@ private theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_log_continuo
       (cbOneToAlphaOriginalInput_continuousOn_posSemidef (a1 := a1)
         (lt_trans zero_lt_one halpha)).mono
           (fun M hM => (State.mem_densityMatrixSet_iff.mp hM).1)
-    simpa [S, X] using continuousOn_iff_continuous_restrict.mp hcontOn
+    have h := continuousOn_iff_continuous_domRestrict.mp hcontOn
+    simp [S, X] at h ⊢
+    exact h
   let Y : S → CMatrix (Prod a1 b1) := fun M => Phi.referenceLift (X M)
   have hYcont : Continuous Y := by
     exact (matrixMap_continuous (a1 := Prod a1 a1) (b1 := Prod a1 b1)
@@ -2253,8 +2265,9 @@ private theorem cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_log_continuo
       cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
         N sigma hsigma (State.densityMatrixSetState M.1 M.2)
         (lt_trans zero_lt_one halpha)
-    simpa [Phi, hPhi, X, Y, normValue, MatrixMap.cbOneToAlphaOriginalValue,
-      State.densityMatrixSetState_matrix] using hpos
+    have h := hpos
+    simp [Phi, X, Y, normValue, MatrixMap.cbOneToAlphaOriginalValue] at h ⊢
+    exact h
   have hlog_cont : Continuous fun M : S => log2 (normValue M) := by
     rw [continuous_iff_continuousAt]
     intro M
@@ -2873,7 +2886,7 @@ private theorem sandwichedChannelOriginalValueLogReferenceDensity_continuousOn_f
       (sandwichedChannelOriginalValueLogReferenceDensity N tau
         (SchattenOrder.ofOneLt halpha))
       (State.fullRankDensityMatrixSet b1) := by
-  rw [continuousOn_iff_continuous_restrict]
+  rw [continuousOn_iff_continuous_domRestrict]
   let S := {M : CMatrix b1 // M ∈ State.fullRankDensityMatrixSet b1}
   let X : CMatrix (Prod a1 a1) := MatrixMap.cbOneToAlphaOriginalInput tau.matrix alpha
   let hX : X.PosSemidef := MatrixMap.cbOneToAlphaOriginalInput_posSemidef tau.pos alpha
@@ -2886,7 +2899,9 @@ private theorem sandwichedChannelOriginalValueLogReferenceDensity_continuousOn_f
           (State.fullRankDensityMatrixSet b1) :=
       (State.cMatrix_rpow_continuousOn_posDef
         (a := b1) ((1 - alpha) / (2 * alpha))).mono (fun M hM => hM.1)
-    simpa [S, W] using continuousOn_iff_continuous_restrict.mp hcontOn
+    have h := continuousOn_iff_continuous_domRestrict.mp hcontOn
+    simp [S, W] at h ⊢
+    exact h
   let base : CMatrix (Prod a1 b1) := MatrixMap.referenceLift N.map X
   let Y : S → CMatrix (Prod a1 b1) := fun M =>
     MatrixMap.referenceLift
@@ -2928,8 +2943,11 @@ private theorem sandwichedChannelOriginalValueLogReferenceDensity_continuousOn_f
         Continuous fun M : S => Matrix.kronecker (1 : CMatrix a1) (W M) := by
       unfold Matrix.kronecker
       exact _root_.continuous_matrix fun x y => by
-        simpa [Matrix.kroneckerMap_apply] using
+        have h : Continuous fun M : S =>
+            (1 : CMatrix a1) x.1 y.1 * W M x.2 y.2 :=
           continuous_const.mul ((hWcont.matrix_elem x.2 y.2))
+        simp only [Matrix.kroneckerMap_apply]
+        exact h
     exact (hkr.matrix_mul continuous_const).matrix_mul hkr
   have hYcont : Continuous Y := by
     rw [hY_eq]
@@ -3322,15 +3340,18 @@ theorem cbOneToAlphaOriginalValue_state_log_le_CBNormExpression
             (rankOneMatrix_pos psi))
           (SchattenOrder.ofOneLt halpha) := by
     rw [hnum_eq]
-    simpa [Y, MatrixMap.CBOneToAlphaOriginalDomain.ofState] using
-      cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
-        N sigma hsigma tau halpha_pos
+    have h := cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
+      N sigma hsigma tau halpha_pos
+    simp [Y, MatrixMap.CBOneToAlphaOriginalDomain.ofState] at h ⊢
+    exact h
   have hmain :=
     sandwichedPureRankOneLogQuotient_le_CBNormExpression
       N sigma halpha psi hden_pos hnum_pos
   rw [hden_one, div_one] at hmain
   rw [hnum_eq] at hmain
-  simpa [Y] using hmain
+  have h := hmain
+  simp [Y] at h ⊢
+  exact h
 
 /-- Fixed-side-reference form of KW `EA_capacity.tex:2090-2093`.
 
@@ -3358,13 +3379,14 @@ theorem sandwichedRenyiCBNormExpression_eq_sSup_stateOriginalValue_log
     MatrixMap.cbOneToAlphaOriginalValue Phi hPhi
       (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
       (SchattenOrder.ofOneLt halpha)
-  haveI : Nonempty (State a1) := ⟨State.maximallyMixed a1⟩
+  have : Nonempty (State a1) := ⟨State.maximallyMixed a1⟩
   have hnorm :
       MatrixMap.cbOneToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha) =
         sSup (Set.range v) := by
-    simpa [v] using
-      MatrixMap.cbOneToAlphaNorm_eq_sSup_stateOriginalValueSet_of_one_lt
-        (a1 := a1) Phi hPhi halpha
+    have h := MatrixMap.cbOneToAlphaNorm_eq_sSup_stateOriginalValueSet_of_one_lt
+      (a1 := a1) Phi hPhi halpha
+    simp [v] at h ⊢
+    exact h
   have hbdd : BddAbove (Set.range v) := by
     refine ⟨MatrixMap.cbOneToAlphaNorm Phi hPhi (SchattenOrder.ofOneLt halpha), ?_⟩
     rintro y ⟨tau, rfl⟩
@@ -3372,9 +3394,10 @@ theorem sandwichedRenyiCBNormExpression_eq_sSup_stateOriginalValue_log
       Phi hPhi halpha (MatrixMap.CBOneToAlphaOriginalDomain.ofState tau)
   have hpos : ∀ x ∈ Set.range v, 0 < x := by
     rintro x ⟨tau, rfl⟩
-    simpa [Phi, hPhi, v] using
-      cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
-        N sigma hsigma tau (lt_trans zero_lt_one halpha)
+    have h := cbOneToAlphaOriginalValue_sandwichedSideWeightedMap_pos_of_state
+      N sigma hsigma tau (lt_trans zero_lt_one halpha)
+    simp [Phi, v] at h ⊢
+    exact h
   have hlogSup :
       sSup (log2 '' Set.range v) = log2 (sSup (Set.range v)) :=
     real_log2_sSup_image_eq (Set.range_nonempty v) hbdd hpos
@@ -3505,9 +3528,11 @@ theorem inputSandwichedRenyiMutualInformationE_le_CBNormExpression
           ((alpha / (alpha - 1) *
             log2 (psdSchattenPNorm inner hinner (SchattenOrder.ofOneLt halpha)) : ℝ) :
             EReal) := by
-            simpa [inner, hinner] using
+            have h :=
               State.sandwichedRenyiMutualInformationCandidateE_eq_coe_schattenNorm_of_supports
                 rho sigma hSupport halpha
+            simp [inner] at h ⊢
+            exact h
       _ =
           ((alpha / (alpha - 1) *
             log2
@@ -3728,9 +3753,11 @@ theorem swappedCanonical_sandwichedRenyiMutualInformationCandidateE_eq_cbOrigina
         ((alpha / (alpha - 1) *
           log2 (psdSchattenPNorm inner hinner (SchattenOrder.ofOneLt halpha)) : ℝ) :
           EReal) := by
-          simpa [inner, hinner] using
+          have h :=
             State.sandwichedRenyiMutualInformationCandidateE_eq_coe_schattenNorm_of_supports
               rho sigma hSupport halpha
+          simp [inner] at h ⊢
+          exact h
     _ =
         ((alpha / (alpha - 1) *
           log2
@@ -3767,7 +3794,7 @@ theorem inputSandwichedRenyiMutualInformationE_eq_coe_fullRankCandidateReal_sInf
         State.sandwichedRenyiMutualInformationCandidateRealPosDef
           (N.hypothesisTestingOutputState psi) sigma.1 hOut hOutA sigma.2
           alpha halpha) : ℝ) : EReal) := by
-  haveI : Nonempty {sigma : State b1 // sigma.matrix.PosDef} :=
+  have : Nonempty {sigma : State b1 // sigma.matrix.PosDef} :=
     ⟨⟨State.maximallyMixed b1, State.maximallyMixed_posDef⟩⟩
   let rho : State (Prod a1 b1) := N.hypothesisTestingOutputState psi
   have hraw :
@@ -4088,7 +4115,7 @@ theorem sandwichedChannelAlternateSionExchange_of_reference_quasiconvexOn
         QuasiconvexOn ℝ (State.fullRankDensityMatrixSet b1)
           (sandwichedChannelOriginalValueLogReferenceDensity N tau (SchattenOrder.ofOneLt halpha))) :
     N.sandwichedChannelAlternateSionExchange alpha halpha := by
-  haveI : Nonempty (State a1) := ⟨State.maximallyMixed a1⟩
+  have : Nonempty (State a1) := ⟨State.maximallyMixed a1⟩
   let stateLog : {sigma : State b1 // sigma.matrix.PosDef} → State a1 → ℝ :=
     fun sigma tau =>
       alpha / (alpha - 1) *
@@ -4401,7 +4428,7 @@ theorem sandwichedRenyiCBNormExpression_fullRank_bddBelow_of_input_output_posDef
     {alpha : ℝ} (halpha : 1 < alpha) :
     BddBelow (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>
       sandwichedRenyiCBNormExpression N sigma.1 (SchattenOrder.ofOneLt halpha)) := by
-  haveI : Nonempty {sigma : State b1 // sigma.matrix.PosDef} :=
+  have : Nonempty {sigma : State b1 // sigma.matrix.PosDef} :=
     ⟨⟨State.maximallyMixed b1, State.maximallyMixed_posDef⟩⟩
   let lower : ℝ :=
     sInf (Set.range fun sigma : {sigma : State b1 // sigma.matrix.PosDef} =>

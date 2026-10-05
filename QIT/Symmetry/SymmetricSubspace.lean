@@ -12,7 +12,7 @@ public import Mathlib.Algebra.Group.End
 public import Mathlib.Algebra.Group.Action.Defs
 public import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 public import Mathlib.Logic.Equiv.Basic
-public import Mathlib.Data.Complex.Basic
+public import Mathlib.Basic.Complex.Basic
 public import Mathlib.Data.Finsupp.Multiset
 public import Mathlib.Data.Nat.Choose.Multinomial
 public import Mathlib.Data.Sym.Card
@@ -324,7 +324,12 @@ noncomputable def tailAfterHead {n : ℕ}
             (if y = z then 1 else 0) ≤ p.1 y := by
         intro y _
         by_cases hy : y = z
-        · simpa [hy] using hz
+        -- 4.34: the `simpa [hy] using hz` closer no longer reconciles the
+        -- simplified `1 ≤ p.1 z` goal with `0 < p.1 z` at implicit
+        -- transparency; bridge explicitly (`0 < k` is by definition `0 + 1 ≤
+        -- k`).
+        · rw [hy, ite_eq_left rfl]
+          exact hz
         · simp [hy]
       have hdelta : (∑ y : a, if y = z then 1 else 0) = 1 := by
         simp
@@ -424,8 +429,11 @@ end TensorPowerProfile
 theorem tensorPowerProfileClass_self_mem {n : ℕ} (x : TensorPower a n) :
     x ∈ tensorPowerProfileClass (a := a)
       (⟨tensorPowerTypeProfile (a := a) n x,
-        tensorPowerTypeProfile_mem_profiles (a := a) n x⟩ : TensorPowerProfile a n) := by
-  rw [mem_tensorPowerProfileClass]
+        tensorPowerTypeProfile_mem_profiles (a := a) n x⟩ : TensorPowerProfile a n) :=
+  -- 4.34: `rw` cannot match the anonymous-constructor profile argument at
+  -- implicit transparency; the term-mode bridge elaborates at default
+  -- transparency and the projection reduces by iota.
+  (mem_tensorPowerProfileClass (a := a) _ x).mpr rfl
 
 theorem tensorPowerProfileClass_eq_of_profile_eq {n : ℕ}
     {p q : TensorPowerProfile a n} (hpq : p.1 = q.1) :
@@ -510,7 +518,10 @@ theorem tensorPowerProfileClass_succ_card {n : ℕ} (p : TensorPowerProfile a (n
   change ((Finset.univ : Finset (a × TensorPower a n)).filter
       (fun x => tensorPowerTypeProfile (a := a) (n + 1) x = p.1)).card = _
   rw [Finset.card_eq_sum_ones]
-  rw [Finset.sum_filter]
+  -- 4.34: `rw [Finset.sum_filter]` cannot match through the `↑p` subtype
+  -- coercion at implicit transparency; bridge in term mode (the following
+  -- `change` re-states the bridged goal verbatim).
+  refine (Finset.sum_filter _ _).trans ?_
   change (∑ x : a × TensorPower a n,
       if tensorPowerTypeProfile (a := a) (n + 1) x = p.1 then 1 else 0) = _
   rw [Fintype.sum_prod_type]
@@ -592,9 +603,9 @@ private theorem tensorPowerProfile_tail_factorial_prod_mul {n : ℕ}
       ∏ y : a, Nat.factorial (p.1 y) := by
   classical
   have hzmem : z ∈ (Finset.univ : Finset a) := Finset.mem_univ z
-  rw [Finset.prod_eq_prod_diff_singleton_mul (s := (Finset.univ : Finset a)) hzmem
+  rw [Finset.prod_eq_prod_sdiff_singleton_mul (s := (Finset.univ : Finset a)) hzmem
       (f := fun y => Nat.factorial (p.1 y))]
-  rw [Finset.prod_eq_prod_diff_singleton_mul (s := (Finset.univ : Finset a)) hzmem
+  rw [Finset.prod_eq_prod_sdiff_singleton_mul (s := (Finset.univ : Finset a)) hzmem
       (f := fun y =>
         Nat.factorial ((TensorPowerProfile.tailAfterHead (a := a) p z hz).1 y))]
   have htail_z :
@@ -727,7 +738,12 @@ theorem tensorPowerProfileClass_card_eq_multinomial
             unfold tensorPowerTypeProfile
             simp [TensorPower])
         rw [hfilter]
-        simp [TensorPower]
+        -- 4.34: the flat `simp [TensorPower]` no longer reduces the PUnit
+        -- cardinality through the composed instance, and a bare
+        -- `Fintype.card_unique` makes backward unification unfold
+        -- `Fintype.card` against the goal at implicit transparency (refused);
+        -- close it forward-only instead.
+        exact Finset.card_univ.trans (Fintype.card_unique (α := PUnit))
       have hmult : Nat.multinomial Finset.univ p.1 = 1 := by
         rw [Nat.multinomial_congr (s := (Finset.univ : Finset a)) (g := fun _ => 0)]
         · simp [Nat.multinomial]
@@ -1561,7 +1577,7 @@ theorem tensorPowerProfileUnitVector_inner {n : ℕ}
   · subst q
     have htrace := tensorPowerProfileUnitVector_trace_rankOne_eq_one (a := a) p
     rw [Matrix.trace] at htrace
-    rw [if_pos rfl]
+    rw [ite_eq_left rfl]
     simpa [rankOneMatrix_apply, mul_comm] using htrace
   · have hzero :
       ∀ x : TensorPower a n,
@@ -1577,7 +1593,7 @@ theorem tensorPowerProfileUnitVector_inner {n : ℕ}
             ← (mem_tensorPowerProfileClass (a := a) q x).mp hxq]
         simp [tensorPowerProfileUnitVector, hxp, hxq]
       · simp [tensorPowerProfileUnitVector, hxp]
-    rw [if_neg hpq]
+    rw [ite_eq_right hpq]
     exact Finset.sum_eq_zero (fun x _ => hzero x)
 
 private theorem symmetricProjectionMatrix_eq_inv_profileClass_card_of_same_profile
@@ -1870,12 +1886,16 @@ theorem mem_symmetric_profileVector_profile_expansion (n : ℕ) {f : TensorPower
   ext x
   let px : TensorPowerProfile a n :=
     ⟨tensorPowerTypeProfile (a := a) n x, tensorPowerTypeProfile_mem_profiles (a := a) n x⟩
-  have hxpx : x ∈ tensorPowerProfileClass (a := a) px := by
-    simp [px, mem_tensorPowerProfileClass]
+  have hxpx : x ∈ tensorPowerProfileClass (a := a) px :=
+    -- 4.34: same anonymous-constructor family as
+    -- `tensorPowerProfileClass_self_mem`; bridge in term mode.
+    (mem_tensorPowerProfileClass (a := a) px x).mpr rfl
   have hrep : f px.rep = f x := by
     symm
     exact mem_symmetric_eq_of_typeProfile_eq (a := a) n hf
-      (by simp [px, TensorPowerProfile.rep_typeProfile])
+      -- 4.34: the inner `simp [px, rep_typeProfile]` no longer fires through
+      -- the anonymous constructor; bridge in term mode.
+      (TensorPowerProfile.rep_typeProfile (a := a) px).symm
   calc
     f x =
         (((tensorPowerProfileClass (a := a) px).card : ℂ) * f px.rep) *
@@ -2053,7 +2073,9 @@ omit [Fintype a] in
 private theorem permutationMatrix_sum_fin_two :
     (∑ σ : Equiv.Perm (Fin 2), permutationMatrix (a := a) 2 σ) =
       1 + tensorPowerSwapMatrix_two (a := a) := by
-  rw [Finset.sum_eq_add_sum_diff_singleton_of_mem
+  -- 4.34: renamed in mathlib (`sdiff`); the additive `to_additive` name has
+  -- no deprecation alias, so the old name is an unknown constant there.
+  rw [Finset.sum_eq_add_sum_sdiff_singleton_of_mem
     (s := Finset.univ)
     (i := (1 : Equiv.Perm (Fin 2)))
     (f := fun σ : Equiv.Perm (Fin 2) => permutationMatrix (a := a) 2 σ)
@@ -2067,7 +2089,33 @@ private theorem permutationMatrix_sum_fin_two :
   · intro σ hσ hne
     have hnot_one : σ ≠ 1 := (Finset.mem_erase.mp hσ).1
     have hσ : σ = twoCopySwapPerm := by
-      fin_cases σ <;> simp [twoCopySwapPerm] at hnot_one ⊢
+      -- 4.34: `fin_cases` on `Equiv.Perm (Fin 2)` enumerates through a
+      -- `getEquivOfForallMemList` encoding that `simp` can no longer
+      -- normalize; argue pointwise over `Fin 2` instead (omega two-point
+      -- split + injectivity), which is encoding-free on every toolchain.
+      have h0 : σ 0 = 1 := by
+        rcases (by omega : σ 0 = 0 ∨ σ 0 = 1) with h | h
+        · exfalso
+          apply hnot_one
+          have k1 : σ 1 = 1 := by
+            rcases (by omega : σ 1 = 0 ∨ σ 1 = 1) with h1 | h1
+            · exact absurd (σ.injective (show σ 0 = σ 1 by rw [h, h1])) (by simp)
+            · exact h1
+          ext j
+          fin_cases j
+          · simp [h]
+          · simp [k1]
+        · exact h
+      have h1' : σ 1 = 0 := by
+        rcases (by omega : σ 1 = 0 ∨ σ 1 = 1) with h | h
+        · exact h
+        · exact absurd (σ.injective (show σ 0 = σ 1 by rw [h0, h])) (by simp)
+      have hs0 : twoCopySwapPerm 0 = 1 := by decide
+      have hs1 : twoCopySwapPerm 1 = 0 := by decide
+      ext i
+      fin_cases i
+      · simp [hs0, h0]
+      · simp [hs1, h1']
     exact (hne hσ).elim
   · intro hnot_mem
     exact (hnot_mem (by simp [twoCopySwapPerm])).elim
@@ -2238,7 +2286,7 @@ private theorem twoCopyTensorWord_delta_delta_sum (x y : TensorPower a 2) :
   classical
   by_cases hxy : x = y
   · subst y
-    rw [if_pos rfl]
+    rw [ite_eq_left rfl]
     let ix := tensorPowerEquiv (a := a) 2 x 0
     let jx := tensorPowerEquiv (a := a) 2 x 1
     rw [Finset.sum_eq_single ix]
@@ -2264,7 +2312,7 @@ private theorem twoCopyTensorWord_delta_delta_sum (x y : TensorPower a 2) :
       simp [hword]
     · intro hnot
       exact False.elim (hnot (Finset.mem_univ ix))
-  · rw [if_neg hxy]
+  · rw [ite_eq_right hxy]
     apply Finset.sum_eq_zero
     intro i _
     apply Finset.sum_eq_zero
@@ -2505,9 +2553,9 @@ private theorem rankOne_antisymmetricPairVector_ordered_sum_apply
   by_cases hxy : x = y
   · subst x
     by_cases hswap : y = permEquiv (a := a) 2 twoCopySwapPerm y
-    · simp only [if_pos hswap]
+    · simp only [ite_eq_left hswap]
       norm_num
-    · simp only [if_neg hswap]
+    · simp only [ite_eq_right hswap]
       norm_num
   · by_cases hswap : x = permEquiv (a := a) 2 twoCopySwapPerm y <;>
       simp [hxy, hswap]
@@ -2517,10 +2565,10 @@ private theorem rankOne_antisymmetricPairVector_ordered_sum_apply
       rw [hswap, hself]
     have hifself :
         (if permEquiv (a := a) 2 twoCopySwapPerm y = y then (2 : ℂ) else 0) = 0 :=
-      if_neg hself
+      ite_eq_right hself
     have hifself_one :
         (if permEquiv (a := a) 2 twoCopySwapPerm y = y then (1 : ℂ) else 0) = 0 :=
-      if_neg hself
+      ite_eq_right hself
     rw [hifself, hifself_one]
     norm_num
 
@@ -2551,14 +2599,14 @@ theorem antisymmetricProjectionMatrix_two_eq_quarter_sum_rankOne_antisymmetricPa
   · subst x
     by_cases hself : y = permEquiv (a := a) 2 twoCopySwapPerm y
     · have hself' : permEquiv (a := a) 2 twoCopySwapPerm y = y := hself.symm
-      rw [if_pos rfl, if_pos hself, if_pos hself']
-      simp only [if_true]
+      rw [ite_eq_left rfl, ite_eq_left hself, ite_eq_left hself']
+      simp only [ite_true]
       ring_nf
     · have hself' : ¬ permEquiv (a := a) 2 twoCopySwapPerm y = y := by
         intro hself'
         exact hself hself'.symm
-      rw [if_pos rfl, if_neg hself, if_neg hself']
-      simp only [if_true]
+      rw [ite_eq_left rfl, ite_eq_right hself, ite_eq_right hself']
+      simp only [ite_true]
       ring_nf
   · by_cases hswap : x = permEquiv (a := a) 2 twoCopySwapPerm y
     · have hleft : permEquiv (a := a) 2 twoCopySwapPerm x = y := hswap_iff.mpr hswap
@@ -2569,8 +2617,8 @@ theorem antisymmetricProjectionMatrix_two_eq_quarter_sum_rankOne_antisymmetricPa
       have hself' : ¬ y = permEquiv (a := a) 2 twoCopySwapPerm y := by
         intro hself'
         exact hself hself'.symm
-      have hifxy : (if x = y then (2 : ℂ) else 0) = 0 := if_neg hxy
-      rw [if_neg hxy, if_pos hleft, if_pos hswap, hifxy]
+      have hifxy : (if x = y then (2 : ℂ) else 0) = 0 := ite_eq_right hxy
+      rw [ite_eq_right hxy, ite_eq_left hleft, ite_eq_left hswap, hifxy]
       ring_nf
     · have hleft : ¬ permEquiv (a := a) 2 twoCopySwapPerm x = y := by
         intro hleft
@@ -2789,8 +2837,8 @@ theorem permutationTwirling_matrix_apply {n : ℕ} (ρ : State (TensorPower a n)
     ∑ σ : Equiv.Perm (Fin n),
       ρ.matrix (permEquiv (a := a) n σ x) (permEquiv (a := a) n σ y)
   refine Finset.sum_congr rfl fun σ _ => ?_
-  change ((permutationChannel (a := a) n σ).map ρ.matrix) x y =
-    ρ.matrix (permEquiv (a := a) n σ x) (permEquiv (a := a) n σ y)
+  -- 4.34: the `change` here became a no-op (unusedTactic linter); the goal
+  -- already has the closer's shape.
   exact permutationChannel_map_apply (a := a) n σ ρ.matrix x y
 
 theorem permutationTwirling_isPermutationInvariant {n : ℕ}

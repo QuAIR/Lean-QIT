@@ -144,10 +144,18 @@ theorem conditionalEntropy_neg_marginalA_le (τ : State (Prod a b)) :
     τ.canonicalPurification.reindex (Equiv.prodComm (Prod a b) (Prod a b))
   have hAB : Ψ₀.state.marginalA = τ := by
     apply State.ext
-    simpa [Ψ₀, State.marginalA, State.marginalB, PureVector.reindex_state,
-      State.reindex, QIT.partialTraceA, QIT.partialTraceB,
-      PureVector.state_matrix, rankOneMatrix_apply] using
-      τ.canonicalPurification_purifies
+    have hswap : ∀ X : CMatrix (Prod (Prod a b) (Prod a b)),
+        partialTraceB (X.submatrix Prod.swap Prod.swap) = partialTraceA X := by
+      intro X
+      ext ab ab'
+      simp [partialTraceA, partialTraceB, Matrix.submatrix_apply, Prod.swap_prod_mk]
+    rw [show Ψ₀.state.marginalA.matrix =
+        partialTraceB
+          ((rankOneMatrix τ.canonicalPurification.amp).submatrix Prod.swap Prod.swap) from by
+      simp [Ψ₀, State.marginalA, PureVector.reindex_state, State.reindex,
+        PureVector.state_matrix]]
+    rw [hswap]
+    exact τ.canonicalPurification_purifies
   have hB : Ψ₀.state.marginalBOfABC = τ.marginalB := by
     rw [State.marginalBOfABC_eq, State.marginalAB_eq_marginalA, hAB]
   have hA : Ψ₀.state.marginalA.marginalA = τ.marginalA := by
@@ -395,7 +403,8 @@ theorem tendsto_binaryEntropy_nhdsWithin_zero_right :
       exact ((Real.continuous_negMulLog.continuousAt.comp
         ((continuousAt_const.sub continuousAt_id))).neg.div_const (Real.log 2))
     simpa [xlog2, log2_one] using hcont.tendsto.mono_left nhdsWithin_le_nhds
-  simpa [binaryEntropy] using hx.neg.sub hone
+  rw [show binaryEntropy = fun x : ℝ => -xlog2 x - xlog2 (1 - x) from rfl]
+  simpa using hx.neg.sub hone
 
 theorem tendsto_afwContinuityModulus_nhdsWithin_zero_right (d : ℕ) :
     Tendsto (afwContinuityModulus d)
@@ -448,7 +457,9 @@ theorem tendsto_afwContinuityModulus_nhdsWithin_zero_right (d : ℕ) :
             (nhdsWithin (0 : ℝ) (Set.Ioi 0)) (nhds 0) :=
         (tendsto_nhdsWithin_iff.mp hidWithin).1
       simpa using (hid0.const_add (1 : ℝ)).mul hbin
-  simpa [afwContinuityModulus] using hlin.add hscale
+  rw [show afwContinuityModulus d = fun ε : ℝ =>
+      2 * ε * log2 (d : ℝ) + (1 + ε) * binaryEntropy (ε / (1 + ε)) from rfl]
+  simpa using hlin.add hscale
 
 theorem afwContinuityModulus_eq (d : ℕ) (ε : ℝ) :
     afwContinuityModulus d ε =
@@ -562,13 +573,14 @@ private theorem afw_scaledLog_hasDerivAt {ε : ℝ} (hεpos : 0 < ε) :
       unfold log2
       exact (Real.hasDerivAt_log hεpos.ne').div_const _
     have h := (hasDerivAt_id ε).mul hlog2
-    convert h using 1
+    refine HasDerivAt.congr_deriv h ?_
     simp [div_eq_mul_inv, hεpos.ne']
   have hright : HasDerivAt (fun t : ℝ => (1 + t) * log2 (1 + t))
       (log2 (1 + ε) + 1 / Real.log 2) ε := by
     have honepos : 0 < 1 + ε := by linarith
-    have harg : HasDerivAt (fun t : ℝ => 1 + t) 1 ε := by
-      simpa using (hasDerivAt_const (x := ε) (c := (1 : ℝ))).add (hasDerivAt_id ε)
+    have harg : HasDerivAt (fun t : ℝ => 1 + t) 1 ε :=
+      HasDerivAt.congr_deriv
+        ((hasDerivAt_const (x := ε) (c := (1 : ℝ))).add (hasDerivAt_id ε)) (by simp)
     have hlog2 : HasDerivAt (fun t : ℝ => log2 (1 + t)) ((1 + ε)⁻¹ / Real.log 2) ε := by
       unfold log2
       simpa [Function.comp_def, one_mul] using

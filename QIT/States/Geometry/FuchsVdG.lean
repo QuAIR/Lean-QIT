@@ -116,8 +116,8 @@ private theorem state_sub_state_toEuclideanLin_finrank_range_le_two (ψ φ : Pur
     intro y hy
     rcases hy with ⟨x, rfl⟩
     simpa [S, s] using state_sub_state_toEuclideanLin_mem_span ψ φ x
-  have hfin : Module.finrank ℂ S ≤ s.card := by
-    simpa [S] using finrank_span_finset_le_card (R := ℂ) s
+  have hfin : Module.finrank ℂ S ≤ s.card :=
+    finrank_span_finset_le_card (R := ℂ) s
   have hcard : s.card ≤ 2 := by
     simpa [s] using
       (Finset.card_le_two (a := WithLp.toLp 2 ψ.amp) (b := WithLp.toLp 2 φ.amp))
@@ -308,8 +308,8 @@ theorem fuchs_van_de_graaf_upper (ρ σ : State a) :
   let D : CMatrix (Prod a a) := Ψ.state.matrix - Φ.state.matrix
   have hΨ : Ψ.Purifies ρ := by
     simpa [Ψ] using ρ.canonicalPurification_purifies
-  have hΦ : Φ.Purifies σ := by
-    simpa [Φ] using U.toReferenceIsometry.applyPureVector_purifies σ.canonicalPurification_purifies
+  have hΦ : Φ.Purifies σ :=
+    U.toReferenceIsometry.applyPureVector_purifies σ.canonicalPurification_purifies
   have hdiff :
       ρ.matrix - σ.matrix = partialTraceA (a := a) (b := a) D := by
     change ρ.matrix - σ.matrix =

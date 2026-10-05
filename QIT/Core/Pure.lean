@@ -58,7 +58,7 @@ variable [Fintype a]
 /-- The rank-one kernel is positive semidefinite. -/
 theorem rankOneMatrix_pos (ψ : a -> ℂ) :
     (rankOneMatrix ψ).PosSemidef := by
-  simpa [rankOneMatrix] using Matrix.posSemidef_vecMulVec_self_star ψ
+  exact Matrix.posSemidef_vecMulVec_self_star ψ
 
 /-- The trace of `|ψ⟩⟨ψ|` is the squared norm dot product. -/
 @[simp]
@@ -211,6 +211,7 @@ theorem tensorPower_zero (ψ : PureVector a) :
     ψ.tensorPower 0 =
       ({ amp := fun _ : PUnit => 1
          trace_rankOne_eq_one := by
+          change (rankOneMatrix (fun _ : PUnit => (1 : ℂ))).trace = 1
           rw [rankOneMatrix_trace]
           change (∑ _ : PUnit, (1 : ℂ) * star (1 : ℂ)) = 1
           simp } : PureVector (TensorPower a 0)) := rfl
@@ -226,8 +227,9 @@ theorem tensorPower_state (ψ : PureVector a) :
       ext i j
       cases i
       cases j
-      simp [PureVector.tensorPower, PureVector.state, State.tensorPower, State.unit,
-        rankOneMatrix_apply]
+      simp [PureVector.tensorPower, PureVector.state, State.tensorPower, State.unit]
+      change (1 : ℂ) * star (1 : ℂ) = 1
+      simp
   | n + 1 => by
       rw [PureVector.tensorPower_succ, State.tensorPower_succ]
       calc

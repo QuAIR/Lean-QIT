@@ -140,7 +140,9 @@ private theorem psdSchattenPNorm_rpow_eq_psdTracePower_source
     {d : Type*} [Fintype d] [DecidableEq d]
     (A : CMatrix d) (hA : A.PosSemidef) {p : Real} (hp : 0 < p) :
     Real.rpow (psdSchattenPNorm A hA ⟨p, hp⟩) p = psdTracePower A hA p := by
-  rw [psdSchattenPNorm, Internal.psdSchattenExpression]
+  have hunfold : psdSchattenPNorm A hA ⟨p, hp⟩ =
+      Real.rpow (psdTracePower A hA p) (1 / p) := rfl
+  rw [hunfold]
   have htrace_nonneg : 0 <= psdTracePower A hA p :=
     psdTracePower_nonneg A hA p
   have hp_ne : p ≠ 0 := ne_of_gt hp
@@ -781,6 +783,8 @@ theorem partialTraceB_rankOne_upwardRenyiDualityACWeightedAmplitude_eq_reference
     State.identityTensorStateMatrix_posSemidef (a := a) tau
   have hW : W = CFC.rpow X p := by
     unfold W PureVector.upwardRenyiDualityACWeight X
+    rw [show State.identityTensorStateMatrix (a := a) tau =
+          Matrix.kronecker (1 : CMatrix a) tau.matrix from rfl]
     simpa using
       (cMatrix_rpow_kronecker_nonneg
         (A := (1 : CMatrix a)) (B := tau.matrix)
@@ -788,9 +792,7 @@ theorem partialTraceB_rankOne_upwardRenyiDualityACWeightedAmplitude_eq_reference
   have hS : S = CFC.rpow X (p / 2) := by
     change CFC.sqrt W = CFC.rpow X (p / 2)
     rw [hW]
-    let pnn : NNReal := ⟨p, hp_nonneg⟩
-    simpa [S, pnn] using
-      (CFC.sqrt_rpow_nnreal (a := X) (x := pnn))
+    exact CFC.sqrt_rpow_nnreal (a := X) (x := ⟨p, hp_nonneg⟩)
   have hmarg :
       partialTraceB (a := Prod a c) (b := b)
           (rankOneMatrix psi.upwardRenyiDualityACBAmplitude) =
@@ -977,7 +979,7 @@ theorem upwardRenyiDualityHighBracket_iSup_EReal_eq
         (psi.upwardRenyiDualityHighCMatrix_posSemidef sigma.matrix
           (upwardRenyiDualityParameter alpha))
         ⟨alpha, lt_trans zero_lt_one halpha⟩ : EReal) := by
-  letI : Nonempty (State c) := ⟨State.maximallyMixed c⟩
+  let : Nonempty (State c) := ⟨State.maximallyMixed c⟩
   let f : State c -> Real := fun tau =>
     State.abcSidePowerTraceRe (a := a) psi.state.matrix
       sigma.matrix tau.matrix (upwardRenyiDualityParameter alpha)
@@ -1123,8 +1125,8 @@ theorem upwardRenyiDuality_commonSchattenExtrema_eq
       ⟨beta, lt_trans (by norm_num) hbeta_half⟩
   let sigma0 : S :=
     ⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩
-  letI : Nonempty S := ⟨sigma0⟩
-  letI : Nonempty (State c) := ⟨State.maximallyMixed c⟩
+  let : Nonempty S := ⟨sigma0⟩
+  let : Nonempty (State c) := ⟨State.maximallyMixed c⟩
   have hhigh_bdd : BddBelow (Set.range high) := by
     refine ⟨0, ?_⟩
     rintro x ⟨sigma, rfl⟩
@@ -1353,8 +1355,8 @@ theorem upwardRenyiDualityLowNorm_fullRank_sSup_eq_all
     ⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩
   let tau0 : T :=
     ⟨State.maximallyMixed c, State.maximallyMixed_posDef⟩
-  letI : Nonempty T := ⟨tau0⟩
-  letI : Nonempty (State c) := ⟨tau0.1⟩
+  let : Nonempty T := ⟨tau0⟩
+  let : Nonempty (State c) := ⟨tau0.1⟩
   have hall_bdd : BddAbove (Set.range all) := by
     let high0 : Real := psdSchattenPNorm
       (psi.upwardRenyiDualityHighCMatrix sigma0.1.matrix
@@ -1553,7 +1555,7 @@ theorem conditionalSandwichedRenyiUpSource_marginalAB_eq_commonLog
   let candidate : S -> Real := fun sigma =>
     psi.state.marginalAB.conditionalSandwichedRenyiUpSourceCandidate
       sigma.1 sigma.2 alpha (lt_trans zero_lt_one halpha) (ne_of_gt halpha)
-  letI : Nonempty S :=
+  let : Nonempty S :=
     ⟨⟨State.maximallyMixed b, State.maximallyMixed_posDef⟩⟩
   have hp : 0 < upwardRenyiDualityParameter alpha :=
     upwardRenyiDualityParameter_pos halpha
@@ -1624,7 +1626,7 @@ theorem conditionalSandwichedRenyiUpSource_marginalAC_eq_commonLog
   let candidate : T -> Real := fun tau =>
     psi.state.marginalAC.conditionalSandwichedRenyiUpSourceCandidate
       tau.1 tau.2 beta (lt_trans (by norm_num) hbeta_half) (ne_of_lt hbeta_one)
-  letI : Nonempty T :=
+  let : Nonempty T :=
     ⟨⟨State.maximallyMixed c, State.maximallyMixed_posDef⟩⟩
   have hp : 0 < upwardRenyiDualityParameter alpha :=
     upwardRenyiDualityParameter_pos halpha

@@ -110,13 +110,13 @@ theorem exists_oneShotCode_rate_gt_of_lt_oneShotCapacityE
   rcases hvalue_mem with
     ⟨M, hMfin, hMdec, hMnonempty,
       EA, hEAfin, hEAdec, EB, hEBfin, hEBdec, C, hCerr, rfl⟩
-  letI : Fintype M := hMfin
-  letI : DecidableEq M := hMdec
-  letI : Nonempty M := hMnonempty
-  letI : Fintype EA := hEAfin
-  letI : DecidableEq EA := hEAdec
-  letI : Fintype EB := hEBfin
-  letI : DecidableEq EB := hEBdec
+  let : Fintype M := hMfin
+  let : DecidableEq M := hMdec
+  let : Nonempty M := hMnonempty
+  let : Fintype EA := hEAfin
+  let : DecidableEq EA := hEAdec
+  let : Fintype EB := hEBfin
+  let : DecidableEq EB := hEBdec
   exact ⟨M, inferInstance, inferInstance, inferInstance,
     EA, inferInstance, inferInstance, EB, inferInstance, inferInstance,
     C, hCerr, EReal.coe_lt_coe_iff.mp hlt⟩
@@ -289,13 +289,13 @@ theorem entanglementAssisted_achievable_of_nUseLowerBoundWitness
   intro n hn
   obtain ⟨M, hMfin, hMdec, hMnonempty,
     EA, hEAfin, hEAdec, EB, hEBfin, hEBdec, ⟨W⟩⟩ := hN0 n hn
-  letI : Fintype M := hMfin
-  letI : DecidableEq M := hMdec
-  letI : Nonempty M := hMnonempty
-  letI : Fintype EA := hEAfin
-  letI : DecidableEq EA := hEAdec
-  letI : Fintype EB := hEBfin
-  letI : DecidableEq EB := hEBdec
+  let : Fintype M := hMfin
+  let : DecidableEq M := hMdec
+  let : Nonempty M := hMnonempty
+  let : Fintype EA := hEAfin
+  let : DecidableEq EA := hEAdec
+  let : Fintype EB := hEBfin
+  let : DecidableEq EB := hEBdec
   exact N.exists_code_of_nUseLowerBoundWitness W
 
 set_option maxHeartbeats 2000000

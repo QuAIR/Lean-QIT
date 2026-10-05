@@ -118,6 +118,7 @@ theorem tensorPowerAt_tail (P : ProjectionMatrix a) {n : ℕ} (i : Fin n) :
     cases i with
     | mk k hk =>
         simp [tensorPowerAt]
+        rfl
 
 theorem tensorPowerAt_posSemidef (P : ProjectionMatrix a) {n : ℕ} (i : Fin n) :
     (P.tensorPowerAt i).matrix.PosSemidef :=
@@ -831,6 +832,7 @@ theorem selectedReferenceOutputMarginal_apply_channel
     cases i
     cases j
     simp [Channel.unit, MatrixMap.unit, Channel.idChannel, MatrixMap.ofKraus]
+    rfl
   apply State.ext
   ext x y
   rcases x with ⟨xr, xb⟩
@@ -856,7 +858,19 @@ theorem selectedReferenceOutputMarginal_apply_channel
                 (TensorPower.coordSplitEquiv (a := a) k m).symm
                   ((p'.1, PUnit.unit), tail)))
         (xr, xb) (yr, yb)
-  rw [MatrixMap.kron_idChannel_left_apply_slice]
+  refine Eq.trans ?_
+    (MatrixMap.kron_idChannel_left_apply_slice
+      (a := a) (c := a) (d := b) (Φ := N.map)
+      (X := fun p p' =>
+        ∑ tail : TensorPower.CoordComplement (a := a) k m,
+          ρ.matrix
+            ((p.2, PUnit.unit),
+              (TensorPower.coordSplitEquiv (a := a) k m).symm
+                ((p.1, PUnit.unit), tail))
+            ((p'.2, PUnit.unit),
+              (TensorPower.coordSplitEquiv (a := a) k m).symm
+                ((p'.1, PUnit.unit), tail)))
+      (ad := (xr, xb)) (ad' := (yr, yb))).symm
   have hsum :
       (fun j j' =>
           ∑ tail : TensorPower.CoordComplement (a := a) k m,
@@ -899,8 +913,18 @@ theorem selectedReferenceOutputMarginal_apply_channel
                     ((xr, PUnit.unit), tail))
                 ((j', PUnit.unit),
                   (TensorPower.coordSplitEquiv (a := a) k m).symm
-                    ((yr, PUnit.unit), tail))) := by
-    rw [map_sum]
+                    ((yr, PUnit.unit), tail))) :=
+    map_sum N.map
+      (fun tail : TensorPower.CoordComplement (a := a) k m =>
+        (fun j j' =>
+          ρ.matrix
+            ((j, PUnit.unit),
+              (TensorPower.coordSplitEquiv (a := a) k m).symm
+                ((xr, PUnit.unit), tail))
+            ((j', PUnit.unit),
+              (TensorPower.coordSplitEquiv (a := a) k m).symm
+                ((yr, PUnit.unit), tail))))
+      Finset.univ
   change
     (∑ tail : TensorPower.CoordComplement (a := a) k m,
       MatrixMap.kron (N.tensorPower 1).map
@@ -1010,8 +1034,6 @@ theorem marginalB_applyState_id_prod_local
       (fun x x' => ∑ i : a, ρ.matrix (i, x) (i, x')) =
         ∑ i : a, S i := by
     ext x x'
-    change (∑ i : a, ρ.matrix (i, x) (i, x')) =
-      (∑ i : a, S i) x x'
     simp only [Matrix.sum_apply]
     rfl
   change (∑ i : a,
@@ -1050,7 +1072,7 @@ theorem marginalA_applyState_id_prod_local
             (MatrixMap.kron_idChannel_left_apply_slice (a := a)
               (Φ := D.map) (X := ρ.matrix) (ad := (i, j)) (ad' := (i', j)))
     _ = ∑ j : b, ρ.matrix (i, j) (i', j) := by
-          simpa [S, Matrix.trace] using htrace
+          exact htrace
 
 end Channel
 
@@ -1348,30 +1370,29 @@ theorem tensorPowerHead_compl_matrix
     (P : ProjectionMatrix a) (n : ℕ) :
     (P.tensorPowerHead n).compl.matrix =
       Matrix.kronecker P.compl.matrix (1 : CMatrix (TensorPower a n)) := by
-  ext i j
-  cases i with
-  | mk ih it =>
-      cases j with
-      | mk jh jt =>
-          by_cases ht : it = jt
-          · subst jt
-            by_cases hh : ih = jh
-            · subst jh
-              simp [ProjectionMatrix.compl, ProjectionMatrix.tensorPowerHead,
-                Matrix.kronecker, Matrix.kroneckerMap_apply]
-              exact Matrix.one_apply_eq (ih, it)
-            · have hpair : (ih, it) ≠ (jh, it) := by
-                intro h
-                exact hh (congrArg Prod.fst h)
-              simp [ProjectionMatrix.compl, ProjectionMatrix.tensorPowerHead,
-                Matrix.kronecker, Matrix.kroneckerMap_apply, hh]
-              exact Matrix.one_apply_ne hpair
-          · have hpair : (ih, it) ≠ (jh, jt) := by
-              intro h
-              exact ht (congrArg Prod.snd h)
-            simp [ProjectionMatrix.compl, ProjectionMatrix.tensorPowerHead,
-              Matrix.kronecker, Matrix.kroneckerMap_apply, ht]
-            exact Matrix.one_apply_ne hpair
+  have hkey :
+      Matrix.kronecker P.compl.matrix (1 : CMatrix (TensorPower a n)) =
+      (1 : CMatrix (Prod a (TensorPower a n))) -
+        Matrix.kronecker P.matrix (1 : CMatrix (TensorPower a n)) := by
+    have hsum :
+        Matrix.kronecker P.compl.matrix (1 : CMatrix (TensorPower a n)) +
+          Matrix.kronecker P.matrix (1 : CMatrix (TensorPower a n)) =
+        (1 : CMatrix (Prod a (TensorPower a n))) := by
+      rw [show Matrix.kronecker P.compl.matrix (1 : CMatrix (TensorPower a n)) +
+            Matrix.kronecker P.matrix (1 : CMatrix (TensorPower a n)) =
+              Matrix.kronecker (P.compl.matrix + P.matrix)
+                (1 : CMatrix (TensorPower a n)) from
+            (Matrix.add_kronecker _ _ _).symm,
+        show P.compl.matrix + P.matrix = (1 : CMatrix a) from by
+          rw [ProjectionMatrix.compl_matrix, sub_add_cancel],
+        show Matrix.kronecker (1 : CMatrix a) (1 : CMatrix (TensorPower a n)) =
+            (1 : CMatrix (Prod a (TensorPower a n))) from
+          Matrix.one_kronecker_one]
+    rw [← hsum]
+    abel
+  rw [ProjectionMatrix.compl_matrix (P.tensorPowerHead n),
+    ProjectionMatrix.tensorPowerHead_matrix]
+  exact hkey.symm
 
 /-- Testing the complement of the head tensor factor in an independent product
 state has the same trace as testing the complement on the head state. -/
@@ -1407,6 +1428,7 @@ theorem positionTraceProjectionSequence_castSucc
     (positionTraceProjectionSequence P n (Fin.castSucc i)).matrix =
       (P.tensorPowerAt i.succ).matrix := by
   simp [positionTraceProjectionSequence, i.isLt]
+  rfl
 
 @[simp]
 theorem positionTraceProjectionSequence_last
@@ -1414,6 +1436,7 @@ theorem positionTraceProjectionSequence_last
     (positionTraceProjectionSequence P n (Fin.last n)).matrix =
       (P.tensorPowerHead n).matrix := by
   simp [positionTraceProjectionSequence]
+  rfl
 
 /-- False-alarm trace identity for the canonical position-trace model:
 testing any earlier comparison position gives the one-copy comparison
@@ -1600,9 +1623,40 @@ theorem canonicalIndexed_truePairInputMarginal
   ext x y
   rcases x with ⟨xr, xa⟩
   rcases y with ⟨yr, ya⟩
+  have hchan :
+      ∀ (S : State (Prod (TensorPower a (Fintype.card M))
+          (TensorPower a (Fintype.card M))))
+        (j : TensorPower.CoordComplement (a := a) (Fintype.card M) (messageIndex m)),
+        (((Channel.positionSelection (a := a) (Fintype.card M) (messageIndex m)).prod
+            (Channel.idChannel (TensorPower a (Fintype.card M)))).applyState S).matrix
+          ((xa, PUnit.unit),
+            (tensorPowerEquiv (a := a) (Fintype.card M)).symm
+              fun i => if h : i = messageIndex m then xr else j ⟨i, h⟩)
+          ((ya, PUnit.unit),
+            (tensorPowerEquiv (a := a) (Fintype.card M)).symm
+              fun i => if h : i = messageIndex m then yr else j ⟨i, h⟩) =
+        ∑ tail : TensorPower.CoordComplement (a := a) (Fintype.card M) (messageIndex m),
+          S.matrix
+            ((TensorPower.coordSplitEquiv (a := a) (Fintype.card M) (messageIndex m)).symm
+                ((xa, PUnit.unit), tail),
+              (tensorPowerEquiv (a := a) (Fintype.card M)).symm
+                fun i => if h : i = messageIndex m then xr else j ⟨i, h⟩)
+            ((TensorPower.coordSplitEquiv (a := a) (Fintype.card M) (messageIndex m)).symm
+                ((ya, PUnit.unit), tail),
+              (tensorPowerEquiv (a := a) (Fintype.card M)).symm
+                fun i => if h : i = messageIndex m then yr else j ⟨i, h⟩) :=
+    fun S j =>
+      Channel.positionSelection_prod_id_applyState_matrix (a := a)
+        (k := Fintype.card M) (m := messageIndex m)
+        (r := TensorPower a (Fintype.card M)) (ρ := S)
+        (out := (xa, PUnit.unit)) (out' := (ya, PUnit.unit))
+        (ref := (tensorPowerEquiv (a := a) (Fintype.card M)).symm
+          fun i => if h : i = messageIndex m then xr else j ⟨i, h⟩)
+        (ref' := (tensorPowerEquiv (a := a) (Fintype.card M)).symm
+          fun i => if h : i = messageIndex m then yr else j ⟨i, h⟩)
   simpa [PositionBasedCodingProtocol.canonicalIndexed_encodedPositionState,
     State.marginalA, partialTraceB, State.reindex,
-    Channel.positionSelection_prod_id_applyState_matrix,
+    hchan,
     TensorPower.State.tensorPowerBipartite_matrix_apply_fin,
     TensorPower.outputReferenceCoordEquiv,
     TensorPower.coordSplitEquiv, TensorPower.finFunctionCoordSplitEquiv,
@@ -1674,9 +1728,40 @@ theorem canonicalIndexed_falsePairInputMarginal
       (r := i) (s := messageIndex m) hi
       (xr := xr) (yr := yr) (xa := xa) (ya := ya)
   rw [Finset.sum_comm] at hdistinct
+  have hchan :
+      ∀ (S : State (Prod (TensorPower a (Fintype.card M))
+          (TensorPower a (Fintype.card M))))
+        (j : TensorPower.CoordComplement (a := a) (Fintype.card M) i),
+        (((Channel.positionSelection (a := a) (Fintype.card M) (messageIndex m)).prod
+            (Channel.idChannel (TensorPower a (Fintype.card M)))).applyState S).matrix
+          ((xa, PUnit.unit),
+            (tensorPowerEquiv (a := a) (Fintype.card M)).symm
+              fun i' => if h : i' = i then xr else j ⟨i', h⟩)
+          ((ya, PUnit.unit),
+            (tensorPowerEquiv (a := a) (Fintype.card M)).symm
+              fun i' => if h : i' = i then yr else j ⟨i', h⟩) =
+        ∑ tail : TensorPower.CoordComplement (a := a) (Fintype.card M) (messageIndex m),
+          S.matrix
+            ((TensorPower.coordSplitEquiv (a := a) (Fintype.card M) (messageIndex m)).symm
+                ((xa, PUnit.unit), tail),
+              (tensorPowerEquiv (a := a) (Fintype.card M)).symm
+                fun i' => if h : i' = i then xr else j ⟨i', h⟩)
+            ((TensorPower.coordSplitEquiv (a := a) (Fintype.card M) (messageIndex m)).symm
+                ((ya, PUnit.unit), tail),
+              (tensorPowerEquiv (a := a) (Fintype.card M)).symm
+                fun i' => if h : i' = i then yr else j ⟨i', h⟩) :=
+    fun S j =>
+      Channel.positionSelection_prod_id_applyState_matrix (a := a)
+        (k := Fintype.card M) (m := messageIndex m)
+        (r := TensorPower a (Fintype.card M)) (ρ := S)
+        (out := (xa, PUnit.unit)) (out' := (ya, PUnit.unit))
+        (ref := (tensorPowerEquiv (a := a) (Fintype.card M)).symm
+          fun i' => if h : i' = i then xr else j ⟨i', h⟩)
+        (ref' := (tensorPowerEquiv (a := a) (Fintype.card M)).symm
+          fun i' => if h : i' = i then yr else j ⟨i', h⟩)
   simpa [PositionBasedCodingProtocol.canonicalIndexed_encodedPositionState,
     State.marginalA, State.prod, partialTraceB, State.reindex,
-    Channel.positionSelection_prod_id_applyState_matrix,
+    hchan,
     TensorPower.State.tensorPowerBipartite_matrix_apply_fin,
     TensorPower.outputReferenceCoordEquiv,
     TensorPower.coordSplitEquiv, TensorPower.finFunctionCoordSplitEquiv,

@@ -173,7 +173,7 @@ theorem schumacher_converse_single_code
   have hnR_ne : (n : ℝ) ≠ 0 := by exact_mod_cast hn_ne
   have hrate_mul : 2 * (n : ℝ) * C.rate = 2 * log2 (Fintype.card W) := by
     show 2 * (n : ℝ) * schumacherRegisterRate W n = 2 * log2 (Fintype.card W)
-    rw [schumacherRegisterRate, if_neg hn_ne]
+    rw [schumacherRegisterRate, ite_eq_right hn_ne]
     field_simp
   linarith
 
@@ -266,8 +266,8 @@ theorem schumacher_converse (ρ : State a) (R : ℝ)
   have hn : 1 ≤ n := le_max_right N 1
   have hnN : N ≤ n := le_max_left N 1
   obtain ⟨W, hWfin, hWdec, C, hrate, herr⟩ := hN n hnN
-  letI : Fintype W := hWfin
-  letI : DecidableEq W := hWdec
+  let : Fintype W := hWfin
+  let : DecidableEq W := hWdec
   -- Single-code Wilde chain at block length `n`.
   have hsingle :=
     State.schumacher_converse_single_code ρ ε₀ n hn C herr

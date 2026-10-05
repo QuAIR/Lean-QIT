@@ -48,11 +48,11 @@ theorem conjTranspose_mul_self_le_one_iff_self_mul_conjTranspose_le_one
         (Matrix.fromBlocks (1 : CMatrix m) A
           (Matrix.conjTranspose A) (1 : CMatrix n) :
             CMatrix (Sum m n)).PosSemidef := by
-      letI : Invertible (1 : CMatrix m) := invertibleOne
+      let : Invertible (1 : CMatrix m) := invertibleOne
       apply (Matrix.PosDef.fromBlocks₁₁
         A (1 : CMatrix n) Matrix.PosDef.one).2
       simpa [Matrix.le_iff] using h
-    letI : Invertible (1 : CMatrix n) := invertibleOne
+    let : Invertible (1 : CMatrix n) := invertibleOne
     have hschur := (Matrix.PosDef.fromBlocks₂₂
       (1 : CMatrix m) A Matrix.PosDef.one).1 hblock
     simpa [Matrix.le_iff] using hschur
@@ -61,11 +61,11 @@ theorem conjTranspose_mul_self_le_one_iff_self_mul_conjTranspose_le_one
         (Matrix.fromBlocks (1 : CMatrix m) A
           (Matrix.conjTranspose A) (1 : CMatrix n) :
             CMatrix (Sum m n)).PosSemidef := by
-      letI : Invertible (1 : CMatrix n) := invertibleOne
+      let : Invertible (1 : CMatrix n) := invertibleOne
       apply (Matrix.PosDef.fromBlocks₂₂
         (1 : CMatrix m) A Matrix.PosDef.one).2
       simpa [Matrix.le_iff] using h
-    letI : Invertible (1 : CMatrix m) := invertibleOne
+    let : Invertible (1 : CMatrix m) := invertibleOne
     have hschur := (Matrix.PosDef.fromBlocks₁₁
       A (1 : CMatrix n) Matrix.PosDef.one).1 hblock
     simpa [Matrix.le_iff] using hschur
@@ -90,7 +90,7 @@ theorem conjTranspose_mul_self_le_smul_one_iff_self_mul_conjTranspose_le_smul_on
     simpa [Cm] using Matrix.PosDef.smul (Matrix.PosDef.one :
       (1 : CMatrix m).PosDef) hcComplex
   have hcne : (c : Complex) ≠ 0 := ne_of_gt hcComplex
-  letI : Invertible (c : Complex) := invertibleOfNonzero hcne
+  let : Invertible (c : Complex) := invertibleOfNonzero hcne
   have hCnInv : Cn⁻¹ = ((c : Complex)⁻¹) • (1 : CMatrix n) := by
     have hdet : IsUnit (1 : CMatrix n).det := by simp
     simpa [Cn, invOf_eq_inv] using
@@ -104,10 +104,10 @@ theorem conjTranspose_mul_self_le_smul_one_iff_self_mul_conjTranspose_le_smul_on
     have hblock :
         (Matrix.fromBlocks (1 : CMatrix m) A (Matrix.conjTranspose A) Cn :
           CMatrix (Sum m n)).PosSemidef := by
-      letI : Invertible (1 : CMatrix m) := invertibleOne
+      let : Invertible (1 : CMatrix m) := invertibleOne
       apply (Matrix.PosDef.fromBlocks₁₁ A Cn Matrix.PosDef.one).2
       simpa [Cn, Matrix.le_iff] using h
-    letI : Invertible Cn := hCn.isUnit.invertible
+    let : Invertible Cn := hCn.isUnit.invertible
     have hschur :=
       (Matrix.PosDef.fromBlocks₂₂ (1 : CMatrix m) A hCn).1 hblock
     have hscaled := hschur.smul (le_of_lt hcComplex)
@@ -119,10 +119,10 @@ theorem conjTranspose_mul_self_le_smul_one_iff_self_mul_conjTranspose_le_smul_on
     have hblock :
         (Matrix.fromBlocks Cm A (Matrix.conjTranspose A) (1 : CMatrix n) :
           CMatrix (Sum m n)).PosSemidef := by
-      letI : Invertible (1 : CMatrix n) := invertibleOne
+      let : Invertible (1 : CMatrix n) := invertibleOne
       apply (Matrix.PosDef.fromBlocks₂₂ Cm A Matrix.PosDef.one).2
       simpa [Cm, Matrix.le_iff] using h
-    letI : Invertible Cm := hCm.isUnit.invertible
+    let : Invertible Cm := hCm.isUnit.invertible
     have hschur :=
       (Matrix.PosDef.fromBlocks₁₁ A (1 : CMatrix n) hCm).1 hblock
     have hscaled := hschur.smul (le_of_lt hcComplex)
@@ -149,7 +149,7 @@ theorem conjTranspose_mul_inv_mul_self_le_smul_one_iff_self_mul_conjTranspose_le
     simpa [Cn] using Matrix.PosDef.smul (Matrix.PosDef.one :
       (1 : CMatrix n).PosDef) hcComplex
   have hcne : (c : Complex) ≠ 0 := ne_of_gt hcComplex
-  letI : Invertible (c : Complex) := invertibleOfNonzero hcne
+  let : Invertible (c : Complex) := invertibleOfNonzero hcne
   have hCnInv : Cn⁻¹ = ((c : Complex)⁻¹ • (1 : CMatrix n)) := by
     have hdet : IsUnit (1 : CMatrix n).det := by simp
     simpa [Cn, invOf_eq_inv] using
@@ -159,10 +159,10 @@ theorem conjTranspose_mul_inv_mul_self_le_smul_one_iff_self_mul_conjTranspose_le
     have hblock :
         (Matrix.fromBlocks Q A (Matrix.conjTranspose A) Cn :
           CMatrix (Sum m n)).PosSemidef := by
-      letI : Invertible Q := hQ.isUnit.invertible
+      let : Invertible Q := hQ.isUnit.invertible
       apply (Matrix.PosDef.fromBlocks₁₁ A Cn hQ).2
       simpa [Cn, Matrix.le_iff] using h
-    letI : Invertible Cn := hCn.isUnit.invertible
+    let : Invertible Cn := hCn.isUnit.invertible
     have hschur := (Matrix.PosDef.fromBlocks₂₂ Q A hCn).1 hblock
     have hscaled := hschur.smul (le_of_lt hcComplex)
     rw [hCnInv] at hscaled
@@ -187,9 +187,9 @@ theorem conjTranspose_mul_inv_mul_self_le_smul_one_iff_self_mul_conjTranspose_le
     have hblock :
         (Matrix.fromBlocks Q A (Matrix.conjTranspose A) Cn :
           CMatrix (Sum m n)).PosSemidef := by
-      letI : Invertible Cn := hCn.isUnit.invertible
+      let : Invertible Cn := hCn.isUnit.invertible
       exact (Matrix.PosDef.fromBlocks₂₂ Q A hCn).2 hschur
-    letI : Invertible Q := hQ.isUnit.invertible
+    let : Invertible Q := hQ.isUnit.invertible
     have htop := (Matrix.PosDef.fromBlocks₁₁ A Cn hQ).1 hblock
     simpa [Cn, Matrix.le_iff] using htop
 
@@ -315,7 +315,8 @@ theorem branchWeight_smul_positiveBranchSourceReferenceState_matrix
   intro e _
   have hentry := congrFun (congrFun hfull (x.1, (x.2, e)))
     (y.1, (y.2, e))
-  simpa only [Matrix.smul_apply, rankOneMatrix_apply] using hentry
+  simp only [Matrix.smul_apply, rankOneMatrix_apply] at hentry ⊢
+  exact hentry
 
 /-- A refined branch acts only on Alice's register; the reference and
 purifying registers are untouched. -/
@@ -510,13 +511,18 @@ theorem conditionalMinEntropyScaleFeasible_of_positiveBranches_posDef
         exact_mod_cast hpReal.le
       have hscale := (hbranch ipos).2
       have hscaled := (Matrix.le_iff.mp hscale).smul hpComplex
+      have hkey' : ((M.branchWeight psi ↑ipos : Real)) •
+          (M.positiveBranchSourceReferenceState psi ipos).matrix =
+          M.branchSourceReferenceAmplitude psi i *
+            Matrix.conjTranspose (M.branchSourceReferenceAmplitude psi i) := by
+        rw [← NNReal.smul_def]
+        exact M.branchWeight_smul_positiveBranchSourceReferenceState_matrix psi ipos
       have hgram :
           M.branchSourceReferenceAmplitude psi i *
               Matrix.conjTranspose (M.branchSourceReferenceAmplitude psi i) <=
-            ((M.branchWeight psi i : Real) : Complex) • QA' := by
-        rw [Matrix.le_iff, ← M.branchWeight_smul_positiveBranchSourceReferenceState_matrix
-          psi ipos]
-        simpa [QA', smul_sub] using hscaled
+            ((M.branchWeight psi ↑ipos : Real)) • QA' := by
+        rw [Matrix.le_iff, ← hkey', ← smul_sub]
+        exact (Matrix.le_iff.mp hscale).smul hpReal.le
       exact
         (Matrix.conjTranspose_mul_inv_mul_self_le_smul_one_iff_self_mul_conjTranspose_le_smul
           (M.branchSourceReferenceAmplitude psi i) QA' hQA' hpReal).2 hgram

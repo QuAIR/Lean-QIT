@@ -73,7 +73,7 @@ theorem hypothesisTestingMutualInformation_le_sandwichedRenyiMutualInformationE_
   classical
   let penalty : ℝ := alpha / (alpha - 1) * log2 (1 / (1 - epsilon))
   let penaltyE : EReal := (penalty : EReal)
-  haveI : Nonempty b := by
+  have : Nonempty b := by
     rcases rhoAB.nonempty with ⟨x⟩
     exact ⟨x.2⟩
   have hsub :
@@ -191,7 +191,7 @@ theorem hypothesisTestingMutualInformation_le_sandwichedRenyiMutualInformationE_
   classical
   let penalty : ℝ := alpha / (alpha - 1) * log2 (1 / (1 - epsilon))
   let penaltyE : EReal := (penalty : EReal)
-  haveI : Nonempty (PureVector (Prod a a)) :=
+  have : Nonempty (PureVector (Prod a a)) :=
     ⟨PureVector.basisPureVector⟩
   rw [← EReal.ge_of_forall_gt_iff_ge]
   intro z hz

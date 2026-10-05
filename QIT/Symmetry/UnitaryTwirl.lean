@@ -289,8 +289,8 @@ theorem permutationMatrix_mul_unitaryTensorPowerMatrix
             simp
             intro hby
             exact False.elim
-              (hb ((Equiv.apply_eq_iff_eq_symm_apply
-                (permEquiv (a := a) n σ)).mp hby))
+              (hb (((Equiv.eq_symm_apply
+                (permEquiv (a := a) n σ)).symm).mp hby))
           · intro hnot
             exact False.elim (hnot (Finset.mem_univ _))
 
@@ -552,7 +552,9 @@ theorem tensorWordPhase_eq_fin_prod (phase : a → ℂ) :
   | n + 1, x => by
       cases x with
       | mk x0 xs =>
-      rw [tensorWordPhase_succ, tensorWordPhase_eq_fin_prod phase n xs,
+      rw [show tensorWordPhase (a := a) phase (n + 1) ((x0, xs) : a × TensorPower a n) =
+            phase x0 * tensorWordPhase (a := a) phase n xs from rfl,
+        tensorWordPhase_eq_fin_prod phase n xs,
         Fin.prod_univ_succ]
       simp
 
@@ -599,7 +601,7 @@ theorem diagonalPhaseUnitary_tensorPower_mulVec_profileUnitVector
   rw [Finset.sum_eq_single x]
   · rw [unitaryTensorPowerMatrix_diagonalPhase_apply]
     by_cases hx : x ∈ tensorPowerProfileClass (a := a) p
-    · rw [if_pos rfl]
+    · rw [ite_eq_left rfl]
       rw [tensorWordPhase_eq_profilePhaseCharacter_of_mem_class (a := a) phase p hx]
       ring
     · simp [tensorPowerProfileUnitVector, hx]
@@ -963,8 +965,8 @@ private theorem twoLevelRotationEntry_row_i_norm (i j : a) (hij : i ≠ j)
   let f : a → ℂ := fun k =>
     twoLevelRotationEntry i j θ i k * star (twoLevelRotationEntry i j θ i k)
   change (∑ k ∈ (Finset.univ : Finset a), f k) = 1
-  rw [Finset.sum_eq_add_sum_diff_singleton i f (by simp)]
-  rw [Finset.sum_eq_add_sum_diff_singleton j f]
+  rw [Finset.sum_eq_add_sum_sdiff_singleton i f (by simp)]
+  rw [Finset.sum_eq_add_sum_sdiff_singleton j f]
   · have hzero : ∑ x ∈ ((Finset.univ : Finset a).erase i).erase j, f x = 0 := by
       apply Finset.sum_eq_zero
       intro x hx
@@ -990,8 +992,8 @@ private theorem twoLevelRotationEntry_row_j_norm (i j : a) (hij : i ≠ j)
   let f : a → ℂ := fun k =>
     twoLevelRotationEntry i j θ j k * star (twoLevelRotationEntry i j θ j k)
   change (∑ k ∈ (Finset.univ : Finset a), f k) = 1
-  rw [Finset.sum_eq_add_sum_diff_singleton i f (by simp)]
-  rw [Finset.sum_eq_add_sum_diff_singleton j f]
+  rw [Finset.sum_eq_add_sum_sdiff_singleton i f (by simp)]
+  rw [Finset.sum_eq_add_sum_sdiff_singleton j f]
   · have hzero : ∑ x ∈ ((Finset.univ : Finset a).erase i).erase j, f x = 0 := by
       apply Finset.sum_eq_zero
       intro x hx
@@ -1018,8 +1020,8 @@ private theorem twoLevelRotationEntry_row_i_j_orthogonal (i j : a)
   let f : a → ℂ := fun k =>
     twoLevelRotationEntry i j θ i k * star (twoLevelRotationEntry i j θ j k)
   change (∑ k ∈ (Finset.univ : Finset a), f k) = 0
-  rw [Finset.sum_eq_add_sum_diff_singleton i f (by simp)]
-  rw [Finset.sum_eq_add_sum_diff_singleton j f]
+  rw [Finset.sum_eq_add_sum_sdiff_singleton i f (by simp)]
+  rw [Finset.sum_eq_add_sum_sdiff_singleton j f]
   · have hzero : ∑ x ∈ ((Finset.univ : Finset a).erase i).erase j, f x = 0 := by
       apply Finset.sum_eq_zero
       intro x hx
@@ -1045,8 +1047,8 @@ private theorem twoLevelRotationEntry_row_j_i_orthogonal (i j : a)
   let f : a → ℂ := fun k =>
     twoLevelRotationEntry i j θ j k * star (twoLevelRotationEntry i j θ i k)
   change (∑ k ∈ (Finset.univ : Finset a), f k) = 0
-  rw [Finset.sum_eq_add_sum_diff_singleton i f (by simp)]
-  rw [Finset.sum_eq_add_sum_diff_singleton j f]
+  rw [Finset.sum_eq_add_sum_sdiff_singleton i f (by simp)]
+  rw [Finset.sum_eq_add_sum_sdiff_singleton j f]
   · have hzero : ∑ x ∈ ((Finset.univ : Finset a).erase i).erase j, f x = 0 := by
       apply Finset.sum_eq_zero
       intro x hx
@@ -1183,7 +1185,7 @@ theorem twoLevelRotationMatrix_mem_unitaryGroup (i j : a) (θ : ℝ) :
   unfold twoLevelRotationMatrix
   by_cases hij : i = j
   · simp [hij]
-  rw [if_neg hij, Matrix.mem_unitaryGroup_iff]
+  rw [ite_eq_right hij, Matrix.mem_unitaryGroup_iff]
   ext x y
   simp only [Matrix.mul_apply, Matrix.of_apply]
   simpa [Matrix.one_apply] using
@@ -1242,7 +1244,7 @@ theorem twoLevelRotationEntry_hasDerivAt_zero {i j : a} (hij : i ≠ j) (x y : a
     · rcases h2 with ⟨rfl, rfl⟩
       simp [hij.symm]
       have hsin := (Complex.hasDerivAt_sin (0 : ℂ)).comp_ofReal
-      simpa using hsin.neg
+      exact hsin.neg.congr_deriv (by simp)
     · by_cases h3 : x = j ∧ y = i
       · rcases h3 with ⟨rfl, rfl⟩
         simp [hij, hij.symm]
@@ -2050,7 +2052,14 @@ theorem profileClassMatrixEntrySum_twoLevelTensorGenerator_ne_zero_of_adjacent {
       (twoLevelTensorGeneratorMatrix (a := a) i j n) p q ≠ 0 := by
   classical
   unfold profileClassMatrixEntrySum
-  rw [← Finset.sum_product']
+  have hprod : (∑ x ∈ tensorPowerProfileClass (a := a) p,
+        ∑ y ∈ tensorPowerProfileClass (a := a) q,
+        twoLevelTensorGeneratorMatrix (a := a) i j n x y) =
+      ∑ xy ∈ (tensorPowerProfileClass (a := a) p).product
+        (tensorPowerProfileClass (a := a) q),
+        twoLevelTensorGeneratorMatrix (a := a) i j n xy.1 xy.2 :=
+    (Finset.sum_product' _ _ _).symm
+  rw [hprod]
   refine finset_sum_ne_zero_of_zero_or_neg_one
     ((tensorPowerProfileClass (a := a) p).product
       (tensorPowerProfileClass (a := a) q))
@@ -3070,10 +3079,10 @@ theorem unitaryInvariant_matrix_entry_eq_zero_of_typeProfile_ne {n : ℕ}
       star (profilePhaseCharacter (a := a) phase py)
   have hentry := diagonalPhase_conj_apply (a := a) phase hphase B x y
   rw [hinv (diagonalPhaseUnitary (a := a) phase hphase)] at hentry
-  have hxmem : x ∈ tensorPowerProfileClass (a := a) px := by
-    simp [px, mem_tensorPowerProfileClass]
-  have hymem : y ∈ tensorPowerProfileClass (a := a) py := by
-    simp [py, mem_tensorPowerProfileClass]
+  have hxmem : x ∈ tensorPowerProfileClass (a := a) px :=
+    (mem_tensorPowerProfileClass px x).2 rfl
+  have hymem : y ∈ tensorPowerProfileClass (a := a) py :=
+    (mem_tensorPowerProfileClass py y).2 rfl
   have hxphase :
       tensorWordPhase (a := a) phase n x =
         profilePhaseCharacter (a := a) phase px :=
@@ -3155,7 +3164,7 @@ theorem unitaryInvariant_profileClassComponent_mulVec {n : ℕ}
   classical
   ext x
   by_cases hxp : x ∈ tensorPowerProfileClass (a := a) p
-  · simp only [profileClassComponent, hxp, if_true]
+  · simp only [profileClassComponent, hxp, ite_true]
     simp only [Matrix.mulVec, dotProduct]
     refine Finset.sum_congr rfl ?_
     intro y _
@@ -3459,7 +3468,7 @@ theorem unitaryInvariant_mul_symmetricProjectionMatrix_eq_trace_smul [Nonempty a
     unitaryInvariant_mul_symmetricProjectionMatrix_eq_smul (a := a) B hinv
   have hPtrace_ne : P.trace ≠ 0 := by
     have hcard : (Fintype.card (TensorPowerProfile a n) : ℂ) ≠ 0 := by
-      letI : Nonempty (TensorPowerProfile a n) :=
+      let : Nonempty (TensorPowerProfile a n) :=
         ⟨constantTensorPowerProfile (a := a) (Classical.arbitrary a) n⟩
       exact_mod_cast (Fintype.card_ne_zero : Fintype.card (TensorPowerProfile a n) ≠ 0)
     simpa [P, symmetricProjectionMatrix_trace_eq_profile_card (a := a) n] using hcard
@@ -3879,7 +3888,9 @@ private theorem unitaryTensorPowerMatrix_continuous (n : ℕ) :
       intro i
       refine continuous_pi ?_
       intro j
-      exact ((continuous_apply j.1).comp ((continuous_apply i.1).comp continuous_subtype_val)).mul
+      have hcoe : Continuous (Subtype.val : Matrix.unitaryGroup a ℂ → Matrix a a ℂ) :=
+        continuous_subtype_val
+      exact ((continuous_apply j.1).comp ((continuous_apply i.1).comp hcoe)).mul
         ((continuous_apply j.2).comp ((continuous_apply i.2).comp ih))
 
 /-- The pointwise integrand of the finite-dimensional unitary Haar twirl. -/
@@ -3957,7 +3968,7 @@ private theorem integral_matrix_conjTranspose [Nonempty a]
     (hf : Integrable f (unitaryHaarMeasure (a := a))) :
     (∫ U, f U ∂unitaryHaarMeasure (a := a)).conjTranspose =
       ∫ U, (f U).conjTranspose ∂unitaryHaarMeasure (a := a) := by
-  simpa using
+  simpa [cMatrixConjTransposeCLM] using
     ((cMatrixConjTransposeCLM (ι := ι)).integral_comp_comm hf).symm
 
 theorem unitaryTwirl_conj_invariant [Nonempty a] (n : ℕ)
@@ -4516,7 +4527,7 @@ theorem rennerSchur_scaled_twirl_mul_symmetricProjectionMatrix_eq [Nonempty a]
     simpa [P] using htrace
   have hPtrace_ne : P.trace ≠ 0 := by
     have hcard : (Fintype.card (TensorPowerProfile a n) : ℂ) ≠ 0 := by
-      letI : Nonempty (TensorPowerProfile a n) :=
+      let : Nonempty (TensorPowerProfile a n) :=
         ⟨constantTensorPowerProfile (a := a) (Classical.arbitrary a) n⟩
       exact_mod_cast (Fintype.card_ne_zero : Fintype.card (TensorPowerProfile a n) ≠ 0)
     simpa [P, symmetricProjectionMatrix_trace_eq_profile_card (a := a) n] using hcard

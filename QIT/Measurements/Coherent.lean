@@ -111,7 +111,7 @@ theorem coherentChannel_map (hP : P.IsRankOne) (X : CMatrix a) :
       · subst i₂
         by_cases hj : j₁ = j₂
         · subst j₂
-          simp only [true_and, if_true, Matrix.sum_apply]
+          simp only [true_and, ite_true, Matrix.sum_apply]
           rw [Finset.sum_eq_single i₁]
           · rw [Finset.sum_eq_single j₁]
             · simp
@@ -121,7 +121,7 @@ theorem coherentChannel_map (hP : P.IsRankOne) (X : CMatrix a) :
           · intro i _ hi
             simp [hi]
           · simp
-        · simp only [true_and, hj, if_false, Matrix.sum_apply]
+        · simp only [true_and, hj, ite_false, Matrix.sum_apply]
           symm
           apply Finset.sum_eq_zero
           intro i _
@@ -131,7 +131,7 @@ theorem coherentChannel_map (hP : P.IsRankOne) (X : CMatrix a) :
           · subst j
             simp [hj]
           · simp [hj₁]
-      · simp only [hi, false_and, if_false, Matrix.sum_apply]
+      · simp only [hi, false_and, ite_false, Matrix.sum_apply]
         symm
         apply Finset.sum_eq_zero
         intro i _
@@ -197,10 +197,13 @@ theorem coherentSideIsometry_matrix (hP : P.IsRankOne)
     hP.coherentSideIsometry.matrix out input =
       if out.1.1 = out.1.2 ∧ out.2 = input.2 then
         star ((hP.vector out.1.1).amp input.1) else 0 := by
-  simp only [coherentSideIsometry, ReferenceIsometry.prod, Matrix.kronecker,
-    Matrix.kroneckerMap_apply, ReferenceIsometry.ofInjective, coherentIsometry_matrix]
+  simp only [coherentSideIsometry, ReferenceIsometry.prod, ReferenceIsometry.ofInjective]
+  -- Lean 4.34: `Matrix.kroneckerMap_apply` no longer fires on the raw-lambda
+  -- kronecker factor; bridge the entry by its rfl equation instead.
+  show hP.coherentIsometry.matrix out.1 input.1 *
+      (if out.2 = input.2 then (1 : ℂ) else 0) = _
   by_cases hdiag : out.1.1 = out.1.2 <;>
-    by_cases hside : out.2 = input.2 <;> simp [hdiag, hside]
+    by_cases hside : out.2 = input.2 <;> simp [coherentIsometry_matrix, hdiag, hside]
 
 private theorem partialTraceB_applyMatrix
     {r₁ r₂ t : Type*} [Fintype r₁] [DecidableEq r₁]
@@ -237,7 +240,7 @@ theorem coherentPureVector_amp (hP : P.IsRankOne)
     ReferenceIsometry.applyAmp, Matrix.mulVec, dotProduct,
     coherentSideIsometry_matrix, Fintype.sum_prod_type]
   by_cases hdiag : outcome = copy
-  · rw [if_pos hdiag]
+  · rw [ite_eq_left hdiag]
     refine Finset.sum_congr rfl fun i _ => ?_
     rw [Finset.sum_eq_single k]
     · simp [hdiag]
@@ -294,28 +297,44 @@ theorem coherentYCMarginal_eq_measure (hP : P.IsRankOne)
   change (hP.coherentYCMarginal ψ).matrix (i, l) (j, m) =
     MatrixMap.kron (Channel.measure P.toPOVM).map (Channel.idChannel c).map
       ψ.state.marginalAC.matrix (i, l) (j, m)
-  rw [MatrixMap.kron_idChannel_apply_slice, Channel.measure_map]
+  rw [MatrixMap.kron_idChannel_apply_slice]
+  -- Lean 4.34: `rw [Channel.measure_map]` no longer matches the sliced goal
+  -- (the pattern's instance paths and the goal's diverge). Instantiate the
+  -- equation here so the instances elaborate in this context, then rewrite.
+  have hmeas := Channel.measure_map P.toPOVM
+    (fun i_1 i' => ψ.state.marginalAC.matrix (i_1, (i, l).2) (i', (j, m).2))
+  rw [hmeas]
   simp [coherentYCMarginal, State.marginalAC,
-    PureVector.state_matrix, rankOneMatrix_apply, coherentPureVector_amp,
-    hP.effect_eq, Matrix.trace, Matrix.mul_apply,
+    PureVector.state_matrix, coherentPureVector_amp,
+    hP.effect_eq, Matrix.trace,
     Finset.sum_mul, Finset.mul_sum, mul_assoc, mul_comm]
   by_cases hij : j = i
   · subst j
     rw [Matrix.sum_apply, Finset.sum_eq_single i]
-    · simp only [Matrix.single_apply, and_self, if_true]
+    · simp only [Matrix.single_apply, and_self, ite_true]
       rw [Finset.sum_comm]
       refine Finset.sum_congr rfl fun (p : a) _ => ?_
+      -- Lean 4.34: simp/rw no longer reduce the raw-lambda matrix product on
+      -- the right (`Matrix.mul_apply` / `rankOneMatrix_apply` are rfl, but the
+      -- instance paths diverge). Show its normal form directly, then
+      -- distribute the sums as before.
+      show ∑ x, ψ.amp ((p, x), l) *
+          ((starRingEnd ℂ) ((hP.vector i).amp p) *
+            (starRingEnd ℂ) (∑ x_1, ψ.amp ((x_1, x), m) *
+              (starRingEnd ℂ) ((hP.vector i).amp x_1))) =
+        ∑ k, (∑ x, ψ.amp ((p, x), l) * (starRingEnd ℂ) (ψ.amp ((k, x), m))) *
+          ((hP.vector i).amp k * (starRingEnd ℂ) ((hP.vector i).amp p))
+      simp only [Finset.sum_mul]
       rw [Finset.sum_comm]
       refine Finset.sum_congr rfl fun (k : b) _ => ?_
       rw [map_sum]
-      simp only [Finset.mul_sum]
+      simp only [map_mul, starRingEnd_self_apply, Finset.mul_sum]
       refine Finset.sum_congr rfl fun (q : a) _ => ?_
-      simp only [map_mul, starRingEnd_self_apply]
       ring
     · intro outcome _ houtcome
       simp [houtcome]
     · simp
-  · simp only [hij, if_false, map_zero, mul_zero, Finset.sum_const_zero]
+  · simp only [hij, ite_false, map_zero, mul_zero, Finset.sum_const_zero]
     symm
     rw [Matrix.sum_apply]
     apply Finset.sum_eq_zero
@@ -445,7 +464,7 @@ theorem rankOneTraceOverlap_pos [Nonempty a]
   have hxcard : 0 < Fintype.card x := by
     by_contra h
     have hcard : Fintype.card x = 0 := Nat.eq_zero_of_not_pos h
-    letI : IsEmpty x := Fintype.card_eq_zero_iff.mp hcard
+    let : IsEmpty x := Fintype.card_eq_zero_iff.mp hcard
     have hzero_one : (0 : CMatrix a) = 1 := by
       simpa using R.sum_eq_one
     exact zero_ne_one hzero_one
@@ -483,7 +502,11 @@ theorem measureCoherentPullback_apply (hP : P.IsRankOne)
       else 0 := by
   classical
   rw [MatrixMap.kron_idChannel_apply_slice]
-  rw [Channel.measure_map]
+  -- Lean 4.34: `rw [Channel.measure_map]` no longer matches the sliced goal;
+  -- instantiate the equation here (local instance paths), then rewrite.
+  have hmeas := Channel.measure_map R.toPOVM
+    (fun i_1 i' => hP.coherentPullback σ (i_1, i.2) (i', j.2))
+  rw [hmeas]
   rcases i with ⟨i, k⟩
   rcases j with ⟨j, l⟩
   rw [Matrix.sum_apply]
@@ -510,7 +533,7 @@ theorem measureCoherentPullback_apply (hP : P.IsRankOne)
     · intro outcome _ houtcome
       simp [houtcome]
     · simp
-  · simp only [hij, if_false]
+  · simp only [hij, ite_false]
     apply Finset.sum_eq_zero
     intro outcome _
     by_cases hi : outcome = i
@@ -551,12 +574,12 @@ theorem measureCoherentPullback_rankOne (hP : P.IsRankOne)
     Matrix.kroneckerMap_apply]
   by_cases hij : i = j
   · subst j
-    rw [if_pos rfl, Finset.sum_eq_single i]
+    rw [ite_eq_left rfl, Finset.sum_eq_single i]
     · simp
     · intro measured _ hmeasured
       simp [hmeasured]
     · simp
-  · rw [if_neg hij]
+  · rw [ite_eq_right hij]
     symm
     apply Finset.sum_eq_zero
     intro measured _

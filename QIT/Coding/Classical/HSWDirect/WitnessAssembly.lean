@@ -70,11 +70,11 @@ theorem hsw_directWitnessAssembly_from_spectralPackingHypotheses
   obtain ⟨hn_pos, hinv_le, M, hMfin, hMdec, hMnonempty,
     𝒳, h𝒳fin, h𝒳dec, Eout, typicalitySlack, H, φ,
     houtput, hrate, hpacking_le⟩ := hN0 n hn
-  letI : Fintype M := hMfin
-  letI : DecidableEq M := hMdec
-  letI : Nonempty M := hMnonempty
-  letI : Fintype 𝒳 := h𝒳fin
-  letI : DecidableEq 𝒳 := h𝒳dec
+  let : Fintype M := hMfin
+  let : DecidableEq M := hMdec
+  let : Nonempty M := hMnonempty
+  let : Fintype 𝒳 := h𝒳fin
+  let : DecidableEq 𝒳 := h𝒳dec
   let packingError : ℝ :=
     2 * (H.ε + 2 * Real.sqrt H.ε) +
       4 * ((Fintype.card M : ℝ) - 1) * (H.d / H.D)
@@ -254,10 +254,10 @@ theorem hsw_directWitnessAssembly_from_diagonalPackingEstimates
     δx, δc, packingε, d, D, Px, hδx, hδc, hpackingε, hD, hstates, hx, hlarge,
     hPx, h2, h3, h4, houtput, hpacking_le⟩ :=
       hpack M hMfin hMdec hMnonempty hrate
-  letI : Fintype α := hαfin
-  letI : DecidableEq α := hαdec
-  letI : Fintype 𝒳 := h𝒳fin
-  letI : DecidableEq 𝒳 := h𝒳dec
+  let : Fintype α := hαfin
+  let : DecidableEq α := hαdec
+  let : Fintype 𝒳 := h𝒳fin
+  let : DecidableEq 𝒳 := h𝒳dec
   let H : HSWPackingHypothesesSpectral Eout
       ((Fintype.card α : ℝ) * (δx + δc)) :=
     HSWPackingHypothesesSpectral.hswPackingHypothesesDiagonal_of_pinchedStrongTypical
@@ -265,7 +265,7 @@ theorem hsw_directWitnessAssembly_from_diagonalPackingEstimates
       Px hPx h2 h3 h4
   refine ⟨𝒳, inferInstance, inferInstance, Eout,
     (Fintype.card α : ℝ) * (δx + δc), H, φ, houtput, ?_⟩
-  simpa [H] using hpacking_le
+  exact hpacking_le
 
 /-- HSW direct-achievability assembly from pruned diagonal packing estimates.
 
@@ -342,8 +342,8 @@ theorem hsw_directWitnessAssembly_from_prunedDiagonalPackingEstimates
     Px, hδx, hδc, hpackingε, hD, hprune, hstates, hx, hlarge, hPx, h2, h3,
     hmass_bound, hdom, houtput, hpacking_le⟩ :=
       hpack M hMfin hMdec hMnonempty hrate
-  letI : Fintype α := hαfin
-  letI : DecidableEq α := hαdec
+  let : Fintype α := hαfin
+  let : DecidableEq α := hαdec
   have hD_eff : 0 < (1 - pruneε) * D := by
     have hpos : 0 < 1 - pruneε := by linarith
     exact mul_pos hpos hD
@@ -436,8 +436,8 @@ theorem hsw_directWitnessAssembly_from_prunedDiagonalProjectorEstimates
     hδx, hδc, hpackingε, hD, hprune, hstates, hx, hlarge, hmoment, hdim,
     hmass_bound, hdom, houtput, hpacking_le⟩ :=
       hpack M hMfin hMdec hMnonempty hrate
-  letI : Fintype α := hαfin
-  letI : DecidableEq α := hαdec
+  let : Fintype α := hαfin
+  let : DecidableEq α := hαdec
   let Px : (Fin n → α) → CMatrix (QIT.TensorPower b n) := fun x =>
     conditionallyTypicalSubspaceProjector
       (fun i : Fin n => Classical.diagonalState (K.prob (x i)) (K.sum_eq_one (x i)))
@@ -549,8 +549,8 @@ theorem hsw_directWitnessAssembly_from_prunedDiagonalProjectorEntropyEstimates
     hδx, hδc, hpackingε, hD, hprune, hstates, hx, hlarge, hmoment, hdim,
     hD_entropy, hdom, houtput, hpacking_le⟩ :=
       hpack M hMfin hMdec hMnonempty hrate
-  letI : Fintype α := hαfin
-  letI : DecidableEq α := hαdec
+  let : Fintype α := hαfin
+  let : DecidableEq α := hαdec
   have hδtyp : 0 ≤ (Fintype.card α : ℝ) * (δx + δc) := by
     have hcard : 0 ≤ (Fintype.card α : ℝ) := by exact_mod_cast Nat.zero_le _
     have hsum : 0 ≤ δx + δc := by linarith
@@ -629,8 +629,8 @@ theorem hsw_directWitnessAssembly_from_prunedDiagonalProjectorEntropyDimensionEs
     hδx, hδc, hpackingε, hD, hprune, hstates, hx, hlarge, hmoment,
     hD_entropy, hdom, houtput, hpacking_le⟩ :=
       hpack M hMfin hMdec hMnonempty hrate
-  letI : Fintype α := hαfin
-  letI : DecidableEq α := hαdec
+  let : Fintype α := hαfin
+  let : DecidableEq α := hαdec
   let d := hswConditionalDiagonalDimensionEnvelope p K n δx δc
   refine ⟨α, inferInstance, inferInstance, p, K, Eout, φ, δx, δc, packingε,
     d, D, pruneε, hδx, hδc, hpackingε, hD, hprune, hstates, hx, hlarge, hmoment,
@@ -704,8 +704,8 @@ theorem hsw_directWitnessAssembly_from_prunedDiagonalProjectorTypicalityScaleEst
     hδx, hδc, hpackingε, hprune, hstates, hx, hlarge, hmoment, hdom, houtput,
     hpacking_le⟩ :=
       hpack M hMfin hMdec hMnonempty hrate
-  letI : Fintype α := hαfin
-  letI : DecidableEq α := hαdec
+  let : Fintype α := hαfin
+  let : DecidableEq α := hαdec
   let δz : ℝ := (Fintype.card α : ℝ) * (δx + δc)
   let D : ℝ := (ClassicalTypicality.inducedMarginal p K).strongTypicalMassScale n δz
   refine ⟨α, inferInstance, inferInstance, p, K, Eout, φ, δx, δc, packingε,
@@ -805,8 +805,8 @@ theorem hsw_directWitnessAssembly_from_strongTypicalCodebookProjectorTypicalityS
   obtain ⟨α, hαfin, hαdec, p, K, δx, δc, packingε, Eout, φ,
     hδx, hδc, hpackingε, hstates, hlarge, hmoment, h4, houtput, hpacking_le⟩ :=
       hpack M hMfin hMdec hMnonempty hrate
-  letI : Fintype α := hαfin
-  letI : DecidableEq α := hαdec
+  let : Fintype α := hαfin
+  let : DecidableEq α := hαdec
   let 𝒳 := ClassicalTypicality.StrongTypicalWord p n δx
   let codewordOf : 𝒳 → Fin n → α := fun x =>
     ClassicalTypicality.StrongTypicalWord.codeword p δx x
@@ -949,8 +949,8 @@ theorem hsw_directWitnessAssembly_from_canonicalStrongTypicalCodebookProjectorTy
     Eout, φ, hδx, hδc, hpackingε, hprune, hmass_lower, hprobs, hstates,
     hlarge, hmoment, houtput, hpacking_le⟩ :=
       hpack M hMfin hMdec hMnonempty hrate
-  letI : Fintype α := hαfin
-  letI : DecidableEq α := hαdec
+  let : Fintype α := hαfin
+  let : DecidableEq α := hαdec
   let 𝒳 := ClassicalTypicality.StrongTypicalWord p n δx
   let codewordOf : 𝒳 → Fin n → α := fun x =>
     ClassicalTypicality.StrongTypicalWord.codeword p δx x
@@ -1105,8 +1105,8 @@ theorem hsw_directWitnessAssembly_from_canonicalStrongTypicalCodebookProjectorTy
     hδx, hδc, hpackingε, hprune, hmass_lower, hlarge, hmoment, houtput,
     hpacking_le⟩ :=
       hpack M hMfin hMdec hMnonempty hrate
-  letI : Fintype α := hαfin
-  letI : DecidableEq α := hαdec
+  let : Fintype α := hαfin
+  let : DecidableEq α := hαdec
   have hmass_pos : 0 < ClassicalTypicality.strongTypicalMass (n := n) p δx := by
     have hprune_pos : 0 < 1 - pruneε := by linarith
     have hmass_real_pos :

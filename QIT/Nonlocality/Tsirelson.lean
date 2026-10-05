@@ -759,10 +759,10 @@ theorem _root_.QIT.Bell.QuantumRealization.chshCorrelator_eq_toContractionModel_
     letI : Fintype R.HB := R.fintypeHB
     letI : DecidableEq R.HB := R.decidableEqHB
     R.chshCorrelator x y = (R.toContractionModel).correlator x y := by
-  letI : Fintype R.HA := R.fintypeHA
-  letI : DecidableEq R.HA := R.decidableEqHA
-  letI : Fintype R.HB := R.fintypeHB
-  letI : DecidableEq R.HB := R.decidableEqHB
+  let : Fintype R.HA := R.fintypeHA
+  let : DecidableEq R.HA := R.decidableEqHA
+  let : Fintype R.HB := R.fintypeHB
+  let : DecidableEq R.HB := R.decidableEqHB
   have htrace :
       ((R.rho.matrix *
             Matrix.kronecker ((R.alice x).effects false - (R.alice x).effects true)
@@ -808,10 +808,10 @@ theorem _root_.QIT.Bell.QuantumRealization.chshValue_eq_toContractionModel_value
     letI : DecidableEq R.HB := R.decidableEqHB
     R.chshValue = (R.toContractionModel).value := by
   intro R
-  letI : Fintype R.HA := R.fintypeHA
-  letI : DecidableEq R.HA := R.decidableEqHA
-  letI : Fintype R.HB := R.fintypeHB
-  letI : DecidableEq R.HB := R.decidableEqHB
+  let : Fintype R.HA := R.fintypeHA
+  let : DecidableEq R.HA := R.decidableEqHA
+  let : Fintype R.HB := R.fintypeHB
+  let : DecidableEq R.HB := R.decidableEqHB
   simp [QuantumRealization.chshValue, CHSH.ContractionModel.value,
     R.chshCorrelator_eq_toContractionModel_correlator]
 
@@ -820,10 +820,10 @@ theorem _root_.QIT.Bell.QuantumRealization.chshValue_le_two_mul_sqrt_two :
     (R : QuantumRealization (Fin 2) (Fin 2) Bool Bool) →
     R.chshValue ≤ 2 * Real.sqrt 2 := by
   intro R
-  letI : Fintype R.HA := R.fintypeHA
-  letI : DecidableEq R.HA := R.decidableEqHA
-  letI : Fintype R.HB := R.fintypeHB
-  letI : DecidableEq R.HB := R.decidableEqHB
+  let : Fintype R.HA := R.fintypeHA
+  let : DecidableEq R.HA := R.decidableEqHA
+  let : Fintype R.HB := R.fintypeHB
+  let : DecidableEq R.HB := R.decidableEqHB
   rw [R.chshValue_eq_toContractionModel_value]
   exact CHSH.ContractionModel.value_le_two_mul_sqrt_two R.toContractionModel
 

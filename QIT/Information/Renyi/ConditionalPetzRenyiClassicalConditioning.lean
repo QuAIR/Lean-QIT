@@ -118,7 +118,8 @@ private theorem petz_up_candidateE_eq_coe_fullReference
           (-(1 / (α - 1))) *
             log2 ((CFC.rpow ρ.matrix α * CFC.rpow τ (1 - α)).trace.re) := by ring
       _ = _ := by rw [hcoef]
-  simpa [EReal.coe_neg] using congrArg (fun x : ℝ => (x : EReal)) hreal
+  simpa [EReal.coe_neg, ρ, τ, State.conditionalPetzRenyiTraceTerm] using
+    congrArg (fun x : ℝ => (x : EReal)) hreal
 
 private theorem petz_up_candidateE_le_closed_of_lt_one
     (E : Ensemble Y (A × B)) (σ : State (B × Y)) (α : ℝ)
@@ -358,7 +359,7 @@ theorem conditionalPetzRenyiUp_classicalConditioning_eq_closed_of_lt_one
     rcases ρ.conditionalPetzRenyiUpValueSet_nonempty α hα_pos hα_ne_one with
       ⟨_, ⟨σ, hσ, _⟩⟩
     exact ⟨⟨σ, hσ⟩⟩
-  letI := hI
+  let := hI
   have hf_bdd : BddAbove (Set.range f) := by
     exact petz_up_fullReference_range_bddAbove E α hα_pos hα_lt_one hα_ne_one
   have hf_range : Set.range f =
@@ -417,11 +418,11 @@ theorem conditionalPetzRenyiUp_classicalConditioning_eq_closed_of_one_lt
     rcases ρ.conditionalPetzRenyiUpValueSet_nonempty α hα_pos hα_ne_one with
       ⟨_, ⟨σ, hσ, _⟩⟩
     exact ⟨⟨σ, hσ⟩⟩
-  letI := hI
+  let := hI
   have hf_bdd : BddAbove (Set.range f) := by
     exact petz_up_fullReference_range_bddAbove_of_one_lt E α hα_pos
       hα_gt_one hα_ne_one
-  letI := Classical.decEq I
+  let := Classical.decEq I
   have hf_range : Set.range f =
       ρ.conditionalPetzRenyiUpValueSet α hα_pos hα_ne_one := by
     ext x

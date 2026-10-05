@@ -327,10 +327,7 @@ theorem conditioningSupportCompressedState_conditioningIsometryApply
     psdSupportCompress_reconstruct_of_supports_right_and_conjTranspose
       (M := B) (N := N) hN hB hBstar
   have hentry := congrFun (congrFun hrec x.2) y.2
-  simpa [conditioningIsometryApply_matrix, ReferenceIsometry.applyMatrixRight,
-    conditioningSupportCompressedState_matrix, psdSupportReferenceIsometry,
-    psdSupportCompressRight, ReferenceIsometry.rightBlock, psdSupportCompress,
-    B, N, hN] using hentry
+  exact hentry
 
 /-- Feasibility predicate for the conditional min-entropy order constraint
 `ρ_AB ≤ 2^{-λ} • (I_A ⊗ σ_B)` in the local bits convention. -/

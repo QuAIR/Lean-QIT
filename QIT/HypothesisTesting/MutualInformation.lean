@@ -54,8 +54,8 @@ private theorem state_matrix_le_one_for_htmi (rho : State a) :
   let U : Matrix.unitaryGroup a ℂ := rho.pos.1.eigenvectorUnitary
   let D : CMatrix a := Matrix.diagonal fun i => ((rho.pos.1.eigenvalues i : ℝ) : ℂ)
   have hdiag : rho.matrix = (U : CMatrix a) * D * star (U : CMatrix a) := by
-    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using rho.pos.1.spectral_theorem
+    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply,
+      Function.comp_def] using rho.pos.1.spectral_theorem
   have heig_sum : ∑ i, rho.pos.1.eigenvalues i = 1 := by
     have hc : (∑ i, ((rho.pos.1.eigenvalues i : ℝ) : ℂ)) = 1 := by
       exact rho.pos.1.trace_eq_sum_eigenvalues.symm.trans rho.trace_eq_one
@@ -496,7 +496,7 @@ theorem exists_pos_scalar_smul_one_le_matrix_of_posDef
     (hσ : sigma.matrix.PosDef) :
     ∃ c : ℝ, 0 < c ∧ c • (1 : CMatrix a) ≤ sigma.matrix := by
   classical
-  haveI : Nonempty a := sigma.nonempty
+  have : Nonempty a := sigma.nonempty
   let c : ℝ := Finset.univ.inf' Finset.univ_nonempty
     (fun i : a => hσ.1.eigenvalues i)
   have hc_pos : 0 < c := by
@@ -512,8 +512,8 @@ theorem exists_pos_scalar_smul_one_le_matrix_of_posDef
   let U : Matrix.unitaryGroup a ℂ := hσ.1.eigenvectorUnitary
   let D : CMatrix a := Matrix.diagonal fun i => ((hσ.1.eigenvalues i : ℝ) : ℂ)
   have hdiag : sigma.matrix = (U : CMatrix a) * D * star (U : CMatrix a) := by
-    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply]
-      using hσ.1.spectral_theorem
+    simpa [U, D, Matrix.IsHermitian.spectral_theorem, Unitary.conjStarAlgAut_apply,
+      Function.comp_def] using hσ.1.spectral_theorem
   have hUstar : (U : CMatrix a) * star (U : CMatrix a) = 1 := by
     simp
   have hscalar :
@@ -627,7 +627,7 @@ theorem exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativ
   rw [hypothesisTestingRelativeEntropy_eq] at hlower
   by_cases hzero :
       rho.hypothesisTestingBeta sigma epsilon = 0
-  · rw [if_pos hzero] at hlower
+  · rw [ite_eq_left hzero] at hlower
     have hbudget_pos : 0 < Real.rpow 2 (-lower) :=
       Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) (-lower)
     have hbeta_lt :
@@ -635,7 +635,7 @@ theorem exists_hypothesisTestingEffect_typeIIError_lt_rpow_two_neg_of_lt_relativ
       simpa [hzero] using hbudget_pos
     exact rho.exists_hypothesisTestingEffect_typeIIError_lt_of_hypothesisTestingBeta_lt
       sigma epsilon hε hbeta_lt
-  · rw [if_neg hzero] at hlower
+  · rw [ite_eq_right hzero] at hlower
     have hlower_real :
         lower < rho.hypothesisTestingRelativeEntropyFinite sigma epsilon :=
       EReal.coe_lt_coe_iff.mp hlower

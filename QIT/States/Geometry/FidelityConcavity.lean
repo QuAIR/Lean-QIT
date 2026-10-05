@@ -107,7 +107,7 @@ private theorem binaryEnsemble_averageState
   apply State.ext
   ext i j
   simp only [binaryEnsemble, Ensemble.averageState_matrix, Fintype.sum_bool,
-    if_true, convexCombination_matrix, Matrix.add_apply, Matrix.smul_apply]
+    ite_true, convexCombination_matrix, Matrix.add_apply, Matrix.smul_apply]
   change
     (t : ℂ) * ρ.matrix i j + ((1 - t : ℝ) : ℂ) * σ.matrix i j =
       (t : ℂ) * ρ.matrix i j + ((1 - t : ℝ) : ℂ) * σ.matrix i j

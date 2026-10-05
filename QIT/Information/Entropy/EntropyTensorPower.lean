@@ -498,7 +498,7 @@ private lemma xlog2_mul_log2_self {x : ℝ} (hx : 0 ≤ x) :
   by_cases hzx : x = 0
   · simp [xlog2, hzx, Real.log_zero]
   · have hxp : 0 < x := lt_of_le_of_ne hx (Ne.symm hzx)
-    simp only [xlog2, if_neg (ne_of_gt hxp), log2]
+    simp only [xlog2, ite_eq_right (ne_of_gt hxp), log2]
     field_simp
 
 /-- For nonneg `x, y`, the entropy-split identity (each side times

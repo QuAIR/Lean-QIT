@@ -192,7 +192,7 @@ private def classicalBasisState (x : ι) : State ι where
   matrix := Matrix.single x x (1 : ℂ)
   pos := posSemidef_single x
   trace_eq_one := by
-    rw [trace_single_one, if_pos rfl]
+    rw [trace_single_one, ite_eq_left rfl]
 
 /-- The ensemble of product states `|x⟩⟨x| ⊗ ρ_x` whose average is `E.cqState`. -/
 private def cqProductEnsemble (E : Ensemble ι a) : Ensemble ι (Prod ι a) where

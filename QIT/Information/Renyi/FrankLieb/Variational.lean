@@ -291,10 +291,10 @@ theorem cMatrix_rpow_mul_rpow_of_nonneg
       have hsNN_pos : 0 < sNN := pos_iff_ne_zero.mpr hs_zero
       have hadd : A ^ (rNN + sNN) = A ^ rNN * A ^ sNN :=
         CFC.nnrpow_add (a := A) hrNN_pos hsNN_pos
-      have hrpow : A ^ rNN = CFC.rpow A r := by
-        simpa [rNN] using (CFC.nnrpow_eq_rpow (a := A) hrNN_pos)
-      have hspow : A ^ sNN = CFC.rpow A s := by
-        simpa [sNN] using (CFC.nnrpow_eq_rpow (a := A) hsNN_pos)
+      have hrpow : A ^ rNN = CFC.rpow A r :=
+        CFC.nnrpow_eq_rpow (a := A) hrNN_pos
+      have hspow : A ^ sNN = CFC.rpow A s :=
+        CFC.nnrpow_eq_rpow (a := A) hsNN_pos
       have hsumpow : A ^ (rNN + sNN) = CFC.rpow A (r + s) := by
         simpa [rNN, sNN, hsum] using (CFC.nnrpow_eq_rpow (a := A)
           (add_pos hrNN_pos hsNN_pos))
@@ -445,7 +445,8 @@ theorem posSemidef_trace_mul_rpow_le_psdSchattenPNorm_mul_trace_rpow
     have hscaled :
         S⁻¹ ^ (1 - c) * T ≤
           psdSchattenPNorm M hM ⟨1 / c, one_div_pos.mpr hc_pos⟩ := by
-      simpa [htrace_smul] using hholder'
+      rw [← htrace_smul]
+      exact hholder'
     have hSr_nonneg : 0 ≤ S ^ (1 - c) := Real.rpow_nonneg hS_nonneg _
     have hSr_pos : 0 < S ^ (1 - c) := Real.rpow_pos_of_pos hS_pos _
     have hscale_mul : S⁻¹ ^ (1 - c) * S ^ (1 - c) = 1 := by
@@ -495,7 +496,8 @@ theorem epsteinDualObjective_le_epsteinTraceTerm
       rfl
     have hinv : 1 / (1 / c) = c := by
       field_simp [hc_pos.ne']
-    rw [psdSchattenPNorm, Internal.psdSchattenExpression, hpower_eq, hinv]
+    show Real.rpow (psdTracePower M hM (1 / c)) (1 / (1 / c)) = A ^ c
+    rw [hpower_eq, hinv]
     rfl
   have htrace_bound : T ≤ A ^ c * S ^ (1 - c) := by
     rw [hnorm] at htrace_holder
@@ -560,12 +562,12 @@ theorem epsteinDualObjective_traceTerm_concave
   have h1c_nonneg : 0 ≤ 1 - c := sub_nonneg.mpr hc_lt_one.le
   have hX₁powT :
       CFC.rpow X₁.transpose (1 - (p : ℝ)) =
-        (CFC.rpow X₁ (1 - c)).transpose := by
-    simpa [p] using cMatrix_rpow_transpose_nonneg (A := X₁) hX₁ h1c_nonneg
+        (CFC.rpow X₁ (1 - c)).transpose :=
+    cMatrix_rpow_transpose_nonneg (A := X₁) hX₁ h1c_nonneg
   have hX₂powT :
       CFC.rpow X₂.transpose (1 - (p : ℝ)) =
-        (CFC.rpow X₂ (1 - c)).transpose := by
-    simpa [p] using cMatrix_rpow_transpose_nonneg (A := X₂) hX₂ h1c_nonneg
+        (CFC.rpow X₂ (1 - c)).transpose :=
+    cMatrix_rpow_transpose_nonneg (A := X₂) hX₂ h1c_nonneg
   have hXmix : (cMatrixConvexCombination t X₁ X₂).PosSemidef :=
     cMatrixConvexCombination_posSemidef hX₁ hX₂ ht0 ht1
   have hXmixT :
@@ -577,9 +579,8 @@ theorem epsteinDualObjective_traceTerm_concave
       CFC.rpow (t • X₁.transpose + (1 - t) • X₂.transpose) (1 - (p : ℝ)) =
         (CFC.rpow (cMatrixConvexCombination t X₁ X₂) (1 - c)).transpose := by
     rw [hXmixT]
-    simpa [p] using
-      cMatrix_rpow_transpose_nonneg
-        (A := cMatrixConvexCombination t X₁ X₂) hXmix h1c_nonneg
+    exact cMatrix_rpow_transpose_nonneg
+      (A := cMatrixConvexCombination t X₁ X₂) hXmix h1c_nonneg
   have hσmix :
       t • σ₁ + (1 - t) • σ₂ = cMatrixConvexCombination t σ₁ σ₂ :=
     (cMatrixConvexCombination_eq_real_smul t σ₁ σ₂).symm

@@ -157,7 +157,8 @@ theorem blockDiagonal_rpow
           Matrix.diagonal (fun j => (d i j : ℂ)) *
         star (U i : CMatrix a) := by
     intro i
-    simpa [U, d, Unitary.conjStarAlgAut_apply, Matrix.mul_assoc] using
+    simpa [U, d, Unitary.conjStarAlgAut_apply, Matrix.mul_assoc,
+      Function.comp_def] using
       (hblocks i).isHermitian.spectral_theorem
   let Ubig : Matrix.unitaryGroup (ι × a) ℂ :=
     ⟨blockDiagonal (fun i => (U i : CMatrix a)), by
@@ -542,7 +543,7 @@ theorem conditionalRenyi_rpow_reindex_nonneg
     Matrix.nonneg_iff_posSemidef.mpr hM
   rw [CFC.rpow_eq_cfc_real (a := M.submatrix e e) (y := s) hsub_nonneg]
   rw [CFC.rpow_eq_cfc_real (a := M) (y := s) hM_nonneg]
-  simpa using
+  exact
     (StarAlgHomClass.map_cfc
       (conditionalRenyiReindexStarAlgEquiv e)
       (fun x : ℝ => x ^ s) M
@@ -619,14 +620,14 @@ theorem conditionalRenyi_rpow_reindex_posSemidef_support
     change (Matrix.reindexAlgEquiv ℂ ℂ e)
         (((U : CMatrix ι) * Matrix.diagonal (fun i => (d i : ℂ))) *
           star (U : CMatrix ι)) = _
-    rw [Matrix.reindexAlgEquiv_mul, Matrix.reindexAlgEquiv_mul]
+    rw [_root_.map_mul, _root_.map_mul]
     rw [show (Matrix.reindexAlgEquiv ℂ ℂ e)
         (Matrix.diagonal (fun i => (d i : ℂ)) : CMatrix ι) =
           Matrix.diagonal (fun i => (de i : ℂ)) by
-      simpa [Matrix.reindexAlgEquiv_apply] using hdiag]
+      simpa [Matrix.coe_reindexAlgEquiv] using hdiag]
     rw [show (Matrix.reindexAlgEquiv ℂ ℂ e) (star (U : CMatrix ι)) =
         star ((Matrix.reindexAlgEquiv ℂ ℂ e) (U : CMatrix ι)) by
-      simpa [Matrix.reindexAlgEquiv_apply] using hstarU]
+      simpa [Matrix.coe_reindexAlgEquiv] using hstarU]
     rfl
   have hM_rpow :
       CFC.rpow M s = Unitary.conjStarAlgAut ℂ _ U
@@ -658,14 +659,14 @@ theorem conditionalRenyi_rpow_reindex_posSemidef_support
         (((U : CMatrix ι) *
           Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ))) *
           star (U : CMatrix ι))
-  rw [Matrix.reindexAlgEquiv_mul, Matrix.reindexAlgEquiv_mul]
+  rw [_root_.map_mul, _root_.map_mul]
   rw [show (Matrix.reindexAlgEquiv ℂ ℂ e)
       (Matrix.diagonal (fun i => ((d i ^ s : ℝ) : ℂ)) : CMatrix ι) =
         Matrix.diagonal (fun i => ((de i ^ s : ℝ) : ℂ)) by
-    simpa [Matrix.reindexAlgEquiv_apply] using hdiag_pow]
+    simpa [Matrix.coe_reindexAlgEquiv] using hdiag_pow]
   rw [show (Matrix.reindexAlgEquiv ℂ ℂ e) (star (U : CMatrix ι)) =
       star ((Matrix.reindexAlgEquiv ℂ ℂ e) (U : CMatrix ι)) by
-    simpa [Matrix.reindexAlgEquiv_apply] using hstarU]
+    simpa [Matrix.coe_reindexAlgEquiv] using hstarU]
   rfl
 
 omit [Fintype A] [DecidableEq A] [Fintype B] [DecidableEq B] in

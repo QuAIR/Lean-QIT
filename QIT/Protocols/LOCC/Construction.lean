@@ -134,7 +134,18 @@ private theorem kron_add_left
   apply LinearMap.ext
   intro X
   ext i j
-  simp [MatrixMap.kron, mul_add, add_mul, Finset.sum_add_distrib]
+  simp only [MatrixMap.kron]
+  show (∑ jc : bobInput, ∑ jc' : bobInput, ∑ ia : aliceInput, ∑ ia' : aliceInput,
+      X (ia, jc) (ia', jc') * (left₁ (Matrix.single ia ia' 1) i.1 j.1 +
+        left₂ (Matrix.single ia ia' 1) i.1 j.1) *
+        right (Matrix.single jc jc' 1) i.2 j.2) =
+    ((∑ jc : bobInput, ∑ jc' : bobInput, ∑ ia : aliceInput, ∑ ia' : aliceInput,
+        X (ia, jc) (ia', jc') * left₁ (Matrix.single ia ia' 1) i.1 j.1 *
+          right (Matrix.single jc jc' 1) i.2 j.2) +
+    (∑ jc : bobInput, ∑ jc' : bobInput, ∑ ia : aliceInput, ∑ ia' : aliceInput,
+        X (ia, jc) (ia', jc') * left₂ (Matrix.single ia ia' 1) i.1 j.1 *
+          right (Matrix.single jc jc' 1) i.2 j.2))
+  simp only [mul_add, add_mul, Finset.sum_add_distrib]
 
 private theorem kron_sum_left
     {aliceInput : Type u} {aliceOutput : Type v}
@@ -159,6 +170,7 @@ private theorem kron_sum_left
         intro X
         ext i j
         simp [MatrixMap.kron]
+        rfl
     | @insert i s hi ih =>
         simp only [Finset.sum_insert hi]
         rw [kron_add_left, ih]

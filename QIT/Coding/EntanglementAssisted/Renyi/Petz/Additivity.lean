@@ -79,6 +79,8 @@ theorem tensorPowerBipartite_succ (rho : State (Prod a b)) (n : Nat) :
       (rho.prod (rho.tensorPowerBipartite n)).reindex
         (tensorPowerBipartiteSuccEquiv a b n) := by
   apply State.ext
+  simp only [State.reindex_matrix, State.tensorPowerBipartite_matrix,
+    State.tensorPower_succ, State.prod]
   ext x y
   rcases x with ⟨xA, xB⟩
   rcases y with ⟨yA, yB⟩
@@ -86,10 +88,7 @@ theorem tensorPowerBipartite_succ (rho : State (Prod a b)) (n : Nat) :
   rcases xB with ⟨xB0, xBs⟩
   rcases yA with ⟨yA0, yAs⟩
   rcases yB with ⟨yB0, yBs⟩
-  simp [State.tensorPowerBipartite, State.tensorPower,
-    State.prod, State.reindex, tensorPowerProdEquiv,
-    tensorPowerBipartiteSuccEquiv, Matrix.kronecker,
-    Matrix.kroneckerMap_apply]
+  rfl
 
 theorem reindex_posDef {alpha : Type u} {beta : Type v}
     [Fintype alpha] [DecidableEq alpha] [Fintype beta] [DecidableEq beta]
@@ -126,8 +125,28 @@ theorem prod_tensorPowerBipartite (rho : State a) (sigma : State b) :
       simp [State.tensorPowerBipartite_succ, State.tensorPower, State.prod,
         State.reindex, State.tensorPowerBipartiteSuccEquiv, Matrix.kronecker,
         Matrix.kroneckerMap_apply] at ih_entry ⊢
+      have hrhs :
+          Matrix.kroneckerMap (fun x1 x2 => x1 * x2)
+            (Matrix.kroneckerMap (fun x1 x2 => x1 * x2) rho.matrix
+              (rho.tensorPower n).matrix)
+            (Matrix.kroneckerMap (fun x1 x2 => x1 * x2) sigma.matrix
+              (sigma.tensorPower n).matrix) ((xA0, xAs), xB0, xBs)
+            ((yA0, yAs), yB0, yBs) =
+          (rho.matrix xA0 yA0 * (rho.tensorPower n).matrix xAs yAs) *
+            (sigma.matrix xB0 yB0 * (sigma.tensorPower n).matrix xBs yBs) := rfl
+      have hgoal :
+          rho.matrix xA0 yA0 * sigma.matrix xB0 yB0 *
+            ((rho.tensorPower n).matrix xAs yAs * (sigma.tensorPower n).matrix xBs yBs) =
+          Matrix.kroneckerMap (fun x1 x2 => x1 * x2)
+            (Matrix.kroneckerMap (fun x1 x2 => x1 * x2) rho.matrix
+              (rho.tensorPower n).matrix)
+            (Matrix.kroneckerMap (fun x1 x2 => x1 * x2) sigma.matrix
+              (sigma.tensorPower n).matrix) ((xA0, xAs), xB0, xBs)
+            ((yA0, yAs), yB0, yBs) := by
+        rw [hrhs]
+        ring
       rw [ih_entry]
-      ring
+      exact hgoal
 
 end State
 
@@ -138,10 +157,10 @@ noncomputable def cMatrixReindexStarAlgEquiv {alpha : Type u} {beta : Type v}
   __ := Matrix.reindexAlgEquiv ℂ ℂ e
   map_smul' r A := by
     ext i j
-    simp [Matrix.reindexAlgEquiv_apply, Matrix.reindex_apply, Matrix.submatrix_apply]
+    simp [Matrix.reindex_apply, Matrix.submatrix_apply]
   map_star' A := by
     ext i j
-    simp [Matrix.reindexAlgEquiv_apply, Matrix.reindex_apply, Matrix.submatrix_apply]
+    simp [Matrix.reindex_apply, Matrix.submatrix_apply]
 
 theorem cMatrix_rpow_reindex_posDef {alpha : Type u} {beta : Type v}
     [Fintype alpha] [DecidableEq alpha] [Fintype beta] [DecidableEq beta]
@@ -154,7 +173,7 @@ theorem cMatrix_rpow_reindex_posDef {alpha : Type u} {beta : Type v}
   have hA_nonneg : 0 ≤ A := Matrix.nonneg_iff_posSemidef.mpr hA.posSemidef
   rw [CFC.rpow_eq_cfc_real (a := Matrix.reindex e e A) (y := s) hmap_nonneg]
   rw [CFC.rpow_eq_cfc_real (a := A) (y := s) hA_nonneg]
-  simpa [cMatrixReindexStarAlgEquiv, Matrix.reindexAlgEquiv_apply] using
+  simpa [cMatrixReindexStarAlgEquiv, Matrix.coe_reindexAlgEquiv] using
     (StarAlgHomClass.map_cfc
       (cMatrixReindexStarAlgEquiv e)
       (fun x : ℝ => x ^ s) A
@@ -204,7 +223,7 @@ theorem petzRenyi_reindex {alpha : Type u} {beta : Type v}
     (1 / (alphaR - 1)) *
       log2 (((CFC.rpow rho.matrix alphaR *
         CFC.rpow sigma.matrix (1 - alphaR)).trace).re)
-  rw [← Matrix.reindexAlgEquiv_mul (R := ℂ) (A := ℂ) e
+  rw [← map_mul (Matrix.reindexAlgEquiv (R := ℂ) (A := ℂ) e)
     (CFC.rpow rho.matrix alphaR) (CFC.rpow sigma.matrix (1 - alphaR))]
   change (1 / (alphaR - 1)) *
       log2 ((((Matrix.reindex e e
@@ -277,9 +296,14 @@ theorem barPetzRenyiMutualInformation_tensorPowerBipartite
           (n : ℝ) *
             rhoAB.petzRenyi (rhoAB.marginalA.prod rhoAB.marginalB)
               hrho (State.prod_posDef hA hB) alphaR halpha_pos halpha_ne_one
-        rw [State.petzRenyi_reindex]
-        exact State.petzRenyi_tensorPower rhoAB (rhoAB.marginalA.prod rhoAB.marginalB)
-          hrho (State.prod_posDef hA hB) alphaR halpha_pos halpha_ne_one n
+        exact (State.petzRenyi_reindex (rhoAB.tensorPower n)
+            ((rhoAB.marginalA.prod rhoAB.marginalB).tensorPower n)
+            (tensorPowerProdEquiv a b n)
+            (rhoAB.tensorPower_posDef hrho n)
+            (State.tensorPower_posDef (State.prod_posDef hA hB) n)
+            alphaR halpha_pos halpha_ne_one).trans
+          (State.petzRenyi_tensorPower rhoAB (rhoAB.marginalA.prod rhoAB.marginalB)
+            hrho (State.prod_posDef hA hB) alphaR halpha_pos halpha_ne_one n)
 
 theorem barPetzRenyiMutualInformation_congr
     {rho sigma : State (Prod a b)} (h : rho = sigma)
@@ -333,8 +357,7 @@ theorem applyState_hypothesisTensor_succ_reindex
     ext z z'
     rcases z with ⟨z0, zs⟩
     rcases z' with ⟨z0', zs'⟩
-    simp [State.tensorPowerBipartiteSuccEquiv, Matrix.kronecker,
-      Matrix.kroneckerMap_apply]
+    rfl
   rw [hslice]
   rw [Channel.tensorPower_succ]
   change MatrixMap.kron N.map (N.tensorPower n).map
@@ -342,11 +365,25 @@ theorem applyState_hypothesisTensor_succ_reindex
         (fun i i' => rho.matrix (xR0, i) (yR0, i'))
         (fun is is' => sigma.matrix (xRs, is) (yRs, is')))
       (xB0, xBs) (yB0, yBs) = _
-  rw [MatrixMap.kron_apply_kronecker]
-  simp [Matrix.kronecker, Matrix.kroneckerMap_apply,
-    State.tensorPowerBipartiteSuccEquiv]
-  rw [MatrixMap.kron_idChannel_left_apply_slice]
-  rw [MatrixMap.kron_idChannel_left_apply_slice]
+  have hentry :
+      MatrixMap.kron N.map (N.tensorPower n).map
+          (Matrix.kronecker
+            (fun i i' => rho.matrix (xR0, i) (yR0, i'))
+            (fun is is' => sigma.matrix (xRs, is) (yRs, is'))) (xB0, xBs) (yB0, yBs) =
+        Matrix.kronecker
+            ((MatrixMap.kron (Channel.idChannel a).map N.map) rho.matrix)
+            ((MatrixMap.kron (Channel.idChannel (QIT.TensorPower a n)).map
+                (N.tensorPower n).map) sigma.matrix)
+            ((xR0, xB0), (xRs, xBs)) ((yR0, yB0), (yRs, yBs)) := by
+    have hk := MatrixMap.kron_apply_kronecker
+      (Phi := N.map) (Psi := (N.tensorPower n).map)
+      (X := (fun i i' => rho.matrix (xR0, i) (yR0, i') : CMatrix a))
+      (Y := (fun is is' => sigma.matrix (xRs, is) (yRs, is') :
+        CMatrix (QIT.TensorPower a n)))
+    rw [congrFun (congrFun hk (xB0, xBs)) (yB0, yBs)]
+    simp only [Matrix.kronecker, Matrix.kroneckerMap_apply,
+      MatrixMap.kron_idChannel_left_apply_slice]
+  exact hentry
 
 theorem hypothesisTestingOutputState_tensorPowerBipartite
     (N : Channel a b) (psi : PureVector (Prod a a)) (n : Nat) :

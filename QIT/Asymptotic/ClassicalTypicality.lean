@@ -9,8 +9,8 @@ module
 public import Mathlib.Algebra.BigOperators.Ring.Finset
 public import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Mathlib.Data.Fintype.Pi
-public import Mathlib.Data.NNReal.Basic
-public import Mathlib.Data.Real.Basic
+public import Mathlib.Basic.NNReal.Basic
+public import Mathlib.Basic.Real.Basic
 public import QIT.Symmetry.SymmetricSubspace
 
 /-!
@@ -199,12 +199,20 @@ theorem strongTypicalMass_eq_iidEventMass
       @iidEventMass α _ n p (fun w : Fin n → α => StrongTypical p w δ)
         (Classical.decPred _) := by
   classical
-  unfold strongTypicalMass iidEventMass StrongTypicalWord StrongTypicalWord.codeword
-  rw [← Finset.sum_subtype
-    (s := (Finset.univ.filter fun w : Fin n → α => StrongTypical p w δ))
-    (h := by intro w; simp)
-    (f := fun w : Fin n → α => iidProductMass p w)]
-  rw [Finset.sum_filter]
+  have hmem : ∀ w : Fin n → α,
+      (w ∈ Finset.univ.filter (fun w : Fin n → α => StrongTypical p w δ)) ↔
+        StrongTypical p w δ := by
+    intro w
+    simp
+  have hsub : strongTypicalMass (n := n) p δ =
+      ∑ w ∈ Finset.univ.filter (fun w : Fin n → α => StrongTypical p w δ),
+        iidProductMass p w :=
+    (Finset.sum_subtype
+      (Finset.univ.filter fun w : Fin n → α => StrongTypical p w δ)
+      hmem
+      (fun w : Fin n → α => iidProductMass p w)).symm
+  rw [hsub, Finset.sum_filter]
+  rfl
 
 /-- The pruned i.i.d. distribution on the strongly typical subtype.  The
 normalizing mass is explicit because the HSW proof obtains positivity from the
@@ -490,11 +498,11 @@ theorem conditionalProductMass_expect_two_coordinates [Fintype β] [DecidableEq 
           have hsum : ∑ z : β, (K.prob (xseq l) z : ℝ) = 1 := by
             exact_mod_cast K.sum_eq_one (xseq l)
           simp [F, hli, hlj, hsum]
-        rw [Finset.prod_eq_mul_prod_diff_singleton_of_mem (Finset.mem_univ i)]
+        rw [Finset.prod_eq_mul_prod_sdiff_singleton_of_mem (Finset.mem_univ i)]
         rw [Finset.sdiff_singleton_eq_erase]
         have hjmem : j ∈ Finset.univ.erase i := by
           simp [hij.symm]
-        rw [Finset.prod_eq_mul_prod_diff_singleton_of_mem hjmem]
+        rw [Finset.prod_eq_mul_prod_sdiff_singleton_of_mem hjmem]
         rw [Finset.sdiff_singleton_eq_erase]
         rw [Finset.prod_eq_one hFrest]
         rw [hFi, hFj]

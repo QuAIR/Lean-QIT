@@ -58,8 +58,11 @@ def ofChoiMatrix (J : CMatrix (Prod a b)) : MatrixMap a b where
   map_add' X Y := by
     ext j j'
     simp [add_mul, Finset.sum_add_distrib]
+    rfl
   map_smul' c X := by
     ext j j'
+    change (∑ i : a, ∑ i' : a, (c * X i i') * J (i, j) (i', j')) =
+      c * (∑ i : a, ∑ i' : a, X i i' * J (i, j) (i', j'))
     simp [Finset.mul_sum, mul_assoc]
 
 @[simp]
@@ -75,7 +78,8 @@ theorem choi_ofChoiMatrix (J : CMatrix (Prod a b)) :
   ext ij kl
   rcases ij with ⟨i, j⟩
   rcases kl with ⟨i', j'⟩
-  simp only [choi, ofChoiMatrix, LinearMap.coe_mk, AddHom.coe_mk]
+  change (∑ x : a, ∑ y : a, Matrix.single i i' (1 : ℂ) x y *
+    J (x, j) (y, j')) = J (i, j) (i', j')
   rw [Finset.sum_eq_single i]
   · rw [Finset.sum_eq_single i']
     · simp [Matrix.single]
@@ -117,6 +121,7 @@ theorem unit_isCompletelyPositive :
     cases x
     cases y
     simp [choi, unit, Matrix.single]
+    rfl
   rw [hchoi]
   exact Matrix.PosSemidef.one
 
@@ -125,6 +130,7 @@ theorem unit_isTracePreserving :
     IsTracePreserving (unit : MatrixMap PUnit.{u + 1} PUnit.{v + 1}) := by
   intro X
   simp [unit, Matrix.trace]
+  rfl
 
 /-- The unit-system matrix map preserves positive semidefinite matrices. -/
 theorem unit_mapsPositive :
@@ -743,8 +749,15 @@ def kron (Phi : MatrixMap a b) (Psi : MatrixMap c d) : MatrixMap (Prod a c) (Pro
   map_add' X Y := by
     ext bd bd'
     simp [add_mul, Finset.sum_add_distrib]
+    rfl
   map_smul' r X := by
     ext bd bd'
+    change (∑ j : c, ∑ j' : c, ∑ i : a, ∑ i' : a,
+      (r * X (i, j) (i', j')) * Phi (Matrix.single i i' 1) bd.1 bd'.1 *
+        Psi (Matrix.single j j' 1) bd.2 bd'.2) =
+      r * (∑ j : c, ∑ j' : c, ∑ i : a, ∑ i' : a,
+        X (i, j) (i', j') * Phi (Matrix.single i i' 1) bd.1 bd'.1 *
+          Psi (Matrix.single j j' 1) bd.2 bd'.2)
     simp [mul_assoc, Finset.mul_sum]
 
 /-- The Kronecker product of matrix maps acts componentwise on Kronecker
@@ -759,7 +772,10 @@ theorem kron_apply_kronecker (Phi : MatrixMap a b) (Psi : MatrixMap c d)
   simp only [Matrix.sum_apply] at hPhi hPsi
   simp only [Matrix.kronecker, Matrix.kroneckerMap_apply]
   rw [hPhi, hPsi]
-  simp [kron, Finset.sum_mul, Finset.mul_sum, mul_assoc, mul_left_comm]
+  change (∑ j : c, ∑ j' : c, ∑ i : a, ∑ i' : a,
+    (X i i' * Y j j') * Phi (Matrix.single i i' 1) bd.1 bd'.1 *
+      Psi (Matrix.single j j' 1) bd.2 bd'.2) = _
+  simp [Finset.sum_mul, Finset.mul_sum, mul_assoc, mul_left_comm]
 
 /-- Trace of the product map on a product matrix unit. -/
 theorem trace_kron_single (Phi : MatrixMap a b) (Psi : MatrixMap c d)

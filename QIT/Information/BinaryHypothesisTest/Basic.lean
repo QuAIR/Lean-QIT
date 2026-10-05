@@ -166,7 +166,7 @@ def petzRenyiCoefficient (rho sigma : State a) (s : ℝ) : ℝ≥0 :=
 theorem petzRenyiCoefficient_pos_of_posDef (rho sigma : State a)
     (hρ : rho.matrix.PosDef) (hσ : sigma.matrix.PosDef) (s : ℝ) :
     0 < rho.petzRenyiCoefficient sigma s := by
-  haveI : Nonempty a := rho.nonempty
+  have : Nonempty a := rho.nonempty
   dsimp [petzRenyiCoefficient]
   exact trace_mul_posDef_re_pos
     (rho.rpowMatrix_posDef_of_posDef hρ s)
@@ -219,13 +219,15 @@ theorem petzRenyiCoefficient_tensorPower (rho sigma : State a)
       rho.petzRenyiCoefficient sigma s ^ n := by
   induction n with
   | zero =>
-      rw [State.tensorPower_zero, State.tensorPower_zero]
-      apply NNReal.eq
-      apply Complex.ofReal_injective
-      rw [State.petzRenyiCoefficient_trace_eq]
-      change (((1 : CMatrix PUnit) ^ s * (1 : CMatrix PUnit) ^ (1 - s)).trace) = 1
-      rw [CFC.one_rpow, CFC.one_rpow, one_mul, Matrix.trace_one]
-      norm_num
+      have key : State.unit.petzRenyiCoefficient State.unit s = 1 := by
+        apply NNReal.eq
+        apply Complex.ofReal_injective
+        rw [State.petzRenyiCoefficient_trace_eq]
+        change (((1 : CMatrix PUnit) ^ s * (1 : CMatrix PUnit) ^ (1 - s)).trace) = 1
+        rw [CFC.one_rpow, CFC.one_rpow, one_mul, Matrix.trace_one]
+        norm_num
+      rw [pow_zero, State.tensorPower_zero, State.tensorPower_zero]
+      exact key
   | succ n ih =>
       rw [State.tensorPower_succ, State.tensorPower_succ]
       calc

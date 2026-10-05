@@ -59,7 +59,7 @@ theorem leftToOne_neBot : Filter.NeBot PetzRenyiAlpha.leftToOne := by
     exact Filter.inter_mem
       (Filter.inter_mem ht self_mem_nhdsWithin)
       (mem_nhdsWithin_of_mem_nhds (Ioi_mem_nhds zero_lt_one))
-  haveI : Filter.NeBot (nhdsWithin (1 : ℝ) (Set.Iio 1)) :=
+  have : Filter.NeBot (nhdsWithin (1 : ℝ) (Set.Iio 1)) :=
     nhdsWithin_Iio_neBot (α := ℝ) (a := 1) (b := 1) le_rfl
   rcases Filter.nonempty_of_mem hflt with ⟨x, hx⟩
   refine ⟨⟨x, ?_⟩, ?_⟩
@@ -145,6 +145,7 @@ theorem kron_apply_slice_right
     simpa [Matrix.sum_apply] using h
   simp_rw [hΦ]
   simp [Finset.sum_mul, mul_assoc]
+  rfl
 
 end MatrixMap
 
@@ -205,7 +206,7 @@ theorem prob_reindex_state (M : POVM m α) (ρ : State α) (e : α ≃ β) (y : 
       ((((Matrix.reindexAlgEquiv ℂ ℂ e) ρ.matrix) *
         ((Matrix.reindexAlgEquiv ℂ ℂ e) (M.effects y))).trace) =
     Complex.re ((ρ.matrix * M.effects y).trace)
-  rw [← Matrix.reindexAlgEquiv_mul (R := ℂ) (A := ℂ) e ρ.matrix (M.effects y)]
+  rw [← map_mul (Matrix.reindexAlgEquiv ℂ ℂ e) ρ.matrix (M.effects y)]
   change Complex.re ((Matrix.reindex e e (ρ.matrix * M.effects y)).trace) =
     Complex.re ((ρ.matrix * M.effects y).trace)
   rw [cMatrix_trace_reindex e]
@@ -240,7 +241,7 @@ theorem cMatrix_rpow_reindex_nonneg {α : Type u} {β : Type v}
   have hA_nonneg : 0 ≤ A := Matrix.nonneg_iff_posSemidef.mpr hA
   rw [CFC.rpow_eq_cfc_real (a := Matrix.reindex e e A) (y := s) hmap_nonneg]
   rw [CFC.rpow_eq_cfc_real (a := A) (y := s) hA_nonneg]
-  simpa [cMatrixReindexStarAlgEquiv, Matrix.reindexAlgEquiv_apply] using
+  simpa [cMatrixReindexStarAlgEquiv, Matrix.coe_reindexAlgEquiv] using
     (StarAlgHomClass.map_cfc
       (cMatrixReindexStarAlgEquiv e)
       (fun x : ℝ => x ^ s) A
@@ -294,7 +295,9 @@ theorem applyState_id_prod_prod_assoc_symm
         (fun j j' =>
           N₁.map (fun i i' => ρ.matrix (xR, (i, j)) (yR, (i', j'))) xB1 yB1) := by
     ext j j'
-    rw [MatrixMap.kron_idChannel_apply_slice]
+    have hs := MatrixMap.kron_idChannel_apply_slice N₁.map
+      (fun z z' => ρ.matrix (xR, z) (yR, z')) (xB1, j) (yB1, j')
+    rw [hs]
   rw [hslice]
   exact MatrixMap.kron_apply_slice_right
     N₁.map N₂.map (fun j j' => ρ.matrix (xR, j) (yR, j'))
@@ -318,7 +321,6 @@ theorem partialProductOutput_marginalAB
   rcases y with ⟨yR, yB1⟩
   simp only [State.marginalAB, State.marginalA, QIT.partialTraceB, State.reindex_matrix,
     Channel.applyState, Channel.prod, Matrix.submatrix_apply]
-  simp [Equiv.prodAssoc]
   simp_rw [MatrixMap.kron_idChannel_left_apply_slice]
   change
     (∑ x_1 : a₂,
@@ -328,7 +330,9 @@ theorem partialProductOutput_marginalAB
       N₁.map
         (fun j j' => ∑ x_1 : a₂, ρ.matrix (xR, (j, x_1)) (yR, (j', x_1)))
         xB1 yB1
-  simp_rw [MatrixMap.kron_idChannel_apply_slice]
+  rw [Finset.sum_congr rfl fun x_1 _ =>
+    (MatrixMap.kron_idChannel_apply_slice N₁.map
+      (fun j j' => ρ.matrix (xR, j) (yR, j')) (xB1, x_1) (yB1, x_1))]
   have hsum :=
     congrFun
       (congrFun
@@ -458,7 +462,7 @@ theorem petzRenyiPSDFinite_reindex {α : Type u} {β : Type v}
     (1 / (alphaR - 1)) *
       log2 (((CFC.rpow ρ.matrix alphaR *
         CFC.rpow σ.matrix (1 - alphaR)).trace).re)
-  rw [← Matrix.reindexAlgEquiv_mul (R := ℂ) (A := ℂ) e
+  rw [← map_mul (Matrix.reindexAlgEquiv ℂ ℂ e)
     (CFC.rpow ρ.matrix alphaR) (CFC.rpow σ.matrix (1 - alphaR))]
   change (1 / (alphaR - 1)) *
       log2 (((Matrix.reindex e e

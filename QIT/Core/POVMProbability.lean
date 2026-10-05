@@ -7,8 +7,8 @@ Authors: QuAIR Team
 module
 
 public import QIT.Core.Channel
-public import Mathlib.Data.Complex.BigOperators
-public import Mathlib.Data.NNReal.Basic
+public import Mathlib.Basic.Complex.BigOperators
+public import Mathlib.Basic.NNReal.Basic
 
 /-!
 # POVM outcome probabilities

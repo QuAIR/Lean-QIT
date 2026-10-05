@@ -280,7 +280,7 @@ theorem stateMergingProtocol_netEntanglementRate_eq :
       FQSWBlockProtocol.communicationRate, FQSWBlockProtocol.ebitYieldRate, hn]
   · simp only [StateMergingBlockProtocol.netEntanglementRate,
       FQSWBlockProtocol.communicationRate, FQSWBlockProtocol.ebitYieldRate,
-      if_neg hn]
+      ite_eq_right hn]
     ring
 
 /-- The generalized Bell instrument communicates exactly twice the FQSW
@@ -292,7 +292,7 @@ theorem stateMergingProtocol_classicalCommunicationRate_eq :
   · simp [StateMergingBlockProtocol.classicalCommunicationRate,
       FQSWBlockProtocol.communicationRate, hn]
   · simp only [StateMergingBlockProtocol.classicalCommunicationRate,
-      FQSWBlockProtocol.communicationRate, if_neg hn]
+      FQSWBlockProtocol.communicationRate, ite_eq_right hn]
     have houtcome :
         log2 (Fintype.card (TeleportationOutcome q) : ℝ) =
           2 * log2 (Fintype.card q : ℝ) := by

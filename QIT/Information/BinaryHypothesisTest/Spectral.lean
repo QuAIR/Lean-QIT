@@ -35,7 +35,7 @@ universe u v
 noncomputable section
 
 open scoped ComplexOrder MatrixOrder NNReal ENNReal Topology
-open Filter Matrix Polynomial
+open Filter _root_.Matrix Polynomial
 
 variable {a : Type u} {b : Type v}
 variable [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
@@ -54,7 +54,10 @@ theorem stateSpectralWeight_sum (rho : State a) :
   have htrace :
       (∑ x : a, ((rho.pos.isHermitian.eigenvalues x : ℝ) : ℂ)) = 1 := by
     exact rho.pos.isHermitian.trace_eq_sum_eigenvalues.symm.trans rho.trace_eq_one
-  simpa [stateSpectralWeight] using htrace
+  rw [show ((∑ x : a, stateSpectralWeight rho x : ℝ≥0) : ℝ) =
+      ∑ x : a, ((stateSpectralWeight rho x : ℝ≥0) : ℝ) from NNReal.coe_sum _ _]
+  simp only [stateSpectralWeight, Complex.ofReal_sum]
+  exact htrace
 
 /-- Transition unitary from the eigenbasis of `rho` to the eigenbasis of `sigma`. -/
 def nussbaumSzkolaTransitionUnitary (rho sigma : State a) : Matrix.unitaryGroup a ℂ :=
@@ -69,15 +72,19 @@ def nussbaumSzkolaOverlap (rho sigma : State a) (x y : a) : ℝ≥0 :=
 theorem nussbaumSzkolaOverlap_row_sum (rho sigma : State a) (x : a) :
     ∑ y : a, nussbaumSzkolaOverlap rho sigma x y = 1 := by
   apply NNReal.eq
-  simpa [nussbaumSzkolaOverlap] using
-    unitary_row_normSq_sum (nussbaumSzkolaTransitionUnitary rho sigma) x
+  rw [show ((∑ y : a, nussbaumSzkolaOverlap rho sigma x y : ℝ≥0) : ℝ) =
+      ∑ y : a, ((nussbaumSzkolaOverlap rho sigma x y : ℝ≥0) : ℝ) from NNReal.coe_sum _ _]
+  simp only [nussbaumSzkolaOverlap]
+  exact unitary_row_normSq_sum (nussbaumSzkolaTransitionUnitary rho sigma) x
 
 /-- Nussbaum--Szkola overlap weights sum to one along each `sigma` eigenvector. -/
 theorem nussbaumSzkolaOverlap_col_sum (rho sigma : State a) (y : a) :
     ∑ x : a, nussbaumSzkolaOverlap rho sigma x y = 1 := by
   apply NNReal.eq
-  simpa [nussbaumSzkolaOverlap] using
-    unitary_col_normSq_sum (nussbaumSzkolaTransitionUnitary rho sigma) y
+  rw [show ((∑ x : a, nussbaumSzkolaOverlap rho sigma x y : ℝ≥0) : ℝ) =
+      ∑ x : a, ((nussbaumSzkolaOverlap rho sigma x y : ℝ≥0) : ℝ) from NNReal.coe_sum _ _]
+  simp only [nussbaumSzkolaOverlap]
+  exact unitary_col_normSq_sum (nussbaumSzkolaTransitionUnitary rho sigma) y
 
 /-- Tensor product of a fixed one-copy unitary under the repository's
 left-associated `TensorPower` convention. -/
@@ -121,8 +128,8 @@ theorem tensorPower_matrix_eq_tensorPowerUnitary_diagonal
       cases x
       cases y
       simp [State.tensorPower, State.unit, tensorPowerUnitary,
-        tensorPowerSpectralWeight, Matrix.diagonal, Matrix.mul_apply,
-        Matrix.one_apply]
+        tensorPowerSpectralWeight, Matrix.diagonal]
+      rfl
   | succ n ih =>
       let U : Matrix.unitaryGroup a ℂ := rho.pos.isHermitian.eigenvectorUnitary
       let Un : Matrix.unitaryGroup (TensorPower a n) ℂ := tensorPowerUnitary U n
@@ -133,8 +140,13 @@ theorem tensorPower_matrix_eq_tensorPowerUnitary_diagonal
           (((tensorPowerSpectralWeight rho n x : ℝ≥0) : ℝ) : ℂ)
       have hrho :
           rho.matrix = (U : CMatrix a) * D * star (U : CMatrix a) := by
-        simpa [U, D, stateSpectralWeight, Unitary.conjStarAlgAut_apply]
-          using rho.pos.isHermitian.spectral_theorem
+        have hspec := rho.pos.isHermitian.spectral_theorem
+        rw [show (RCLike.ofReal ∘ rho.pos.isHermitian.eigenvalues) =
+              (fun i => ((rho.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
+        show rho.matrix = (U : CMatrix a) *
+          (Matrix.diagonal fun x : a => ((rho.pos.isHermitian.eigenvalues x : ℝ) : ℂ)) *
+          star (U : CMatrix a)
+        simpa [U, Unitary.conjStarAlgAut_apply] using hspec
       change Matrix.kronecker rho.matrix (rho.tensorPower n).matrix =
         (Matrix.kronecker (U : CMatrix a) (Un : CMatrix (TensorPower a n))) *
           Matrix.diagonal
@@ -161,8 +173,7 @@ theorem tensorPowerNussbaumSzkolaOverlap_eq_normSq
   | zero =>
       cases x
       cases y
-      simp [tensorPowerUnitary, tensorPowerNussbaumSzkolaOverlap, Matrix.mul_apply,
-        Matrix.one_apply]
+      simp [tensorPowerUnitary, tensorPowerNussbaumSzkolaOverlap]
       change (1 : ℝ) = Complex.normSq (1 : ℂ)
       norm_num [Complex.normSq]
   | succ n ih =>
@@ -280,7 +291,7 @@ theorem state_trace_one_sub_projection_re_eq_nussbaumSzkola_source_sum
     ((rho.matrix * (1 - P)).trace).re =
         ∑ x : a, (stateSpectralWeight rho x : ℝ) *
           ((star (Urho : CMatrix a) * (1 - P) * (Urho : CMatrix a)) x x).re := by
-          simpa [Urho, stateSpectralWeight] using htrace
+          exact htrace
     _ = ∑ x : a, (stateSpectralWeight rho x : ℝ) *
           ∑ y : a,
             Complex.normSq
@@ -318,7 +329,7 @@ theorem state_trace_projection_re_eq_nussbaumSzkola_source_sum
     ((sigma.matrix * P).trace).re =
         ∑ y : a, (stateSpectralWeight sigma y : ℝ) *
           ((star (Usigma : CMatrix a) * P * (Usigma : CMatrix a)) y y).re := by
-          simpa [Usigma, stateSpectralWeight] using htrace
+          exact htrace
     _ = ∑ y : a, (stateSpectralWeight sigma y : ℝ) *
           ∑ x : a,
             Complex.normSq
@@ -409,16 +420,18 @@ theorem nussbaumSzkolaModel_petzChernoffCoefficient_eq
         (Urho : CMatrix a) *
           Matrix.diagonal (fun x => (((stateSpectralWeight rho x : ℝ) ^ s : ℝ) : ℂ)) *
             star (Urho : CMatrix a) := by
-    simpa [Urho, stateSpectralWeight] using
-      cMatrix_rpow_eq_eigenbasis_diagonal rho.pos s
+    exact cMatrix_rpow_eq_eigenbasis_diagonal rho.pos s
   have hsigma :
       CFC.rpow sigma.matrix (1 - s) =
         (Usigma : CMatrix a) *
           Matrix.diagonal
             (fun y => (((stateSpectralWeight sigma y : ℝ) ^ (1 - s) : ℝ) : ℂ)) *
             star (Usigma : CMatrix a) := by
-    simpa [Usigma, stateSpectralWeight] using
-      cMatrix_rpow_eq_eigenbasis_diagonal sigma.pos (1 - s)
+    exact cMatrix_rpow_eq_eigenbasis_diagonal sigma.pos (1 - s)
+  have hoverlap_coe : ∀ x y : a,
+      ((nussbaumSzkolaOverlap rho sigma x y : ℝ≥0) : ℝ) =
+        Complex.normSq ((nussbaumSzkolaTransitionUnitary rho sigma : CMatrix a) x y) :=
+    fun _ _ => rfl
   have htrace :
       (rho.petzRenyiCoefficient sigma s : ℝ) =
         ∑ x : a, ∑ y : a,
@@ -427,7 +440,7 @@ theorem nussbaumSzkolaModel_petzChernoffCoefficient_eq
               (nussbaumSzkolaOverlap rho sigma x y : ℝ) := by
     change ((CFC.rpow rho.matrix s * CFC.rpow sigma.matrix (1 - s)).trace).re = _
     rw [hrho, hsigma]
-    simpa [Urho, Usigma, nussbaumSzkolaOverlap, nussbaumSzkolaTransitionUnitary,
+    simpa [Urho, Usigma, hoverlap_coe, nussbaumSzkolaTransitionUnitary,
       Matrix.star_eq_conjTranspose, mul_assoc, mul_left_comm, mul_comm] using
       trace_mul_two_unitary_conj_diagonal_ofReal_re
         Urho Usigma
@@ -495,17 +508,23 @@ theorem productMarginalNussbaumSzkolaOverlap_row_sum
     (rhoAB : State (Prod a b)) (x : Prod a b) :
     ∑ y : Prod a b, productMarginalNussbaumSzkolaOverlap rhoAB x y = 1 := by
   apply NNReal.eq
-  simpa [productMarginalNussbaumSzkolaOverlap] using
-    unitary_row_normSq_sum
-      (productMarginalNussbaumSzkolaTransitionUnitary rhoAB) x
+  rw [show ((∑ y : Prod a b, productMarginalNussbaumSzkolaOverlap rhoAB x y : ℝ≥0) : ℝ) =
+      ∑ y : Prod a b, ((productMarginalNussbaumSzkolaOverlap rhoAB x y : ℝ≥0) : ℝ)
+        from NNReal.coe_sum _ _]
+  simp only [productMarginalNussbaumSzkolaOverlap]
+  exact unitary_row_normSq_sum
+    (productMarginalNussbaumSzkolaTransitionUnitary rhoAB) x
 
 theorem productMarginalNussbaumSzkolaOverlap_col_sum
     (rhoAB : State (Prod a b)) (y : Prod a b) :
     ∑ x : Prod a b, productMarginalNussbaumSzkolaOverlap rhoAB x y = 1 := by
   apply NNReal.eq
-  simpa [productMarginalNussbaumSzkolaOverlap] using
-    unitary_col_normSq_sum
-      (productMarginalNussbaumSzkolaTransitionUnitary rhoAB) y
+  rw [show ((∑ x : Prod a b, productMarginalNussbaumSzkolaOverlap rhoAB x y : ℝ≥0) : ℝ) =
+      ∑ x : Prod a b, ((productMarginalNussbaumSzkolaOverlap rhoAB x y : ℝ≥0) : ℝ)
+        from NNReal.coe_sum _ _]
+  simp only [productMarginalNussbaumSzkolaOverlap]
+  exact unitary_col_normSq_sum
+    (productMarginalNussbaumSzkolaTransitionUnitary rhoAB) y
 
 /-- Spectral weights of a product of the two marginals, expressed in the
 explicit product marginal eigenbasis. -/
@@ -551,18 +570,32 @@ theorem productMarginal_matrix_eq_productEigenbasis_diagonal
           Matrix.diagonal
             (fun x : a => (((stateSpectralWeight rhoAB.marginalA x : NNReal) : ℝ) : ℂ)) *
           star (UA : CMatrix a) := by
-    simpa [UA, stateSpectralWeight, Function.comp_def,
-      Unitary.conjStarAlgAut_apply]
-      using rhoAB.marginalA.pos.isHermitian.spectral_theorem
+    have hspec := rhoAB.marginalA.pos.isHermitian.spectral_theorem
+    rw [show (RCLike.ofReal ∘ rhoAB.marginalA.pos.isHermitian.eigenvalues) =
+          (fun i => ((rhoAB.marginalA.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl]
+      at hspec
+    show rhoAB.marginalA.matrix =
+      (UA : CMatrix a) *
+        (Matrix.diagonal fun x : a =>
+          ((rhoAB.marginalA.pos.isHermitian.eigenvalues x : ℝ) : ℂ)) *
+        star (UA : CMatrix a)
+    simpa [UA, Unitary.conjStarAlgAut_apply] using hspec
   have hB :
       rhoAB.marginalB.matrix =
         (UB : CMatrix b) *
           Matrix.diagonal
             (fun y : b => (((stateSpectralWeight rhoAB.marginalB y : NNReal) : ℝ) : ℂ)) *
           star (UB : CMatrix b) := by
-    simpa [UB, stateSpectralWeight, Function.comp_def,
-      Unitary.conjStarAlgAut_apply]
-      using rhoAB.marginalB.pos.isHermitian.spectral_theorem
+    have hspec := rhoAB.marginalB.pos.isHermitian.spectral_theorem
+    rw [show (RCLike.ofReal ∘ rhoAB.marginalB.pos.isHermitian.eigenvalues) =
+          (fun i => ((rhoAB.marginalB.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl]
+      at hspec
+    show rhoAB.marginalB.matrix =
+      (UB : CMatrix b) *
+        (Matrix.diagonal fun y : b =>
+          ((rhoAB.marginalB.pos.isHermitian.eigenvalues y : ℝ) : ℂ)) *
+        star (UB : CMatrix b)
+    simpa [UB, Unitary.conjStarAlgAut_apply] using hspec
   change Matrix.kronecker rhoAB.marginalA.matrix rhoAB.marginalB.matrix =
     (productMarginalEigenvectorUnitary rhoAB : CMatrix (Prod a b)) *
       Matrix.diagonal
@@ -699,9 +732,14 @@ theorem productMarginalNussbaumSzkolaModel_p_supportedBy_q
     have hrho_diag :
         rhoAB.matrix = (Urho : CMatrix (Prod a b)) * Drho *
           star (Urho : CMatrix (Prod a b)) := by
-      simpa [Urho, Drho, Function.comp_def, stateSpectralWeight,
-        Unitary.conjStarAlgAut_apply]
-        using rhoAB.pos.isHermitian.spectral_theorem
+      have hspec := rhoAB.pos.isHermitian.spectral_theorem
+      rw [show (RCLike.ofReal ∘ rhoAB.pos.isHermitian.eigenvalues) =
+            (fun i => ((rhoAB.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
+      show rhoAB.matrix = (Urho : CMatrix (Prod a b)) *
+        (Matrix.diagonal fun i : Prod a b =>
+          ((rhoAB.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) *
+        star (Urho : CMatrix (Prod a b))
+      simpa [Urho, Unitary.conjStarAlgAut_apply] using hspec
     have hleft_diag :
         (star (Urho : CMatrix (Prod a b)) * rhoAB.matrix *
           (Uprod : CMatrix (Prod a b))) x y =
@@ -786,9 +824,14 @@ theorem productMarginalNussbaumSzkolaOverlap_weighted_col_sum_eq_productBasis_di
     star (Urho : CMatrix (Prod a b)) * (Uprod : CMatrix (Prod a b))
   have hrho :
       rhoAB.matrix = (Urho : CMatrix (Prod a b)) * D * star (Urho : CMatrix (Prod a b)) := by
-    simpa [Urho, D, stateSpectralWeight, Function.comp_def,
-      Unitary.conjStarAlgAut_apply]
-      using rhoAB.pos.isHermitian.spectral_theorem
+    have hspec := rhoAB.pos.isHermitian.spectral_theorem
+    rw [show (RCLike.ofReal ∘ rhoAB.pos.isHermitian.eigenvalues) =
+          (fun i => ((rhoAB.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl] at hspec
+    show rhoAB.matrix = (Urho : CMatrix (Prod a b)) *
+      (Matrix.diagonal fun i : Prod a b =>
+        ((rhoAB.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) *
+      star (Urho : CMatrix (Prod a b))
+    simpa [Urho, Unitary.conjStarAlgAut_apply] using hspec
   have hmatrix :
       star (Uprod : CMatrix (Prod a b)) * rhoAB.matrix *
           (Uprod : CMatrix (Prod a b)) =
@@ -877,8 +920,15 @@ theorem productMarginalNussbaumSzkolaOverlap_weighted_fst_sum
                 (fun k : a =>
                   (((stateSpectralWeight rhoAB.marginalA k : NNReal) : ℝ) : ℂ)) *
               star (UA : CMatrix a) := by
-        simpa [UA, stateSpectralWeight, Function.comp_def,
-          Unitary.conjStarAlgAut_apply] using hspec
+        rw [show (RCLike.ofReal ∘ rhoAB.marginalA.pos.isHermitian.eigenvalues) =
+              (fun i => ((rhoAB.marginalA.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl]
+          at hspec
+        show rhoAB.marginalA.matrix =
+          (UA : CMatrix a) *
+            (Matrix.diagonal fun k : a =>
+              ((rhoAB.marginalA.pos.isHermitian.eigenvalues k : ℝ) : ℂ)) *
+            star (UA : CMatrix a)
+        simpa [UA, Unitary.conjStarAlgAut_apply] using hspec
       calc
         star (UA : CMatrix a) * rhoAB.marginalA.matrix * (UA : CMatrix a)
             = star (UA : CMatrix a) *
@@ -967,8 +1017,15 @@ theorem productMarginalNussbaumSzkolaOverlap_weighted_snd_sum
                 (fun k : b =>
                   (((stateSpectralWeight rhoAB.marginalB k : NNReal) : ℝ) : ℂ)) *
               star (UB : CMatrix b) := by
-        simpa [UB, stateSpectralWeight, Function.comp_def,
-          Unitary.conjStarAlgAut_apply] using hspec
+        rw [show (RCLike.ofReal ∘ rhoAB.marginalB.pos.isHermitian.eigenvalues) =
+              (fun i => ((rhoAB.marginalB.pos.isHermitian.eigenvalues i : ℝ) : ℂ)) from rfl]
+          at hspec
+        show rhoAB.marginalB.matrix =
+          (UB : CMatrix b) *
+            (Matrix.diagonal fun k : b =>
+              ((rhoAB.marginalB.pos.isHermitian.eigenvalues k : ℝ) : ℂ)) *
+            star (UB : CMatrix b)
+        simpa [UB, Unitary.conjStarAlgAut_apply] using hspec
       calc
         star (UB : CMatrix b) * rhoAB.marginalB.matrix * (UB : CMatrix b)
             = star (UB : CMatrix b) *
@@ -1086,7 +1143,7 @@ private lemma xlog2_mul_log_two {x : ℝ} (hx : 0 ≤ x) :
   by_cases hzx : x = 0
   · simp [xlog2, hzx, Real.log_zero]
   · have hxp : 0 < x := lt_of_le_of_ne hx (Ne.symm hzx)
-    simp only [xlog2, if_neg (ne_of_gt hxp), log2]
+    simp only [xlog2, ite_eq_right (ne_of_gt hxp), log2]
     field_simp
 
 /-- Spectral log sums are the negative von Neumann entropy after dividing by

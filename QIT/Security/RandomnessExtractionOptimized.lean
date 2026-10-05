@@ -221,10 +221,10 @@ theorem extractorSecrecyDistance_le_sqrt_card_mul_rpow_of_collisionUniform_condi
           Real.rpow 2 (-(E.cqState.conditionalMinEntropy - η))) := by
   classical
   have hprod : Nonempty (Prod Z e) := E.cqState.nonempty
-  letI : Nonempty (Prod Z e) := hprod
+  let : Nonempty (Prod Z e) := hprod
   let prodWitness : Prod Z e := Classical.choice hprod
-  letI : Nonempty Z := ⟨prodWitness.1⟩
-  letI : Nonempty e := ⟨prodWitness.2⟩
+  let : Nonempty Z := ⟨prodWitness.1⟩
+  let : Nonempty e := ⟨prodWitness.2⟩
   let δ : ℝ := η / 2
   have hδ_pos : 0 < δ := by positivity
   let s : Set ℝ := E.cqState.conditionalMinEntropyFeasibleExponentValueSet (a := Z)
@@ -438,7 +438,7 @@ theorem finFullFunctionHashFamily_outputLengthAchievable_of_conditionalMinEntrop
         ((ell : ℝ) *
           Real.rpow 2 (-(E.cqState.conditionalMinEntropy))) ≤ ε) :
     ExtractorOutputLengthAchievable.{uZ, uZ, 0, ue} E ε ell := by
-  letI : Nonempty (Fin ell) := ⟨⟨0, hell⟩⟩
+  let : Nonempty (Fin ell) := ⟨⟨0, hell⟩⟩
   let H := FinFullFunctionHashFamily (Z := Z) ell hell
   have hεH :
       Real.sqrt
@@ -464,7 +464,7 @@ theorem finFullFunctionHashFamily_outputLengthAchievable_of_cqSmoothConditionalM
       Real.sqrt ((ell : ℝ) * Real.rpow 2 (-h)) ≤ ε₂) :
     ExtractorOutputLengthAchievable.{uZ, uZ, 0, ue}
       E (2 * ε₁ + ε₂) ell := by
-  letI : Nonempty (Fin ell) := ⟨⟨0, hell⟩⟩
+  let : Nonempty (Fin ell) := ⟨⟨0, hell⟩⟩
   let H := FinFullFunctionHashFamily (Z := Z) ell hell
   have hεH :
       Real.sqrt
@@ -492,7 +492,7 @@ theorem finFullFunctionHashFamily_extractableRandomnessLogValue_mem_of_condition
           Real.rpow 2 (-(E.cqState.conditionalMinEntropy))) ≤ ε) :
     log2 (ell : ℝ) ∈
       ExtractableRandomnessLogValueSet.{uZ, uZ, 0, ue} E ε := by
-  letI : Nonempty (Fin ell) := ⟨⟨0, hell⟩⟩
+  let : Nonempty (Fin ell) := ⟨⟨0, hell⟩⟩
   let H := FinFullFunctionHashFamily (Z := Z) ell hell
   have hεH :
       Real.sqrt
@@ -520,7 +520,7 @@ theorem finFullFunctionHashFamily_extractableRandomnessLogValue_mem_of_cqSmoothC
     log2 (ell : ℝ) ∈
       ExtractableRandomnessLogValueSet.{uZ, uZ, 0, ue}
         E (2 * ε₁ + ε₂) := by
-  letI : Nonempty (Fin ell) := ⟨⟨0, hell⟩⟩
+  let : Nonempty (Fin ell) := ⟨⟨0, hell⟩⟩
   let H := FinFullFunctionHashFamily (Z := Z) ell hell
   have hεH :
       Real.sqrt

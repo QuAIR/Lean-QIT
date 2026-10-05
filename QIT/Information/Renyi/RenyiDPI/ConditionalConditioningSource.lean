@@ -123,7 +123,7 @@ private theorem smul_identityTensorStateMatrix_le_fullRankApprox
     ((1 - delta : Real) • identityTensorStateMatrix (a := a) sigma) <=
       identityTensorStateMatrix (a := a)
         (fullRankApproxMaximallyMixedStatePath sigma delta) := by
-  letI : Nonempty b := sigma.nonempty
+  let : Nonempty b := sigma.nonempty
   have hside := smul_left_le_fullRankApproxStatePath_matrix_of_mem
     sigma (State.maximallyMixed b) hdelta
   rw [Matrix.le_iff] at hside ⊢
@@ -242,14 +242,14 @@ theorem conditionalSandwichedRenyiUpSourceCandidate_le_conditioning
     simp
   have hdiv : sandwichedRenyiPSDReferenceE omega rout hrout alpha <=
       -(candidate : EReal) := hDPI'.trans_eq hinput
-  letI : Nonempty c := tau.nonempty
+  let : Nonempty c := tau.nonempty
   have hbdd := omega.conditionalSandwichedRenyiUpSourceValueSet_bddAbove
     halpha_half halpha_one
   have htend : Filter.Tendsto (fun delta : Real =>
       candidate + log2 (1 - delta))
       (nhdsWithin (0 : Real) (Set.Ioo 0 1)) (nhds candidate) := by
     simpa using tendsto_const_nhds.add log2_one_sub_tendsto_zero
-  letI : Filter.NeBot (nhdsWithin (0 : Real) (Set.Ioo 0 1)) :=
+  let : Filter.NeBot (nhdsWithin (0 : Real) (Set.Ioo 0 1)) :=
     left_nhdsWithin_Ioo_neBot zero_lt_one
   refine le_of_tendsto htend ?_
   filter_upwards [self_mem_nhdsWithin] with delta hdelta
@@ -348,7 +348,7 @@ theorem conditionalSandwichedRenyiUpSource_dataProcessing_conditioning
         (lt_trans (by norm_num) halpha_half) halpha_one <=
       (((Channel.idChannel a).prod N).applyState rho).conditionalSandwichedRenyiUpSource
         alpha (lt_trans (by norm_num) halpha_half) halpha_one := by
-  letI : Nonempty b := by
+  let : Nonempty b := by
     rcases rho.nonempty with ⟨z⟩
     exact ⟨z.2⟩
   unfold conditionalSandwichedRenyiUpSource
@@ -384,7 +384,9 @@ theorem ConditionalMinEntropyFeasible.conditioningChannel
       conditioningChannel_map_identityTensorStateMatrix (a := a) N sigma
   have hfinal : Phi.map rho.matrix <= (t : Complex) • rout := by
     simpa [map_smul, hmapRef] using hmapFeas
-  simpa [Phi, rin, rout, t] using hfinal
+  rw [show (((Channel.idChannel a).prod N).applyState rho).matrix =
+      ((Channel.idChannel a).prod N).map rho.matrix from rfl]
+  simpa [Phi, rout, t] using hfinal
 
 /-- Conditional min-entropy cannot decrease under a channel on the
 conditioning system. -/
@@ -392,7 +394,7 @@ theorem conditionalMinEntropy_dataProcessing_conditioning
     (rho : State (Prod a b)) (N : Channel b c) :
     rho.conditionalMinEntropy <=
       (((Channel.idChannel a).prod N).applyState rho).conditionalMinEntropy := by
-  letI : Nonempty b := by
+  let : Nonempty b := by
     rcases rho.nonempty with ⟨z⟩
     exact ⟨z.2⟩
   rw [conditionalMinEntropy_eq, conditionalMinEntropy_eq]
@@ -419,13 +421,13 @@ theorem conditionalMaxEntropy_dataProcessing_conditioning
       (((Channel.idChannel a).prod N).applyState rho).conditionalMaxEntropy := by
   let Phi : Channel (Prod a b) (Prod a c) := (Channel.idChannel a).prod N
   let omega : State (Prod a c) := Phi.applyState rho
-  letI : Nonempty a := by
+  let : Nonempty a := by
     rcases rho.nonempty with ⟨z⟩
     exact ⟨z.1⟩
-  letI : Nonempty b := by
+  let : Nonempty b := by
     rcases rho.nonempty with ⟨z⟩
     exact ⟨z.2⟩
-  letI : Nonempty c := by
+  let : Nonempty c := by
     exact (N.applyState (State.maximallyMixed b)).nonempty
   rw [conditionalMaxEntropy_eq_sSup_valueSet,
     conditionalMaxEntropy_eq_sSup_valueSet]
