@@ -433,6 +433,15 @@ theorem partialTransposeB_kronecker (M : CMatrix a) (N : CMatrix b) :
   cases y
   rfl
 
+/-- Partial transposes on the two subsystems of a bipartite matrix commute. -/
+theorem partialTransposeA_partialTransposeB (X : CMatrix (Prod a b)) :
+    partialTransposeA (a := a) (b := b) (partialTransposeB (a := a) (b := b) X) =
+      partialTransposeB (a := a) (b := b) (partialTransposeA (a := a) (b := b) X) := by
+  ext x y
+  cases x
+  cases y
+  rfl
+
 /-- A matrix unit on a product index is a Kronecker product of matrix units. -/
 theorem single_prod_eq_kronecker_single [DecidableEq a] [DecidableEq b]
     (i i' : a) (j j' : b) :

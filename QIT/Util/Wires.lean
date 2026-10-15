@@ -52,9 +52,11 @@ This module develops the combinatorics of such joint configuration spaces.
 * **Reindexing vectors and matrices.** `vecReindex` and `matReindex`
   transport complex vectors and square matrices along equivalences of the
   index types, preserving multiplication, the identity matrix, the trace,
-  the conjugate transpose, and Kronecker products
-  (`matReindex_kronecker_prodCongr`), with `matReindex_symm` and
-  `matReindex_trans_apply` for inverse and composite reindexings and
+  the conjugate transpose, positive semidefiniteness
+  (`matReindex_posSemidef`), and Kronecker products
+  (`matReindex_kronecker_prodCongr`), with `matReindex_symm`, the
+  cancellation pair `matReindex_symm_matReindex`/`matReindex_matReindex_symm`,
+  and `matReindex_trans_apply` for inverse and composite reindexings and
   `matReindexMonoidHom`/`matReindex_noncommProd` for distribution over
   noncommutative products. `vecSplit`, `matSplit`, `vecPermute`,
   and `matPermute` specialize these transports to the split and permutation
@@ -610,6 +612,16 @@ theorem matReindex_conjTranspose (e : ι ≃ κ) (M : CMatrix ι) :
     matReindex e (Matrix.conjTranspose M) = Matrix.conjTranspose (matReindex e M) :=
   rfl
 
+/-- Reindexing preserves positive semidefiniteness. -/
+theorem matReindex_posSemidef (e : ι ≃ κ) {M : CMatrix ι} (hM : M.PosSemidef) :
+    (matReindex e M).PosSemidef :=
+  (Matrix.posSemidef_submatrix_equiv e.symm).2 hM
+
+/-- Reindexing preserves and reflects positive semidefiniteness. -/
+theorem matReindex_posSemidef_iff (e : ι ≃ κ) (M : CMatrix ι) :
+    (matReindex e M).PosSemidef ↔ M.PosSemidef :=
+  Matrix.posSemidef_submatrix_equiv e.symm
+
 /-- Reindexing a Kronecker product along a product of equivalences is the
 Kronecker product of the reindexed factors. -/
 theorem matReindex_kronecker_prodCongr {ι₁ κ₁ ι₂ κ₂ : Type*}
@@ -624,6 +636,22 @@ equivalence. -/
 theorem matReindex_symm (e : ι ≃ κ) :
     (matReindex e).symm = matReindex e.symm :=
   rfl
+
+/-- Reindexing along an equivalence followed by its inverse is the identity on
+matrices. -/
+@[simp]
+theorem matReindex_symm_matReindex (e : ι ≃ κ) (M : CMatrix ι) :
+    matReindex e.symm (matReindex e M) = M := by
+  rw [← matReindex_symm]
+  exact Equiv.symm_apply_apply _ _
+
+/-- Reindexing along the inverse of an equivalence followed by the equivalence
+is the identity on matrices. -/
+@[simp]
+theorem matReindex_matReindex_symm (e : ι ≃ κ) (N : CMatrix κ) :
+    matReindex e (matReindex e.symm N) = N := by
+  rw [← matReindex_symm]
+  exact Equiv.apply_symm_apply _ _
 
 /-- Reindexing preserves matrix addition. -/
 theorem matReindex_add (e : ι ≃ κ) (M N : CMatrix ι) :

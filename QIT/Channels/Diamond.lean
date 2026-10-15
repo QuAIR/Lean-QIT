@@ -7,6 +7,7 @@ Authors: QuAIR Team
 module
 
 public import QIT.Core.Channel
+public import QIT.Core.Map.QuantumOperation
 public import QIT.Classical.Bridge
 public import QIT.Util.SDP.HermitianPSDTraceDuality
 public import QIT.States.TraceNorm.PositivePart
@@ -55,84 +56,6 @@ def normalizedTraceAction (Δ : MatrixMap a b) (X : CMatrix a) : ℝ :=
 /-- Finite-ancilla normalized trace action of `Δ ⊗ id_r` on a state. -/
 def ancillaNormalizedTraceAction (Δ : MatrixMap a b) (ω : State (Prod a r)) : ℝ :=
   normalizedTraceAction (kron Δ (Channel.idChannel r).map) ω.matrix
-
-/-- A finite matrix map is trace nonincreasing on positive semidefinite inputs
-when it never increases the real trace of a PSD matrix. -/
-def IsTraceNonincreasing (Φ : MatrixMap a b) : Prop :=
-  ∀ X : CMatrix a, X.PosSemidef → (Φ X).trace.re ≤ X.trace.re
-
-omit [DecidableEq a] [DecidableEq b] in theorem krausAdjoint_posSemidef
-    {κ : Type w} [Fintype κ]
-    (K : κ → Matrix b a ℂ) {E : CMatrix b} (hE : E.PosSemidef) :
-    (krausAdjoint K E).PosSemidef := by
-  unfold krausAdjoint
-  exact Matrix.posSemidef_sum Finset.univ fun k _ => by
-    simpa [Matrix.conjTranspose_conjTranspose, Matrix.mul_assoc]
-      using hE.mul_mul_conjTranspose_same (Matrix.conjTranspose (K k))
-
-/-- `krausAdjoint` of the unit is bounded by the unit for a trace-nonincreasing
-Kraus map. -/
-theorem krausAdjoint_one_le_of_traceNonincreasing
-    {κ : Type w} [Fintype κ]
-    (K : κ → Matrix b a ℂ)
-    (hTNI : IsTraceNonincreasing (ofKraus K)) :
-    krausAdjoint K (1 : CMatrix b) ≤ 1 := by
-  rw [Matrix.le_iff]
-  refine (cMatrix_posSemidef_iff_trace_mul_posSemidef_re_nonneg ?_).2 ?_
-  · exact Matrix.IsHermitian.sub Matrix.isHermitian_one
-      (krausAdjoint_posSemidef K Matrix.PosSemidef.one).isHermitian
-  · intro A hA
-    have hle := hTNI A hA
-    have hdual :
-        (((ofKraus K) A) * (1 : CMatrix b)).trace =
-          (A * krausAdjoint K (1 : CMatrix b)).trace :=
-      ofKraus_trace_duality K A (1 : CMatrix b)
-    rw [Matrix.mul_one] at hdual
-    have htrace :
-        ((A * ((1 : CMatrix a) - krausAdjoint K (1 : CMatrix b))).trace).re =
-          A.trace.re - ((A * krausAdjoint K (1 : CMatrix b)).trace).re := by
-      simp [Matrix.mul_sub, Matrix.trace_sub]
-    rw [Matrix.trace_mul_comm]
-    rw [htrace]
-    rw [← hdual]
-    exact sub_nonneg.mpr hle
-
-/-- Minimal finite-dimensional trace-nonincreasing completely positive map
-interface used by CKR extraction maps. -/
-structure TraceNonincreasingCP (Φ : MatrixMap a b) : Prop where
-  completelyPositive : IsCompletelyPositive Φ
-  traceNonincreasing : IsTraceNonincreasing Φ
-
-theorem TraceNonincreasingCP.mapsPositive {Φ : MatrixMap a b}
-    (hΦ : TraceNonincreasingCP Φ) :
-    ∀ X : CMatrix a, X.PosSemidef → (Φ X).PosSemidef :=
-  isCompletelyPositive_mapsPositive Φ hΦ.completelyPositive
-
-noncomputable def TraceNonincreasingCP.kraus {Φ : MatrixMap a b}
-    (hΦ : TraceNonincreasingCP Φ) : (a × b) → Matrix b a ℂ :=
-  Classical.choose (exists_kraus_of_choi_psd Φ hΦ.completelyPositive)
-
-theorem TraceNonincreasingCP.ofKraus_kraus {Φ : MatrixMap a b}
-    (hΦ : TraceNonincreasingCP Φ) :
-    ofKraus hΦ.kraus = Φ :=
-  (Classical.choose_spec (exists_kraus_of_choi_psd Φ hΦ.completelyPositive)).symm
-
-theorem ofKraus_tracePreserving_of_krausAdjoint_one {κ : Type w} [Fintype κ]
-    (K : κ → Matrix b a ℂ) (hK : krausAdjoint K (1 : CMatrix b) = 1) :
-    IsTracePreserving (ofKraus K) := by
-  intro X
-  have hdual := ofKraus_trace_duality K X (1 : CMatrix b)
-  rw [Matrix.mul_one] at hdual
-  rw [hK, Matrix.mul_one] at hdual
-  exact hdual
-
-/-- Kraus-form matrix maps are completely positive. -/
-theorem ofKraus_isCompletelyPositive {κ : Type*} [Fintype κ]
-    (K : κ → Matrix b a ℂ) :
-    IsCompletelyPositive (ofKraus K) := by
-  rw [IsCompletelyPositive, choi_ofKraus]
-  exact Matrix.posSemidef_sum Finset.univ fun k _ =>
-    Matrix.posSemidef_vecMulVec_self_star _
 
 variable (a b)
 
@@ -464,15 +387,6 @@ theorem TraceNonincreasingCP.hatCompletion_apply_fromBlocks {Φ : MatrixMap a b}
                 Fintype.sum_sum_type]
             _ = Φ X xi yj := by
               rw [hΦ.ofKraus_kraus]
-
-/-- Trace-preserving CP maps are trace-nonincreasing CP maps. -/
-theorem traceNonincreasingCP_of_tracePreserving {Φ : MatrixMap a b}
-    (hCP : IsCompletelyPositive Φ) (hTP : IsTracePreserving Φ) :
-    TraceNonincreasingCP Φ where
-  completelyPositive := hCP
-  traceNonincreasing := by
-    intro X _hX
-    rw [hTP X]
 
 theorem kron_comp_apply {c : Type w} {d : Type x} {e : Type u} {f : Type v}
     [Fintype c] [DecidableEq c] [Fintype d] [DecidableEq d]

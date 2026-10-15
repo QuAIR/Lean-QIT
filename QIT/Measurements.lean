@@ -6,6 +6,7 @@ Authors: QuAIR Team
 
 module
 
+public import QIT.Measurements.Instrument
 public import QIT.Measurements.Naimark
 public import QIT.Measurements.Projective
 public import QIT.Measurements.SquareRootMeasurement

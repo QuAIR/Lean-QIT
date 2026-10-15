@@ -7,11 +7,12 @@ Authors: QuAIR Team
 module
 
 public import QIT.Channels.Diamond
+public import QIT.Measurements.Instrument
 
 /-!
 # Finite one-way LOCC operations
 
-This module contains the protocol-independent finite instrument and one-way
+This module re-exports the lower-layer finite instrument and supplies one-way
 LOCC data used by state merging. A one-way LOCC realization is fixed by
 Alice's finite instrument and Bob's outcome-conditioned channels; it is not a
 freely supplied replacement channel.
@@ -61,37 +62,6 @@ theorem partialTraceB_kron_idChannel_of_tracePreserving
   simpa [QIT.partialTraceB, MatrixMap.kron_idChannel_left_apply_slice] using htrace
 
 end MatrixMap
-
-/-- A finite quantum instrument. Each outcome branch is completely positive
-and trace-nonincreasing, and the sum of all branches is a channel. -/
-structure FiniteInstrument
-    (input : Type u) (output : Type v) (outcome : Type w)
-    [Fintype input] [DecidableEq input]
-    [Fintype output] [DecidableEq output]
-    [Fintype outcome] where
-  branch : outcome → MatrixMap input output
-  branchTraceNonincreasingCP :
-    ∀ result, MatrixMap.TraceNonincreasingCP (branch result)
-  total : Channel input output
-  sum_branch_eq_total : (∑ result, branch result) = total.map
-
-namespace FiniteInstrument
-
-variable {input : Type u} {output : Type v} {outcome : Type w}
-variable [Fintype input] [DecidableEq input]
-variable [Fintype output] [DecidableEq output]
-variable [Fintype outcome]
-
-/-- The channel obtained by forgetting the classical outcome. -/
-def totalChannel (M : FiniteInstrument input output outcome) : Channel input output :=
-  M.total
-
-theorem branch_completelyPositive
-    (M : FiniteInstrument input output outcome) (result : outcome) :
-    MatrixMap.IsCompletelyPositive (M.branch result) :=
-  (M.branchTraceNonincreasingCP result).completelyPositive
-
-end FiniteInstrument
 
 /-- A finite one-way LOCC operation. Alice applies an instrument, sends its
 classical result, and Bob applies the channel indexed by that result. -/

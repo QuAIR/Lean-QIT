@@ -35,31 +35,6 @@ universe u v w x y
 
 noncomputable section
 
-namespace Channel
-
-variable {a : Type u} {b : Type v}
-  [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
-
-/-- The canonical finite Kraus witness stacked as a Stinespring isometry.
-Its environment is `a × b`, with no minimality assertion. This realizes the
-representation in
-[BeigiTomamichel2026BlowingUp, strong_converse_blowing_up.tex:219-227]. -/
-def krausStinespring (N : Channel a b) : ReferenceIsometry a (b × (a × b)) :=
-  MatrixMap.krausStinespringIsometry N.kraus (by
-    rw [← N.map_eq_ofKraus]
-    exact N.tracePreserving)
-
-/-- Tracing the stacked Kraus environment recovers the original channel. -/
-@[simp]
-theorem krausStinespring_outputChannel (N : Channel a b) :
-    N.krausStinespring.outputChannel = N := by
-  apply ReferenceIsometry.outputChannel_eq_of_realizes
-  intro X
-  rw [krausStinespring, MatrixMap.partialTraceB_krausStinespringIsometry]
-  exact congrArg (fun Φ : MatrixMap a b => Φ X) N.map_eq_ofKraus
-
-end Channel
-
 namespace EntanglementGenerationCode
 
 variable {a : Type u} {b : Type v} {r : Type w} {t : Type x} {e : Type y}

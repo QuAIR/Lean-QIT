@@ -25,14 +25,14 @@ Use `import QIT.Coding.Quantum` for kernel-checked support for these conditional
 Proofs of these external facts and the Lloyd-Shor-Devetak capacity identification remain deferred. These APIs are unreleased; tagged snapshots retain their documented release coverage.
 
 ## Installation
-For reproducible builds, add the latest tagged Lean-QIT release to `lakefile.toml` and use the Lean version pinned by `lean-toolchain`:
+For a reproducible build of the latest tagged release, use `v0.1.0` with Lean and mathlib `v4.30.0`:
 ```toml
 [[require]]
 name = "QIT"
 git = "https://github.com/QuAIR/Lean-QIT.git"
 rev = "v0.1.0"
 ```
-The `main` branch tracks unreleased work and may change between tagged releases. Import the complete public API with `import QIT`.
+The unreleased `main` branch uses Lean and mathlib `v4.34.0` as pinned by `lean-toolchain` and `lakefile.toml`, and may change between tagged releases. Import the complete public API with `import QIT`.
 
 ## Build
 ```bash

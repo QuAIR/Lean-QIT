@@ -10,6 +10,9 @@ public import QIT.Core.Channel
 public import QIT.Channels.Topology
 public import QIT.Channels.Diamond
 public import QIT.Channels.Stinespring
+public import QIT.Channels.CompleteAdmissibility
+public import QIT.Channels.MemoryChain
+public import QIT.Channels.Superchannel
 
 /-!
 # Channel interfaces

@@ -11,6 +11,7 @@ public import QIT.Util
 public import QIT.Core
 public import QIT.States
 public import QIT.Channels
+public import QIT.HigherOrder
 public import QIT.Measurements
 public import QIT.Classical
 public import QIT.Information

@@ -18,6 +18,8 @@ public import QIT.Util.RpowOperatorConvex
 public import QIT.Util.Order.EReal
 public import QIT.Util.TensorPower
 public import QIT.Util.Wires
+public import QIT.Util.Wires.Contraction
+public import QIT.Util.Wires.LinkProduct
 public import QIT.Util.CMatrixCLM
 public import QIT.Util.NewtonBinomial
 public import QIT.Util.CommutingBinomial

@@ -7,12 +7,18 @@ Authors: QuAIR Team
 module
 
 public import QIT.Channels.Diamond
+public import QIT.States.Purification.Uhlmann
 
 /-!
-# Stinespring image projectors and complementary channels
+# Finite Stinespring dilations and complementary channels
 
 A reference isometry has an orthogonal image projector. For an isometry into a
 product space, tracing either factor gives the output or complementary channel.
+Every channel has a canonical dilation with finite environment `a × b`; this
+environment need not be minimal. Choi recovery uses an explicit associator, and
+equivalences transport the output basis without rank or invertibility assumptions.
+The factor-swap lemma also supports the environment-first convention used in the
+single-channel base case of the quantum-network realization argument.
 
 The Stinespring representation and its image projector are used in
 [BeigiTomamichel2026BlowingUp, strong_converse_blowing_up.tex:219-227] and
@@ -26,9 +32,9 @@ complement convention follows the complementary-map definition at lines
 
 namespace QIT
 
-open scoped ComplexOrder MatrixOrder Matrix
+open scoped ComplexOrder MatrixOrder _root_.Matrix
 
-universe u v w
+universe u v w x
 
 noncomputable section
 
@@ -182,7 +188,96 @@ theorem outputChannel_eq_of_realizes (V : ReferenceIsometry a (b × e)) (N : Cha
   cases hm
   rfl
 
+/-- Relabel the output basis of an isometry along an exact finite equivalence. -/
+def reindexOutput {c : Type x} [Fintype c] [DecidableEq c]
+    (V : ReferenceIsometry a b) (e : b ≃ c) : ReferenceIsometry a c where
+  matrix := V.matrix.submatrix e.symm id
+  isometry := by
+    rw [Matrix.conjTranspose_submatrix, Matrix.submatrix_mul_equiv, V.isometry]
+    rfl
+
+/-- Isometric conjugation commutes with output relabeling. -/
+theorem reindexOutput_map {c : Type x} [Fintype c] [DecidableEq c]
+    (V : ReferenceIsometry a b) (e : b ≃ c) (X : CMatrix a) :
+    MatrixMap.ofReferenceIsometry (V.reindexOutput e) X =
+      (MatrixMap.ofReferenceIsometry V X).submatrix e.symm e.symm := by
+  simp only [MatrixMap.ofReferenceIsometry_apply, reindexOutput,
+    Matrix.conjTranspose_submatrix]
+  ext i j
+  rfl
+
+/-- Relabeling the dilation output relabels only the output factor of its Choi matrix. -/
+theorem reindexOutput_choi {c : Type x} [Fintype c] [DecidableEq c]
+    (V : ReferenceIsometry a b) (e : b ≃ c) :
+    MatrixMap.choi (MatrixMap.ofReferenceIsometry (V.reindexOutput e)) =
+      (MatrixMap.choi (MatrixMap.ofReferenceIsometry V)).submatrix
+        (Equiv.prodCongr (Equiv.refl a) e.symm)
+        (Equiv.prodCongr (Equiv.refl a) e.symm) := by
+  ext i j
+  exact congrFun (congrFun (V.reindexOutput_map e (Matrix.single i.1 j.1 1)) i.2) j.2
+
+/-- Recover the channel Choi matrix by tracing the environment of the dilation
+Choi matrix. The associator explicitly groups input and output before the trace. -/
+theorem outputChannel_choi (V : ReferenceIsometry a (b × e)) :
+    MatrixMap.choi V.outputChannel.map = partialTraceB
+      ((MatrixMap.choi (MatrixMap.ofReferenceIsometry V)).submatrix
+        (Equiv.prodAssoc a b e) (Equiv.prodAssoc a b e)) := by
+  rfl
+
+/-- Changing only the finite memory labels leaves the recovered channel unchanged. -/
+theorem outputChannel_reindexEnvironment {f : Type x} [Fintype f] [DecidableEq f]
+    (V : ReferenceIsometry a (b × e)) (e' : e ≃ f) :
+    (V.reindexOutput (Equiv.prodCongr (Equiv.refl b) e')).outputChannel =
+      V.outputChannel := by
+  apply outputChannel_eq_of_realizes
+  intro X
+  rw [← MatrixMap.ofReferenceIsometry_apply, reindexOutput_map]
+  change partialTraceB (MatrixMap.ofReferenceIsometry V X) = _
+  ext i j
+  exact (e'.symm.sum_comp (fun k => MatrixMap.ofReferenceIsometry V X (i, k) (j, k))).symm
+
+/-- The source's environment-first ordering recovers the same channel by tracing
+its first factor. This is a coordinate swap, with no dimension or rank assumption. -/
+theorem complementaryChannel_reindex_swap (V : ReferenceIsometry a (b × e)) :
+    (V.reindexOutput (Equiv.prodComm b e)).complementaryChannel =
+      V.outputChannel := by
+  have hm : (V.reindexOutput (Equiv.prodComm b e)).complementaryChannel.map =
+      V.outputChannel.map := by
+    ext X i j
+    rw [complementaryChannel_map, ← MatrixMap.ofReferenceIsometry_apply, reindexOutput_map]
+    rfl
+  cases hV : (V.reindexOutput (Equiv.prodComm b e)).complementaryChannel
+  cases hW : V.outputChannel
+  rw [hV, hW] at hm
+  cases hm
+  rfl
+
 end ReferenceIsometry
+
+namespace Channel
+
+variable {a : Type u} {b : Type v}
+  [Fintype a] [DecidableEq a] [Fintype b] [DecidableEq b]
+
+/-- The canonical finite Kraus witness stacked as a Stinespring isometry.
+Its environment is `a × b`, with no minimality assertion. This realizes the
+representation in
+[BeigiTomamichel2026BlowingUp, strong_converse_blowing_up.tex:219-227]. -/
+def krausStinespring (N : Channel a b) : ReferenceIsometry a (b × (a × b)) :=
+  MatrixMap.krausStinespringIsometry N.kraus (by
+    rw [← N.map_eq_ofKraus]
+    exact N.tracePreserving)
+
+/-- Tracing the stacked Kraus environment recovers the original channel. -/
+@[simp]
+theorem krausStinespring_outputChannel (N : Channel a b) :
+    N.krausStinespring.outputChannel = N := by
+  apply ReferenceIsometry.outputChannel_eq_of_realizes
+  intro X
+  rw [krausStinespring, MatrixMap.partialTraceB_krausStinespringIsometry]
+  exact congrArg (fun Φ : MatrixMap a b => Φ X) N.map_eq_ofKraus
+
+end Channel
 
 end
 
