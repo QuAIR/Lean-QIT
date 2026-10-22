@@ -4,7 +4,7 @@
 <p align="center"><a href="https://quair.github.io/Lean-QIT/">Theorem Catalog</a> &middot; <a href="https://arxiv.org/abs/2607.09632">Paper</a> &middot; <a href="#installation">Installation</a> &middot; <a href="#coverage">Coverage</a> &middot; <a href="#citation">Citation</a></p>
 
 ## Overview
-Lean-QIT provides composable interfaces for states, channels, codes, finite-block criteria, hypothesis testing, one-shot quantities, and asymptotic rates. Reusable achievability, converse, and limit components support quantum Shannon theory while separating operational definitions from analytic characterizations.
+Lean-QIT provides composable interfaces for states, channels, codes, finite-block criteria, hypothesis testing, one-shot quantities, and asymptotic rates, together with higher-order quantum maps (superchannels, combs, superinstruments, and quantum testers). Reusable achievability, converse, and limit components support quantum Shannon theory while separating operational definitions from analytic characterizations.
 
 ## Coverage
 | Layer | Public facades and scope |
@@ -13,6 +13,7 @@ Lean-QIT provides composable interfaces for states, channels, codes, finite-bloc
 | Information theory | `QIT.Classical`, `QIT.Information`, `QIT.OneShot`, `QIT.HypothesisTesting`, `QIT.Asymptotic`: entropy, Renyi quantities, smoothing, testing, decoupling, and AEP. |
 | Coding and protocols | `QIT.Coding`, `QIT.Protocols`: source coding, classical and entanglement-assisted communication, state merging, and FQSW. |
 | Structure and applications | `QIT.Symmetry`, `QIT.Entanglement`, `QIT.Nonlocality`, `QIT.Security`: de Finetti tools, separability, Bell phenomena, self-testing, and QKD. |
+| Higher-order maps | `QIT.HigherOrder`: link product and Choi composition, deterministic superchannels and finite combs with their characterizations and physical realizations, probabilistic combs, superinstruments, and quantum N-testers. |
 
 ### Quantum capacity: unreleased APIs
 
@@ -36,8 +37,7 @@ The unreleased `main` branch uses Lean and mathlib `v4.34.0` as pinned by `lean-
 
 ## Build
 ```bash
-lake exe cache get
-lake build QIT
+lake exe cache get && lake build QIT
 ```
 
 ## Documentation
