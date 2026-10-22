@@ -1100,6 +1100,289 @@ theorem WireMatch.linkProduct_apply {W₁ : Fin a → Type u} {W₂ : Fin b → 
   simp only [matReindex_apply, Equiv.symm_trans_apply,
     WireMatch.eTransportEquiv_symm_pack, WireMatch.read₁, WireMatch.read₂]
 
+/-! ## Position readback of the canonical transports -/
+
+/-- The connected-block readback function of `sortPackEquiv`: the inverse of
+the pointwise sort-permutation cast, applied to the connected block. -/
+private def sortPackConnRead (W : Fin a → Type u) (ι : Fin s → Fin a) (hι : Function.Injective ι)
+    (g : ∀ k, W (ι k)) :
+    ∀ i, permute W (sortPerm ι hι) (posConn ι hι i) :=
+  (Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm g
+
+/-- The complement-block readback function of `sortPackEquiv`. -/
+private def sortPackComplRead (W : Fin a → Type u) (ι : Fin s → Fin a) (hι : Function.Injective ι)
+    (h : ∀ j, W (complEmb ι hι j)) :
+    ∀ j, permute W (sortPerm ι hι) (posCompl ι hι j) :=
+  (Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm h
+
+/-- Evaluation of the reassembly stage of `sortPackEquiv` at any position: the
+`piCongrLeft` component reads the case-split tuple back at the packed index. -/
+private theorem piCongrLeft_addCases_pack (W : Fin a → Type u) (ι : Fin s → Fin a)
+    (hι : Function.Injective ι) (g : ∀ k, W (ι k)) (h : ∀ j, W (complEmb ι hι j))
+    (q : Fin (s + (a - s))) :
+    (Equiv.piCongrLeft (permute W (sortPerm ι hι)) (finCongr (conn_add_compl ι hι)))
+      (Fin.addCases (sortPackConnRead W ι hι g) (sortPackComplRead W ι hι h))
+      (finCongr (conn_add_compl ι hι) q) =
+      Fin.addCases (sortPackConnRead W ι hι g) (sortPackComplRead W ι hι h) q := rfl
+
+/-- Computation of `sortPackEquiv` on a packaged configuration at a connected
+position, stated with the position in unfolded form: the value is the connected
+block's entry read back through the sort-permutation cast. -/
+private theorem sortPack_pack_posConn (W : Fin a → Type u) (ι : Fin s → Fin a)
+    (hι : Function.Injective ι) (g : ∀ k, W (ι k)) (h : ∀ j, W (complEmb ι hι j))
+    (k : Fin s) :
+    sortPackEquiv W ι hι
+        ((splitAppendEquiv (fun k => W (ι k)) (fun j => W (complEmb ι hι j))).symm (g, h))
+        (finCongr (conn_add_compl ι hι) (Fin.castAdd (a - s) k)) =
+      cast (congrArg W (sortPerm_conn ι hι k)).symm (g k) := by
+  have hev : ((Fin.addCases (sortPackConnRead W ι hι g) (sortPackComplRead W ι hι h)
+        (Fin.castAdd (a - s) k) :
+      permute W (sortPerm ι hι)
+        (finCongr (conn_add_compl ι hι) (Fin.castAdd (a - s) k)))) =
+    (Equiv.cast (congrArg W (sortPerm_conn ι hι k))).symm (g k) :=
+    Fin.addCases_left k
+  have h3 : (Equiv.piCongrLeft (permute W (sortPerm ι hι)) (finCongr (conn_add_compl ι hι)))
+      (Fin.addCases
+        ((Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm g)
+        ((Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm h))
+      (finCongr (conn_add_compl ι hι) (Fin.castAdd (a - s) k)) =
+    ((Equiv.cast (congrArg W (sortPerm_conn ι hι k))).symm (g k) :
+      permute W (sortPerm ι hι)
+        (finCongr (conn_add_compl ι hι) (Fin.castAdd (a - s) k))) :=
+    (piCongrLeft_addCases_pack W ι hι g h (Fin.castAdd (a - s) k)).trans hev
+  have h1 : sortPackEquiv W ι hι
+        ((splitAppendEquiv (fun k => W (ι k)) (fun j => W (complEmb ι hι j))).symm (g, h))
+        (finCongr (conn_add_compl ι hι) (Fin.castAdd (a - s) k)) =
+      (Equiv.piCongrLeft (permute W (sortPerm ι hι)) (finCongr (conn_add_compl ι hι)))
+        ((splitEquiv
+            (fun p => permute W (sortPerm ι hι) (finCongr (conn_add_compl ι hι) p))).symm
+          (((Equiv.piCongrRight fun i =>
+              Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm.prodCongr
+            (Equiv.piCongrRight fun j =>
+              Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm) (g, h)))
+        (finCongr (conn_add_compl ι hι) (Fin.castAdd (a - s) k)) := by
+    show (Equiv.piCongrLeft (permute W (sortPerm ι hι)) (finCongr (conn_add_compl ι hι)))
+        ((splitEquiv (fun p => permute W (sortPerm ι hι) (finCongr (conn_add_compl ι hι) p))).symm
+          (((Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm.prodCongr (Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm)
+            ((splitAppendEquiv (fun k => W (ι k)) (fun j => W (complEmb ι hι j)) ((splitAppendEquiv (fun k => W (ι k)) (fun j => W (complEmb ι hι j))).symm (g, h))))))
+        (finCongr (conn_add_compl ι hι) (Fin.castAdd (a - s) k)) = _
+    rw [Equiv.apply_symm_apply]
+  have h2 : (Equiv.piCongrLeft (permute W (sortPerm ι hι)) (finCongr (conn_add_compl ι hι)))
+        ((splitEquiv
+            (fun p => permute W (sortPerm ι hι) (finCongr (conn_add_compl ι hι) p))).symm
+          (((Equiv.piCongrRight fun i =>
+              Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm.prodCongr
+            (Equiv.piCongrRight fun j =>
+              Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm) (g, h)))
+        (finCongr (conn_add_compl ι hι) (Fin.castAdd (a - s) k)) =
+      (Equiv.piCongrLeft (permute W (sortPerm ι hι)) (finCongr (conn_add_compl ι hι)))
+        (Fin.addCases
+          ((Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm g)
+          ((Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm h))
+        (finCongr (conn_add_compl ι hι) (Fin.castAdd (a - s) k)) := by
+    have hA : ((splitEquiv (fun p => permute W (sortPerm ι hι) (finCongr (conn_add_compl ι hι) p))).symm
+          (((Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm.prodCongr
+            (Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm) (g, h))) =
+        Fin.addCases ((Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm g)
+          ((Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm h) :=
+      splitEquiv_symm_apply (fun p => permute W (sortPerm ι hι) (finCongr (conn_add_compl ι hι) p))
+        ((Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm g)
+        ((Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm h)
+    rw [hA]
+  have h4 : ((Equiv.cast (congrArg W (sortPerm_conn ι hι k))).symm (g k) :
+      permute W (sortPerm ι hι)
+        (finCongr (conn_add_compl ι hι) (Fin.castAdd (a - s) k))) =
+    (cast (congrArg W (sortPerm_conn ι hι k)).symm (g k) :
+      permute W (sortPerm ι hι)
+        (finCongr (conn_add_compl ι hι) (Fin.castAdd (a - s) k))) := rfl
+  exact ((h1.trans h2).trans h3).trans h4
+
+/-- `posConn`-indexed form of the connected-position computation rule. -/
+private theorem sortPack_pack_posConn' (W : Fin a → Type u) (ι : Fin s → Fin a)
+    (hι : Function.Injective ι) (g : ∀ k, W (ι k)) (h : ∀ j, W (complEmb ι hι j))
+    (k : Fin s) :
+    sortPackEquiv W ι hι
+        ((splitAppendEquiv (fun k => W (ι k)) (fun j => W (complEmb ι hι j))).symm (g, h))
+        (posConn ι hι k) =
+      cast (congrArg W (sortPerm_conn ι hι k)).symm (g k) :=
+  sortPack_pack_posConn W ι hι g h k
+
+/-- Computation of `sortPackEquiv` on a packaged configuration at a complement
+position, in unfolded form. -/
+private theorem sortPack_pack_posCompl (W : Fin a → Type u) (ι : Fin s → Fin a)
+    (hι : Function.Injective ι) (g : ∀ k, W (ι k)) (h : ∀ j, W (complEmb ι hι j))
+    (j : Fin (a - s)) :
+    sortPackEquiv W ι hι
+        ((splitAppendEquiv (fun k => W (ι k)) (fun j => W (complEmb ι hι j))).symm (g, h))
+        (finCongr (conn_add_compl ι hι) (Fin.natAdd s j)) =
+      cast (congrArg W (sortPerm_compl ι hι j)).symm (h j) := by
+  have hev : ((Fin.addCases (sortPackConnRead W ι hι g) (sortPackComplRead W ι hι h)
+        (Fin.natAdd s j) :
+      permute W (sortPerm ι hι)
+        (finCongr (conn_add_compl ι hι) (Fin.natAdd s j)))) =
+    (Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm (h j) :=
+    Fin.addCases_right j
+  have h3 : (Equiv.piCongrLeft (permute W (sortPerm ι hι)) (finCongr (conn_add_compl ι hι)))
+      (Fin.addCases
+        ((Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm g)
+        ((Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm h))
+      (finCongr (conn_add_compl ι hι) (Fin.natAdd s j)) =
+    ((Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm (h j) :
+      permute W (sortPerm ι hι)
+        (finCongr (conn_add_compl ι hι) (Fin.natAdd s j))) :=
+    (piCongrLeft_addCases_pack W ι hι g h (Fin.natAdd s j)).trans hev
+  have h1 : sortPackEquiv W ι hι
+        ((splitAppendEquiv (fun k => W (ι k)) (fun j => W (complEmb ι hι j))).symm (g, h))
+        (finCongr (conn_add_compl ι hι) (Fin.natAdd s j)) =
+      (Equiv.piCongrLeft (permute W (sortPerm ι hι)) (finCongr (conn_add_compl ι hι)))
+        ((splitEquiv
+            (fun p => permute W (sortPerm ι hι) (finCongr (conn_add_compl ι hι) p))).symm
+          (((Equiv.piCongrRight fun i =>
+              Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm.prodCongr
+            (Equiv.piCongrRight fun j =>
+              Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm) (g, h)))
+        (finCongr (conn_add_compl ι hι) (Fin.natAdd s j)) := by
+    show (Equiv.piCongrLeft (permute W (sortPerm ι hι)) (finCongr (conn_add_compl ι hι)))
+        ((splitEquiv (fun p => permute W (sortPerm ι hι) (finCongr (conn_add_compl ι hι) p))).symm
+          (((Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm.prodCongr (Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm)
+            ((splitAppendEquiv (fun k => W (ι k)) (fun j => W (complEmb ι hι j)) ((splitAppendEquiv (fun k => W (ι k)) (fun j => W (complEmb ι hι j))).symm (g, h))))))
+        (finCongr (conn_add_compl ι hι) (Fin.natAdd s j)) = _
+    rw [Equiv.apply_symm_apply]
+  have h2 : (Equiv.piCongrLeft (permute W (sortPerm ι hι)) (finCongr (conn_add_compl ι hι)))
+        ((splitEquiv
+            (fun p => permute W (sortPerm ι hι) (finCongr (conn_add_compl ι hι) p))).symm
+          (((Equiv.piCongrRight fun i =>
+              Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm.prodCongr
+            (Equiv.piCongrRight fun j =>
+              Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm) (g, h)))
+        (finCongr (conn_add_compl ι hι) (Fin.natAdd s j)) =
+      (Equiv.piCongrLeft (permute W (sortPerm ι hι)) (finCongr (conn_add_compl ι hι)))
+        (Fin.addCases
+          ((Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm g)
+          ((Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm h))
+        (finCongr (conn_add_compl ι hι) (Fin.natAdd s j)) := by
+    have hA : ((splitEquiv (fun p => permute W (sortPerm ι hι) (finCongr (conn_add_compl ι hι) p))).symm
+          (((Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm.prodCongr
+            (Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm) (g, h))) =
+        Fin.addCases ((Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm g)
+          ((Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm h) :=
+      splitEquiv_symm_apply (fun p => permute W (sortPerm ι hι) (finCongr (conn_add_compl ι hι) p))
+        ((Equiv.piCongrRight fun i => Equiv.cast (congrArg W (sortPerm_conn ι hι i))).symm g)
+        ((Equiv.piCongrRight fun j => Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm h)
+    rw [hA]
+  have h4 : ((Equiv.cast (congrArg W (sortPerm_compl ι hι j))).symm (h j) :
+      permute W (sortPerm ι hι)
+        (finCongr (conn_add_compl ι hι) (Fin.natAdd s j))) =
+    (cast (congrArg W (sortPerm_compl ι hι j)).symm (h j) :
+      permute W (sortPerm ι hι)
+        (finCongr (conn_add_compl ι hι) (Fin.natAdd s j))) := rfl
+  exact ((h1.trans h2).trans h3).trans h4
+
+/-- `posCompl`-indexed form of the complement-position computation rule. -/
+private theorem sortPack_pack_posCompl' (W : Fin a → Type u) (ι : Fin s → Fin a)
+    (hι : Function.Injective ι) (g : ∀ k, W (ι k)) (h : ∀ j, W (complEmb ι hι j))
+    (j : Fin (a - s)) :
+    sortPackEquiv W ι hι
+        ((splitAppendEquiv (fun k => W (ι k)) (fun j => W (complEmb ι hι j))).symm (g, h))
+        (posCompl ι hι j) =
+      cast (congrArg W (sortPerm_compl ι hι j)).symm (h j) :=
+  sortPack_pack_posCompl W ι hι g h j
+
+/-- Cast cancellation: casting along an equation and back returns the original
+value. -/
+private theorem cast_cast_cancel {A B : Type u} (h : A = B) (x : B) :
+    cast h (cast h.symm x) = x := by
+  cases h
+  rfl
+
+/-- Transport along an index equation, restated with an explicit family cast:
+the two transports differ only in motive shape, and cancel against each other
+in composed form. -/
+private theorem transport_eq_cast {b : ℕ} {X : Fin b → Type u} {x y : Fin b}
+    (h : x = y) (v : X x) :
+    h ▸ v = cast (congrArg X h) v := by
+  cases h
+  rfl
+
+/-- Cancellation rule for inverse-permutation readback: if the packaged sort
+value at the inverse image of a position is a cast entry along the
+permutation's defining equation at that position, then reading the inverse
+permutation equiv at the position returns the entry.  The index normalization
+happens by substitution on variables, before any transport is load-bearing;
+the two transports cancel because their proofs prove the same equation. -/
+private theorem permuteEquiv_symm_cast_cancel {b : ℕ} {W₂ : Fin b → Type u}
+    {σ : Fin b ≃ Fin b} {u : ∀ q, W₂ (σ q)} {i₀ y : Fin b}
+    (hyp : σ.symm i₀ = y) (hpc : σ y = i₀) (v : W₂ i₀)
+    (hSP : u y = cast (congrArg W₂ hpc).symm v) :
+    (permuteEquiv W₂ σ).symm u i₀ = v := by
+  subst hyp
+  rw [permuteEquiv_symm_apply, hSP, transport_eq_cast]
+  exact cast_cast_cancel (congrArg W₂ hpc) v
+
+/-- Evaluation of the first-factor readback at a connected wire: the value is
+the connected entry. -/
+theorem WireMatch.read₁_conn {W₁ : Fin a → Type u} {W₂ : Fin b → Type u}
+    (m : WireMatch W₁ W₂) (g : ∀ j, m.complFam₁ j) (z : ∀ k, m.connFam₁ k)
+    (k : Fin m.s) :
+    m.read₁ (g, z) (m.ι₁ k) = z k := by
+  have hpos : (sortPerm m.ι₁ m.hι₁).symm (m.ι₁ k) = posConn m.ι₁ m.hι₁ k :=
+    ((sortPerm m.ι₁ m.hι₁).symm_apply_eq).mpr (sortPerm_conn m.ι₁ m.hι₁ k).symm
+  show (permuteEquiv W₁ (sortPerm m.ι₁ m.hι₁)).symm
+      (sortPackEquiv W₁ m.ι₁ m.hι₁
+        (appendFlipEquiv m.complFam₁ m.connFam₁
+          ((splitAppendEquiv m.complFam₁ m.connFam₁).symm (g, z)))) (m.ι₁ k) = _
+  rw [appendFlipEquiv_pack m.complFam₁ m.connFam₁ g z]
+  exact permuteEquiv_symm_cast_cancel hpos (sortPerm_conn m.ι₁ m.hι₁ k)
+    (z k) (sortPack_pack_posConn' W₁ m.ι₁ m.hι₁ z g k)
+
+/-- Evaluation of the first-factor readback at a private wire: the value is
+the private entry. -/
+theorem WireMatch.read₁_compl {W₁ : Fin a → Type u} {W₂ : Fin b → Type u}
+    (m : WireMatch W₁ W₂) (g : ∀ j, m.complFam₁ j) (z : ∀ k, m.connFam₁ k)
+    (j : Fin (a - m.s)) :
+    m.read₁ (g, z) (complEmb m.ι₁ m.hι₁ j) = g j := by
+  have hpos : (sortPerm m.ι₁ m.hι₁).symm (complEmb m.ι₁ m.hι₁ j) =
+      posCompl m.ι₁ m.hι₁ j :=
+    ((sortPerm m.ι₁ m.hι₁).symm_apply_eq).mpr (sortPerm_compl m.ι₁ m.hι₁ j).symm
+  show (permuteEquiv W₁ (sortPerm m.ι₁ m.hι₁)).symm
+      (sortPackEquiv W₁ m.ι₁ m.hι₁
+        (appendFlipEquiv m.complFam₁ m.connFam₁
+          ((splitAppendEquiv m.complFam₁ m.connFam₁).symm (g, z))))
+      (complEmb m.ι₁ m.hι₁ j) = _
+  rw [appendFlipEquiv_pack m.complFam₁ m.connFam₁ g z]
+  exact permuteEquiv_symm_cast_cancel hpos (sortPerm_compl m.ι₁ m.hι₁ j)
+    (g j) (sortPack_pack_posCompl' W₁ m.ι₁ m.hι₁ z g j)
+
+/-- Evaluation of the second-factor readback at a connected wire: the value is
+the relabeled connected entry. -/
+theorem WireMatch.read₂_conn {W₁ : Fin a → Type u} {W₂ : Fin b → Type u}
+    (m : WireMatch W₁ W₂) (z : ∀ k, m.connFam₁ k) (w : ∀ j, m.complFam₂ j)
+    (k : Fin m.s) :
+    m.read₂ z w (m.ι₂ k) = m.eRelabel z k := by
+  have hpos : (sortPerm m.ι₂ m.hι₂).symm (m.ι₂ k) = posConn m.ι₂ m.hι₂ k :=
+    ((sortPerm m.ι₂ m.hι₂).symm_apply_eq).mpr (sortPerm_conn m.ι₂ m.hι₂ k).symm
+  show (permuteEquiv W₂ (sortPerm m.ι₂ m.hι₂)).symm
+      (sortPackEquiv W₂ m.ι₂ m.hι₂
+        ((splitAppendEquiv m.connFam₂ m.complFam₂).symm (m.eRelabel z, w))) (m.ι₂ k) = _
+  exact permuteEquiv_symm_cast_cancel hpos (sortPerm_conn m.ι₂ m.hι₂ k)
+    (m.eRelabel z k) (sortPack_pack_posConn' W₂ m.ι₂ m.hι₂ (m.eRelabel z) w k)
+
+/-- Evaluation of the second-factor readback at a private wire: the value is
+the private entry. -/
+theorem WireMatch.read₂_compl {W₁ : Fin a → Type u} {W₂ : Fin b → Type u}
+    (m : WireMatch W₁ W₂) (z : ∀ k, m.connFam₁ k) (w : ∀ j, m.complFam₂ j)
+    (j : Fin (b - m.s)) :
+    m.read₂ z w (complEmb m.ι₂ m.hι₂ j) = w j := by
+  have hpos : (sortPerm m.ι₂ m.hι₂).symm (complEmb m.ι₂ m.hι₂ j) =
+      posCompl m.ι₂ m.hι₂ j :=
+    ((sortPerm m.ι₂ m.hι₂).symm_apply_eq).mpr (sortPerm_compl m.ι₂ m.hι₂ j).symm
+  show (permuteEquiv W₂ (sortPerm m.ι₂ m.hι₂)).symm
+      (sortPackEquiv W₂ m.ι₂ m.hι₂
+        ((splitAppendEquiv m.connFam₂ m.complFam₂).symm (m.eRelabel z, w)))
+      (complEmb m.ι₂ m.hι₂ j) = _
+  exact permuteEquiv_symm_cast_cancel hpos (sortPerm_compl m.ι₂ m.hι₂ j)
+    (w j) (sortPack_pack_posCompl' W₂ m.ι₂ m.hι₂ (m.eRelabel z) w j)
+
 /-- The reversed matching: the same connected wire pairs with the two sides
 swapped and the basis identifications inverted. The injectivity hypotheses
 swap sides accordingly, so the reversed no-double-connection condition is

@@ -20,8 +20,10 @@ through one branch uses the link product of
 [Chiribella2009Networks, comblong-pub.tex:315-327], and positivity of that
 outcome action is the link-product positivity of
 [Chiribella2009Networks, comblong-pub.tex:342-355]. Outcome families are
-finite but not assumed inhabited; an empty family cannot sum to a
-normalized comb.
+finite but not assumed inhabited. For an empty outcome family the sum is
+zero; whether it can be normalized depends on the wire systems. In
+particular, the tester specialization excludes empty outcomes when a
+deterministic input comb exists.
 -/
 
 @[expose] public section

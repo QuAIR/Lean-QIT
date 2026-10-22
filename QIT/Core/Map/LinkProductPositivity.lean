@@ -32,6 +32,10 @@ the wire-package reindexings by `matReindex_posSemidef`.
 
 * `QIT.WireFam.linkProduct_posSemidef`: the link product of positive
   semidefinite factors is positive semidefinite.
+* `QIT.WireFam.linkProduct_mono_left` / `linkProduct_mono_right` /
+  `linkProduct_mono`: Loewner-monotonicity of the link product in each
+  factor, with the positivity side conditions that the contraction route
+  requires.
 
 ## Tags
 
@@ -86,6 +90,38 @@ theorem linkProduct_posSemidef {M : CMatrix (∀ i, append A B i)}
       matReindex_symm_matReindex]
   rw [hlink]
   exact matReindex_posSemidef _ hpsd
+
+/-- The link product is monotone in the first factor whenever the second
+factor is positive semidefinite: the difference of the two products is the
+link product of the positive semidefinite difference `M' - M` with `N`,
+which is positive semidefinite by `linkProduct_posSemidef`
+[Chiribella2009Networks, comblong-pub.tex:342-355]. -/
+theorem linkProduct_mono_left {M M' : CMatrix (∀ i, append A B i)}
+    {N : CMatrix (∀ i, append B C i)} (hM : M ≤ M') (hN : N.PosSemidef) :
+    linkProduct A B C M N ≤ linkProduct A B C M' N := by
+  rw [Matrix.le_iff, ← linkProduct_sub_left]
+  exact linkProduct_posSemidef (Matrix.le_iff.mp hM) hN
+
+/-- The link product is monotone in the second factor whenever the first
+factor is positive semidefinite, symmetrically to `linkProduct_mono_left`
+[Chiribella2009Networks, comblong-pub.tex:342-355]. -/
+theorem linkProduct_mono_right {M : CMatrix (∀ i, append A B i)}
+    {N N' : CMatrix (∀ i, append B C i)} (hM : M.PosSemidef) (hN : N ≤ N') :
+    linkProduct A B C M N ≤ linkProduct A B C M N' := by
+  rw [Matrix.le_iff, ← linkProduct_sub_right]
+  exact linkProduct_posSemidef hM (Matrix.le_iff.mp hN)
+
+/-- Two-sided Loewner-monotonicity of the link product. Positivity of the
+dominating first factor and of the dominated second factor is required:
+monotonicity in one factor transports domination only when the other factor
+of that step is positive semidefinite, so domination of both factors yields
+domination of the products under exactly these side conditions
+[Chiribella2009Networks, comblong-pub.tex:342-355]. -/
+theorem linkProduct_mono {M M' : CMatrix (∀ i, append A B i)}
+    {N N' : CMatrix (∀ i, append B C i)} (hM : M ≤ M') (hM' : M'.PosSemidef)
+    (hN : N ≤ N') (hNpsd : N.PosSemidef) :
+    linkProduct A B C M N ≤ linkProduct A B C M' N' :=
+  (linkProduct_mono_left hM hNpsd).trans (linkProduct_mono_right hM' hN)
 
 end WireFam
 

@@ -27,7 +27,8 @@ ordering resolves the inconsistent endpoint/subscript labels in the source's
 `Tr ρ = 1`, in our input-first storage order.
 
 Normalization of Born probabilities is proved by contraction of these two
-recursions. No physical realization or converse characterization is asserted.
+recursions. The converse and algebraic instrument equivalence are proved in
+`Tester.Characterization` and `Tester.Instrument`; physical realization is separate.
 -/
 
 @[expose] public section

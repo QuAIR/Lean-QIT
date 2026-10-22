@@ -17,7 +17,7 @@ public import QIT.Util.Wires.Contraction
 This module builds the reusable infrastructure for finite chains of isometric
 interactions with heterogeneous memories: the chain side of the source's
 memory-channel realization, built on the normalization recursion
-[Chiribella2009Networks, comblong-pub.tex:860-869], the realization theorem
+[Chiribella2009Networks, comblong-pub.tex:860-877], the realization theorem
 [Chiribella2009Networks, comblong-pub.tex:986-997], and the memory-channel
 phrasing [Chiribella2009Networks, comblong-pub.tex:1891-1892]. A chain
 with `N = n + 1` links (indexed by `Nat.succ`, matching the public comb
@@ -131,7 +131,7 @@ variable {m : ℕ} {I O : Fin m → Type u}
 
 /-- The comb wire family of a chain with `m` links: the `m` free input wires
 followed by the `m` free output wires, the wire content of the source's comb
-[Chiribella2009Networks, comblong-pub.tex:860-869] in the block order of the
+[Chiribella2009Networks, comblong-pub.tex:860-877] in the block order of the
 Choi convention. The memories are internal and do not appear. Reducible, so
 that the `WireFam.append` computation lemmas apply to it directly. -/
 abbrev combWire (I O : Fin m → Type u) : Fin (m + m) → Type u :=
@@ -567,7 +567,7 @@ theorem keptIL :
 identified with the input wire of the discarded final link together with the
 comb wires of the truncated chain. This is the codomain decomposition of the
 normalization recursion `lemrecnet`
-[Chiribella2009Networks, comblong-pub.tex:860-869]. -/
+[Chiribella2009Networks, comblong-pub.tex:860-877]. -/
 def combKeptEquiv (I O : Fin (n + 2) → Type u) :
     (∀ j : Fin ((n + 2) + (n + 1)), combWire I O (Fin.castAdd 1 j)) ≃
       I (Fin.last (n := n + 1)) ×
@@ -694,7 +694,7 @@ last free output wire of the chain Choi collapses the final link telescopically
 (over its free output and discarded ancilla memory, by
 `ReferenceIsometry.sum_mul_star`) and leaves the identity on the final link's
 input wire tensored with the Choi of the truncated chain, on the kept comb
-wires [Chiribella2009Networks, comblong-pub.tex:860-869]. -/
+wires [Chiribella2009Networks, comblong-pub.tex:860-877]. -/
 theorem MemoryChain.traceOutLast_one_chainChoi (c : MemoryChain I O E) :
     WireFam.traceOutLast (k := 1) (combWire (m := n + 2) I O) c.chainChoi =
       (WireFam.matReindex (combKeptEquiv I O).symm)

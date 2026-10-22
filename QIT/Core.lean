@@ -13,6 +13,7 @@ public import QIT.Core.Map
 public import QIT.Core.Map.ChoiCharacterization
 public import QIT.Core.Map.ChoiComposition
 public import QIT.Core.Map.LinkProductPositivity
+public import QIT.Core.Map.MatchedWireAssociativity
 public import QIT.Core.Map.QuantumOperation
 public import QIT.Core.Channel
 public import QIT.Core.Measurement

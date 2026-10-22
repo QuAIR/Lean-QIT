@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use Lean-QIT, please cite the software and the associated paper."
 title: "Lean-QIT"
 type: software
-version: 0.1.0
-date-released: 2026-09-04
+version: 0.2.0
+date-released: 2026-10-22
 license: Apache-2.0
 repository-code: "https://github.com/QuAIR/Lean-QIT"
 url: "https://quair.github.io/Lean-QIT/"
